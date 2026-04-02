@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide scrollbar while maintaining scroll functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+}
+
+@layer base {
+  :root {
+    /* Stitch Light Theme (Default) */
+    --background: 0 0% 100%;
+    /* #ffffff */
+    --foreground: 120 36% 10%;
+    /* #102210 */
+
+    --card: 0 0% 100%;
+    --card-foreground: 120 36% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 120 36% 10%;
+
+    /* Primary: #13ec13 (Neo Green) */
+    --primary: 118 86% 50%;
+    --primary-foreground: 120 28% 14%;
+
+    --secondary: 120 10% 97%;
+    /* #f6f8f6 */
+    --secondary-foreground: 120 36% 10%;
+
+    --muted: 120 10% 97%;
+    --muted-foreground: 120 5% 45%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 120 36% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 120 10% 90%;
+    --input: 120 10% 90%;
+    --ring: 118 86% 50%;
+
+    --radius: 1rem;
+
+    /* Shadow Scale */
+    --shadow-card:     0 1px 3px 0 rgb(0 0 0 / 0.08);
+    --shadow-elevated: 0 4px 16px 0 rgb(0 0 0 / 0.12);
+    --shadow-modal:    0 24px 64px 0 rgb(0 0 0 / 0.22);
+
+    /* Semantic Spacing */
+    --page-x: 1rem;
+    --page-y: 1.5rem;
+
+    /* Semantic Colors (Light) */
+    --success: 118 86% 50%;
+    /* #13ec13 (Neon Green - Primary Match) */
+    --success-foreground: 120 28% 14%;
+    /* Dark text for contrast on Neon */
+
+    --warning: 45 93% 47%;
+    /* #eab308 */
+    --warning-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    /* Tactical Dark Theme */
+    --background: 156 20% 5%;
+    /* ≈ #0a100d */
+    --foreground: 0 0% 98%;
+
+    --card: 150 19% 13%;
+    /* #1a2620 */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 150 19% 13%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 118 86% 50%;
+    --primary-foreground: 120 28% 14%;
+
+    --secondary: 120 28% 14%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 120 28% 14%;
+    --muted-foreground: 120 5% 65%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 120 28% 14%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 120 28% 14%;
+    --input: 120 28% 14%;
+    --ring: 118 86% 50%;
+
+    /* Semantic Colors (Dark - Neon) */
+    --success: 118 86% 50%;
+    /* Matches Primary */
+    --success-foreground: 120 28% 14%;
+
+    --warning: 45 93% 47%;
+    --warning-foreground: 120 36% 10%;
+
+    /* Shadow Scale (Dark — deeper, more pronounced) */
+    --shadow-card:     0 1px 3px 0 rgb(0 0 0 / 0.20);
+    --shadow-elevated: 0 4px 16px 0 rgb(0 0 0 / 0.35);
+    --shadow-modal:    0 24px 64px 0 rgb(0 0 0 / 0.55);
+  }
+
+  html {
+    font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+
+  /* Legacy Component Styles - Commented out to prevent errors with missing color shades
+   .btn-primary { @apply btn bg-primary-500 ... } 
+   Since we only have primary DEFAULT, these would fail or need updating.
+   For now, we rely on tailwind utilities directly in components.
+*/
+
+  /* Safe area for mobile devices */
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Respect user's motion preferences — WCAG 2.1 SC 2.3.3 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
