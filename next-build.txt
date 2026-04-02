@@ -1,0 +1,43 @@
+﻿  Ôû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Ô£ô Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/14) ...
+   Generating static pages (3/14) 
+   Generating static pages (6/14) 
+   Generating static pages (10/14) 
+ Ô£ô Generating static pages (14/14)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Ôöî ãÆ /                                    12.4 kB         174 kB
+Ôö£ Ôùï /_not-found                          872 B          88.2 kB
+Ôö£ ãÆ /admin                               177 B          96.2 kB
+Ôö£ Ôùï /admin/login                         1.5 kB          150 kB
+Ôö£ ãÆ /admin/pedidos                       4.36 kB        91.7 kB
+Ôö£ ãÆ /admin/produtos                      5.14 kB        97.8 kB
+Ôö£ ãÆ /api/admin/pedidos                   0 B                0 B
+Ôö£ ãÆ /api/admin/pedidos/[id]              0 B                0 B
+Ôö£ ãÆ /api/admin/produtos                  0 B                0 B
+Ôö£ ãÆ /api/admin/produtos/[id]             0 B                0 B
+Ôö£ ãÆ /api/admin/produtos/[id]/imagem      0 B                0 B
+Ôö£ ãÆ /api/pedidos                         0 B                0 B
+Ôö£ Ôùï /carrinho                            29.1 kB         191 kB
+Ôö£ ãÆ /produtos                            5.46 kB         167 kB
+Ôö£ ãÆ /produtos/[slug]                     1.87 kB         164 kB
+Ôöö Ôùï /sobre                               205 B           162 kB
++ First Load JS shared by all            87.3 kB
+  Ôö£ chunks/5b8f0dd8-8541beace150f4ee.js  53.6 kB
+  Ôö£ chunks/749-b396b8057ffe2822.js       31.7 kB
+  Ôöö other shared chunks (total)          1.96 kB
+
+
+ãÆ Middleware                             78.9 kB
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

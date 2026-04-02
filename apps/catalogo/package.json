@@ -1,0 +1,42 @@
+{
+    "name": "catalogo",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "db:push": "supabase db push",
+        "db:pull": "supabase db pull",
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@mont/shared": "workspace:*",
+        "@hookform/resolvers": "^3.10.0",
+        "@supabase/ssr": "^0.5.2",
+        "@supabase/supabase-js": "^2.95.3",
+        "clsx": "^2.1.1",
+        "gsap": "^3.14.2",
+        "lucide-react": "^0.447.0",
+        "next": "^14.2.0",
+        "react": "^18.3.0",
+        "react-dom": "^18.3.0",
+        "react-hook-form": "^7.71.1",
+        "tailwind-merge": "^2.6.1",
+        "zod": "^3.25.76",
+        "zustand": "^4.5.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "@types/react": "^18.3.0",
+        "@types/react-dom": "^18.3.0",
+        "autoprefixer": "^10.4.20",
+        "eslint": "^8.57.0",
+        "eslint-config-next": "^14.2.0",
+        "postcss": "^8.4.47",
+        "sharp": "^0.34.5",
+        "tailwindcss": "^3.4.0",
+        "typescript": "^5.6.0"
+    }
+}
