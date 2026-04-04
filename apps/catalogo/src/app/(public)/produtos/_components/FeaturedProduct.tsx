@@ -5,8 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useCartStore } from '@/lib/cart/store';
 import type { ProdutoCatalogo } from '@mont/shared';
+import { useCartStore } from '@/lib/cart/store';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,7 +23,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
     const priceFormatted = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-    }).format(product.preco || 0);
+    }).format(product.preco ?? 0);
 
     const weightFormatted = product.subtitulo || '';
 
@@ -50,6 +50,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
     }, []);
 
     const badgeText = '\u2B50 Mais Vendido';
+    const infoBlockLabel = 'BLOCO DE INFORMA\u00C7\u00D5ES';
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -63,7 +64,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
             repeat: 1,
             ease: 'back.out(1.7)',
             onComplete: () => {
-                addItem(product, 1);
+                addItem({ ...product }, 1);
             },
         });
     };
@@ -79,7 +80,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
                     <div className="relative w-full md:w-1/2 aspect-[4/3] md:aspect-video overflow-hidden">
                         <Image
                             src={product.url_imagem_principal || '/placeholder-product.jpg'}
-                            alt={product.nome || ''}
+                            alt={product.nome ?? ''}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                             sizes="(max-width: 768px) 100vw, 50vw"

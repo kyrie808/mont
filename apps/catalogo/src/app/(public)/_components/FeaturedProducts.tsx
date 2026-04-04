@@ -1,77 +1,123 @@
 'use client'
 
-import React, { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
-import Link from 'next/link'
-import { useCartStore } from '@/lib/cart/store'
+import { useEffect, useRef } from 'react'
 import { ProductCard } from '@/components/catalog'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import type { ProdutoCatalogo } from '@mont/shared'
 
 interface FeaturedProductsProps {
     products: ProdutoCatalogo[]
 }
 
-export function FeaturedProducts({ products }: FeaturedProductsProps) {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const isInView = useInView(containerRef, { once: true, amount: 0.1 })
+const SECTION_TITLE = "Os favoritos da casa"
+const SECTION_SUBTITLE = "Quem abre o forno e v\u00EA que n\u00E3o murchou, entende por qu\u00EA."
 
-    // Filter only featured products if possible, or just take first 4
-    const featuredItems = products.filter(p => p.destaque).slice(0, 4)
-    const displayProducts = featuredItems.length > 0 ? featuredItems : products.slice(0, 4)
+export default function FeaturedProducts({ products }: FeaturedProductsProps) {
+    const sectionRef = useRef<HTMLElement>(null)
+    const contentRef = useRef<HTMLDivElement>(null)
+    const gridRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (!sectionRef.current || !contentRef.current) return
+        gsap.registerPlugin(ScrollTrigger)
+
+        const ctx = gsap.context(() => {
+            // --- EFEITO 3D: Arco de trás pra frente ---
+            // PRESERVADO: Toda a lógica de animação abaixo
+            gsap.fromTo(contentRef.current,
+                {
+                    rotateX: -65,
+                    y: 350,
+                    scale: 0.45,
+                    opacity: 0,
+                    z: -200,
+                },
+                {
+                    rotateX: 0,
+                    y: 0,
+                    scale: 1,
+                    opacity: 1,
+                    z: 0,
+                    ease: 'power4.out',
+                    scrollTrigger: {
+                        trigger: sectionRef.current,
+                        start: 'top 100%',
+                        end: 'top 30%',
+                        scrub: 1.2,
+                    }
+                }
+            )
+        }, sectionRef)
+
+        return () => ctx.revert()
+    }, [products])
+
+    if (products.length === 0) return null
 
     return (
-        <section ref={containerRef} className="py-24 bg-mont-white overflow-hidden">
-            <div className="container mx-auto px-4">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-                    <div className="max-w-2xl">
-                        <motion.span
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={isInView ? { opacity: 1, y: 0 } : {}}
-                            className="text-mont-gold font-bold uppercase tracking-widest text-sm block mb-3"
-                        >
-                            Nossos Favoritos
-                        </motion.span>
-                        <motion.h2
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={isInView ? { opacity: 1, y: 0 } : {}}
-                            transition={{ delay: 0.1 }}
-                            className="font-display text-4xl md:text-5xl text-mont-espresso leading-tight"
-                        >
-                            Assinaturas da <span className="italic">Casa</span>
-                        </motion.h2>
+        <section
+            ref={sectionRef}
+            className="pt-8 pb-20 md:pt-12 md:pb-32 bg-mont-cream relative z-10"
+            id="destaques"
+            style={{
+                // PRESERVADO: Posicionamento e perspectiva
+                marginTop: '-80vh',
+                perspective: '600px',
+                perspectiveOrigin: '50% 10%',
+            }}
+        >
+            <div
+                ref={contentRef}
+                style={{
+                    transformOrigin: 'center bottom',
+                    willChange: 'transform, opacity',
+                    transformStyle: 'preserve-3d',
+                }}
+            >
+                <div className="container mx-auto px-4">
+                    <div className="text-center mb-12">
+                        {/* ALTERAÇÃO: Novos textos com Unicode encoding */}
+                        <h2 className="font-display text-4xl md:text-5xl text-mont-espresso mb-4">
+                            {SECTION_TITLE}
+                        </h2>
+                        <p className="text-mont-gray text-lg max-w-2xl mx-auto">
+                            {SECTION_SUBTITLE}
+                        </p>
                     </div>
 
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={isInView ? { opacity: 1, x: 0 } : {}}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <Link
-                            href="/produtos"
-                            className="group flex items-center gap-3 text-mont-espresso font-bold hover:text-mont-gold transition-colors text-lg"
+                    <div className="max-w-[1400px] mx-auto">
+                        <div
+                            ref={gridRef}
+                            /* ALTERAÇÃO: grid-cols-2 no mobile, 4 colunas em lg+ para bento grid 50/50 */
+                            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
                         >
-                            Ver Cardápio Completo
-                            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-2" />
-                        </Link>
-                    </motion.div>
-                </div>
-
-                {/* Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {displayProducts.map((product, index) => (
-                        <ProductCard
-                            key={product.id}
-                            produto={product}
-                            index={index}
-                        />
-                    ))}
+                            {products.map((product, index) => (
+                                <div
+                                    key={product.id}
+                                    /* PRESERVADO: Lógica de destaque do primeiro card (md:col-span-2) */
+                                    className={`product-card ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''
+                                        }`}
+                                >
+                                    <ProductCard
+                                        id={product.id!}
+                                        name={product.nome!}
+                                        slug={product.slug!}
+                                        category={product.categoria as 'congelado' | 'refrigerado' | 'combo'}
+                                        subtitle={product.subtitulo}
+                                        price={product.preco ?? 0}
+                                        anchor_price={product.preco_ancoragem}
+                                        image_url={product.url_imagem_principal}
+                                        is_featured={index === 0}
+                                        index={index}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
     )
 }
 
-// Add default export to avoid build errors
-export default FeaturedProducts

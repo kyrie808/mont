@@ -33,7 +33,7 @@ async function getProduct(slug: string): Promise<ProdutoCatalogo | null> {
     }
 }
 
-async function getRelatedProducts(category: string | null, currentId: string | null): Promise<ProdutoCatalogo[]> {
+async function getRelatedProducts(category: string, currentId: string): Promise<ProdutoCatalogo[]> {
     try {
         const supabase = createClient()
 
@@ -41,7 +41,7 @@ async function getRelatedProducts(category: string | null, currentId: string | n
             .from('vw_catalogo_produtos')
             .select('*')
             .eq('visivel_catalogo', true)
-            .neq('id', currentId || '')
+            .neq('id', currentId)
 
         if (error || !data) {
             return []
@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     return {
         title: `${product.nome} | Mont Distribuidora`,
-        description: product.descricao || `Compre ${product.nome} - ${product.subtitulo} por ${formatCurrency(product.preco || 0)}`,
+        description: product.descricao || `Compre ${product.nome} - ${product.subtitulo} por ${formatCurrency(product.preco ?? 0)}`,
     }
 }
 
@@ -82,13 +82,13 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
         notFound()
     }
 
-    const relatedProducts = await getRelatedProducts(product.categoria, product.id)
+    const relatedProducts = await getRelatedProducts(product.categoria ?? '', product.id!)
 
     return (
         <>
             <Navbar />
 
-            <main className="min-h-screen bg-mont-cream pt-20 md:pt-28 pb-20">
+            <main className="min-h-screen bg-mont-cream pt-28 pb-20">
                 <div className="container mx-auto px-4">
                     <div className="max-w-6xl mx-auto">
                         {/* Grid: Imagem + Info */}
@@ -99,7 +99,7 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
                                     <div className="relative aspect-square w-full">
                                         <Image
                                             src={product.url_imagem_principal}
-                                            alt={product.nome || 'Produto'}
+                                            alt={product.nome ?? ''}
                                             fill
                                             className="object-cover"
                                             priority
@@ -122,7 +122,7 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
                                 </h1>
 
                                 <div className="mb-4">
-                                    <Badge variant={(product.categoria as any) || 'Massas Decorativas'} />
+                                    {product.categoria && <Badge variant={product.categoria as any} />}
                                 </div>
 
                                 <p className="text-mont-gray text-lg mb-6">
@@ -136,7 +136,7 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
                                         </span>
                                     )}
                                     <div className="text-4xl font-bold text-mont-gold">
-                                        {formatCurrency(product.preco || 0)}
+                                        {formatCurrency(product.preco ?? 0)}
                                     </div>
                                 </div>
 

@@ -1,10 +1,10 @@
 'use client'
 
 import Image from 'next/image'
-import type { ItemCarrinho } from '@/types/cart'
+import type { CartItem } from '@/types/cart'
 
 interface CartItemListProps {
-    items: ItemCarrinho[]
+    items: CartItem[]
     onIncrease: (id: string) => void
     onDecrease: (id: string) => void
     onRemove: (id: string) => void
@@ -20,14 +20,14 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
 
             {items.map((item) => (
                 <div
-                    key={item.produto.id}
+                    key={item.product.id!}
                     className="bg-mont-white p-4 rounded-lg shadow-sm flex gap-4"
                 >
                     <div className="relative w-20 h-20 bg-mont-surface rounded flex-shrink-0 overflow-hidden">
-                        {item.produto.url_imagem_principal ? (
+                        {item.product.url_imagem_principal ? (
                             <Image
-                                src={item.produto.url_imagem_principal!}
-                                alt={item.produto.nome!}
+                                src={item.product.url_imagem_principal}
+                                alt={item.product.nome ?? ''}
                                 fill
                                 className="object-cover"
                                 sizes="80px"
@@ -43,33 +43,33 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
 
                     <div className="flex-1">
                         <h3 className="font-medium text-mont-espresso mb-1">
-                            {item.produto.nome!}
+                            {item.product.nome}
                         </h3>
                         <p className="text-mont-gray text-sm mb-2">
-                            {formatCurrency(item.produto.preco!)} cada
+                            {formatCurrency(item.product.preco ?? 0)} cada
                         </p>
 
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => onDecrease(item.produto.id!)}
+                                onClick={() => onDecrease(item.product.id!)}
                                 className="w-8 h-8 bg-mont-surface rounded flex items-center justify-center text-mont-espresso hover:bg-mont-gray/10"
                             >
                                 −
                             </button>
 
                             <span className="w-16 text-center bg-mont-surface rounded py-1 text-mont-espresso">
-                                {item.quantidade}
+                                {item.quantity}
                             </span>
 
                             <button
-                                onClick={() => onIncrease(item.produto.id!)}
+                                onClick={() => onIncrease(item.product.id!)}
                                 className="w-8 h-8 bg-mont-surface rounded flex items-center justify-center text-mont-espresso hover:bg-mont-gray/10"
                             >
                                 +
                             </button>
 
                             <button
-                                onClick={() => onRemove(item.produto.id!)}
+                                onClick={() => onRemove(item.product.id!)}
                                 className="ml-auto text-mont-gray hover:text-red-600 transition-colors"
                             >
                                 Remover
@@ -79,7 +79,7 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
 
                     <div className="text-right">
                         <p className="font-medium text-mont-espresso">
-                            {formatCurrency(item.produto.preco! * item.quantidade)}
+                            {formatCurrency((item.product.preco ?? 0) * item.quantity)}
                         </p>
                     </div>
                 </div>

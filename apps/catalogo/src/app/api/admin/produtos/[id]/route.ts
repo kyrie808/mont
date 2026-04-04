@@ -1,42 +1,42 @@
+
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import type { Database } from '@mont/shared'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
+// Validation Schema
 const updateProductSchema = z.object({
-    nome: z.string().optional(),
-    subtitulo: z.string().optional(),
-    descricao: z.string().optional(),
-    preco: z.number().optional(),
-    categoria: z.string().optional(),
-    estoque_atual: z.number().optional(),
+    ativo: z.boolean().optional(),
     visivel_catalogo: z.boolean().optional(),
+    descricao: z.string().nullable().optional(),
+    categoria: z.string().nullable().optional(),
+    peso_kg: z.number().min(0, 'Peso não pode ser negativo').nullable().optional(),
+    subtitulo: z.string().nullable().optional(),
     destaque: z.boolean().optional(),
+    slug: z.string()
+        .regex(/^[a-z0-9_-]+$/, 'Slug deve conter apenas letras minúsculas, números, hífens e underscores')
+        .nullable().optional(),
+    instrucoes_preparo: z.string().nullable().optional()
 })
 
-// Admin client with service role for updates/deletes
-const supabaseAdmin = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false
-        }
-    }
-)
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    if (!UUID_REGEX.test(params.id)) {
+        return NextResponse.json(
+            { error: 'ID inválido' },
+            { status: 400 }
+        )
+    }
+
     const cookieStore = cookies()
-    const { id } = params
 
     // 1. Verify Auth
-    const authSupabase = createServerClient<Database>(
+    const authSupabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
@@ -57,70 +57,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Acesso não autorizado' }, { status: 403 })
     }
 
-    try {
-        const body = await request.json()
-        const result = updateProductSchema.safeParse(body)
+    // 2. Parse & Validate Body
+    const body = await request.json()
+    const result = updateProductSchema.safeParse(body)
 
-        if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
-        }
+    if (!result.success) {
+        console.error('ZOD_VALIDATION_ERROR:', JSON.stringify(result.error.issues, null, 2))
+        console.error('ZOD_RAW_BODY:', JSON.stringify(body))
+        return NextResponse.json({ error: 'Dados inválidos', details: result.error.issues }, { status: 400 })
+    }
 
-        const { data, error } = await (supabaseAdmin
-            .from('produtos') as any)
-            .update(result.data)
-            .eq('id', id)
-            .select()
-            .single()
+    // 3. Update Data (Service Role)
+    const { data, error } = await supabaseAdmin
+        .from('produtos')
+        .update(result.data)
+        .eq('id', params.id)
+        .select()
+        .single()
 
-        if (error) throw error
-
-        return NextResponse.json(data)
-    } catch (error: any) {
-        console.error('Error updating product:', error)
+    if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    const cookieStore = cookies()
-    const { id } = params
-
-    // 1. Verify Auth
-    const authSupabase = createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() { return cookieStore.getAll() },
-                setAll() { }
-            }
-        }
-    )
-
-    const { data: { user } } = await authSupabase.auth.getUser()
-
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (user.user_metadata?.role !== 'admin') {
-        return NextResponse.json({ error: 'Acesso não autorizado' }, { status: 403 })
-    }
-
-    try {
-        const { error } = await supabaseAdmin
-            .from('produtos')
-            .delete()
-            .eq('id', id)
-
-        if (error) throw error
-
-        return new NextResponse(null, { status: 204 })
-    } catch (error: any) {
-        console.error('Error deleting product:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    return NextResponse.json(data)
 }

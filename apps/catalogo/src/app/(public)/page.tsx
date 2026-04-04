@@ -23,7 +23,7 @@ async function getFeaturedProducts(): Promise<ProdutoCatalogo[]> {
             .eq('destaque', true)
             .limit(10)
 
-        if (error || !data) {
+        if (error || !data || data.length === 0) {
             return []
         }
 
@@ -44,9 +44,7 @@ export default async function HomePage() {
 
             <HomeWrapper>
                 <ImmersiveHero />
-                {featuredProducts.length > 0 && (
-                    <FeaturedProducts products={featuredProducts} />
-                )}
+                <FeaturedProducts products={featuredProducts} />
 
                 {/* CTA Ver Todos os Produtos */}
                 <div className="flex justify-center py-12">

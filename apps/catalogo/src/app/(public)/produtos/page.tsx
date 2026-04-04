@@ -21,7 +21,7 @@ async function getAllProducts(): Promise<ProdutoCatalogo[]> {
             .eq('visivel_catalogo', true)
             .order('nome', { ascending: true })
 
-        if (error || !data) {
+        if (error || !data || data.length === 0) {
             return []
         }
 
@@ -35,7 +35,7 @@ async function getAllProducts(): Promise<ProdutoCatalogo[]> {
 
 export const metadata = {
     title: 'Produtos | Mont Massas',
-    description: 'Conheça nossa linha completa de produtos artesanais.',
+    description: 'Conhe\u00E7a nossa linha completa de produtos artesanais.',
 }
 
 export default async function ProdutosPage() {

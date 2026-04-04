@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Plus, Minus, ShoppingCart, Check } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@mont/shared'
+import { useState } from 'react'
 import { useCartStore } from '@/lib/cart/store'
+import { Button } from '@/components/ui'
+import { cn } from '@mont/shared'
 import type { ProdutoCatalogo } from '@mont/shared'
+import { useRouter } from 'next/navigation'
 
 interface AddToCartSectionProps {
     product: ProdutoCatalogo
@@ -14,155 +14,137 @@ interface AddToCartSectionProps {
 
 export default function AddToCartSection({ product, compact = false }: AddToCartSectionProps) {
     const [quantity, setQuantity] = useState(1)
-    const [isAdded, setIsAdded] = useState(false)
+    const [isAdding, setIsAdding] = useState(false)
+    const [isSuccess, setIsSuccess] = useState(false)
     const { addItem } = useCartStore()
 
-    const handleIncrement = () => setQuantity(prev => Math.min(prev + 1, 99))
-    const handleDecrement = () => setQuantity(prev => Math.max(prev - 1, 1))
-
     const handleAddToCart = () => {
+        setIsAdding(true)
         addItem(product, quantity)
-        setIsAdded(true)
-        setTimeout(() => setIsAdded(false), 2000)
+
+        // Feedback visual
+        setTimeout(() => {
+            setIsAdding(false)
+            setIsSuccess(true)
+
+            // Volta ao estado normal após 2 segundos
+            setTimeout(() => {
+                setIsSuccess(false)
+            }, 2000)
+        }, 300)
+    }
+
+    const incrementQuantity = () => {
+        setQuantity(prev => Math.min(prev + 1, 99))
+    }
+
+    const decrementQuantity = () => {
+        setQuantity(prev => Math.max(prev - 1, 1))
     }
 
     if (compact) {
         return (
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center bg-mont-surface rounded-lg p-1">
+            <div className="flex items-center gap-3">
+                {/* Quantity Selector */}
+                <div className="flex items-center bg-mont-surface rounded-lg">
                     <button
-                        onClick={handleDecrement}
-                        className="p-2 hover:text-mont-gold transition-colors"
+                        onClick={decrementQuantity}
+                        className="px-3 py-2 text-mont-espresso hover:bg-mont-gray/10 transition-colors"
                         aria-label="Diminuir quantidade"
                     >
-                        <Minus className="w-5 h-5" />
+                        −
                     </button>
-                    <span className="w-10 text-center font-bold text-mont-espresso">
-                        {quantity}
-                    </span>
+
+                    <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => {
+                            const val = parseInt(e.target.value) || 1
+                            setQuantity(Math.max(1, Math.min(val, 99)))
+                        }}
+                        className="w-12 text-center bg-transparent text-mont-espresso font-medium"
+                        min="1"
+                        max="99"
+                    />
+
                     <button
-                        onClick={handleIncrement}
-                        className="p-2 hover:text-mont-gold transition-colors"
+                        onClick={incrementQuantity}
+                        className="px-3 py-2 text-mont-espresso hover:bg-mont-gray/10 transition-colors"
                         aria-label="Aumentar quantidade"
                     >
-                        <Plus className="w-5 h-5" />
+                        +
                     </button>
                 </div>
 
-                <button
+                {/* Add Button */}
+                <Button
+                    variant={isSuccess ? "secondary" : "primary"}
+                    size="md"
                     onClick={handleAddToCart}
-                    disabled={isAdded}
+                    isLoading={isAdding}
                     className={cn(
-                        "flex-grow py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all duration-300",
-                        isAdded ? "bg-green-500 text-white" : "bg-mont-gold text-white hover:bg-mont-espresso shadow-md"
+                        "flex-1 transition-all duration-300",
+                        isSuccess && "border-green-500 text-green-600 hover:bg-green-50"
                     )}
                 >
-                    <AnimatePresence mode="wait">
-                        {isAdded ? (
-                            <motion.span
-                                key="added"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="flex items-center gap-2"
-                            >
-                                <Check className="w-5 h-5" />
-                                Adicionado!
-                            </motion.span>
-                        ) : (
-                            <motion.span
-                                key="add"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="flex items-center gap-2"
-                            >
-                                <ShoppingCart className="w-5 h-5" />
-                                Comprar Agora
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
-                </button>
+                    {isSuccess ? 'Adicionado! ✓' : 'Adicionar ao Carrinho'}
+                </Button>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-                {/* Quantidade Selector */}
-                <div className="flex items-center bg-mont-surface rounded-xl p-1.5 border border-mont-cream self-stretch sm:self-auto">
-                    <button
-                        onClick={handleDecrement}
-                        className="p-3 text-mont-espresso hover:text-mont-gold transition-colors"
-                        aria-label="Diminuir quantidade"
-                    >
-                        <Minus className="w-6 h-6" />
-                    </button>
-                    <span className="w-14 text-center font-display text-xl text-mont-espresso">
-                        {quantity}
-                    </span>
-                    <button
-                        onClick={handleIncrement}
-                        className="p-3 text-mont-espresso hover:text-mont-gold transition-colors"
-                        aria-label="Aumentar quantidade"
-                    >
-                        <Plus className="w-6 h-6" />
-                    </button>
-                </div>
+        <div className="space-y-4">
+            <div>
+                <label className="block text-mont-gray text-sm mb-2">
+                    Quantidade
+                </label>
 
-                {/* Add to Cart Button */}
-                <button
-                    onClick={handleAddToCart}
-                    disabled={isAdded}
-                    className={cn(
-                        "flex-grow py-4 px-8 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 relative overflow-hidden self-stretch sm:self-auto min-w-[200px]",
-                        isAdded ? "bg-green-500 text-white" : "bg-mont-gold text-white hover:bg-mont-espresso shadow-lg hover:shadow-xl group"
-                    )}
-                >
-                    <AnimatePresence mode="wait">
-                        {isAdded ? (
-                            <motion.span
-                                key="added"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="flex items-center gap-2"
-                            >
-                                <Check className="w-6 h-6" />
-                                Adicionado ao Carrinho!
-                            </motion.span>
-                        ) : (
-                            <motion.span
-                                key="add"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="flex items-center gap-3"
-                            >
-                                <ShoppingCart className="w-6 h-6 transition-transform group-hover:-rotate-12" />
-                                Adicionar ao Carrinho
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center bg-mont-surface rounded-lg">
+                        <button
+                            onClick={decrementQuantity}
+                            className="px-4 py-3 text-mont-espresso hover:bg-mont-gray/10 transition-colors"
+                            aria-label="Diminuir quantidade"
+                        >
+                            −
+                        </button>
+
+                        <input
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value) || 1
+                                setQuantity(Math.max(1, Math.min(val, 99)))
+                            }}
+                            className="w-16 text-center bg-transparent text-mont-espresso font-medium text-lg"
+                            min="1"
+                            max="99"
+                        />
+
+                        <button
+                            onClick={incrementQuantity}
+                            className="px-4 py-3 text-mont-espresso hover:bg-mont-gray/10 transition-colors"
+                            aria-label="Aumentar quantidade"
+                        >
+                            +
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* Badges/Info */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 text-sm text-mont-gray">
-                    <div className="w-8 h-8 rounded-full bg-mont-surface flex items-center justify-center text-mont-gold">
-                        🚚
-                    </div>
-                    <span>Entrega rápida em SP</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-mont-gray">
-                    <div className="w-8 h-8 rounded-full bg-mont-surface flex items-center justify-center text-mont-gold">
-                        🛡️
-                    </div>
-                    <span>Pagamento Seguro</span>
-                </div>
-            </div>
+            <Button
+                variant={isSuccess ? "secondary" : "primary"}
+                size="lg"
+                onClick={handleAddToCart}
+                isLoading={isAdding}
+                className={cn(
+                    "w-full transition-all duration-300",
+                    isSuccess && "border-green-500 text-green-600 hover:bg-green-50"
+                )}
+            >
+                {isSuccess ? 'Adicionado! ✓' : 'Adicionar ao Carrinho'}
+            </Button>
         </div>
     )
 }

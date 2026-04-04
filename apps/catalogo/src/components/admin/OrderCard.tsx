@@ -3,7 +3,6 @@
 
 import { ChevronDown, ChevronUp, Package, Phone, User, Monitor, Store, Trash2 } from 'lucide-react'
 import StatusBadge from './StatusBadge'
-import { formatCurrency } from '@/lib/utils/format'
 
 interface OrderItem {
     id: string
@@ -58,6 +57,12 @@ export default function OrderCard({
         })
     }
 
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(val)
+    }
 
     return (
         <div className={`bg-white rounded-lg border transition-all ${expanded ? 'shadow-md border-mont-gold/50' : 'shadow-sm border-gray-200'}`}>

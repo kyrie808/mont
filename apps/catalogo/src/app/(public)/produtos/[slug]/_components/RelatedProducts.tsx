@@ -1,8 +1,10 @@
 'use client'
 
-import React from 'react'
-import { motion } from 'framer-motion'
-import { ProductCard } from '@/components/catalog'
+import { useRef } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { formatCurrency } from '@/lib/utils/format'
+import { Badge } from '@/components/ui'
 import type { ProdutoCatalogo } from '@mont/shared'
 
 interface RelatedProductsProps {
@@ -10,30 +12,61 @@ interface RelatedProductsProps {
 }
 
 export default function RelatedProducts({ products }: RelatedProductsProps) {
+    const scrollRef = useRef<HTMLDivElement>(null)
+
     if (products.length === 0) return null
 
     return (
-        <section className="mt-24 pt-16 border-t border-mont-surface">
-            <div className="flex items-center justify-between mb-8">
-                <h2 className="font-display text-3xl text-mont-espresso">
-                    Você também pode <span className="italic">gostar</span>
-                </h2>
-                <div className="hidden md:flex gap-2">
-                    {/* Navigation buttons could go here if slider */}
-                </div>
-            </div>
+        <section className="mt-16 mb-8 overflow-hidden">
+            <h2 className="font-display text-2xl text-mont-espresso mb-6">
+                Você também pode gostar
+            </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {products.map((product, index) => (
-                    <motion.div
+            <div
+                ref={scrollRef}
+                className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory touch-pan-x"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+                {products.map(product => (
+                    <Link
                         key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: index * 0.1 }}
+                        href={`/produtos/${product.slug}`}
+                        className="flex-none w-48 snap-start bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                     >
-                        <ProductCard produto={product} />
-                    </motion.div>
+                        <div className="aspect-square bg-mont-surface overflow-hidden">
+                            {product.url_imagem_principal ? (
+                                <div className="relative w-full h-full">
+                                    <Image
+                                        src={product.url_imagem_principal}
+                                        alt={product.nome ?? ''}
+                                        fill
+                                        className="object-cover"
+                                        sizes="(max-width: 768px) 50vw, 192px"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-mont-gray/30">
+                                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-3">
+                            {product.categoria && <Badge variant={product.categoria as any} />}
+                            <p className="text-sm font-medium text-mont-espresso mt-2 leading-tight line-clamp-2">
+                                {product.nome}
+                            </p>
+                            {product.preco_ancoragem && (
+                                <span className="text-sm text-gray-400 line-through">
+                                    {formatCurrency(product.preco_ancoragem)}
+                                </span>
+                            )}
+                            <p className="text-mont-gold font-bold mt-1">
+                                {formatCurrency(product.preco ?? 0)}
+                            </p>
+                        </div>
+                    </Link>
                 ))}
             </div>
         </section>

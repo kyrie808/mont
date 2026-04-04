@@ -1,98 +1,65 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
+import type { CartState, CartItem } from '@/types/cart'
 import type { ProdutoCatalogo } from '@mont/shared'
 
-export interface CartItem {
-    id: string
-    produto: ProdutoCatalogo
-    quantidade: number
-}
-
-interface CartStore {
-    items: CartItem[]
-    isOpen: boolean
-    addItem: (produto: ProdutoCatalogo, quantidade?: number) => void
-    removeItem: (id: string) => void
-    updateQuantity: (id: string, quantidade: number) => void
-    updateQuantidade: (id: string, quantidade: number) => void // Alias
-    clearCart: () => void
-    setIsOpen: (open: boolean) => void
-    toggleCart: () => void
-    getTotalItems: () => number
-    getSubtotal: () => number
-    getTotalPrice: () => number // Alias
-}
-
-export const useCartStore = create<CartStore>()(
+export const useCartStore = create<CartState>()(
     persist(
         (set, get) => ({
             items: [],
-            isOpen: false,
 
-            addItem: (produto, quantidade = 1) => {
-                const id = produto.id!
-                const currentItems = get().items
-                const existingItem = currentItems.find((item) => item.id === id)
+            addItem: (product: ProdutoCatalogo, quantity: number) => {
+                const items = get().items
+                const existingItem = items.find((item) => item.product.id === product.id)
 
                 if (existingItem) {
-                    const updatedItems = currentItems.map((item) =>
-                        item.id === id
-                            ? { ...item, quantidade: item.quantidade + quantidade }
-                            : item
-                    )
-                    set({ items: updatedItems, isOpen: true })
+                    set({
+                        items: items.map((item) =>
+                            item.product.id === product.id
+                                ? { ...item, quantity: item.quantity + quantity }
+                                : item
+                        ),
+                    })
+                } else {
+                    set({ items: [...items, { product, quantity }] })
+                }
+            },
+
+            removeItem: (productId: string) => {
+                set({ items: get().items.filter((item) => item.product.id !== productId) })
+            },
+
+            updateQuantity: (productId: string, quantity: number) => {
+                if (quantity <= 0) {
+                    get().removeItem(productId)
                 } else {
                     set({
-                        items: [...currentItems, { id, produto, quantidade }],
-                        isOpen: true,
+                        items: get().items.map((item) =>
+                            item.product.id === productId ? { ...item, quantity } : item
+                        ),
                     })
                 }
             },
 
-            removeItem: (id) => {
-                set({
-                    items: get().items.filter((item) => item.id !== id),
-                })
+            clearCart: () => {
+                set({ items: [] })
             },
-
-            updateQuantity: (id, quantidade) => {
-                if (quantidade <= 0) {
-                    get().removeItem(id)
-                    return
-                }
-
-                set({
-                    items: get().items.map((item) =>
-                        item.id === id ? { ...item, quantidade } : item
-                    ),
-                })
-            },
-            
-            updateQuantidade: (id, quantidade) => get().updateQuantity(id, quantidade),
-
-            clearCart: () => set({ items: [] }),
-
-            setIsOpen: (isOpen) => set({ isOpen }),
-            toggleCart: () => set({ isOpen: !get().isOpen }),
 
             getTotalItems: () => {
-                return get().items.reduce((total, item) => total + item.quantidade, 0)
+                return get().items.reduce((total, item) => total + item.quantity, 0)
             },
 
-            getSubtotal: () => {
+            getTotalPrice: () => {
                 return get().items.reduce(
-                    (total, item) => total + (item.produto.preco || 0) * item.quantidade,
+                    (total, item) => total + (item.product.preco ?? 0) * item.quantity,
                     0
                 )
             },
-            
-            getTotalPrice: () => get().getSubtotal(),
         }),
         {
-            name: 'mont-massas-cart',
-            storage: createJSONStorage(() => localStorage),
+            name: 'mont-cart-storage',
         }
     )
 )
