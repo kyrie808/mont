@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const deleteImageSchema = z.object({
-    imageUrl: z.url({ error: 'imageUrl deve ser uma URL válida' })
+    imageUrl: z.string().url('imageUrl deve ser uma URL válida')
 })
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

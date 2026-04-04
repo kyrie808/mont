@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // Item de venda
 export const itemVendaSchema = z.object({
-    produto_id: z.uuid(),
+    produto_id: z.string().uuid(),
     quantidade: z.number().min(0.001, 'Quantidade inválida'),
     preco_unitario: z.number().min(0.01, 'Preço inválido'),
     subtotal: z.number(),
@@ -12,7 +12,7 @@ export type ItemVendaFormData = z.infer<typeof itemVendaSchema>
 
 // Venda completa
 export const vendaSchema = z.object({
-    contato_id: z.uuid({ error: 'Selecione um cliente' }),
+    contato_id: z.string().uuid('Selecione um cliente'),
     data: z.string(),
     data_entrega: z.string().optional().nullable(),
     forma_pagamento: z.enum(['pix', 'dinheiro', 'cartao', 'fiado', 'brinde', 'pre_venda']),
@@ -45,7 +45,7 @@ export const vendaFiltrosSchema = z.object({
 export type VendaFiltros = z.infer<typeof vendaFiltrosSchema>
 
 export const pagamentoSchema = z.object({
-    venda_id: z.uuid(),
+    venda_id: z.string().uuid(),
     valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
     data: z.string().refine((val) => {
         const date = new Date(val);
@@ -54,7 +54,7 @@ export const pagamentoSchema = z.object({
         return date <= endOfToday;
     }, 'A data de pagamento não pode ser futura'),
     metodo: z.enum(['pix', 'dinheiro', 'cartao', 'fiado', 'brinde', 'pre_venda']).default('pix'),
-    conta_id: z.uuid({ error: 'Selecione uma conta de destino' }),
+    conta_id: z.string().uuid('Selecione uma conta de destino'),
     observacao: z.string().optional(),
 })
 

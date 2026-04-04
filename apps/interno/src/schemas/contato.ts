@@ -17,7 +17,7 @@ export const contatoSchema = z.object({
     subtipo: z.string().optional().nullable(),
     status: z.enum(['lead', 'cliente', 'inativo', 'fornecedor']),
     origem: z.enum(['direto', 'indicacao', 'catalogo']),
-    indicado_por_id: z.uuid().optional().nullable(),
+    indicado_por_id: z.string().uuid().optional().nullable(),
     endereco: z.string().optional().nullable(),
     cep: z.string().optional().nullable(),
     bairro: z.string().optional().nullable(),

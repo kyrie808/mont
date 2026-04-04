@@ -10,7 +10,7 @@ const orderSchema = z.object({
     delivery_method: z.enum(['entrega', 'retirada']),
     payment_method: z.enum(['pix', 'dinheiro']),
     items: z.array(z.object({
-        product_id: z.uuid(),
+        product_id: z.string().uuid(),
         quantity: z.number().int().positive(),
     })).min(1),
     delivery_fee: z.number().nonnegative().optional(),

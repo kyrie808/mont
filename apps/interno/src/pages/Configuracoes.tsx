@@ -69,9 +69,9 @@ export function Configuracoes() {
             setCicloB2C(config.cicloRecompra.b2c)
             setCicloB2B(config.cicloRecompra.b2b)
             setRecompensaValor(config.recompensaIndicacao.valor)
-            ;(setMensagemRecompra as any)(config.mensagemRecompra)
+            setMensagemRecompra(config.mensagemRecompra)
 
-            (supabase.from('configuracoes') as any)
+            ;(supabase.from('configuracoes') as any)
                 .select('valor')
                 .eq('chave', 'locais_partida')
                 .maybeSingle()
@@ -173,8 +173,8 @@ export function Configuracoes() {
         setCicloB2C(config.cicloRecompra.b2c)
         setCicloB2B(config.cicloRecompra.b2b)
         setRecompensaValor(config.recompensaIndicacao.valor)
-        ;(setMensagemRecompra as any)(config.mensagemRecompra)
-        (supabase.from('configuracoes') as any).select('valor').eq('chave', 'locais_partida').maybeSingle()
+        setMensagemRecompra(config.mensagemRecompra)
+        ;(supabase.from('configuracoes') as any).select('valor').eq('chave', 'locais_partida').maybeSingle()
             .then(({ data }: any) => {
                 if (data?.valor && Array.isArray(data.valor)) {
                     setLocais(data.valor as unknown as LocalPartida[])

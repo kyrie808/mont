@@ -14,7 +14,7 @@ const paymentSchema = z.object({
     amount: z.number().min(0.01, 'Valor deve ser maior que zero'),
     payment_method: z.enum(['pix', 'dinheiro', 'cartao_credito', 'cartao_debito', 'boleto', 'transferencia']),
     payment_date: z.string(),
-    conta_id: z.uuid({ error: 'Selecione uma conta de origem' }),
+    conta_id: z.string().uuid('Selecione uma conta de origem'),
     notes: z.string().optional()
 })
 
