@@ -5,7 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function GET() {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     // 1. Verify Auth
     const authSupabase = createServerClient(

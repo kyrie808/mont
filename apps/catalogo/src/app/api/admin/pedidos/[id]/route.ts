@@ -16,16 +16,17 @@ const updateStatusSchema = z.object({
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!UUID_REGEX.test(params.id)) {
+    const { id } = await params
+    if (!UUID_REGEX.test(id)) {
         return NextResponse.json(
             { error: 'ID inválido' },
             { status: 400 }
         )
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     const authSupabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,7 +63,7 @@ export async function PATCH(
     const { data, error } = await supabaseAdmin
         .from('cat_pedidos')
         .update(patch)
-        .eq('id', params.id)
+        .eq('id', id)
         .select()
         .single()
 
@@ -74,7 +75,7 @@ export async function PATCH(
     const { data: existingVenda, error: idempotenciaError } = await supabaseAdmin
         .from('vendas')
         .select('id')
-        .eq('cat_pedido_id', params.id)
+        .eq('cat_pedido_id', id)
         .maybeSingle()
 
     if (idempotenciaError) {
@@ -104,7 +105,7 @@ export async function PATCH(
         const { error: updateError } = await supabaseAdmin
             .from('vendas')
             .update(vendaUpdate)
-            .eq('cat_pedido_id', params.id)
+            .eq('cat_pedido_id', id)
 
         if (updateError) {
             console.error('VENDA_UPDATE_ERROR:', updateError)
@@ -164,7 +165,7 @@ export async function PATCH(
                 valor_pago: data.status_pagamento === 'pago' ? data.total : 0,
                 taxa_entrega: data.frete,
                 observacoes: data.observacoes || null,
-                cat_pedido_id: params.id,
+                cat_pedido_id: id,
                 data: new Date().toISOString().split('T')[0],
                 contato_id: contatoId,
             })
@@ -176,16 +177,17 @@ export async function PATCH(
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!UUID_REGEX.test(params.id)) {
+    const { id: pedidoId } = await params
+    if (!UUID_REGEX.test(pedidoId)) {
         return NextResponse.json(
             { error: 'ID inválido' },
             { status: 400 }
         )
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     const authSupabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -208,7 +210,7 @@ export async function DELETE(
     const { data: venda } = await supabaseAdmin
         .from('vendas')
         .select('id')
-        .eq('cat_pedido_id', params.id)
+        .eq('cat_pedido_id', pedidoId)
         .maybeSingle()
 
     if (venda) {
@@ -228,13 +230,13 @@ export async function DELETE(
 
     // Sequência de deleção Catálogo:
     // 5. Itens do Pedido (Catálogo)
-    await supabaseAdmin.from('cat_itens_pedido').delete().eq('pedido_id', params.id)
+    await supabaseAdmin.from('cat_itens_pedido').delete().eq('pedido_id', pedidoId)
 
     // 6. O Pedido do Catálogo
     const { error: deleteOrderError } = await supabaseAdmin
         .from('cat_pedidos')
         .delete()
-        .eq('id', params.id)
+        .eq('id', pedidoId)
 
     if (deleteOrderError) {
         return NextResponse.json({ error: deleteOrderError.message }, { status: 500 })

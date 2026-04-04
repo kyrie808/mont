@@ -13,16 +13,17 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!UUID_REGEX.test(params.id)) {
+    const { id } = await params
+    if (!UUID_REGEX.test(id)) {
         return NextResponse.json(
             { error: 'ID inválido' },
             { status: 400 }
         )
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     // 1. Verify Auth
     const authSupabase = createServerClient(
@@ -73,7 +74,7 @@ export async function DELETE(
         await supabaseAdmin
             .from('sis_imagens_produto')
             .select('id')
-            .eq('produto_id', params.id)
+            .eq('produto_id', id)
             .eq('url', imageUrl)
             .single()
 
@@ -117,7 +118,7 @@ export async function DELETE(
     // 6. Só então remove referência do banco
     const { error: dbError } = await supabaseAdmin
         .rpc('delete_image_reference', {
-            p_produto_id: params.id,
+            p_produto_id: id,
             p_image_url: imageUrl
         })
 

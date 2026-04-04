@@ -5,8 +5,8 @@ import { createClient as createBrowserClient } from '@supabase/supabase-js'
 /**
  * Supabase client para Server Components (usa cookies)
  */
-export function createClient() {
-    const cookieStore = cookies()
+export async function createClient() {
+    const cookieStore = await cookies()
 
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,

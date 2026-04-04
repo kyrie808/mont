@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 async function getFeaturedProducts(): Promise<ProdutoCatalogo[]> {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         const { data, error } = await supabase
             .from('vw_catalogo_produtos')

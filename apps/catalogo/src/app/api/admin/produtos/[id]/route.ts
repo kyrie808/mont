@@ -24,16 +24,17 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!UUID_REGEX.test(params.id)) {
+    const { id } = await params
+    if (!UUID_REGEX.test(id)) {
         return NextResponse.json(
             { error: 'ID inválido' },
             { status: 400 }
         )
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     // 1. Verify Auth
     const authSupabase = createServerClient(
@@ -71,7 +72,7 @@ export async function PATCH(
     const { data, error } = await supabaseAdmin
         .from('produtos')
         .update(result.data)
-        .eq('id', params.id)
+        .eq('id', id)
         .select()
         .single()
 

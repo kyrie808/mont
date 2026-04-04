@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 async function getProduct(slug: string): Promise<ProdutoCatalogo | null> {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         const { data, error } = await supabase
             .from('vw_catalogo_produtos')
@@ -35,7 +35,7 @@ async function getProduct(slug: string): Promise<ProdutoCatalogo | null> {
 
 async function getRelatedProducts(category: string, currentId: string): Promise<ProdutoCatalogo[]> {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         const { data, error } = await supabase
             .from('vw_catalogo_produtos')
@@ -60,8 +60,9 @@ async function getRelatedProducts(category: string, currentId: string): Promise<
     }
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-    const product = await getProduct(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
+    const product = await getProduct(slug)
 
     if (!product) {
         return {
@@ -75,8 +76,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
 }
 
-export default async function ProdutoPage({ params }: { params: { slug: string } }) {
-    const product = await getProduct(params.slug)
+export default async function ProdutoPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
+    const product = await getProduct(slug)
 
     if (!product) {
         notFound()
