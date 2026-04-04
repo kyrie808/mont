@@ -38,7 +38,7 @@ export default async function AdminDashboard() {
     }
 
     const kpis = data || {
-        faturamento_hoje_cents: 0,
+        faturamento_hoje: 0,
         pedidos_pendentes: 0,
         produtos_ativos: 0,
         produtos_estoque_baixo: 0,
@@ -64,7 +64,7 @@ export default async function AdminDashboard() {
                 <DashboardCard
                     title="Faturamento"
                     value={faturamentoFormatter.format(
-                        (kpis.faturamento_hoje_cents || 0) / 100
+                        kpis.faturamento_hoje || 0
                     )}
                     icon={DollarSign}
                     color="gold"

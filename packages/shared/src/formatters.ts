@@ -1,13 +1,12 @@
 /**
  * Formatar valor em moeda brasileira (BRL)
- * Aceita valor em reais (padrão) ou centavos
+ * Trabalha exclusivamente com numérico em reais (R$)
  */
-export function formatCurrency(value: number, fromCents = false): string {
-    const amount = fromCents ? value / 100 : value
+export function formatCurrency(value: number): string {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-    }).format(amount)
+    }).format(value)
 }
 
 /**

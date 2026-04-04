@@ -22,15 +22,15 @@ const paymentMethodLabels = {
 export function generateWhatsAppMessage(
     formData: CheckoutFormData,
     items: CartItem[],
-    subtotalCents: number,
-    deliveryFeeCents: number,
-    totalCents: number
+    subtotal: number,
+    deliveryFee: number,
+    total: number
 ): string {
-    const formatCurrency = (cents: number) => {
+    const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
-        }).format(cents / 100)
+        }).format(value)
     }
 
     // Header
@@ -51,22 +51,22 @@ export function generateWhatsAppMessage(
     // Itens
     message += '*Itens:*\n'
     items.forEach(item => {
-        const itemTotal = item.product.price_cents * item.quantity
+        const itemTotal = item.product.price * item.quantity
         message += `▸ ${item.product.name} × ${item.quantity} — ${formatCurrency(itemTotal)}\n`
     })
 
     message += '\n━━━━━━━━━━━━━━━━\n\n'
 
     // Totais
-    message += `*Subtotal:* ${formatCurrency(subtotalCents)}\n`
+    message += `*Subtotal:* ${formatCurrency(subtotal)}\n`
 
     if (formData.delivery_method === 'entrega') {
-        message += deliveryFeeCents === 0
+        message += deliveryFee === 0
             ? '*Entrega:* Grátis (SBC)\n'
-            : `*Entrega:* ${formatCurrency(deliveryFeeCents)}\n`
+            : `*Entrega:* ${formatCurrency(deliveryFee)}\n`
     }
 
-    message += `*Total:* ${formatCurrency(totalCents)}\n`
+    message += `*Total:* ${formatCurrency(total)}\n`
     message += `*Pagamento:* ${paymentMethodLabels[formData.payment_method]}\n`
 
     // Informações adicionais

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useRef, useEffect } from 'react'
 import Link from 'next/link'
@@ -16,8 +16,8 @@ interface ProductCardProps {
     slug: string
     category: 'congelado' | 'refrigerado' | 'combo'
     subtitle?: string | null
-    price_cents: number
-    anchor_price_cents?: number | null
+    price: number
+    anchor_price?: number | null
     image_url?: string | null
     is_featured?: boolean
     index?: number
@@ -30,8 +30,8 @@ export function ProductCard({
     slug,
     category,
     subtitle,
-    price_cents,
-    anchor_price_cents,
+    price,
+    anchor_price,
     image_url,
     is_featured,
     index,
@@ -50,7 +50,7 @@ export function ProductCard({
     const formattedPrice = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
-    }).format(price_cents / 100)
+    }).format(price)
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -69,11 +69,11 @@ export function ProductCard({
             slug,
             category,
             subtitle,
-            price_cents,
+            price,
             primary_image_url: image_url ?? null,
             is_featured: is_featured ?? false,
             description: null,
-            cost_cents: null,
+            cost: null,
             stock_quantity: 0,
             stock_min_alert: 0,
             is_active: true,
@@ -156,9 +156,9 @@ export function ProductCard({
                             {subtitle}
                         </p>
                     )}
-                    {anchor_price_cents && (
+                    {anchor_price && (
                         <span className="text-sm text-gray-400 line-through">
-                            R$ {(anchor_price_cents / 100).toFixed(2).replace('.', ',')}
+                            R$ {anchor_price.toFixed(2).replace('.', ',')}
                         </span>
                     )}
                     <p className="font-bold text-base text-mont-gold mt-1">

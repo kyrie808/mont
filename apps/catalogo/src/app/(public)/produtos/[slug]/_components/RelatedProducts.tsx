@@ -57,13 +57,13 @@ export default function RelatedProducts({ products }: RelatedProductsProps) {
                             <p className="text-sm font-medium text-mont-espresso mt-2 leading-tight line-clamp-2">
                                 {product.name}
                             </p>
-                            {product.anchor_price_cents && (
-                                <p className="text-xs text-mont-gray line-through mt-1">
-                                    {formatCurrency(product.anchor_price_cents)}
-                                </p>
+                            {product.anchor_price && (
+                                <span className="text-sm text-gray-400 line-through">
+                                    {formatCurrency(product.anchor_price)}
+                                </span>
                             )}
                             <p className="text-mont-gold font-bold mt-1">
-                                {formatCurrency(product.price_cents)}
+                                {formatCurrency(product.price)}
                             </p>
                         </div>
                     </Link>

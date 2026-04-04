@@ -90,8 +90,8 @@ export default function ProductCatalog({ products }: ProductCatalogProps) {
                             slug={product.slug}
                             category={product.category}
                             subtitle={product.subtitle}
-                            price_cents={product.price_cents}
-                            anchor_price_cents={product.anchor_price_cents}
+                            price={product.price}
+                            anchor_price={product.anchor_price}
                             is_featured={product.is_featured}
                             image_url={product.primary_image_url || product.image_url}
                             index={index}

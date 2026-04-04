@@ -105,8 +105,8 @@ export default function FeaturedProducts({ products }: FeaturedProductsProps) {
                                         slug={product.slug}
                                         category={product.category}
                                         subtitle={product.subtitle}
-                                        price_cents={product.price_cents}
-                                        anchor_price_cents={product.anchor_price_cents}
+                                        price={product.price}
+                                        anchor_price={product.anchor_price}
                                         image_url={product.primary_image_url}
                                         is_featured={index === 0}
                                         index={index}

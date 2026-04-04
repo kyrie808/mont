@@ -95,7 +95,7 @@ export async function PATCH(
 
         if (data.status_pagamento === 'pago') {
             vendaUpdate.pago = true
-            vendaUpdate.valor_pago = data.total_centavos / 100
+            vendaUpdate.valor_pago = data.total
         } else {
             vendaUpdate.pago = false
             vendaUpdate.valor_pago = 0
@@ -158,11 +158,11 @@ export async function PATCH(
             .insert({
                 origem: 'catalogo',
                 status: data.status === 'entregue' ? 'entregue' : (data.status === 'cancelado' ? 'cancelada' : 'pendente'),
-                total: data.total_centavos / 100,
+                total: data.total,
                 forma_pagamento: data.metodo_pagamento,
                 pago: data.status_pagamento === 'pago',
-                valor_pago: data.status_pagamento === 'pago' ? data.total_centavos / 100 : 0,
-                taxa_entrega: data.frete_centavos / 100,
+                valor_pago: data.status_pagamento === 'pago' ? data.total : 0,
+                taxa_entrega: data.frete,
                 observacoes: data.observacoes || null,
                 cat_pedido_id: params.id,
                 data: new Date().toISOString().split('T')[0],

@@ -13,7 +13,7 @@ const orderSchema = z.object({
         product_id: z.string().uuid(),
         quantity: z.number().int().positive(),
     })).min(1),
-    delivery_fee_cents: z.number().int().nonnegative().optional(),
+    delivery_fee: z.number().nonnegative().optional(),
     referred_by: z.string().optional(),
     notes: z.string().optional(),
     customer_cep: z.string().nullable().optional(),
@@ -66,26 +66,26 @@ export async function POST(request: Request) {
             }
         }
 
-        // Recalcular preços a partir do banco
+        // Recalcular preços a partir do banco (REAIS)
         const itemsComPreco = validatedData.items.map(item => {
             const produto = produtoMap.get(item.product_id)!
-            const unit_price_cents = Math.round(Number(produto.preco) * 100)
+            const unit_price = Number(produto.preco)
             return {
                 product_id: item.product_id,
                 product_name: produto.nome,
                 quantity: item.quantity,
-                unit_price_cents,
-                total_centavos: unit_price_cents * item.quantity,
+                unit_price,
+                total: unit_price * item.quantity,
             }
         })
 
-        const subtotal_cents = itemsComPreco.reduce(
-            (acc, i) => acc + i.total_centavos, 0
+        const subtotal = itemsComPreco.reduce(
+            (acc, i) => acc + i.total, 0
         )
         // Server-side: força o frete correto — ignora valor enviado pelo cliente
         // Entrega SBC = grátis; retirada = sem frete
-        const delivery_fee_cents = 0
-        const total_cents = subtotal_cents + delivery_fee_cents
+        const frete = 0
+        const total = subtotal + frete
 
         // Inserir pedido + itens via RPC (transação atômica)
         const { data: pedidoCriado, error: rpcError } = await supabaseAdmin
@@ -95,9 +95,9 @@ export async function POST(request: Request) {
                 p_endereco_entrega: validatedData.customer_address || null,
                 p_metodo_entrega: validatedData.delivery_method,
                 p_metodo_pagamento: validatedData.payment_method,
-                p_subtotal_centavos: subtotal_cents,
-                p_frete_centavos: delivery_fee_cents,
-                p_total_centavos: total_cents,
+                p_subtotal: subtotal,
+                p_frete: frete,
+                p_total: total,
                 p_observacoes: validatedData.notes || null,
                 p_indicado_por: validatedData.referred_by || null,
                 p_itens: itemsComPreco,

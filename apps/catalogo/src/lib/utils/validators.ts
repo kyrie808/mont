@@ -5,7 +5,7 @@ export const productSchema = z.object({
     description: z.string().optional(),
     category: z.enum(['congelado', 'refrigerado']),
     subtitle: z.string().optional(),
-    price_cents: z.number().int().positive('Preço deve ser positivo'),
+    price: z.number().positive('Preço deve ser positivo'),
     stock_quantity: z.number().int().nonnegative('Estoque não pode ser negativo'),
 })
 

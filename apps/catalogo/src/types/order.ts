@@ -6,9 +6,9 @@ export interface Order {
     customer_address: string | null
     delivery_method: 'entrega' | 'retirada'
     status: 'pendente' | 'confirmado' | 'preparando' | 'enviado' | 'entregue' | 'cancelado'
-    subtotal_cents: number
-    delivery_fee_cents: number
-    total_cents: number
+    subtotal: number
+    delivery_fee: number
+    total: number
     payment_method: 'pix' | 'dinheiro' | 'cartao' | 'fiado'
     payment_status: 'pendente' | 'pago' | 'parcial'
     notes: string | null
@@ -23,8 +23,8 @@ export interface OrderItem {
     product_id: string
     product_name: string
     quantity: number
-    unit_price_cents: number
-    total_cents: number
+    unit_price: number
+    total: number
 }
 
 export interface OrderWithItems extends Order {

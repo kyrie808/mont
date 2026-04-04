@@ -11,8 +11,8 @@ export interface ProdutoDatabase {
     descricao: string | null
     category: 'congelado' | 'refrigerado' | 'combo' // Vem da view
     subtitle?: string | null // Vem da view
-    price_cents: number // Vem da view
-    anchor_price_cents?: number | string | null // Vem da view
+    price: number // Vem da view
+    anchor_price?: number | string | null // Vem da view
     price_formatted: string // Vem da view
     estoque_atual: number | null
     estoque_minimo: number | null
@@ -37,11 +37,11 @@ export function mapProdutoToProduct(produto: ProdutoDatabase): Product {
         description: produto.descricao,
         category: produto.category,
         subtitle: produto.subtitle || null,
-        price_cents: produto.price_cents,
-        anchor_price_cents: produto.anchor_price_cents
-            ? Number(produto.anchor_price_cents)
+        price: produto.price,
+        anchor_price: produto.anchor_price
+            ? Number(produto.anchor_price)
             : null,
-        cost_cents: 0, // Não vem da view pública por segurança
+        cost: 0, // Não vem da view pública por segurança
         stock_quantity: produto.estoque_atual || 0,
         stock_min_alert: produto.estoque_minimo || 5,
         is_active: produto.ativo,
@@ -67,8 +67,8 @@ export const MOCK_PRODUCTS: Product[] = [
         description: 'Chipa artesanal congelada, pronta para assar. Receita tradicional paraguaia com queijo de primeira qualidade.',
         category: 'congelado',
         subtitle: '2kg',
-        price_cents: 6000,
-        cost_cents: 3300,
+        price: 6000,
+        cost: 3300,
         stock_quantity: 20,
         stock_min_alert: 5,
         is_active: true,
@@ -87,8 +87,8 @@ export const MOCK_PRODUCTS: Product[] = [
         description: 'Palitos de queijo crocantes, congelados e prontos para fritar. Perfeitos para festas e lanches.',
         category: 'congelado',
         subtitle: '2kg',
-        price_cents: 6000,
-        cost_cents: 3300,
+        price: 6000,
+        cost: 3300,
         stock_quantity: 15,
         stock_min_alert: 5,
         is_active: true,
@@ -107,8 +107,8 @@ export const MOCK_PRODUCTS: Product[] = [
         description: 'Pão de queijo mineiro tradicional, congelado e pronto para assar. Massa leve e saborosa.',
         category: 'congelado',
         subtitle: '1kg',
-        price_cents: 2500,
-        cost_cents: 1300,
+        price: 2500,
+        cost: 1300,
         stock_quantity: 30,
         stock_min_alert: 5,
         is_active: true,
@@ -127,8 +127,8 @@ export const MOCK_PRODUCTS: Product[] = [
         description: 'Pão de queijo mineiro tradicional, congelado e pronto para assar. Embalagem econômica.',
         category: 'congelado',
         subtitle: '2kg',
-        price_cents: 5000,
-        cost_cents: 2600,
+        price: 5000,
+        cost: 2600,
         stock_quantity: 25,
         stock_min_alert: 5,
         is_active: true,
@@ -147,8 +147,8 @@ export const MOCK_PRODUCTS: Product[] = [
         description: 'Massa fresca de pão de queijo refrigerada, pronta para modelar e assar.',
         category: 'refrigerado',
         subtitle: '1kg',
-        price_cents: 2500,
-        cost_cents: 1300,
+        price: 2500,
+        cost: 1300,
         stock_quantity: 10,
         stock_min_alert: 5,
         is_active: true,
@@ -167,8 +167,8 @@ export const MOCK_PRODUCTS: Product[] = [
         description: 'Massa fresca de pão de queijo refrigerada em embalagem econômica.',
         category: 'refrigerado',
         subtitle: '4kg',
-        price_cents: 6500,
-        cost_cents: 4100,
+        price: 6500,
+        cost: 4100,
         stock_quantity: 8,
         stock_min_alert: 5,
         is_active: true,

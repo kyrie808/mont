@@ -16,7 +16,7 @@ export function useCatalogoPendentes() {
         .from('cat_pedidos_pendentes_vinculacao')
         .select(`
           id, cat_pedido_id, motivo_falha, criado_em,
-          cat_pedidos (id, numero_pedido, nome_cliente, telefone_cliente, endereco_entrega, metodo_entrega, status, subtotal_centavos, frete_centavos, total_centavos, metodo_pagamento, status_pagamento, observacoes, indicado_por, criado_em, atualizado_em, contato_id)
+          cat_pedidos (id, numero_pedido, nome_cliente, telefone_cliente, endereco_entrega, metodo_entrega, status, subtotal, frete, total, metodo_pagamento, status_pagamento, observacoes, indicado_por, criado_em, atualizado_em, contato_id)
         `)
         .order('criado_em', { ascending: false })
 
@@ -39,7 +39,7 @@ export function useCatalogoPendentes() {
       // 1. Buscar dados do pedido
       const { data: pedido, error: errPed } = await supabase
         .from('cat_pedidos')
-        .select('id, numero_pedido, nome_cliente, telefone_cliente, endereco_entrega, metodo_entrega, status, subtotal_centavos, frete_centavos, total_centavos, metodo_pagamento, status_pagamento, observacoes, indicado_por, criado_em, atualizado_em, contato_id')
+        .select('id, numero_pedido, nome_cliente, telefone_cliente, endereco_entrega, metodo_entrega, status, subtotal, frete, total, metodo_pagamento, status_pagamento, observacoes, indicado_por, criado_em, atualizado_em, contato_id')
         .eq('id', catPedidoId)
         .single()
 
@@ -51,14 +51,14 @@ export function useCatalogoPendentes() {
         .insert({
           contato_id: contatoId,
           data: pedido.criado_em ? new Date(pedido.criado_em).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          total: pedido.total_centavos / 100,
+          total: pedido.total || 0,
           forma_pagamento: pedido.metodo_pagamento || 'pix',
           status: 'entregue',
           pago: true,
           origem: 'catalogo',
           cat_pedido_id: pedido.id,
           observacoes: `Pedido Catálogo #${pedido.numero_pedido}${pedido.observacoes ? '\n' + pedido.observacoes : ''}`,
-          taxa_entrega: (pedido.frete_centavos || 0) / 100
+          taxa_entrega: pedido.frete || 0
         })
 
       if (errVenda) throw errVenda

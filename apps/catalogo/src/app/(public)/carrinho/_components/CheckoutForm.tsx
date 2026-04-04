@@ -23,9 +23,9 @@ interface CheckoutFormProps {
     cepDisplayValue: string
     onCepChange: (e: React.ChangeEvent<HTMLInputElement>) => void
     loadingCep: boolean
-    subtotalCents: number
-    deliveryFeeCents: number
-    totalCents: number
+    subtotal: number
+    deliveryFee: number
+    total: number
 }
 
 export default function CheckoutForm({
@@ -37,9 +37,9 @@ export default function CheckoutForm({
     cepDisplayValue,
     onCepChange,
     loadingCep,
-    subtotalCents,
-    deliveryFeeCents,
-    totalCents,
+    subtotal,
+    deliveryFee,
+    total,
 }: CheckoutFormProps) {
     const { register, handleSubmit, formState: { errors }, watch } = form
     const deliveryMethod = watch('delivery_method')
@@ -233,9 +233,9 @@ export default function CheckoutForm({
 
                 {/* Resumo */}
                 <OrderSummary
-                    subtotal={subtotalCents}
-                    frete={deliveryFeeCents}
-                    total={totalCents}
+                    subtotal={subtotal}
+                    frete={deliveryFee}
+                    total={total}
                     deliveryMethod={deliveryMethod}
                     formatCurrency={formatCurrency}
                 />

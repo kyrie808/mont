@@ -51,9 +51,9 @@ export default function CarrinhoPage() {
 
     const deliveryMethod = watch('delivery_method')
     const cepValue = watch('cep')
-    const subtotalCents = getTotalPrice()
-    const deliveryFeeCents = deliveryMethod === 'entrega' ? DELIVERY_CONFIG.SBC_FEE_CENTS : 0
-    const totalCents = subtotalCents + deliveryFeeCents
+    const subtotal = getTotalPrice()
+    const deliveryFee = deliveryMethod === 'entrega' ? DELIVERY_CONFIG.SBC_FEE : 0
+    const total = subtotal + deliveryFee
 
     // Dispara busca ao completar 8 dígitos — mesmo padrão do ContatoFormModal.tsx
     useEffect(() => {
@@ -99,7 +99,7 @@ export default function CarrinhoPage() {
                     product_id: item.product.id,
                     quantity: item.quantity,
                 })),
-                delivery_fee_cents: deliveryFeeCents,
+                delivery_fee: deliveryFee,
                 referred_by: data.referred_by,
                 notes: data.notes,
                 customer_cep: data.cep || null,
@@ -126,9 +126,9 @@ export default function CarrinhoPage() {
             const message = generateWhatsAppMessage(
                 { ...data, customer_address: customer_address || '' },
                 items,
-                subtotalCents,
-                deliveryFeeCents,
-                totalCents
+                subtotal,
+                deliveryFee,
+                total
             )
 
             const whatsappUrl = generateWhatsAppUrl(message)
@@ -213,9 +213,9 @@ export default function CarrinhoPage() {
                                 form.setValue('cep', masked)
                             }}
                             loadingCep={loadingCep}
-                            subtotalCents={subtotalCents}
-                            deliveryFeeCents={deliveryFeeCents}
-                            totalCents={totalCents}
+                            subtotal={subtotal}
+                            deliveryFee={deliveryFee}
+                            total={total}
                         />
                     </div>
                 </div>

@@ -37,8 +37,8 @@ export async function GET() {
       cat_itens_pedido (
         id,
         quantidade,
-        preco_unitario_centavos,
-        total_centavos,
+        preco_unitario,
+        total,
         produto: produto_id (
           nome
         )

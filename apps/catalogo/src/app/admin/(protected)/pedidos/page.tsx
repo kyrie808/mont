@@ -11,7 +11,7 @@ interface OrderItem {
     id: string
     quantidade: number
     preco_unitario: number
-    total_centavos: number
+    total: number
     produto: {
         nome: string
     }
@@ -22,7 +22,7 @@ interface Order {
     numero_pedido: number
     nome_cliente: string
     telefone_cliente: string
-    total_centavos: number
+    total: number
     status: string
     status_pagamento: string
     criado_em: string

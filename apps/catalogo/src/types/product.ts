@@ -37,9 +37,9 @@ export interface Product {
     description: string | null
     category: 'congelado' | 'refrigerado' | 'combo'
     subtitle?: string | null
-    price_cents: number
-    anchor_price_cents?: number | null
-    cost_cents: number | null
+    price: number
+    anchor_price?: number | null
+    cost: number | null
     stock_quantity: number
     stock_min_alert: number
     is_active: boolean

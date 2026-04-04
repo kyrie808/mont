@@ -1,0 +1,62 @@
+type Table<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+type View<T extends keyof Database['public']['Views']> = Database['public']['Views'][T]['Row']
+export type Insert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']
+export type Update<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
+
+export type Conta = Table<'contas'>
+export type PlanoConta = Table<'plano_de_contas'>
+export type Lancamento = Table<'lancamentos'>
+export type ExtratoItem = View<'view_extrato_mensal'>
+export type FluxoResumo = View<'view_fluxo_resumo'>
+
+export type Venda = Table<'vendas'>
+export type Contato = Table<'contatos'>
+export type Produto = Table<'produtos'>
+export type ItemVenda = Table<'itens_venda'>
+export type PagamentoVenda = Table<'pagamentos_venda'>
+
+export type PurchaseOrder = Table<'purchase_orders'>
+export type PurchaseOrderItem = Table<'purchase_order_items'>
+export type PurchaseOrderPayment = Table<'purchase_order_payments'>
+
+export type ContaAPagar = Table<'contas_a_pagar'>
+export type PagamentoContaAPagar = Table<'pagamentos_conta_a_pagar'>
+
+export type VendaInsert = Insert<'vendas'>
+export type VendaUpdate = Update<'vendas'>
+export type ContatoInsert = Insert<'contatos'>
+export type ContatoUpdate = Update<'contatos'>
+export type ProdutoInsert = Insert<'produtos'>
+export type ProdutoUpdate = Update<'produtos'>
+export type ItemVendaInsert = Insert<'itens_venda'>
+
+export interface VendaComItens extends Venda {
+  itens: (ItemVenda & {
+    produto?: {
+      id: string
+      nome: string
+      codigo: string
+    }
+  })[]
+  contato?: {
+    id: string
+    nome: string
+    telefone: string
+    origem: string
+    indicado_por_id?: string | null
+    indicador?: {
+      id: string
+      nome: string
+    } | null
+    status: string
+  }
+  pagamentos?: PagamentoVenda[]
+}
+
+export interface PurchaseOrderWithItems extends PurchaseOrder {
+  fornecedor: { nome: string }
+  items: (PurchaseOrderItem & {
+    product: Produto
+  })[]
+  payments: PurchaseOrderPayment[]
+}

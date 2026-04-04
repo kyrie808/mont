@@ -8,7 +8,7 @@ interface OrderItem {
     id: string
     quantidade: number
     preco_unitario: number
-    total_centavos: number
+    total: number
     produto: {
         nome: string
     }
@@ -19,7 +19,7 @@ interface Order {
     numero_pedido: number
     nome_cliente: string
     telefone_cliente: string
-    total_centavos: number
+    total: number
     status: string
     status_pagamento: string
     criado_em: string
@@ -61,7 +61,7 @@ export default function OrderCard({
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
-        }).format(val / 100)
+        }).format(val)
     }
 
     return (
@@ -100,7 +100,7 @@ export default function OrderCard({
 
                     <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-lg text-mont-gold">
-                            {formatCurrency(order.total_centavos)}
+                            {formatCurrency(order.total)}
                         </span>
                         {expanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
                     </div>
@@ -174,7 +174,7 @@ export default function OrderCard({
                                     </span>
                                 </div>
                                 <div className="font-mono text-gray-600 text-xs">
-                                    {formatCurrency(item.total_centavos)}
+                                    {formatCurrency(item.total)}
                                 </div>
                             </div>
                         )) || <p className="text-xs text-gray-400 italic">Carregando itens...</p>}

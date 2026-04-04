@@ -1,4 +1,4 @@
-﻿
+
 import { useNavigate } from 'react-router-dom'
 import { Package } from 'lucide-react'
 import { useCatalogOrders } from '../../../../hooks/useCatalogOrders'
@@ -46,7 +46,7 @@ function CatalogOrderCard({ pedido, onView }: CatalogOrderCardProps) {
                 </div>
                 <div className="flex flex-col items-end">
                     <span className="text-lg font-bold text-foreground tabular-nums">
-                        {formatCurrency(pedido.totalCentavos / 100)}
+                        {formatCurrency(pedido.total)}
                     </span>
                     <span className={cn("text-[10px] font-bold uppercase", payColors[pedido.statusPagamento] || "text-gray-500")}>
                         Pagamento: {pedido.statusPagamento}

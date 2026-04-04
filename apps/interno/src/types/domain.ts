@@ -185,8 +185,8 @@ export interface DomainCatalogOrderItem {
     produtoId?: string | null
     nomeProduto: string
     quantidade: number
-    precoUnitarioCentavos: number
-    totalCentavos: number
+    precoUnitario: number
+    total: number
 }
 
 export interface DomainCatalogOrder {
@@ -197,9 +197,9 @@ export interface DomainCatalogOrder {
     enderecoEntrega?: string | null
     metodoEntrega?: 'entrega' | 'retirada' | null
     status: CatalogOrderStatus
-    subtotalCentavos: number
-    freteCentavos: number
-    totalCentavos: number
+    subtotal: number
+    frete: number
+    total: number
     metodoPagamento?: PagamentoMetodo | null
     statusPagamento: CatalogPaymentStatus
     observacoes?: string | null

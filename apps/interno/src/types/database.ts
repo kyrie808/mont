@@ -105,28 +105,28 @@ export type Database = {
           id: string
           nome_produto: string
           pedido_id: string | null
-          preco_unitario_centavos: number
+          preco_unitario: number | null
           produto_id: string | null
           quantidade: number
-          total_centavos: number
+          total: number | null
         }
         Insert: {
           id?: string
           nome_produto: string
           pedido_id?: string | null
-          preco_unitario_centavos: number
+          preco_unitario?: number | null
           produto_id?: string | null
           quantidade: number
-          total_centavos: number
+          total?: number | null
         }
         Update: {
           id?: string
           nome_produto?: string
           pedido_id?: string | null
-          preco_unitario_centavos?: number
+          preco_unitario?: number | null
           produto_id?: string | null
           quantidade?: number
-          total_centavos?: number
+          total?: number | null
         }
         Relationships: [
           {
@@ -172,7 +172,7 @@ export type Database = {
           contato_id: string | null
           criado_em: string | null
           endereco_entrega: string | null
-          frete_centavos: number | null
+          frete: number | null
           id: string
           indicado_por: string | null
           metodo_entrega: string | null
@@ -182,16 +182,16 @@ export type Database = {
           observacoes: string | null
           status: string | null
           status_pagamento: string | null
-          subtotal_centavos: number
+          subtotal: number | null
           telefone_cliente: string
-          total_centavos: number
+          total: number | null
         }
         Insert: {
           atualizado_em?: string | null
           contato_id?: string | null
           criado_em?: string | null
           endereco_entrega?: string | null
-          frete_centavos?: number | null
+          frete?: number | null
           id?: string
           indicado_por?: string | null
           metodo_entrega?: string | null
@@ -201,16 +201,16 @@ export type Database = {
           observacoes?: string | null
           status?: string | null
           status_pagamento?: string | null
-          subtotal_centavos: number
+          subtotal?: number | null
           telefone_cliente: string
-          total_centavos: number
+          total?: number | null
         }
         Update: {
           atualizado_em?: string | null
           contato_id?: string | null
           criado_em?: string | null
           endereco_entrega?: string | null
-          frete_centavos?: number | null
+          frete?: number | null
           id?: string
           indicado_por?: string | null
           metodo_entrega?: string | null
@@ -220,9 +220,9 @@ export type Database = {
           observacoes?: string | null
           status?: string | null
           status_pagamento?: string | null
-          subtotal_centavos?: number
+          subtotal?: number | null
           telefone_cliente?: string
-          total_centavos?: number
+          total?: number | null
         }
         Relationships: [
           {
@@ -1594,8 +1594,8 @@ export type Database = {
       }
       vw_admin_dashboard: {
         Row: {
-          faturamento_hoje_cents: number | null
-          faturamento_mes_cents: number | null
+          faturamento_hoje: number | null
+          faturamento_mes: number | null
           pedidos_pendentes: number | null
           produtos_ativos: number | null
           produtos_estoque_baixo: number | null
@@ -1606,7 +1606,7 @@ export type Database = {
       }
       vw_catalogo_produtos: {
         Row: {
-          anchor_price_cents: number | null
+          anchor_price: number | null
           category: string | null
           codigo: string | null
           descricao: string | null
@@ -1616,7 +1616,7 @@ export type Database = {
           is_active: boolean | null
           is_featured: boolean | null
           nome: string | null
-          price_cents: number | null
+          price: number | null
           price_formatted: string | null
           primary_image_url: string | null
           slug: string | null
@@ -1626,7 +1626,7 @@ export type Database = {
           subtitle: string | null
         }
         Insert: {
-          anchor_price_cents?: never
+          anchor_price?: number | null
           category?: string | null
           codigo?: string | null
           descricao?: string | null
@@ -1636,7 +1636,7 @@ export type Database = {
           is_active?: boolean | null
           is_featured?: boolean | null
           nome?: string | null
-          price_cents?: never
+          price?: number | null
           price_formatted?: never
           primary_image_url?: never
           slug?: string | null
@@ -1646,7 +1646,7 @@ export type Database = {
           subtitle?: string | null
         }
         Update: {
-          anchor_price_cents?: never
+          anchor_price?: number | null
           category?: string | null
           codigo?: string | null
           descricao?: string | null
@@ -1656,7 +1656,7 @@ export type Database = {
           is_active?: boolean | null
           is_featured?: boolean | null
           nome?: string | null
-          price_cents?: never
+          price?: number | null
           price_formatted?: never
           primary_image_url?: never
           slug?: string | null
@@ -1671,15 +1671,15 @@ export type Database = {
         Row: {
           data_venda: string | null
           entregas_count: number | null
-          faturamento_cents: number | null
-          faturamento_direto_cents: number | null
-          faturamento_online_cents: number | null
+          faturamento: number | null
+          faturamento_direto: number | null
+          faturamento_online: number | null
           mes_iso: string | null
           pedidos_diretos: number | null
           pedidos_online: number | null
           retiradas_count: number | null
           semana_iso: string | null
-          ticket_medio_cents: number | null
+          ticket_medio: number | null
           total_pedidos: number | null
         }
         Relationships: []
@@ -1705,17 +1705,24 @@ export type Database = {
       }
       criar_pedido: {
         Args: {
+          p_bairro?: string
+          p_cep?: string
+          p_cidade?: string
+          p_complemento?: string
           p_endereco_entrega: string
-          p_frete_centavos: number
+          p_frete: number
           p_indicado_por?: string
           p_itens?: Json
+          p_logradouro?: string
           p_metodo_entrega: string
           p_metodo_pagamento: string
           p_nome_cliente: string
+          p_numero?: string
           p_observacoes?: string
-          p_subtotal_centavos: number
+          p_subtotal: number
           p_telefone_cliente: string
-          p_total_centavos: number
+          p_total: number
+          p_uf?: string
         }
         Returns: Json
       }
@@ -1958,7 +1965,6 @@ export const Constants = {
     },
   },
 } as const
-
 type Table<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 type View<T extends keyof Database['public']['Views']> = Database['public']['Views'][T]['Row']
 export type Insert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']

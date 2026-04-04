@@ -23,7 +23,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
     const priceFormatted = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-    }).format(product.price_cents / 100);
+    }).format(product.price);
 
     const weightFormatted = product.subtitle || '';
 

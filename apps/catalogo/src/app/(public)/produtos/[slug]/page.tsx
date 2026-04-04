@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     return {
         title: `${product.name} | Mont Distribuidora`,
-        description: product.description || `Compre ${product.name} - ${product.subtitle} por ${formatCurrency(product.price_cents)}`,
+        description: product.description || `Compre ${product.name} - ${product.subtitle} por ${formatCurrency(product.price)}`,
     }
 }
 
@@ -135,13 +135,13 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
                                 </p>
 
                                 <div className="mb-8">
-                                    {product.anchor_price_cents && (
-                                        <span className="text-mont-gray line-through text-xl mr-3">
-                                            {formatCurrency(product.anchor_price_cents)}
+                                    {product.anchor_price && (
+                                        <span className="text-lg text-gray-400 line-through">
+                                            {formatCurrency(product.anchor_price)}
                                         </span>
                                     )}
                                     <div className="text-4xl font-bold text-mont-gold">
-                                        {formatCurrency(product.price_cents)}
+                                        {formatCurrency(product.price)}
                                     </div>
                                 </div>
 

@@ -46,7 +46,7 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
                             {item.product.name}
                         </h3>
                         <p className="text-mont-gray text-sm mb-2">
-                            {formatCurrency(item.product.price_cents)} cada
+                            {formatCurrency(item.product.price)} cada
                         </p>
 
                         <div className="flex items-center gap-2">
@@ -79,7 +79,7 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
 
                     <div className="text-right">
                         <p className="font-medium text-mont-espresso">
-                            {formatCurrency(item.product.price_cents * item.quantity)}
+                            {formatCurrency(item.product.price * item.quantity)}
                         </p>
                     </div>
                 </div>

@@ -1,11 +1,12 @@
 /**
- * Formata valor em centavos para moeda brasileira
+ * Formata valor em reais para moeda brasileira
+ * Trabalha exclusivamente com tipo numérico direto em reais (R$)
  */
-export function formatCurrency(cents: number): string {
+export function formatCurrency(value: number): string {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-    }).format(cents / 100)
+    }).format(value)
 }
 
 /**

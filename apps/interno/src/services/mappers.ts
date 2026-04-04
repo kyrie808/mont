@@ -229,8 +229,8 @@ export const toDomainCatalogOrderItem = (dbItem: CatalogOrderItemRow): DomainCat
         produtoId: dbItem.produto_id || '',
         nomeProduto: dbItem.nome_produto,
         quantidade: Number(dbItem.quantidade || 0),
-        precoUnitarioCentavos: Number(dbItem.preco_unitario_centavos || 0),
-        totalCentavos: Number(dbItem.total_centavos || 0)
+        precoUnitario: Number(dbItem.preco_unitario || 0),
+        total: Number(dbItem.total || 0)
     }
 }
 
@@ -243,9 +243,9 @@ export const toDomainCatalogOrder = (dbOrder: CatalogOrderRowWithItems): DomainC
         enderecoEntrega: dbOrder.endereco_entrega,
         metodoEntrega: dbOrder.metodo_entrega as DomainCatalogOrder['metodoEntrega'],
         status: dbOrder.status as CatalogOrderStatus,
-        subtotalCentavos: Number(dbOrder.subtotal_centavos || 0),
-        freteCentavos: Number(dbOrder.frete_centavos || 0),
-        totalCentavos: Number(dbOrder.total_centavos || 0),
+        subtotal: Number(dbOrder.subtotal || 0),
+        frete: Number(dbOrder.frete || 0),
+        total: Number(dbOrder.total || 0),
         metodoPagamento: dbOrder.metodo_pagamento as PagamentoMetodo,
         statusPagamento: dbOrder.status_pagamento as CatalogPaymentStatus,
         observacoes: dbOrder.observacoes,
