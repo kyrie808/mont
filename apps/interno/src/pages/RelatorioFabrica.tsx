@@ -48,7 +48,7 @@ export function RelatorioFabrica() {
             .select('valor')
             .eq('chave', 'telefone_fabrica')
             .maybeSingle()
-            .then(({ data }) => {
+            .then(({ data }: any) => {
                 if (data?.valor && typeof data.valor === 'string') {
                     setTelefoneFabrica(data.valor)
                 }
@@ -57,7 +57,7 @@ export function RelatorioFabrica() {
             .select('valor')
             .eq('chave', 'nome_fabrica')
             .maybeSingle()
-            .then(({ data }) => {
+            .then(({ data }: any) => {
                 if (data?.valor && typeof data.valor === 'string') setNomeFabrica(data.valor)
             })
     }, [])

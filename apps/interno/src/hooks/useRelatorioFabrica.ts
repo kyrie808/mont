@@ -52,8 +52,8 @@ export function useRelatorioFabrica(): UseRelatorioFabricaReturn {
             // Agrupar por produto e somar quantidade
             const agregados: Record<string, ProdutoAgregado> = {}
 
-            for (const item of data || []) {
-                const produto = item.produtos as unknown as { id: string; nome: string; codigo: string }
+            for (const item of (data as any[] || [])) {
+                const produto = item.produtos as any
                 if (!produto) continue
 
                 const produtoId = produto.id

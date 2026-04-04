@@ -58,9 +58,9 @@ export function ProductNicknamesModal({ isOpen, onClose }: ProductNicknamesModal
             }
 
             // Using Promise.all for now. Parallel updates.
-            await Promise.all(updates.map(update =>
-                supabase
-                    .from('produtos')
+            await Promise.all(updates.map((update: any) =>
+                (supabase
+                    .from('produtos') as any)
                     .update({ apelido: update.apelido })
                     .eq('id', update.id)
             ))

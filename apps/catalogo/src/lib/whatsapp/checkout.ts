@@ -1,4 +1,4 @@
-import type { CartItem } from '@/types/cart'
+import type { ItemCarrinho } from '@/types/cart'
 import { formatCurrency } from '@/lib/utils/format'
 
 interface CheckoutFormData {
@@ -22,7 +22,7 @@ const paymentMethodLabels = {
  */
 export function generateWhatsAppMessage(
     formData: CheckoutFormData,
-    items: CartItem[],
+    items: ItemCarrinho[],
     subtotal: number,
     deliveryFee: number,
     total: number
@@ -46,8 +46,8 @@ export function generateWhatsAppMessage(
     // Itens
     message += '*Itens:*\n'
     items.forEach(item => {
-        const itemTotal = item.product.price * item.quantity
-        message += `▸ ${item.product.name} × ${item.quantity} — ${formatCurrency(itemTotal)}\n`
+        const itemTotal = (item.produto.preco || 0) * item.quantidade
+        message += `▸ ${item.produto.nome} × ${item.quantidade} — ${formatCurrency(itemTotal)}\n`
     })
 
     message += '\n━━━━━━━━━━━━━━━━\n\n'

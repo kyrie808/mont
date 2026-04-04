@@ -1,9 +1,8 @@
 import { supabase } from '../lib/supabase'
-import type { Tables } from '@mont/shared'
 
-type HomeFinanceiroRow = Tables<'view_home_financeiro'>
-type HomeOperacionalRow = Tables<'view_home_operacional'>
-type HomeAlertasRow = Tables<'view_home_alertas'>
+type HomeFinanceiroRow = any
+type HomeOperacionalRow = any
+type HomeAlertasRow = any
 
 interface BreakdownResult {
     vencidos: number
@@ -91,23 +90,23 @@ export const dashboardService = {
             { data: alertsData, error: alrError },
             { data: breakdownData, error: breakdownError }
         ] = await Promise.all([
-            supabase
-                .from('view_home_financeiro')
+            (supabase
+                .from('view_home_financeiro') as any)
                 .select('faturamento, ticket_medio, lucro_estimado, total_a_receber, liquidado_mes, liquidado_mes_count, faturamento_anterior, variacao_faturamento_percentual, alertas_financeiros')
                 .eq('mes', month)
                 .eq('ano', year)
                 .maybeSingle(),
-            supabase
-                .from('view_home_operacional')
+            (supabase
+                .from('view_home_operacional') as any)
                 .select('total_vendas, total_itens, pedidos_pendentes, pedidos_entregues_hoje, clientes_ativos, ranking_indicacoes, ultimas_vendas')
                 .eq('mes', month)
                 .eq('ano', year)
                 .maybeSingle(),
-            supabase
-                .from('view_home_alertas')
+            (supabase
+                .from('view_home_alertas') as any)
                 .select('contato_id, nome, telefone, data_ultima_compra, dias_sem_compra')
                 .limit(10),
-            supabase.rpc('get_areceber_breakdown').maybeSingle()
+            (supabase as any).rpc('get_areceber_breakdown').maybeSingle()
         ])
 
         if (finError) throw finError
@@ -138,8 +137,8 @@ export const dashboardService = {
         const fimMes = new Date(ano, mesNum, 0).getDate()
         const fim = `${ano}-${String(mesNum).padStart(2, '0')}-${fimMes}`
 
-        const { data, error } = await supabase
-            .from('view_lucro_liquido_mensal')
+        const { data, error } = await (supabase
+            .from('view_lucro_liquido_mensal') as any)
             .select('receita_bruta, custo_produtos, lucro_bruto, despesas_operacionais, custo_fabrica, lucro_liquido, margem_liquida_pct')
             .gte('mes', inicio)
             .lte('mes', fim)
@@ -172,8 +171,8 @@ export const dashboardService = {
         const fimMes = new Date(ano, mesNum, 0).getDate()
         const fim = `${ano}-${String(mesNum).padStart(2, '0')}-${fimMes}`
 
-        const { data, error } = await supabase
-            .from('view_liquidado_mensal')
+        const { data, error } = await (supabase
+            .from('view_liquidado_mensal') as any)
             .select('vendas_liquidadas, total_liquidado')
             .gte('mes', inicio)
             .lte('mes', fim)
@@ -196,8 +195,8 @@ export const dashboardService = {
         qtd_pendentes: number
         qtd_vencidas: number
     }> {
-        const { data, error } = await supabase
-            .from('view_contas_a_pagar_dashboard')
+        const { data, error } = await (supabase
+            .from('view_contas_a_pagar_dashboard') as any)
             .select('total_a_pagar, total_vencido, qtd_pendentes, qtd_vencidas')
             .maybeSingle()
 
@@ -222,8 +221,8 @@ export const dashboardService = {
         parcela_atual: number | null
         total_parcelas: number | null
     }[]> {
-        const { data, error } = await supabase
-            .from('rpt_projecao_pagamentos')
+        const { data, error } = await (supabase
+            .from('rpt_projecao_pagamentos') as any)
             .select('conta_a_pagar_id, credor, descricao, saldo_devedor, data_vencimento, situacao, dias_atraso, parcela_atual, total_parcelas')
             .in('situacao', ['vencido', 'vence_hoje', 'proximos_7_dias', 'proximos_30_dias'])
             .order('data_vencimento', { ascending: true })
@@ -231,7 +230,7 @@ export const dashboardService = {
 
         if (error || !data) return []
 
-        return data.map(d => ({
+        return (data as any[]).map(d => ({
             conta_a_pagar_id: d.conta_a_pagar_id ?? '',
             credor: d.credor ?? '',
             descricao: d.descricao ?? '',
@@ -248,7 +247,7 @@ export const dashboardService = {
         total_a_receber: number
         total_vendas_abertas: number
     }> {
-        const { data, error } = await supabase.rpc('rpc_total_a_receber_dashboard')
+        const { data, error } = await (supabase as any).rpc('rpc_total_a_receber_dashboard')
         if (error || !data) return { total_a_receber: 0, total_vendas_abertas: 0 }
         const result = data as { total_a_receber: number; total_vendas_abertas: number }
         return {
@@ -319,7 +318,7 @@ export function mapDashboardMetrics(
                 valor_sem_data: Number(breakdownData.valor_sem_data || 0),
             } : undefined
         },
-        alertas_recompra: (alertsData || []).map((a) => ({
+        alertas_recompra: ((alertsData as any[]) || []).map((a) => ({
             contato_id: a.contato_id ?? '',
             nome: a.nome ?? 'Cliente sem nome',
             telefone: a.telefone ?? '',

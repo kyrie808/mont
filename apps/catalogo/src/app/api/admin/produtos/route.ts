@@ -1,20 +1,32 @@
-
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@mont/shared'
+
+// Admin client with service role
+const supabaseAdmin = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    }
+)
 
 export async function GET() {
     const cookieStore = cookies()
 
     // 1. Verify Auth
-    const authSupabase = createServerClient(
+    const authSupabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
                 getAll() { return cookieStore.getAll() },
-                setAll() { } // Read-only for auth check
+                setAll() { }
             }
         }
     )
@@ -29,9 +41,10 @@ export async function GET() {
         return NextResponse.json({ error: 'Acesso não autorizado' }, { status: 403 })
     }
 
-    // 2. Data Access (Service Role)
+    // 2. Data Access via View to get image and formatted values
+    // Using view for list results as requested for display
     const { data, error } = await supabaseAdmin
-        .from('produtos')
+        .from('vw_catalogo_produtos')
         .select('*')
         .order('nome')
 
@@ -39,20 +52,5 @@ export async function GET() {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Buscar imagens separadamente
-    const { data: imagens } = await supabaseAdmin
-        .from('sis_imagens_produto')
-        .select('produto_id, url')
-
-    // Merge manual
-    const imagensMap = new Map(imagens?.map(i => [i.produto_id, i.url]) ?? [])
-
-    const combinedData = (data || []).map(p => ({
-        ...p,
-        sis_imagens_produto: imagensMap.has(p.id)
-            ? [{ url: imagensMap.get(p.id)! }]
-            : []
-    }))
-
-    return NextResponse.json(combinedData)
+    return NextResponse.json(data)
 }

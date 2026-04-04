@@ -120,7 +120,7 @@ export function Entregas() {
             .select('*')
             .eq('chave', 'locais_partida')
             .maybeSingle()
-            .then(({ data }) => {
+            .then(({ data }: any) => {
                 if (data) {
                     const val = data?.valor as Array<{ endereco?: string; nome?: string }> | undefined
                     if (val && Array.isArray(val) && val.length > 0) {

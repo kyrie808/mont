@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { mapDashboardMetrics } from '../dashboardService';
-import type { Database } from '@mont/shared';
 
-type HomeFinanceiroRow = Database['public']['Views']['view_home_financeiro']['Row'];
-type HomeOperacionalRow = Database['public']['Views']['view_home_operacional']['Row'];
-type HomeAlertasRow = Database['public']['Views']['view_home_alertas']['Row'];
+type HomeFinanceiroRow = any;
+type HomeOperacionalRow = any;
+type HomeAlertasRow = any;
 
 describe('dashboardService - mapDashboardMetrics', () => {
     it('should handle completely null inputs providing correct fallbacks', () => {

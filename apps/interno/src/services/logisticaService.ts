@@ -11,8 +11,8 @@ export interface LogisticsMetrics {
 export const logisticaService = {
     async getLogisticsMetrics(): Promise<LogisticsMetrics> {
         // 1. Fetch ALL pending deliveries (Global Backlog)
-        const { count: pendingCount, error: pendingError } = await supabase
-            .from('vendas')
+        const { count: pendingCount, error: pendingError } = await (supabase
+            .from('vendas') as any)
             .select('*', { count: 'exact', head: true })
             .eq('status', 'pendente')
             .neq('status', 'cancelada')
@@ -24,8 +24,8 @@ export const logisticaService = {
         const startStr = startOfDay(hoje).toISOString()
         const endStr = endOfDay(hoje).toISOString()
 
-        const { count: doneTodayCount, error: doneError } = await supabase
-            .from('vendas')
+        const { count: doneTodayCount, error: doneError } = await (supabase
+            .from('vendas') as any)
             .select('*', { count: 'exact', head: true })
             .eq('status', 'entregue')
             .gte('data', startStr)

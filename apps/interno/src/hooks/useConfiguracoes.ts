@@ -44,8 +44,8 @@ export function useConfiguracoes(): UseConfiguracoesReturn {
         setError(null)
 
         try {
-            const { data, error: queryError } = await supabase
-                .from('configuracoes')
+            const { data, error: queryError } = await (supabase
+                .from('configuracoes') as any)
                 .select('chave, valor')
 
             if (queryError) throw queryError
@@ -53,7 +53,7 @@ export function useConfiguracoes(): UseConfiguracoesReturn {
             // Parse config values
             const configObj = { ...DEFAULT_CONFIG }
 
-            data?.forEach((item) => {
+            data?.forEach((item: any) => {
                 switch (item.chave) {
                     case 'ciclo_recompra':
                         configObj.cicloRecompra = item.valor as unknown as CicloRecompra
@@ -84,8 +84,8 @@ export function useConfiguracoes(): UseConfiguracoesReturn {
 
     const updateConfig = async (chave: string, valor: Record<string, unknown>): Promise<boolean> => {
         try {
-            const { error } = await supabase
-                .from('configuracoes')
+            const { error } = await (supabase
+                .from('configuracoes') as any)
                 .update({ valor: valor as unknown as Record<string, never> })
                 .eq('chave', chave)
 

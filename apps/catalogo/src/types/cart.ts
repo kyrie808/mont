@@ -1,15 +1,15 @@
-import type { Product } from './product'
+import type { ProdutoCatalogo } from '@mont/shared'
 
-export interface CartItem {
-    product: Product
-    quantity: number
+export interface ItemCarrinho {
+    produto: ProdutoCatalogo
+    quantidade: number
 }
 
 export interface CartState {
-    items: CartItem[]
-    addItem: (product: Product, quantity: number) => void
-    removeItem: (productId: string) => void
-    updateQuantity: (productId: string, quantity: number) => void
+    items: ItemCarrinho[]
+    addItem: (produto: ProdutoCatalogo, quantidade: number) => void
+    removeItem: (produtoId: string) => void
+    updateQuantidade: (produtoId: string, quantidade: number) => void
     clearCart: () => void
     getTotalItems: () => number
     getTotalPrice: () => number

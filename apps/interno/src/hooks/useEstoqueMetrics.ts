@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+
 export interface EstoqueMetrics {
     totalProdutos: number
     produtosBaixoEstoque: number
@@ -19,8 +20,8 @@ export function useEstoqueMetrics() {
 
             // 1. Total de produtos ativos
             // Usamos count() para ser rápido
-            const { count: total, error: errorTotal } = await supabase
-                .from('produtos')
+            const { count: total, error: errorTotal } = await (supabase
+                .from('produtos') as any)
                 .select('*', { count: 'exact', head: true })
                 .eq('ativo', true)
 
@@ -31,14 +32,14 @@ export function useEstoqueMetrics() {
             // não é trivial com a API simples do Supabase JS sem RPC,
             // vamos buscar os produtos e filtrar no front (assumindo catálogo < 1000 itens para MVP).
             // Se escalar, criar uma VIEW ou RPC é melhor.
-            const { data: produtos, error: errorBaixo } = await supabase
-                .from('produtos')
+            const { data: produtos, error: errorBaixo } = await (supabase
+                .from('produtos') as any)
                 .select('estoque_atual, estoque_minimo')
                 .eq('ativo', true)
 
             if (errorBaixo) throw errorBaixo
 
-            const baixoEstoqueCount = produtos?.filter(p => {
+            const baixoEstoqueCount = (produtos || [])?.filter((p: any) => {
                 const atual = p.estoque_atual || 0
                 const minimo = p.estoque_minimo ?? 10 // Fallback seguro
                 return atual <= minimo

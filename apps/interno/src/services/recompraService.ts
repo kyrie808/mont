@@ -14,16 +14,16 @@ export interface ContatoRecompra {
 
 export const recompraService = {
     async getRecompraData(config: { b2b: number, b2c: number }): Promise<ContatoRecompra[]> {
-        const { data: clientesData, error: clientesError } = await supabase
-            .from('contatos')
+        const { data: clientesData, error: clientesError } = await (supabase
+            .from('contatos') as any)
             .select('id, nome, tipo, ultimo_contato, criado_em, status')
             .eq('status', 'cliente')
 
         if (clientesError) throw clientesError
         const clientes = (clientesData ?? []) as Contato[]
 
-        const { data: vendasData, error: vendasError } = await supabase
-            .from('vendas')
+        const { data: vendasData, error: vendasError } = await (supabase
+            .from('vendas') as any)
             .select('contato_id, data')
             .eq('status', 'entregue')
             .order('data', { ascending: false })
@@ -31,7 +31,7 @@ export const recompraService = {
         if (vendasError) throw vendasError
 
         const ultimaVendaPorContato = new Map<string, string>()
-        vendasData?.forEach((v) => {
+        vendasData?.forEach((v: any) => {
             if (!ultimaVendaPorContato.has(v.contato_id)) {
                 ultimaVendaPorContato.set(v.contato_id, v.data)
             }
@@ -40,7 +40,7 @@ export const recompraService = {
         const hoje = new Date()
         const contatosRecompra: ContatoRecompra[] = []
 
-        clientes.forEach((cliente) => {
+        clientes.forEach((cliente: any) => {
             const ciclo = cliente.tipo === 'B2B' ? config.b2b : config.b2c
             const ultimaVendaStr = ultimaVendaPorContato.get(cliente.id)
             const ultimaCompra = ultimaVendaStr ? new Date(ultimaVendaStr) : null
@@ -90,8 +90,8 @@ export const recompraService = {
     },
 
     async marcarComoContatado(contatoId: string): Promise<boolean> {
-        const { error } = await supabase
-            .from('contatos')
+        const { error } = await (supabase
+            .from('contatos') as any)
             .update({ ultimo_contato: new Date().toISOString() })
             .eq('id', contatoId)
 

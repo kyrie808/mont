@@ -24,7 +24,7 @@ const formatCep = (value: string) => {
 }
 
 export default function CarrinhoPage() {
-    const { items, updateQuantity, removeItem, getTotalPrice, clearCart } = useCartStore()
+    const { items, updateQuantidade, removeItem, getTotalPrice, clearCart } = useCartStore()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [phoneValue, setPhoneValue] = useState('')
     const [cepDisplayValue, setCepDisplayValue] = useState('')
@@ -96,8 +96,8 @@ export default function CarrinhoPage() {
                 delivery_method: data.delivery_method,
                 payment_method: data.payment_method,
                 items: items.map(item => ({
-                    product_id: item.product.id,
-                    quantity: item.quantity,
+                    product_id: item.produto.id,
+                    quantity: item.quantidade,
                 })),
                 delivery_fee: deliveryFee,
                 referred_by: data.referred_by,
@@ -190,8 +190,8 @@ export default function CarrinhoPage() {
                         {/* Lista de Itens */}
                         <CartItemList
                             items={items}
-                            onIncrease={(id) => updateQuantity(id, items.find(i => i.product.id === id)!.quantity + 1)}
-                            onDecrease={(id) => updateQuantity(id, items.find(i => i.product.id === id)!.quantity - 1)}
+                            onIncrease={(id) => updateQuantidade(id, items.find(i => i.produto.id === id)!.quantidade + 1)}
+                            onDecrease={(id) => updateQuantidade(id, items.find(i => i.produto.id === id)!.quantidade - 1)}
                             onRemove={removeItem}
                             formatCurrency={formatCurrency}
                         />

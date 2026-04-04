@@ -1,15 +1,27 @@
-
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import type { Database } from '@mont/shared'
 
 const deleteImageSchema = z.object({
     imageUrl: z.string().url('imageUrl deve ser uma URL válida')
 })
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Admin client with service role for deletion
+const supabaseAdmin = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    }
+)
 
 export async function DELETE(
     request: Request,
@@ -25,7 +37,7 @@ export async function DELETE(
     const cookieStore = cookies()
 
     // 1. Verify Auth
-    const authSupabase = createServerClient(
+    const authSupabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
@@ -42,11 +54,12 @@ export async function DELETE(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Role check (assuming admin)
     if (user.user_metadata?.role !== 'admin') {
         return NextResponse.json({ error: 'Acesso não autorizado' }, { status: 403 })
     }
 
-    // 2. Parse body + validar imageUrl via Zod
+    // 2. Parse body
     const body = await request.json()
     const parsed = deleteImageSchema.safeParse(body)
 
@@ -68,10 +81,10 @@ export async function DELETE(
         )
     }
 
-    // 3. Verificar ownership — imagem pertence ao produto
+    // 3. Verificar ownership — imagem pertence ao produto na tabela cat_imagens_produto
     const { data: imagemExiste, error: checkError } =
-        await supabaseAdmin
-            .from('sis_imagens_produto')
+        await (supabaseAdmin
+            .from('cat_imagens_produto') as any)
             .select('id')
             .eq('produto_id', params.id)
             .eq('url', imageUrl)
@@ -84,7 +97,7 @@ export async function DELETE(
         )
     }
 
-    // 4. Extrair filePath com new URL()
+    // 4. Extrair filePath
     const pathSegments = parsedUrl.pathname.split('/')
     const bucketIndex = pathSegments.findIndex(
         s => s === 'object' || s === 'public'
@@ -100,7 +113,7 @@ export async function DELETE(
         )
     }
 
-    // 5. Deleta do Storage primeiro
+    // 5. Deleta do Storage
     const { error: storageError } = await supabaseAdmin
         .storage
         .from('products')
@@ -114,12 +127,11 @@ export async function DELETE(
         )
     }
 
-    // 6. Só então remove referência do banco
+    // 6. Remove referência do banco
     const { error: dbError } = await supabaseAdmin
-        .rpc('delete_image_reference', {
-            p_produto_id: params.id,
-            p_image_url: imageUrl
-        })
+        .from('cat_imagens_produto')
+        .delete()
+        .eq('id', imagemExiste.id)
 
     if (dbError) {
         console.error('Erro ao remover referência do banco:', dbError)

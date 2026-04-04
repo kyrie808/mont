@@ -1,10 +1,9 @@
 import { Navbar, Footer } from '@/components/catalog'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { mapProdutoToProduct, MOCK_PRODUCTS, type ProdutoDatabase } from '@/lib/supabase/mappers'
 import { formatCurrency } from '@/lib/utils/format'
 import { Badge } from '@/components/ui'
-import type { Product } from '@/types/product'
+import type { ProdutoCatalogo } from '@mont/shared'
 import AddToCartSection from './_components/AddToCartSection'
 import RelatedProducts from './_components/RelatedProducts'
 import { notFound } from 'next/navigation'
@@ -12,7 +11,7 @@ import { notFound } from 'next/navigation'
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-async function getProduct(slug: string): Promise<Product | null> {
+async function getProduct(slug: string): Promise<ProdutoCatalogo | null> {
     try {
         const supabase = createClient()
 
@@ -23,45 +22,41 @@ async function getProduct(slug: string): Promise<Product | null> {
             .single()
 
         if (error || !data) {
-            const mockProduct = MOCK_PRODUCTS.find(p => p.slug === slug)
-            return mockProduct || null
+            return null
         }
 
-        return mapProdutoToProduct(data as ProdutoDatabase)
+        return data as ProdutoCatalogo
 
     } catch (error) {
         console.error('Erro ao buscar produto:', error)
-        const mockProduct = MOCK_PRODUCTS.find(p => p.slug === slug)
-        return mockProduct || null
+        return null
     }
 }
 
-
-
-async function getRelatedProducts(category: string, currentId: string): Promise<Product[]> {
+async function getRelatedProducts(category: string | null, currentId: string | null): Promise<ProdutoCatalogo[]> {
     try {
         const supabase = createClient()
 
         const { data, error } = await supabase
             .from('vw_catalogo_produtos')
             .select('*')
-            .eq('is_active', true)
-            .neq('id', currentId)
+            .eq('visivel_catalogo', true)
+            .neq('id', currentId || '')
 
         if (error || !data) {
-            return MOCK_PRODUCTS.filter(p => p.id !== currentId).slice(0, 6)
+            return []
         }
 
         // Prioriza mesma categoria, depois os demais
-        const mesmaCategoria = data.filter(p => p.category === category)
-        const outrosCategoria = data.filter(p => p.category !== category)
+        const mesmaCategoria = data.filter(p => p.categoria === category)
+        const outrosCategoria = data.filter(p => p.categoria !== category)
         const ordenados = [...mesmaCategoria, ...outrosCategoria].slice(0, 6)
 
-        return ordenados.map(mapProdutoToProduct)
+        return ordenados as ProdutoCatalogo[]
 
     } catch (error) {
         console.error('Erro ao buscar produtos relacionados:', error)
-        return MOCK_PRODUCTS.filter(p => p.id !== currentId).slice(0, 6)
+        return []
     }
 }
 
@@ -75,8 +70,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
 
     return {
-        title: `${product.name} | Mont Distribuidora`,
-        description: product.description || `Compre ${product.name} - ${product.subtitle} por ${formatCurrency(product.price)}`,
+        title: `${product.nome} | Mont Distribuidora`,
+        description: product.descricao || `Compre ${product.nome} - ${product.subtitulo} por ${formatCurrency(product.preco || 0)}`,
     }
 }
 
@@ -87,24 +82,24 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
         notFound()
     }
 
-    const relatedProducts = await getRelatedProducts(product.category, product.id)
+    const relatedProducts = await getRelatedProducts(product.categoria, product.id)
 
     return (
         <>
             <Navbar />
 
-            <main className="min-h-screen bg-mont-cream pt-28 pb-20">
+            <main className="min-h-screen bg-mont-cream pt-20 md:pt-28 pb-20">
                 <div className="container mx-auto px-4">
                     <div className="max-w-6xl mx-auto">
                         {/* Grid: Imagem + Info */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20 items-start">
                             {/* Imagem */}
                             <div className="aspect-square bg-mont-surface rounded-lg overflow-hidden flex items-center justify-center lg:mt-10">
-                                {product.primary_image_url ? (
+                                {product.url_imagem_principal ? (
                                     <div className="relative aspect-square w-full">
                                         <Image
-                                            src={product.primary_image_url}
-                                            alt={product.name}
+                                            src={product.url_imagem_principal}
+                                            alt={product.nome || 'Produto'}
                                             fill
                                             className="object-cover"
                                             priority
@@ -123,35 +118,35 @@ export default async function ProdutoPage({ params }: { params: { slug: string }
                             {/* Info */}
                             <div>
                                 <h1 className="font-display text-4xl md:text-5xl text-mont-espresso mb-3">
-                                    {product.name}
+                                    {product.nome}
                                 </h1>
 
                                 <div className="mb-4">
-                                    <Badge variant={product.category} />
+                                    <Badge variant={(product.categoria as any) || 'Massas Decorativas'} />
                                 </div>
 
                                 <p className="text-mont-gray text-lg mb-6">
-                                    {product.subtitle}
+                                    {product.subtitulo}
                                 </p>
 
                                 <div className="mb-8">
-                                    {product.anchor_price && (
+                                    {product.preco_ancoragem && (
                                         <span className="text-lg text-gray-400 line-through">
-                                            {formatCurrency(product.anchor_price)}
+                                            {formatCurrency(product.preco_ancoragem)}
                                         </span>
                                     )}
                                     <div className="text-4xl font-bold text-mont-gold">
-                                        {formatCurrency(product.price)}
+                                        {formatCurrency(product.preco || 0)}
                                     </div>
                                 </div>
 
-                                {product.description && (
+                                {product.descricao && (
                                     <div className="mb-8">
                                         <h2 className="font-display text-2xl text-mont-espresso mb-3">
                                             Sobre o produto
                                         </h2>
                                         <p className="text-mont-gray leading-relaxed whitespace-pre-line">
-                                            {product.description}
+                                            {product.descricao}
                                         </p>
                                     </div>
                                 )}

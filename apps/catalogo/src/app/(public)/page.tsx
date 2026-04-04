@@ -1,8 +1,7 @@
 import { Navbar, Footer } from '@/components/catalog'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { mapProdutoToProduct, MOCK_PRODUCTS, type ProdutoDatabase } from '@/lib/supabase/mappers'
-import type { Product } from '@/types/product'
+import type { ProdutoCatalogo } from '@mont/shared'
 import ImmersiveHero from './_components/hero/ImmersiveHero'
 import FeaturedProducts from './_components/FeaturedProducts'
 import HowItWorks from './_components/HowItWorks'
@@ -13,26 +12,26 @@ import HomeWrapper from './_components/HomeWrapper'
 // Force dynamic rendering (não SSG)
 export const dynamic = 'force-dynamic'
 
-async function getFeaturedProducts(): Promise<Product[]> {
+async function getFeaturedProducts(): Promise<ProdutoCatalogo[]> {
     try {
         const supabase = createClient()
 
         const { data, error } = await supabase
             .from('vw_catalogo_produtos')
             .select('*')
-            .eq('is_active', true)
-            .eq('is_featured', true)
+            .eq('visivel_catalogo', true)
+            .eq('destaque', true)
             .limit(10)
 
-        if (error || !data || data.length === 0) {
-            return MOCK_PRODUCTS.filter(p => p.is_featured)
+        if (error || !data) {
+            return []
         }
 
-        return data.map(p => mapProdutoToProduct(p as ProdutoDatabase))
+        return data as ProdutoCatalogo[]
 
     } catch (error) {
         console.error('Erro ao buscar produtos:', error)
-        return MOCK_PRODUCTS.filter(p => p.is_featured)
+        return []
     }
 }
 
@@ -45,7 +44,9 @@ export default async function HomePage() {
 
             <HomeWrapper>
                 <ImmersiveHero />
-                <FeaturedProducts products={featuredProducts} />
+                {featuredProducts.length > 0 && (
+                    <FeaturedProducts products={featuredProducts} />
+                )}
 
                 {/* CTA Ver Todos os Produtos */}
                 <div className="flex justify-center py-12">

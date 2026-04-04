@@ -5,13 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Product } from '@/types/product';
 import { useCartStore } from '@/lib/cart/store';
+import type { ProdutoCatalogo } from '@mont/shared';
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface FeaturedProductProps {
-    product: Product;
+    product: ProdutoCatalogo;
 }
 
 export default function FeaturedProduct({ product }: FeaturedProductProps) {
@@ -23,9 +23,9 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
     const priceFormatted = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-    }).format(product.price);
+    }).format(product.preco || 0);
 
-    const weightFormatted = product.subtitle || '';
+    const weightFormatted = product.subtitulo || '';
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -50,7 +50,6 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
     }, []);
 
     const badgeText = '\u2B50 Mais Vendido';
-    const infoBlockLabel = 'BLOCO DE INFORMA\u00C7\u00D5ES';
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -64,7 +63,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
             repeat: 1,
             ease: 'back.out(1.7)',
             onComplete: () => {
-                addItem({ ...product }, 1);
+                addItem(product, 1);
             },
         });
     };
@@ -79,8 +78,8 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
                     {/* BLOCO DA IMAGEM */}
                     <div className="relative w-full md:w-1/2 aspect-[4/3] md:aspect-video overflow-hidden">
                         <Image
-                            src={product.primary_image_url || product.image_url || '/placeholder-product.jpg'}
-                            alt={product.name}
+                            src={product.url_imagem_principal || '/placeholder-product.jpg'}
+                            alt={product.nome || ''}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                             sizes="(max-width: 768px) 100vw, 50vw"
@@ -97,7 +96,7 @@ export default function FeaturedProduct({ product }: FeaturedProductProps) {
                     {/* BLOCO DE INFORMACOES */}
                     <div className="p-6 md:p-8 flex flex-col justify-center flex-1">
                         <h2 className="font-display text-2xl md:text-3xl text-mont-espresso mb-1">
-                            {product.name}
+                            {product.nome}
                         </h2>
                         <p className="text-sm text-mont-espresso/50 mb-6">
                             {weightFormatted}

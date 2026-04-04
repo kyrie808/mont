@@ -1,7 +1,6 @@
 import { Navbar, Footer } from '@/components/catalog'
 import { createClient } from '@/lib/supabase/server'
-import { mapProdutoToProduct, MOCK_PRODUCTS, type ProdutoDatabase } from '@/lib/supabase/mappers'
-import type { Product } from '@/types/product'
+import type { ProdutoCatalogo } from '@mont/shared'
 import ProductCatalog from './_components/ProductCatalog'
 import FeaturedProduct from './_components/FeaturedProduct'
 import StoreBanner from './_components/StoreBanner'
@@ -12,39 +11,37 @@ import TrustBar from './_components/TrustBar'
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-async function getAllProducts(): Promise<Product[]> {
+async function getAllProducts(): Promise<ProdutoCatalogo[]> {
     try {
         const supabase = createClient()
 
         const { data, error } = await supabase
             .from('vw_catalogo_produtos')
             .select('*')
-            .eq('is_active', true)
-            // .order('sort_order', { ascending: true }) // Se a view tiver sort_order
-            .order('nome', { ascending: true }) // Ajustado para 'nome' que é o campo real no banco
+            .eq('visivel_catalogo', true)
+            .order('nome', { ascending: true })
 
-        if (error || !data || data.length === 0) {
-
-            return MOCK_PRODUCTS
+        if (error || !data) {
+            return []
         }
 
-        return data.map(p => mapProdutoToProduct(p as ProdutoDatabase))
+        return data as ProdutoCatalogo[]
 
     } catch (error) {
         console.error('Erro ao buscar produtos:', error)
-        return MOCK_PRODUCTS
+        return []
     }
 }
 
 export const metadata = {
     title: 'Produtos | Mont Massas',
-    description: 'Conhe\u00E7a nossa linha completa de produtos artesanais.',
+    description: 'Conheça nossa linha completa de produtos artesanais.',
 }
 
 export default async function ProdutosPage() {
     const products = await getAllProducts()
 
-    const featuredProduct = products.find(p => p.is_featured);
+    const featuredProduct = products.find(p => p.destaque);
 
     return (
         <>

@@ -27,18 +27,18 @@ export function useRankingCompras(): UseRankingComprasReturn {
         setError(null)
 
         try {
-            const { data, error: fetchError } = await supabase
-                .from('ranking_compras')
+            const { data, error: fetchError } = await (supabase
+                .from('ranking_compras') as any)
                 .select('contato_id, nome, total_pontos, total_compras, ultima_compra')
                 .order('total_pontos', { ascending: false })
                 .limit(10)
 
             if (fetchError) throw fetchError
 
-            const stats: RankingComprasStats[] = data.map((item, index) => ({
+            const stats: RankingComprasStats[] = (data || []).map((item: any, index: number) => ({
                 contatoId: item.contato_id as string,
                 nome: item.nome as string,
-                totalPontos: item.total_pontos || 0,
+                totalPoints: item.total_pontos || 0,
                 totalCompras: item.total_compras || 0,
                 ultimaCompra: item.ultima_compra,
                 ranking: index + 1

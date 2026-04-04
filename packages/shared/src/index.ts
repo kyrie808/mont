@@ -49,5 +49,9 @@ export type {
     ContatoUpdate,
     ProdutoInsert,
     ProdutoUpdate,
-    ItemVendaInsert
+    ItemVendaInsert,
+    ProdutoCatalogo,
+    PedidoCatalogo,
+    ItemPedidoCatalogo,
+    ImagemProdutoCatalogo
 } from './database'

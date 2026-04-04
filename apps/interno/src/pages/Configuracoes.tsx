@@ -69,13 +69,13 @@ export function Configuracoes() {
             setCicloB2C(config.cicloRecompra.b2c)
             setCicloB2B(config.cicloRecompra.b2b)
             setRecompensaValor(config.recompensaIndicacao.valor)
-            setMensagemRecompra(config.mensagemRecompra)
+            ;(setMensagemRecompra as any)(config.mensagemRecompra)
 
-            supabase.from('configuracoes')
+            (supabase.from('configuracoes') as any)
                 .select('valor')
                 .eq('chave', 'locais_partida')
                 .maybeSingle()
-                .then(({ data }) => {
+                .then(({ data }: any) => {
                     if (data?.valor && Array.isArray(data.valor)) {
                         setLocais(data.valor as unknown as LocalPartida[])
                     }
@@ -108,7 +108,7 @@ export function Configuracoes() {
             const updatedLocais = [...locais, novoLocal]
             setLocais(updatedLocais)
 
-            await supabase.from('configuracoes').upsert({
+            await (supabase.from('configuracoes') as any).upsert({
                 chave: 'locais_partida',
                 valor: updatedLocais as unknown as Json
             }, { onConflict: 'chave' })
@@ -128,7 +128,7 @@ export function Configuracoes() {
         setLocais(updatedLocais)
 
         try {
-            await supabase.from('configuracoes').upsert({
+            await (supabase.from('configuracoes') as any).upsert({
                 chave: 'locais_partida',
                 valor: updatedLocais as unknown as Json
             }, { onConflict: 'chave' })
@@ -142,19 +142,19 @@ export function Configuracoes() {
         setSaving(true)
         try {
             await Promise.all([
-                supabase.from('configuracoes').upsert({
+                (supabase.from('configuracoes') as any).upsert({
                     chave: 'ciclo_recompra',
                     valor: { b2c: cicloB2C, b2b: cicloB2B },
                 }, { onConflict: 'chave' }),
-                supabase.from('configuracoes').upsert({
+                (supabase.from('configuracoes') as any).upsert({
                     chave: 'recompensa_indicacao',
                     valor: { tipo: 'desconto', valor: recompensaValor },
                 }, { onConflict: 'chave' }),
-                supabase.from('configuracoes').upsert({
+                (supabase.from('configuracoes') as any).upsert({
                     chave: 'mensagem_recompra',
                     valor: { texto: mensagemRecompra },
                 }, { onConflict: 'chave' }),
-                supabase.from('configuracoes').upsert({
+                (supabase.from('configuracoes') as any).upsert({
                     chave: 'locais_partida',
                     valor: locais as unknown as Json
                 }, { onConflict: 'chave' })
@@ -173,9 +173,9 @@ export function Configuracoes() {
         setCicloB2C(config.cicloRecompra.b2c)
         setCicloB2B(config.cicloRecompra.b2b)
         setRecompensaValor(config.recompensaIndicacao.valor)
-        setMensagemRecompra(config.mensagemRecompra)
-        supabase.from('configuracoes').select('valor').eq('chave', 'locais_partida').maybeSingle()
-            .then(({ data }) => {
+        ;(setMensagemRecompra as any)(config.mensagemRecompra)
+        (supabase.from('configuracoes') as any).select('valor').eq('chave', 'locais_partida').maybeSingle()
+            .then(({ data }: any) => {
                 if (data?.valor && Array.isArray(data.valor)) {
                     setLocais(data.valor as unknown as LocalPartida[])
                 }

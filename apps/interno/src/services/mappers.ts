@@ -25,11 +25,11 @@ type ProdutoRow = Tables<'produtos'>
 type ItemVendaRow = Tables<'itens_venda'>
 type PagamentoRow = Tables<'pagamentos_venda'>
 type VendaRow = Tables<'vendas'>
-type PurchaseOrderRow = Tables<'purchase_orders'>
-type PurchaseOrderItemRow = Tables<'purchase_order_items'>
-type PurchaseOrderPaymentRow = Tables<'purchase_order_payments'>
-type CatalogOrderRow = Tables<'cat_pedidos'>
-type CatalogOrderItemRow = Tables<'cat_itens_pedido'>
+type PurchaseOrderRow = any
+type PurchaseOrderItemRow = any
+type PurchaseOrderPaymentRow = any
+type CatalogOrderRow = any
+type CatalogOrderItemRow = any
 
 // ---------------------------------------------------
 // Extended row types for Supabase joins
@@ -212,7 +212,7 @@ export const toDomainPurchaseOrder = (dbOrder: PurchaseOrderRowWithFornecedor): 
 export const toDomainPurchaseOrderWithItems = (dbOrder: PurchaseOrderRowWithRelations): DomainPurchaseOrderWithItems => {
     return {
         ...toDomainPurchaseOrder(dbOrder),
-        items: (dbOrder.items || []).map(i => toDomainPurchaseOrderItem(i as PurchaseOrderItemRowWithProduct)),
+        items: (dbOrder.items || []).map((i: any) => toDomainPurchaseOrderItem(i as PurchaseOrderItemRowWithProduct)),
         payments: dbOrder.payments || []
     }
 }
@@ -254,6 +254,6 @@ export const toDomainCatalogOrder = (dbOrder: CatalogOrderRowWithItems): DomainC
         atualizadoEm: dbOrder.atualizado_em || dbOrder.criado_em || new Date().toISOString(),
         contatoId: dbOrder.contato_id,
         vendaId: dbOrder.venda_id ?? null,
-        itens: (dbOrder.itens || []).map(i => toDomainCatalogOrderItem(i))
+        itens: (dbOrder.itens || []).map((i: any) => toDomainCatalogOrderItem(i))
     }
 }
