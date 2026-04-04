@@ -1,4 +1,5 @@
 import type { CartItem } from '@/types/cart'
+import { formatCurrency } from '@/lib/utils/format'
 
 interface CheckoutFormData {
     customer_name: string
@@ -26,12 +27,6 @@ export function generateWhatsAppMessage(
     deliveryFee: number,
     total: number
 ): string {
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value)
-    }
 
     // Header
     let message = '🧀 *Novo Pedido — Mont Distribuidora*\n\n'
