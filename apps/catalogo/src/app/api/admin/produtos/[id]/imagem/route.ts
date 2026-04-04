@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const deleteImageSchema = z.object({
-    imageUrl: z.string().url('imageUrl deve ser uma URL válida')
+    imageUrl: z.url({ error: 'imageUrl deve ser uma URL válida' })
 })
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -53,7 +53,7 @@ export async function DELETE(
 
     if (!parsed.success) {
         return NextResponse.json(
-            { error: parsed.error.errors[0].message },
+            { error: parsed.error.issues[0].message },
             { status: 400 }
         )
     }

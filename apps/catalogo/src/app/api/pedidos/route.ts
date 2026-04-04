@@ -10,7 +10,7 @@ const orderSchema = z.object({
     delivery_method: z.enum(['entrega', 'retirada']),
     payment_method: z.enum(['pix', 'dinheiro']),
     items: z.array(z.object({
-        product_id: z.string().uuid(),
+        product_id: z.uuid(),
         quantity: z.number().int().positive(),
     })).min(1),
     delivery_fee: z.number().nonnegative().optional(),
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     } catch (error) {
         if (error instanceof z.ZodError) {
             return NextResponse.json(
-                { error: 'Dados inválidos', details: error.errors },
+                { error: 'Dados inválidos', details: error.issues },
                 { status: 400 }
             )
         }

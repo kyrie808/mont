@@ -14,7 +14,7 @@ const paymentSchema = z.object({
     amount: z.number().min(0.01, 'Valor deve ser maior que zero'),
     payment_method: z.enum(['pix', 'dinheiro', 'cartao_credito', 'cartao_debito', 'boleto', 'transferencia']),
     payment_date: z.string(),
-    conta_id: z.string().uuid('Selecione uma conta de origem'),
+    conta_id: z.uuid({ error: 'Selecione uma conta de origem' }),
     notes: z.string().optional()
 })
 
@@ -30,10 +30,10 @@ interface PurchaseOrderPaymentModalProps {
 const PAYMENT_METHODS = [
     { value: 'pix', label: 'Pix' },
     { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'cartao_credito', label: 'Cartão de Crédito' },
-    { value: 'cartao_debito', label: 'Cartão de Débito' },
+    { value: 'cartao_credito', label: 'Cartï¿½o de Crï¿½dito' },
+    { value: 'cartao_debito', label: 'Cartï¿½o de Dï¿½bito' },
     { value: 'boleto', label: 'Boleto' },
-    { value: 'transferencia', label: 'Transferência' }
+    { value: 'transferencia', label: 'Transferï¿½ncia' }
 ] as const
 
 export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }: PurchaseOrderPaymentModalProps) {
@@ -124,7 +124,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
                         </div>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-600">Já Pago:</span>
+                            <span className="text-sm text-gray-600">Jï¿½ Pago:</span>
                             <span className="font-medium text-emerald-600">{formatCurrency(order.amountPaid || 0)}</span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t mt-2">
@@ -150,7 +150,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Método
+                                    Mï¿½todo
                                 </label>
                                 <select
                                     {...register('payment_method')}
@@ -206,20 +206,20 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             )}
                             {currentAmount > remainingAmount + 0.01 && (
                                 <p className="text-xs text-amber-600 mt-1">
-                                    ?? Atenção: Valor maior que o restante.
+                                    ?? Atenï¿½ï¿½o: Valor maior que o restante.
                                 </p>
                             )}
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Observação
+                                Observaï¿½ï¿½o
                             </label>
                             <textarea
                                 {...register('notes')}
                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
                                 rows={2}
-                                placeholder="Ex: Confirmação de transferência..."
+                                placeholder="Ex: Confirmaï¿½ï¿½o de transferï¿½ncia..."
                             />
                         </div>
 
