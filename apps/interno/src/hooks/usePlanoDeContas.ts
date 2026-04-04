@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { cashFlowService } from '../services/cashFlowService'
-import type { Database } from '../types/database'
+import type { Database } from '@mont/shared'
 
 type PlanoContaInsert = Database['public']['Tables']['plano_de_contas']['Insert']
 

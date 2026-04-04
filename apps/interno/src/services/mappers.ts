@@ -15,7 +15,7 @@ import type {
     CatalogPaymentStatus,
     PagamentoMetodo
 } from '../types/domain'
-import type { Tables } from '../types/database'
+import type { Tables } from '@mont/shared'
 
 // ---------------------------------------------------
 // Row aliases for readability

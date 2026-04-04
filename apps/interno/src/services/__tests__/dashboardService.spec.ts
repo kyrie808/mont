@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mapDashboardMetrics } from '../dashboardService';
-import type { Database } from '../../types/database';
+import type { Database } from '@mont/shared';
 
 type HomeFinanceiroRow = Database['public']['Views']['view_home_financeiro']['Row'];
 type HomeOperacionalRow = Database['public']['Views']['view_home_operacional']['Row'];

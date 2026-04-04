@@ -1,4 +1,4 @@
-Ôªøimport { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
     Search,
     Filter,
@@ -20,7 +20,7 @@ import { cn } from '@mont/shared'
 import { useToast } from '../components/ui/Toast'
 import { cashFlowService } from '../services/cashFlowService'
 import { Modal, ModalActions, Select, Badge } from '../components/ui'
-import type { Conta } from '../types/database'
+import type { Conta } from '@mont/shared'
 
 type StatusFilter = 'todos' | 'vencidos' | 'hoje' | 'semana'
 
@@ -43,7 +43,7 @@ export function ContasReceber() {
             const data = await vendaService.getVendas(undefined, undefined, false)
             setVendas(data.filter(v => v.status === 'entregue' && !v.pago && v.origem !== 'catalogo' && v.formaPagamento !== 'brinde'))
         } catch (_error) {
-            toast.error('N√£o foi poss√≠vel carregar as contas a receber')
+            toast.error('N„o foi possÌvel carregar as contas a receber')
         } finally {
             setIsLoading(false)
         }
@@ -117,7 +117,7 @@ export function ContasReceber() {
             setSelectedVenda(null)
             fetchVendas()
         } catch (_error) {
-            toast.error('N√£o foi poss√≠vel quitar a venda')
+            toast.error('N„o foi possÌvel quitar a venda')
         } finally {
             setIsQuitting(false)
         }
@@ -174,7 +174,7 @@ export function ContasReceber() {
                     {isLoading ? (
                         <div role="status" aria-live="polite" className="py-20 flex flex-col items-center gap-4">
                             <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                            <p className="text-sm font-bold text-gray-500 uppercase">Carregando pend√™ncias...</p>
+                            <p className="text-sm font-bold text-gray-500 uppercase">Carregando pendÍncias...</p>
                         </div>
                     ) : filteredVendas.length === 0 ? (
                         <div className="py-20 flex flex-col items-center text-center space-y-4 bg-card/50 rounded-xl border border-dashed border-border">
@@ -226,7 +226,7 @@ export function ContasReceber() {
                                                         className="font-bold text-gray-900 dark:text-white leading-tight cursor-pointer hover:text-primary-500 transition-colors"
                                                         onClick={() => navigate(`/contatos/${venda.contatoId}`)}
                                                     >
-                                                        {venda.contato?.nome || 'Cliente n√£o identificado'}
+                                                        {venda.contato?.nome || 'Cliente n„o identificado'}
                                                     </h3>
                                                     <div className="flex items-center gap-3 mt-1">
                                                         <div className="flex items-center gap-1 text-xs text-gray-500 font-bold uppercase tracking-tight">
@@ -260,14 +260,14 @@ export function ContasReceber() {
                                                 </span>
                                             </div>
                                             <div>
-                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Previs√£o</span>
+                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Previs„o</span>
                                                 <span className={cn(
                                                     "text-base font-bold",
                                                     atraso > 0 ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
                                                 )}>
                                                     {venda.dataPrevistaPagamento
                                                         ? formatDate(venda.dataPrevistaPagamento)
-                                                        : 'N√£o definida'
+                                                        : 'N„o definida'
                                                     }
                                                 </span>
                                             </div>
@@ -296,7 +296,7 @@ export function ContasReceber() {
                     )}
                 </div>
 
-                {/* Modal de Quita√ß√£o */}
+                {/* Modal de QuitaÁ„o */}
                 <Modal
                     isOpen={!!selectedVenda}
                     onClose={() => !isQuitting && setSelectedVenda(null)}
@@ -330,7 +330,7 @@ export function ContasReceber() {
 
                             <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
                                 <p className="text-xs text-primary font-medium">
-                                    Este recebimento ser√° registrado automaticamente no Fluxo de Caixa como entrada na conta selecionada.
+                                    Este recebimento ser· registrado automaticamente no Fluxo de Caixa como entrada na conta selecionada.
                                 </p>
                             </div>
 

@@ -1,0 +1,131 @@
+﻿ apps/catalogo/.eslintrc.json                       |    3 +
+ apps/catalogo/next-env.d.ts                        |    5 +
+ apps/catalogo/next.config.js                       |   30 +
+ apps/catalogo/package.json                         |   42 +
+ apps/catalogo/postcss.config.js                    |    6 +
+ apps/catalogo/public/hero-cheese/cheese.png        |  Bin 0 -> 366687 bytes
+ apps/catalogo/public/hero-cheese/cheese_500.png    |  Bin 0 -> 25070 bytes
+ apps/catalogo/public/hero-cheese/pao_left.png      |  Bin 0 -> 256783 bytes
+ apps/catalogo/public/hero-cheese/pao_left_500.png  |  Bin 0 -> 24973 bytes
+ apps/catalogo/public/hero-cheese/pao_right.png     |  Bin 0 -> 267733 bytes
+ apps/catalogo/public/hero-cheese/pao_right_500.png |  Bin 0 -> 25604 bytes
+ apps/catalogo/public/hero/hero-bg-desktop.png      |  Bin 0 -> 2426586 bytes
+ apps/catalogo/public/hero/hero-bg-mobile.png       |  Bin 0 -> 1086530 bytes
+ apps/catalogo/public/images/benefits/nao-oco.png   |  Bin 0 -> 805547 bytes
+ .../public/images/benefits/pronto-20min.png        |  Bin 0 -> 533243 bytes
+ .../public/images/benefits/queijo-verdade.png      |  Bin 0 -> 739800 bytes
+ .../public/images/benefits/sem-conservantes.png    |  Bin 0 -> 851512 bytes
+ .../public/images/ingredients/fecula-mandioca.png  |  Bin 0 -> 737361 bytes
+ .../public/images/ingredients/oleo-soja.png        |  Bin 0 -> 1048868 bytes
+ apps/catalogo/public/images/ingredients/ovos.png   |  Bin 0 -> 519914 bytes
+ .../public/images/ingredients/queijo-canastra.png  |  Bin 0 -> 700514 bytes
+ apps/catalogo/public/images/ingredients/sal.png    |  Bin 0 -> 842011 bytes
+ .../images/products/balde-massa-1kg-cover.webp     |  Bin 0 -> 33492 bytes
+ .../images/products/balde-massa-4kg-cover.webp     |  Bin 0 -> 45920 bytes
+ ...ao-de-queijo-congelado-1kg-10un-100g-cover.webp |  Bin 0 -> 68760 bytes
+ ...pao-de-queijo-congelado-2kg-40un-50g-cover.webp |  Bin 0 -> 90962 bytes
+ ...pao-de-queijo-congelado-2kg-80un-25g-cover.webp |  Bin 0 -> 65454 bytes
+ apps/catalogo/public/mont-distribuidora-sem-bg.png |  Bin 0 -> 627533 bytes
+ apps/catalogo/scripts/optimize-hero.mjs            |   30 +
+ apps/catalogo/scripts/wsl-chrome-bridge.sh         |   25 +
+ .../src/app/(public)/_components/BrandStory.tsx    |   51 +
+ .../app/(public)/_components/FeaturedProducts.tsx  |  123 ++
+ .../src/app/(public)/_components/FinalCTA.tsx      |  171 ++
+ .../src/app/(public)/_components/HeroSection.tsx   |  210 +++
+ .../src/app/(public)/_components/HomeWrapper.tsx   |   13 +
+ .../src/app/(public)/_components/HowItWorks.tsx    |  111 ++
+ .../app/(public)/_components/hero/DiveOverlay.tsx  |   82 +
+ .../app/(public)/_components/hero/FloatingPaes.tsx |   98 +
+ .../(public)/_components/hero/HeroBackground.tsx   |   62 +
+ .../src/app/(public)/_components/hero/HeroCopy.tsx |  101 +
+ .../(public)/_components/hero/ImmersiveHero.tsx    |   21 +
+ .../app/(public)/_components/hero/PaoDeQueijo.tsx  |  211 +++
+ .../(public)/_components/hero/ScrollWrapper.tsx    |  101 +
+ .../(public)/carrinho/_components/CartItemList.tsx |   89 +
+ .../(public)/carrinho/_components/CheckoutForm.tsx |  258 +++
+ .../(public)/carrinho/_components/OrderSummary.tsx |   32 +
+ apps/catalogo/src/app/(public)/carrinho/error.tsx  |   32 +
+ apps/catalogo/src/app/(public)/carrinho/page.tsx   |  228 +++
+ apps/catalogo/src/app/(public)/carrinho/types.ts   |   39 +
+ apps/catalogo/src/app/(public)/error.tsx           |   32 +
+ apps/catalogo/src/app/(public)/loading.tsx         |    7 +
+ apps/catalogo/src/app/(public)/not-found.tsx       |   21 +
+ apps/catalogo/src/app/(public)/page.tsx            |   71 +
+ .../[slug]/_components/AddToCartSection.tsx        |  150 ++
+ .../[slug]/_components/RelatedProducts.tsx         |   74 +
+ .../src/app/(public)/produtos/[slug]/page.tsx      |  195 ++
+ .../produtos/_components/BenefitsCarousel.tsx      |  110 ++
+ .../produtos/_components/FeaturedProduct.tsx       |  124 ++
+ .../produtos/_components/IngredientsSection.tsx    |  173 ++
+ .../produtos/_components/ProductCatalog.tsx        |  113 ++
+ .../(public)/produtos/_components/StoreBanner.tsx  |   73 +
+ .../app/(public)/produtos/_components/TrustBar.tsx |   54 +
+ apps/catalogo/src/app/(public)/produtos/error.tsx  |   32 +
+ .../catalogo/src/app/(public)/produtos/loading.tsx |   12 +
+ apps/catalogo/src/app/(public)/produtos/page.tsx   |   74 +
+ apps/catalogo/src/app/(public)/sobre/page.tsx      |   20 +
+ apps/catalogo/src/app/admin/(protected)/layout.tsx |   55 +
+ apps/catalogo/src/app/admin/(protected)/page.tsx   |  121 ++
+ .../src/app/admin/(protected)/pedidos/page.tsx     |  221 +++
+ .../src/app/admin/(protected)/produtos/page.tsx    |  155 ++
+ apps/catalogo/src/app/admin/login/page.tsx         |  118 ++
+ .../src/app/api/admin/pedidos/[id]/route.ts        |  244 +++
+ apps/catalogo/src/app/api/admin/pedidos/route.ts   |   54 +
+ .../app/api/admin/produtos/[id]/imagem/route.ts    |  133 ++
+ .../src/app/api/admin/produtos/[id]/route.ts       |   83 +
+ apps/catalogo/src/app/api/admin/produtos/route.ts  |   58 +
+ apps/catalogo/src/app/api/pedidos/route.ts         |  140 ++
+ apps/catalogo/src/app/globals.css                  |   72 +
+ apps/catalogo/src/app/layout.tsx                   |  152 ++
+ apps/catalogo/src/components/PreloaderDismiss.tsx  |   29 +
+ apps/catalogo/src/components/admin/AdminHeader.tsx |   49 +
+ apps/catalogo/src/components/admin/AdminNav.tsx    |   57 +
+ .../src/components/admin/DashboardCard.tsx         |   53 +
+ apps/catalogo/src/components/admin/OrderCard.tsx   |  187 ++
+ apps/catalogo/src/components/admin/ProductCard.tsx |   98 +
+ .../src/components/admin/ProductEditForm.tsx       |  271 +++
+ apps/catalogo/src/components/admin/StatusBadge.tsx |   33 +
+ apps/catalogo/src/components/catalog/Footer.tsx    |   71 +
+ apps/catalogo/src/components/catalog/Navbar.tsx    |  218 +++
+ .../src/components/catalog/ProductCard.tsx         |  181 ++
+ apps/catalogo/src/components/catalog/index.ts      |    3 +
+ apps/catalogo/src/components/ui/Badge.tsx          |   41 +
+ apps/catalogo/src/components/ui/Button.tsx         |   72 +
+ apps/catalogo/src/components/ui/Input.tsx          |   60 +
+ apps/catalogo/src/components/ui/ToastContainer.tsx |   28 +
+ apps/catalogo/src/components/ui/index.ts           |    8 +
+ .../src/components/visual/FloatingCheeseBread.tsx  |   48 +
+ .../src/components/visual/GrainTexture.tsx         |   19 +
+ .../src/components/visual/MountainSilhouette.tsx   |   37 +
+ .../src/components/visual/ParticleField.tsx        |   54 +
+ apps/catalogo/src/hooks/useCep.ts                  |   71 +
+ apps/catalogo/src/hooks/useScrollAnimation.ts      |   51 +
+ apps/catalogo/src/hooks/useToast.ts                |   26 +
+ apps/catalogo/src/lib/cart/store.ts                |   65 +
+ apps/catalogo/src/lib/constants/delivery.ts        |    5 +
+ apps/catalogo/src/lib/gsap/animations.ts           |  174 ++
+ apps/catalogo/src/lib/supabase/admin.ts            |   12 +
+ apps/catalogo/src/lib/supabase/client.ts           |    7 +
+ apps/catalogo/src/lib/supabase/mappers.ts          |  183 ++
+ apps/catalogo/src/lib/supabase/server.ts           |   47 +
+ apps/catalogo/src/lib/utils/cn.ts                  |    6 +
+ apps/catalogo/src/lib/utils/format.ts              |   52 +
+ apps/catalogo/src/lib/utils/validators.ts          |   22 +
+ apps/catalogo/src/lib/whatsapp/checkout.ts         |   94 +
+ apps/catalogo/src/middleware.ts                    |   65 +
+ apps/catalogo/src/types/cart.ts                    |   16 +
+ apps/catalogo/src/types/order.ts                   |   32 +
+ apps/catalogo/src/types/product.ts                 |   69 +
+ apps/catalogo/tailwind.config.ts                   |   42 +
+ apps/catalogo/tsconfig.json                        |   40 +
+ apps/catalogo/tsconfig.tsbuildinfo                 |    1 +
+ apps/interno/package.json                          |    2 +-
+ apps/interno/src/vite-env.d.ts                     |    8 +
+ apps/interno/tsc-error.txt                         |   93 +
+ apps/interno/tsconfig.app.json                     |    3 +-
+ apps/interno/vercel.json                           |    4 -
+ deploy-config.md                                   |   52 +
+ next-build.txt                                     |   43 +
+ pnpm-lock.yaml                                     | 1981 +++++++++++++++++++-
+ apps/catalogo/.gitkeep => tsc-catalogo.txt         |    0
+ 130 files changed, 9948 insertions(+), 50 deletions(-)

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { contasAPagarService } from '../services/contasAPagarService'
-import type { Database } from '../types/database'
+import type { Database } from '@mont/shared'
 
 type ContaAPagarInsert = Database['public']['Tables']['contas_a_pagar']['Insert']
 

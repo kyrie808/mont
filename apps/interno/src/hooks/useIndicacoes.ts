@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Contato } from '../types/database'
+import type { Contato } from '@mont/shared'
 
 export interface Indicado {
     id: string

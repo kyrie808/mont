@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Conta, PlanoConta, Lancamento, ExtratoItem, FluxoResumo, Insert } from '../types/database'
+import type { Conta, PlanoConta, Lancamento, ExtratoItem, FluxoResumo, Insert } from '@mont/shared'
 
 export interface ExtratoDeSaldoRow {
     mes: string

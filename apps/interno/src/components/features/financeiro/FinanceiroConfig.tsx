@@ -1,11 +1,11 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Building2, LayoutGrid, Plus, FileText, ChevronRight } from 'lucide-react'
 import { Button } from '../../ui'
 import { PlanoContaModal } from './PlanoContaModal'
 import { ContaModal } from './ContaModal'
 import { formatCurrency } from '@mont/shared'
 import { cn } from '@mont/shared'
-import type { Conta, PlanoConta } from '@/types/database'
+import type { Conta, PlanoConta } from '@mont/shared'
 
 interface FinanceiroConfigProps {
     contas: Conta[]
@@ -33,7 +33,7 @@ export function FinanceiroConfig({
             {/* Settings Sub-tabs */}
             <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
                 {[
-                    { id: 'contas', label: 'Contas Bancárias', icon: Building2 },
+                    { id: 'contas', label: 'Contas Banc�rias', icon: Building2 },
                     { id: 'categorias', label: 'Plano de Contas', icon: LayoutGrid },
                 ].map((tab) => (
                     <button

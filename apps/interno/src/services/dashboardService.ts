@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Tables } from '../types/database'
+import type { Tables } from '@mont/shared'
 
 type HomeFinanceiroRow = Tables<'view_home_financeiro'>
 type HomeOperacionalRow = Tables<'view_home_operacional'>

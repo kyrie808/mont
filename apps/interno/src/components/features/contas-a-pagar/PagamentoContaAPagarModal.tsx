@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,21 +10,21 @@ import { contasAPagarService } from '../../../services/contasAPagarService'
 import { formatCurrency, formatDate } from '@mont/shared'
 import { cn } from '@mont/shared'
 import type { ContaAPagarWithCategoria } from '../../../services/contasAPagarService'
-import type { Database } from '../../../types/database'
+import type { Database } from '@mont/shared'
 
 type PagamentoRow = Database['public']['Tables']['pagamentos_conta_a_pagar']['Row']
 
 const PAYMENT_METHODS = [
     { value: 'pix', label: 'Pix' },
     { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'transferencia', label: 'TransferÃªncia' },
+    { value: 'transferencia', label: 'Transferência' },
 ] as const
 
 const schema = z.object({
     valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
-    data_pagamento: z.string().min(1, 'Data Ã© obrigatÃ³ria'),
+    data_pagamento: z.string().min(1, 'Data é obrigatória'),
     conta_id: z.string().min(1, 'Selecione uma conta'),
-    metodo_pagamento: z.string().min(1, 'Selecione um mÃ©todo'),
+    metodo_pagamento: z.string().min(1, 'Selecione um método'),
     observacao: z.string().optional(),
 })
 
@@ -134,7 +134,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                         <p className="font-bold text-foreground">{conta.credor}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs font-bold text-muted-foreground uppercase">DescriÃ§Ã£o</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Descrição</p>
                         <p className="text-sm text-foreground">{conta.descricao}</p>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                         <p className="font-bold text-foreground">{formatCurrency(conta.valor_total)}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase">JÃ¡ Pago</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Já Pago</p>
                         <p className="font-bold text-success">{formatCurrency(conta.valor_pago)}</p>
                     </div>
                     <div>
@@ -207,7 +207,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                         error={errors.conta_id?.message}
                     />
                     <Select
-                        label="MÃ©todo"
+                        label="Método"
                         {...register('metodo_pagamento')}
                         options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label }))}
                         error={errors.metodo_pagamento?.message}
@@ -215,7 +215,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 </div>
 
                 <Input
-                    label="ObservaÃ§Ã£o"
+                    label="Observação"
                     placeholder="Opcional"
                     {...register('observacao')}
                 />
@@ -249,8 +249,8 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
                     <p className="text-xs text-primary font-medium">
                         {contaCredorId
-                            ? 'Este pagamento debitarÃ¡ a conta de origem e creditarÃ¡ a conta do credor (transferÃªncia).'
-                            : 'Este pagamento serÃ¡ registrado automaticamente no Fluxo de Caixa como saÃ­da na conta selecionada.'
+                            ? 'Este pagamento debitará a conta de origem e creditará a conta do credor (transferência).'
+                            : 'Este pagamento será registrado automaticamente no Fluxo de Caixa como saída na conta selecionada.'
                         }
                     </p>
                 </div>
@@ -265,7 +265,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 </ModalActions>
             </form>
 
-            {/* HistÃ³rico de pagamentos */}
+            {/* Histórico de pagamentos */}
             {pagamentos.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-border">
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
@@ -285,7 +285,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 </div>
             )}
             {loadingPagamentos && (
-                <p className="text-xs text-muted-foreground text-center py-2">Carregando histÃ³rico...</p>
+                <p className="text-xs text-muted-foreground text-center py-2">Carregando histórico...</p>
             )}
         </Modal>
     )

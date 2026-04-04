@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { VendaInsert, VendaUpdate, ItemVendaInsert } from '../types/database'
+import type { VendaInsert, VendaUpdate, ItemVendaInsert } from '@mont/shared'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
 import { toDomainVenda, type VendaRowWithRelations } from './mappers'
 import { isToday } from 'date-fns'

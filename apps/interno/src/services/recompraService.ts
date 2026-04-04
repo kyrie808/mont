@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Contato } from '../types/database'
+import type { Contato } from '@mont/shared'
 import { differenceInDays } from 'date-fns'
 
 export type StatusRecompra = 'atrasado' | 'proximo' | 'ok'

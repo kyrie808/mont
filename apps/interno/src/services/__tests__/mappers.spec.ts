@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { toDomainContato, toDomainProduto, toDomainItemVenda, toDomainPagamento, toDomainVenda } from '../mappers'
-import type { PagamentoVenda, VendaComItens } from '../../types/database'
+import type { PagamentoVenda } from '@mont/shared'
+import type { VendaComItens } from '../../types/domain'
 
 describe('Domain Mappers', () => {
     describe('toDomainContato', () => {

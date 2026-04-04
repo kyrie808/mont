@@ -1,6 +1,6 @@
 import { differenceInDays } from 'date-fns'
 import { RECOMPRA_LIMITES } from '../constants'
-import type { Contato, Venda } from '../types/database'
+import type { Contato, Venda } from '@mont/shared'
 
 /**
  * Calcula dias desde a última compra de um contato

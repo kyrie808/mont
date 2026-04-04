@@ -11,7 +11,7 @@ import { useToast } from '../components/ui/Toast'
 import { supabase } from '../lib/supabase'
 import { getCoordinates } from '../utils/geocoding'
 import { useCep } from '../hooks/useCep'
-import type { Json } from '../types/database'
+import type { Json } from '@mont/shared'
 
 // Sub-components
 import { ConfiguracaoCiclo } from '../components/features/configuracoes/ConfiguracaoCiclo'

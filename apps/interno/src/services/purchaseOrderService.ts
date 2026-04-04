@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 import type { DomainPurchaseOrderWithItems, CreatePurchaseOrder, UpdatePurchaseOrder } from '../types/domain'
 import { toDomainPurchaseOrderWithItems } from './mappers'
-import type { Database } from '../types/database'
+import type { Database } from '@mont/shared'
 
 export interface CreatePurchaseOrderItem {
     productId: string

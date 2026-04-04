@@ -1,4 +1,13 @@
-import type { Database } from './database'
+import type { 
+    Database, 
+    Venda, 
+    ItemVenda, 
+    PagamentoVenda, 
+    Produto, 
+    PurchaseOrder, 
+    PurchaseOrderItem, 
+    PurchaseOrderPayment 
+} from '@mont/shared'
 
 export type VendaStatus = 'pendente' | 'entregue' | 'cancelada'
 export type PagamentoMetodo = 'pix' | 'dinheiro' | 'cartao' | 'fiado' | 'brinde' | 'pre_venda'
@@ -217,4 +226,35 @@ export interface LocalPartida {
     endereco: string
     lat: number
     lng: number
+}
+
+export interface VendaComItens extends Venda {
+  itens: (ItemVenda & {
+    produto?: {
+      id: string
+      nome: string
+      codigo: string
+    }
+  })[]
+  contato?: {
+    id: string
+    nome: string
+    telefone: string
+    origem: string
+    indicado_por_id?: string | null
+    indicador?: {
+      id: string
+      nome: string
+    } | null
+    status: string
+  }
+  pagamentos?: PagamentoVenda[]
+}
+
+export interface PurchaseOrderWithItems extends PurchaseOrder {
+  fornecedor: { nome: string }
+  items: (PurchaseOrderItem & {
+    product: Produto
+  })[]
+  payments: PurchaseOrderPayment[]
 }

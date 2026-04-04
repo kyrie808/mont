@@ -1,10 +1,10 @@
-ï»¿import { Wallet, TrendingUp, Clock, Filter } from 'lucide-react'
+import { Wallet, TrendingUp, Clock, Filter } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { MonthPicker } from '../../dashboard/MonthPicker'
 import { formatCurrency } from '@mont/shared'
 import { cn } from '@mont/shared'
-import type { FluxoResumo } from '@/types/database'
+import type { FluxoResumo } from '@mont/shared'
 
 interface FinanceiroResumoProps {
     selectedMonth: Date
@@ -52,7 +52,7 @@ export function FinanceiroResumo({
                         </p>
                     </div>
                     <div className="flex-1">
-                        <p className="text-[9px] font-black uppercase tracking-wider opacity-60">SaÃ­das ({format(selectedMonth, 'MMM', { locale: ptBR })})</p>
+                        <p className="text-[9px] font-black uppercase tracking-wider opacity-60">Saídas ({format(selectedMonth, 'MMM', { locale: ptBR })})</p>
                         <p className="text-sm font-bold text-red-400 dark:text-red-600">
                             - {formatCurrency(resumo?.total_saidas || 0)}
                         </p>
@@ -63,10 +63,10 @@ export function FinanceiroResumo({
             {/* Quick KPIs Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 {[
-                    { label: 'Saldo do MÃªs', value: (resumo?.total_entradas || 0) - (resumo?.total_saidas || 0), icon: TrendingUp, color: 'emerald' },
+                    { label: 'Saldo do Mês', value: (resumo?.total_entradas || 0) - (resumo?.total_saidas || 0), icon: TrendingUp, color: 'emerald' },
                     { label: 'A Receber', value: resumo?.total_a_receber || 0, icon: Clock, color: 'orange' },
                     {
-                        label: 'InadimplÃªncia',
+                        label: 'Inadimplência',
                         value: (resumo?.total_faturamento || 0) > 0
                             ? Math.min(((resumo?.total_a_receber || 0) / (resumo?.total_faturamento || 1)) * 100, 100)
                             : 0,

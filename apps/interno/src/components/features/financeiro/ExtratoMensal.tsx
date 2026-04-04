@@ -1,10 +1,10 @@
-ï»¿import { useState } from 'react'
+import { useState } from 'react'
 import { Receipt, Filter, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '../../ui'
 import { formatCurrency } from '@mont/shared'
 import { cn } from '@mont/shared'
-import type { ExtratoItem } from '@/types/database'
+import type { ExtratoItem } from '@mont/shared'
 
 interface ExtratoMensalProps {
     extrato: ExtratoItem[]
@@ -30,11 +30,11 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
         <section className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Receipt className="w-4 h-4" /> Extrato do MÃªs
+                    <Receipt className="w-4 h-4" /> Extrato do Mês
                 </h2>
                 {!loadingExtrato && extrato.length > 0 && (
                     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                        {extrato.length} lanÃ§amentos
+                        {extrato.length} lançamentos
                     </span>
                 )}
             </div>
@@ -43,14 +43,14 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                 {loadingExtrato ? (
                     <div className="p-12 flex flex-col items-center gap-4">
                         <div className="w-8 h-8 border-4 border-zinc-900 dark:border-white border-t-transparent rounded-full animate-spin" />
-                        <p className="text-xs font-bold text-zinc-500 uppercase">Sincronizando lanÃ§amentos...</p>
+                        <p className="text-xs font-bold text-zinc-500 uppercase">Sincronizando lançamentos...</p>
                     </div>
                 ) : extrato.length === 0 ? (
                     <div className="p-16 text-center">
                         <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-200 dark:border-zinc-700">
                             <Filter className="w-8 h-8 text-zinc-300" />
                         </div>
-                        <p className="text-sm font-bold text-zinc-400 uppercase">Nenhum lanÃ§amento registrado</p>
+                        <p className="text-sm font-bold text-zinc-400 uppercase">Nenhum lançamento registrado</p>
                     </div>
                 ) : (
                     <>
@@ -76,7 +76,7 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                                                 </span>
                                                 <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
                                                 <Badge variant="outline" className="text-[9px] py-0 h-4 border-zinc-200 dark:border-zinc-700 text-zinc-500">
-                                                    {item.categoria_nome || 'LanÃ§amento'}
+                                                    {item.categoria_nome || 'Lançamento'}
                                                 </Badge>
                                             </div>
                                         </div>
@@ -105,14 +105,14 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                                     <ChevronLeft className="w-4 h-4" /> Anterior
                                 </button>
                                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">
-                                    PÃ¡gina {paginaAtual} de {totalPaginas}
+                                    Página {paginaAtual} de {totalPaginas}
                                 </span>
                                 <button
                                     onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
                                     disabled={paginaAtual === totalPaginas}
                                     className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 dark:hover:text-white transition-colors"
                                 >
-                                    PrÃ³xima <ChevronRight className="w-4 h-4" />
+                                    Próxima <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         )}

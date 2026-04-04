@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Tables } from '@/types/database'
+import type { Tables } from '@mont/shared'
 
 export type CatalogoPendente = Tables<'cat_pedidos_pendentes_vinculacao'> & {
   cat_pedidos: Tables<'cat_pedidos'>

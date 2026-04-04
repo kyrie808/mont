@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import type {
     ProdutoInsert,
     ProdutoUpdate
-} from '../types/database'
+} from '@mont/shared'
 import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
 import { toDomainProduto } from './mappers'
 

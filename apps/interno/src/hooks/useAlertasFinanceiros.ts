@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { startOfDay, differenceInDays, isBefore, isSameDay, addDays } from 'date-fns'
-import type { VendaComItens } from '../types/database'
-import { type ContatoRowWithIndicador } from '../services/mappers'
+import type { VendaComItens } from '../types/domain'
 
 export type StatusFinanceiro = 'atrasado' | 'hoje' | 'proximo'
 
@@ -70,8 +69,8 @@ export function useAlertasFinanceiros(enabled: boolean = true): UseAlertasFinanc
                     alertasProcessados.push({
                         venda: {
                             ...venda,
-                            contato: (venda.contato as unknown as ContatoRowWithIndicador), // Type assertion to match VendaComItens expected by the widget
-                        },
+                            contato: (venda.contato as any),
+                        } as any,
                         diasAtraso: differenceInDays(hoje, dataPrevista),
                         status,
                         dataPrevista

@@ -1,4 +1,4 @@
-Ôªøimport { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, DollarSign } from 'lucide-react'
 import { useForm, type SubmitHandler } from 'react-hook-form'
@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { formatCurrency } from '@mont/shared'
 import type { DomainPurchaseOrderWithItems } from '../../../types/domain'
 import { cashFlowService } from '../../../services/cashFlowService'
-import type { Conta } from '../../../types/database'
+import type { Conta } from '@mont/shared'
 
 // Schema similar to sales payment but for purchase orders
 const paymentSchema = z.object({
@@ -30,10 +30,10 @@ interface PurchaseOrderPaymentModalProps {
 const PAYMENT_METHODS = [
     { value: 'pix', label: 'Pix' },
     { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'cartao_credito', label: 'Cart√£o de Cr√©dito' },
-    { value: 'cartao_debito', label: 'Cart√£o de D√©bito' },
+    { value: 'cartao_credito', label: 'Cart„o de CrÈdito' },
+    { value: 'cartao_debito', label: 'Cart„o de DÈbito' },
     { value: 'boleto', label: 'Boleto' },
-    { value: 'transferencia', label: 'Transfer√™ncia' }
+    { value: 'transferencia', label: 'TransferÍncia' }
 ] as const
 
 export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }: PurchaseOrderPaymentModalProps) {
@@ -124,7 +124,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
                         </div>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-600">J√° Pago:</span>
+                            <span className="text-sm text-gray-600">J· Pago:</span>
                             <span className="font-medium text-emerald-600">{formatCurrency(order.amountPaid || 0)}</span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t mt-2">
@@ -150,7 +150,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    M√©todo
+                                    MÈtodo
                                 </label>
                                 <select
                                     {...register('payment_method')}
@@ -206,20 +206,20 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             )}
                             {currentAmount > remainingAmount + 0.01 && (
                                 <p className="text-xs text-amber-600 mt-1">
-                                    ‚ö†Ô∏è Aten√ß√£o: Valor maior que o restante.
+                                    ?? AtenÁ„o: Valor maior que o restante.
                                 </p>
                             )}
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Observa√ß√£o
+                                ObservaÁ„o
                             </label>
                             <textarea
                                 {...register('notes')}
                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
                                 rows={2}
-                                placeholder="Ex: Confirma√ß√£o de transfer√™ncia..."
+                                placeholder="Ex: ConfirmaÁ„o de transferÍncia..."
                             />
                         </div>
 

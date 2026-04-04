@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Database } from '../types/database'
+import type { Database } from '@mont/shared'
 
 type ContaAPagarRow = Database['public']['Tables']['contas_a_pagar']['Row']
 type ContaAPagarInsert = Database['public']['Tables']['contas_a_pagar']['Insert']

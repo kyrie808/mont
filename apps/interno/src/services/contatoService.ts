@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import type {
     ContatoInsert,
     ContatoUpdate
-} from '../types/database'
+} from '@mont/shared'
 import type { DomainContato, CreateContato, UpdateContato } from '../types/domain'
 import { getCoordinates } from '../utils/geocoding'
 import { toDomainContato } from './mappers'
