@@ -57,6 +57,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
+    fileParallelism: false,
     exclude: [
       '.aios-core/**',
       'node_modules/**'

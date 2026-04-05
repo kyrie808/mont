@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
-import { createTestServiceClient, cleanTestData, formatCurrency } from '@mont/shared'
+import { createTestServiceClient, cleanTestData } from '@mont/shared/test-utils'
+import { formatCurrency } from '@mont/shared'
 
 const supabase = createTestServiceClient()
 

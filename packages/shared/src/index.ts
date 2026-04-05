@@ -56,6 +56,3 @@ export type {
     ItemPedidoCatalogo,
     ImagemProdutoCatalogo,
 } from './types'
-
-// Test utilities
-export { createTestClient, createTestServiceClient, cleanTestData } from './test-utils'

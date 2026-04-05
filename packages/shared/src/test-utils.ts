@@ -7,16 +7,12 @@ const LOCAL_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 /** Client com role anon — respeita RLS */
 export function createTestClient() {
-    const url = process.env.SUPABASE_URL || LOCAL_URL
-    const key = process.env.SUPABASE_ANON_KEY || LOCAL_ANON_KEY
-    return createClient<Database>(url, key)
+    return createClient<Database>(LOCAL_URL, LOCAL_ANON_KEY)
 }
 
 /** Client com role service_role — bypassa RLS */
 export function createTestServiceClient() {
-    const url = process.env.SUPABASE_URL || LOCAL_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || LOCAL_SERVICE_KEY
-    return createClient<Database>(url, key)
+    return createClient<Database>(LOCAL_URL, LOCAL_SERVICE_KEY)
 }
 
 /** Limpa dados de teste respeitando FK constraints */
