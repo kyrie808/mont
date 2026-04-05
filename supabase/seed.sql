@@ -14,7 +14,7 @@ VALUES
     ('Banco Teste', 'banco', 0, 0);
 
 -- Plano de contas mínimo (se necessário para lançamentos)
-INSERT INTO "public"."plano_de_contas" (nome, tipo, categoria)
+INSERT INTO "public"."plano_de_contas" (nome, tipo, categoria, codigo)
 VALUES
-    ('Receita de Vendas', 'receita', 'variavel'),
-    ('Custo de Mercadoria', 'despesa', 'variavel');
+    ('Recebimento de Venda', 'receita', 'variavel', 'RECEBIMENTO_VENDA'),
+    ('Custo de Mercadoria', 'despesa', 'variavel', 'CMV');
