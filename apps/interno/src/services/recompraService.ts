@@ -14,16 +14,16 @@ export interface ContatoRecompra {
 
 export const recompraService = {
     async getRecompraData(config: { b2b: number, b2c: number }): Promise<ContatoRecompra[]> {
-        const { data: clientesData, error: clientesError } = await (supabase
-            .from('contatos') as any)
+        const { data: clientesData, error: clientesError } = await supabase
+            .from('contatos')
             .select('id, nome, tipo, ultimo_contato, criado_em, status')
             .eq('status', 'cliente')
 
         if (clientesError) throw clientesError
         const clientes = (clientesData ?? []) as Contato[]
 
-        const { data: vendasData, error: vendasError } = await (supabase
-            .from('vendas') as any)
+        const { data: vendasData, error: vendasError } = await supabase
+            .from('vendas')
             .select('contato_id, data')
             .eq('status', 'entregue')
             .order('data', { ascending: false })
@@ -90,8 +90,8 @@ export const recompraService = {
     },
 
     async marcarComoContatado(contatoId: string): Promise<boolean> {
-        const { error } = await (supabase
-            .from('contatos') as any)
+        const { error } = await supabase
+            .from('contatos')
             .update({ ultimo_contato: new Date().toISOString() })
             .eq('id', contatoId)
 

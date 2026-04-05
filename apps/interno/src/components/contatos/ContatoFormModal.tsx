@@ -89,7 +89,6 @@ export function ContatoFormModal({
                 complemento: contato.complemento || '',
                 cidade: contato.cidade || '',
                 uf: contato.uf || '',
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any)
         } else if (isOpen) {
             reset()

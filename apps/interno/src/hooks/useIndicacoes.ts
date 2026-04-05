@@ -41,8 +41,8 @@ export function useIndicacoes(): UseIndicacoesReturn {
 
         try {
             // Fetch all contacts that have indicated someone
-            const { data: contatos, error: contatosError } = await (supabase
-                .from('contatos') as any)
+            const { data: contatos, error: contatosError } = await supabase
+                .from('contatos')
                 .select('id, nome, telefone, status, indicado_por_id, ultimo_contato')
                 .not('indicado_por_id', 'is', null)
 
@@ -55,8 +55,8 @@ export function useIndicacoes(): UseIndicacoesReturn {
             })) as unknown as Contato[]
 
             // Fetch all contacts that are indicadores (have indicated at least one person)
-            const { data: todosContatos, error: todosError } = await (supabase
-                .from('contatos') as any)
+            const { data: todosContatos, error: todosError } = await supabase
+                .from('contatos')
                 .select('id, nome')
 
             if (todosError) throw todosError
@@ -66,8 +66,8 @@ export function useIndicacoes(): UseIndicacoesReturn {
             })) as unknown as Contato[]
 
             // Fetch sales count per contact
-            const { data: vendasCount, error: vendasError } = await (supabase
-                .from('vendas') as any)
+            const { data: vendasCount, error: vendasError } = await supabase
+                .from('vendas')
                 .select('contato_id, id')
                 .eq('status', 'entregue')
 

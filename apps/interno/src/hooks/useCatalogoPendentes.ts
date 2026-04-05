@@ -12,8 +12,8 @@ export function useCatalogoPendentes() {
     const { data, isLoading, error } = useQuery({
         queryKey: ['catalogo-pendentes'],
         queryFn: async () => {
-            const { data, error } = await (supabase
-                .from('cat_pedidos_pendentes_vinculacao') as any)
+            const { data, error } = await supabase
+                .from('cat_pedidos_pendentes_vinculacao')
                 .select(`
                     id, cat_pedido_id, motivo_falha, criado_em,
                     cat_pedidos (
@@ -43,11 +43,11 @@ export function useCatalogoPendentes() {
             contatoId: string
         }) => {
             // 1. Buscar dados do pedido
-            const { data: pedido, error: errPed } = await (supabase
-                .from('cat_pedidos') as any)
+            const { data: pedido, error: errPed } = await supabase
+                .from('cat_pedidos')
                 .select('*')
                 .eq('id', catPedidoId)
-                .single() as any
+                .single()
 
             if (errPed) throw errPed
             if (!pedido) throw new Error('Pedido não encontrado')
@@ -66,14 +66,14 @@ export function useCatalogoPendentes() {
                 taxa_entrega: pedido.frete || 0
             }
 
-            const { error: errVenda } = await (supabase.from('vendas') as any)
+            const { error: errVenda } = await supabase.from('vendas')
                 .insert(vendaInsert)
 
             if (errVenda) throw errVenda
 
             // 3. Remover da fila de pendentes
-            const { error: errDelete } = await (supabase
-                .from('cat_pedidos_pendentes_vinculacao') as any)
+            const { error: errDelete } = await supabase
+                .from('cat_pedidos_pendentes_vinculacao')
                 .delete()
                 .eq('id', pendenteId)
 

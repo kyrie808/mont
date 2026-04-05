@@ -13,8 +13,8 @@ import { startOfMonth, endOfMonth, format, startOfDay, differenceInDays, isBefor
 
 export type StatusFinanceiro = 'atrasado' | 'hoje' | 'proximo'
 
-const alertasQuery = (supabase
-    .from('vendas') as any)
+const alertasQuery = supabase
+    .from('vendas')
     .select(`
         *,
         contato:contatos(id, nome, telefone, origem, indicado_por_id),
@@ -44,8 +44,8 @@ export interface AlertasFinanceirosResumo {
 export const cashFlowService = {
     // --- Contas ---
     async getContas() {
-        const { data, error } = await (supabase
-            .from('contas') as any)
+        const { data, error } = await supabase
+            .from('contas')
             .select('id, nome, tipo, banco, ativo, saldo_atual, saldo_inicial, criado_em, atualizado_em')
             .order('nome')
         if (error) throw error
@@ -53,19 +53,19 @@ export const cashFlowService = {
     },
 
     async createConta(data: Insert<'contas'>) {
-        const { data: created, error } = await (supabase
-            .from('contas') as any)
+        const { data: created, error } = await supabase
+            .from('contas')
             .insert(data)
             .select()
             .single()
         if (error) throw error
-        return created as any as Conta
+        return created as Conta
     },
 
     // --- Plano de Contas ---
     async getPlanoDeContas() {
-        const { data, error } = await (supabase
-            .from('plano_de_contas') as any)
+        const { data, error } = await supabase
+            .from('plano_de_contas')
             .select('id, nome, tipo, categoria, ativo, automatica')
             .eq('ativo', true)
             .eq('automatica', false)
@@ -75,8 +75,8 @@ export const cashFlowService = {
     },
 
     async getExtratoDeSaldo() {
-        const { data, error } = await (supabase
-            .from('view_extrato_saldo') as any)
+        const { data, error } = await supabase
+            .from('view_extrato_saldo')
             .select('mes, mes_ordem, entradas, saidas, saldo_mes, saldo_acumulado')
             .order('mes_ordem', { ascending: false })
         if (error) throw error
@@ -84,13 +84,13 @@ export const cashFlowService = {
     },
 
     async createPlanoConta(data: Insert<'plano_de_contas'>) {
-        const { data: created, error } = await (supabase
-            .from('plano_de_contas') as any)
+        const { data: created, error } = await supabase
+            .from('plano_de_contas')
             .insert(data)
             .select()
             .single()
         if (error) throw error
-        return created as any as PlanoConta
+        return created as PlanoConta
     },
 
     async createTransferencia(data: {
@@ -100,8 +100,8 @@ export const cashFlowService = {
         conta_destino_id: string
         descricao?: string
     }) {
-        const { data: created, error } = await (supabase
-            .from('lancamentos') as any)
+        const { data: created, error } = await supabase
+            .from('lancamentos')
             .insert({
                 tipo: 'transferencia',
                 valor: Math.round(data.valor * 100) / 100,
@@ -114,7 +114,7 @@ export const cashFlowService = {
             .select()
             .single()
         if (error) throw error
-        return created as any as Lancamento
+        return created as Lancamento
     },
 
     // --- Lançamentos Manuais (via RPC com validações no banco) ---
@@ -125,7 +125,7 @@ export const cashFlowService = {
         conta_id: string
         plano_conta_id: string
     }) {
-        const { error } = await (supabase as any).rpc('registrar_despesa_manual', {
+        const { error } = await supabase.rpc('registrar_despesa_manual', {
             p_valor: Math.round(data.valor * 100) / 100,
             p_descricao: data.descricao ?? '',
             p_data: data.data,
@@ -142,7 +142,7 @@ export const cashFlowService = {
         conta_id: string
         plano_conta_id: string
     }) {
-        const { error } = await (supabase as any).rpc('registrar_entrada_manual', {
+        const { error } = await supabase.rpc('registrar_entrada_manual', {
             p_valor: Math.round(data.valor * 100) / 100,
             p_descricao: data.descricao ?? '',
             p_data: data.data,
@@ -157,8 +157,8 @@ export const cashFlowService = {
         const start = format(startOfMonth(month), 'yyyy-MM-dd')
         const end = format(endOfMonth(month), 'yyyy-MM-dd')
 
-        const { data, error } = await (supabase
-            .from('view_extrato_mensal') as any)
+        const { data, error } = await supabase
+            .from('view_extrato_mensal')
             .select('id, data, valor, conta_id, categoria_tipo, categoria_nome, origem, descricao, tipo')
             .gte('data', start)
             .lte('data', end)
@@ -172,20 +172,20 @@ export const cashFlowService = {
         const mes = month.getMonth() + 1
         const ano = month.getFullYear()
 
-        const { data, error } = await (supabase
-            .from('view_fluxo_resumo') as any)
+        const { data, error } = await supabase
+            .from('view_fluxo_resumo')
             .select('mes, ano, total_entradas, total_saidas, total_faturamento, lucro_estimado, total_a_receber')
             .eq('mes', mes)
             .eq('ano', ano)
-            .maybeSingle() as any
+            .maybeSingle()
 
         if (error) throw error
         return data as FluxoResumo
     },
 
     async getContasReceber() {
-        const { data, error } = await (supabase
-            .from('vendas') as any)
+        const { data, error } = await supabase
+            .from('vendas')
             .select(`
         *,
         contato:contatos(nome)
@@ -229,7 +229,7 @@ export function processAlertasFinanceiros(vendas: VendaAlerta[]): AlertasFinance
 
         if (status) {
             alertasProcessados.push({
-                venda: venda as any,
+                venda,
                 diasAtraso: differenceInDays(hoje, dataPrevista),
                 status,
                 dataPrevista

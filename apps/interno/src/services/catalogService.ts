@@ -5,16 +5,16 @@ import { toDomainCatalogOrder } from './mappers'
 export const catalogService = {
     async getPedidosByContato(contatoId: string): Promise<DomainCatalogOrder[]> {
         const [pedidosRes, vendasRes] = await Promise.all([
-            (supabase
-                .from('cat_pedidos') as any)
+            supabase
+                .from('cat_pedidos')
                 .select(`
                     *,
                     itens:cat_itens_pedido(*)
                 `)
                 .eq('contato_id', contatoId)
                 .order('criado_em', { ascending: false }),
-            (supabase
-                .from('vendas') as any)
+            supabase
+                .from('vendas')
                 .select('id, cat_pedido_id')
                 .eq('contato_id', contatoId)
                 .not('cat_pedido_id', 'is', null)

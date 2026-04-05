@@ -7,8 +7,8 @@ import { isToday } from 'date-fns'
 
 export const vendaService = {
     async getVendas(startDate?: Date, endDate?: Date, includePending = false, search?: string, excludeCatalogo = false): Promise<DomainVenda[]> {
-        let query = (supabase
-            .from('vendas') as any)
+        let query = supabase
+            .from('vendas')
             .select(`
                 *,
                 contato:contatos(id, nome, telefone, origem, indicado_por_id, status),
@@ -47,8 +47,8 @@ export const vendaService = {
     },
 
     async getVendaById(id: string): Promise<DomainVenda> {
-        const { data, error } = await (supabase
-            .from('vendas') as any)
+        const { data, error } = await supabase
+            .from('vendas')
             .select(`
                 *,
                 contato:contatos(id, nome, telefone, tipo, status),
@@ -65,8 +65,8 @@ export const vendaService = {
     async createVenda(data: CreateVenda): Promise<DomainVenda> {
         // 1. Buscar custos dos produtos para cálculo de lucro
         const produtoIds = data.itens.map(it => it.produtoId)
-        const { data: produtos } = await (supabase
-            .from('produtos') as any)
+        const { data: produtos } = await supabase
+            .from('produtos')
             .select('id, custo')
             .in('id', produtoIds)
 
@@ -91,7 +91,7 @@ export const vendaService = {
             custo_total: custoTotal
         }
 
-        const { data: vendaData, error: vendaError } = await (supabase.from('vendas') as any).insert(vInsert).select().single()
+        const { data: vendaData, error: vendaError } = await supabase.from('vendas').insert(vInsert).select().single()
         if (vendaError) throw vendaError
 
         if (data.itens.length > 0) {
@@ -103,7 +103,7 @@ export const vendaService = {
                 subtotal: it.subtotal,
                 custo_unitario: custoPorProduto[it.produtoId] || 0
             }))
-            const { error: itensError } = await (supabase.from('itens_venda') as any).insert(iInserts)
+            const { error: itensError } = await supabase.from('itens_venda').insert(iInserts)
             if (itensError) throw itensError
         }
 
@@ -119,16 +119,16 @@ export const vendaService = {
         if (data.status) vUpdate.status = data.status
         if (data.pago !== undefined) vUpdate.pago = data.pago
 
-        const { error } = await (supabase.from('vendas') as any).update(vUpdate).eq('id', id)
+        const { error } = await supabase.from('vendas').update(vUpdate).eq('id', id)
         if (error) throw error
 
         return this.getVendaById(id)
     },
 
     async cancelVenda(id: string): Promise<boolean> {
-        const { error } = await (supabase
-            .from('vendas') as any)
-            .update({ status: 'cancelada', pago: false } as any)
+        const { error } = await supabase
+            .from('vendas')
+            .update({ status: 'cancelada', pago: false })
             .eq('id', id)
 
         if (error) throw error
@@ -137,11 +137,11 @@ export const vendaService = {
 
     async deleteVenda(id: string): Promise<boolean> {
         // Deletar lancamentos primeiro (FK sem CASCADE)
-        const { error: lancError } = await (supabase.from('lancamentos') as any).delete().eq('venda_id', id)
+        const { error: lancError } = await supabase.from('lancamentos').delete().eq('venda_id', id)
         if (lancError) throw lancError
 
         // vendas DELETE cascadeia para itens_venda e pagamentos_venda
-        const { error } = await (supabase.from('vendas') as any).delete().eq('id', id)
+        const { error } = await supabase.from('vendas').delete().eq('id', id)
         if (error) throw error
         return true
     },
@@ -150,7 +150,7 @@ export const vendaService = {
         // RPC atômica: pagamento + lançamento em uma única transação.
         // Se qualquer parte falhar, nada é commitado.
         const dataDate = data.includes('T') ? data.split('T')[0] : data
-        const { error } = await (supabase as any).rpc('registrar_pagamento_venda', {
+        const { error } = await supabase.rpc('registrar_pagamento_venda', {
             p_venda_id: vendaId,
             p_valor: valor,
             p_metodo: metodo,
@@ -164,7 +164,7 @@ export const vendaService = {
     },
 
     async getTotalAReceber(): Promise<number> {
-        const { data, error } = await (supabase as any).rpc('rpc_total_a_receber_dashboard')
+        const { data, error } = await supabase.rpc('rpc_total_a_receber_dashboard')
         if (error) return 0
         return Number(data) || 0
     },
@@ -201,8 +201,8 @@ export const vendaService = {
 
     async deleteUltimoPagamento(vendaId: string): Promise<boolean> {
         // 1. Buscar último pagamento
-        const { data: pagamento, error: fetchError } = await (supabase
-            .from('pagamentos_venda') as any)
+        const { data: pagamento, error: fetchError } = await supabase
+            .from('pagamentos_venda')
             .select('id, valor')
             .eq('venda_id', vendaId)
             .order('criado_em', { ascending: false })
@@ -212,8 +212,8 @@ export const vendaService = {
         if (fetchError || !pagamento) throw fetchError || new Error('Nenhum pagamento encontrado')
 
         // 2. Buscar lançamento correspondente por ID e deletar
-        const { data: lancamento } = await (supabase
-            .from('lancamentos') as any)
+        const { data: lancamento } = await supabase
+            .from('lancamentos')
             .select('id')
             .eq('venda_id', vendaId)
             .eq('origem', 'venda')
@@ -223,8 +223,8 @@ export const vendaService = {
             .maybeSingle()
 
         if (lancamento) {
-            const { error: lancError } = await (supabase
-                .from('view_home_financeiro') as any)
+            const { error: lancError } = await supabase
+                .from('lancamentos')
                 .delete()
                 .eq('id', lancamento.id)
 

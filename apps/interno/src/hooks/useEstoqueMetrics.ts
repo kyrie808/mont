@@ -20,8 +20,8 @@ export function useEstoqueMetrics() {
 
             // 1. Total de produtos ativos
             // Usamos count() para ser rápido
-            const { count: total, error: errorTotal } = await (supabase
-                .from('produtos') as any)
+            const { count: total, error: errorTotal } = await supabase
+                .from('produtos')
                 .select('*', { count: 'exact', head: true })
                 .eq('ativo', true)
 
@@ -32,8 +32,8 @@ export function useEstoqueMetrics() {
             // não é trivial com a API simples do Supabase JS sem RPC,
             // vamos buscar os produtos e filtrar no front (assumindo catálogo < 1000 itens para MVP).
             // Se escalar, criar uma VIEW ou RPC é melhor.
-            const { data: produtos, error: errorBaixo } = await (supabase
-                .from('produtos') as any)
+            const { data: produtos, error: errorBaixo } = await supabase
+                .from('produtos')
                 .select('estoque_atual, estoque_minimo')
                 .eq('ativo', true)
 

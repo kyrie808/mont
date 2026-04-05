@@ -11,8 +11,8 @@ export interface ContaAPagarWithCategoria extends ContaAPagarRow {
 
 export const contasAPagarService = {
     async getContasAPagar(): Promise<ContaAPagarWithCategoria[]> {
-        const { data, error } = await (supabase
-            .from('contas_a_pagar') as any)
+        const { data, error } = await supabase
+            .from('contas_a_pagar')
             .select('*, plano_de_contas(nome)')
             .order('data_vencimento', { ascending: true })
 
@@ -21,8 +21,8 @@ export const contasAPagarService = {
     },
 
     async createContaAPagar(payload: ContaAPagarInsert): Promise<ContaAPagarRow> {
-        const { data, error } = await (supabase
-            .from('contas_a_pagar') as any)
+        const { data, error } = await supabase
+            .from('contas_a_pagar')
             .insert(payload)
             .select()
             .single()
@@ -41,7 +41,7 @@ export const contasAPagarService = {
         referencia?: string
         observacao?: string
     }): Promise<string[]> {
-        const { data, error } = await (supabase as any).rpc('criar_obrigacao_parcelada', {
+        const { data, error } = await supabase.rpc('criar_obrigacao_parcelada', {
             p_descricao: params.descricao,
             p_credor: params.credor,
             p_valor_total: params.valor_total,
@@ -57,8 +57,8 @@ export const contasAPagarService = {
     },
 
     async getProjecaoPagamentos() {
-        const { data, error } = await (supabase
-            .from('rpt_projecao_pagamentos') as any)
+        const { data, error } = await supabase
+            .from('rpt_projecao_pagamentos')
             .select('*')
 
         if (error) throw error
@@ -74,7 +74,7 @@ export const contasAPagarService = {
         observacao?: string
         contaCredorId?: string
     }): Promise<string> {
-        const { data, error } = await (supabase as any).rpc('registrar_pagamento_conta_a_pagar', {
+        const { data, error } = await supabase.rpc('registrar_pagamento_conta_a_pagar', {
             p_conta_a_pagar_id: params.contaAPagarId,
             p_valor: Math.round(params.valor * 100) / 100,
             p_data_pagamento: params.dataPagamento,
@@ -89,8 +89,8 @@ export const contasAPagarService = {
     },
 
     async deleteContaAPagar(id: string): Promise<void> {
-        const { error } = await (supabase
-            .from('contas_a_pagar') as any)
+        const { error } = await supabase
+            .from('contas_a_pagar')
             .delete()
             .eq('id', id)
 
@@ -98,8 +98,8 @@ export const contasAPagarService = {
     },
 
     async getPagamentos(contaAPagarId: string): Promise<PagamentoRow[]> {
-        const { data, error } = await (supabase
-            .from('pagamentos_conta_a_pagar') as any)
+        const { data, error } = await supabase
+            .from('pagamentos_conta_a_pagar')
             .select('*')
             .eq('conta_a_pagar_id', contaAPagarId)
             .order('data_pagamento', { ascending: false })

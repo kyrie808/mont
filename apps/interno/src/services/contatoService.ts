@@ -10,8 +10,8 @@ import { toDomainContato } from './mappers'
 export class ContatoService {
     /* CRUD */
     async func(query: string = '', tipo?: string, status?: string): Promise<DomainContato[]> {
-        let builder = (supabase
-            .from('contatos') as any)
+        let builder = supabase
+            .from('contatos')
             .select(`
                 *,
                 indicador:contatos!indicado_por_id (
@@ -45,8 +45,8 @@ export class ContatoService {
     }
 
     async getById(id: string): Promise<DomainContato | null> {
-        const { data, error } = await (supabase
-            .from('contatos') as any)
+        const { data, error } = await supabase
+            .from('contatos')
             .select(`
                 *,
                 indicador:contatos!indicado_por_id (
@@ -100,8 +100,8 @@ export class ContatoService {
             }
         }
 
-        const { data: created, error } = await (supabase
-            .from('contatos') as any)
+        const { data: created, error } = await supabase
+            .from('contatos')
             .insert(dbInsert)
             .select(`
                 *,
@@ -154,8 +154,8 @@ export class ContatoService {
             }
         }
 
-        const { data: updated, error } = await (supabase
-            .from('contatos') as any)
+        const { data: updated, error } = await supabase
+            .from('contatos')
             .update(dbUpdate)
             .eq('id', id)
             .select(`
@@ -176,8 +176,8 @@ export class ContatoService {
     }
 
     async delete(id: string): Promise<void> {
-        const { error } = await (supabase
-            .from('contatos') as any)
+        const { error } = await supabase
+            .from('contatos')
             .delete()
             .eq('id', id)
 

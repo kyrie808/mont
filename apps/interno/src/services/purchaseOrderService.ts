@@ -11,8 +11,8 @@ export interface CreatePurchaseOrderItem {
 
 export const purchaseOrderService = {
     async fetchOrders(): Promise<DomainPurchaseOrderWithItems[]> {
-        const { data, error } = await (supabase
-            .from('purchase_orders') as any)
+        const { data, error } = await supabase
+            .from('purchase_orders')
             .select(`
                 *,
                 fornecedor:contatos(nome),
@@ -29,8 +29,8 @@ export const purchaseOrderService = {
     },
 
     async fetchOrderById(id: string): Promise<DomainPurchaseOrderWithItems | null> {
-        const { data, error } = await (supabase
-            .from('purchase_orders') as any)
+        const { data, error } = await supabase
+            .from('purchase_orders')
             .select(`
                 *,
                 fornecedor:contatos(nome),
@@ -46,12 +46,12 @@ export const purchaseOrderService = {
         if (error) throw error
         if (!data) return null
 
-        return toDomainPurchaseOrderWithItems(data as any)
+        return toDomainPurchaseOrderWithItems(data)
     },
 
     async createOrder(order: CreatePurchaseOrder, items: CreatePurchaseOrderItem[]): Promise<DomainPurchaseOrderWithItems> {
-        const { data: newOrder, error: orderError } = await (supabase
-            .from('purchase_orders') as any)
+        const { data: newOrder, error: orderError } = await supabase
+            .from('purchase_orders')
             .insert({
                 fornecedor_id: order.fornecedorId,
                 order_date: order.orderDate,
@@ -66,29 +66,27 @@ export const purchaseOrderService = {
         if (orderError) throw orderError
         if (!newOrder) throw new Error('Falha ao criar pedido de compra')
 
-        const typedOrder = newOrder as any
-
-        const orderItems = items.map((item: any) => ({
-            purchase_order_id: typedOrder.id,
+        const orderItems = items.map((item) => ({
+            purchase_order_id: newOrder.id,
             product_id: item.productId,
             quantity: item.quantity,
             unit_cost: item.unitCost
         }))
 
-        const { error: itemsError } = await (supabase
-            .from('purchase_order_items') as any)
+        const { error: itemsError } = await supabase
+            .from('purchase_order_items')
             .insert(orderItems)
 
         if (itemsError) throw itemsError
 
-        const result = await this.fetchOrderById(typedOrder.id)
+        const result = await this.fetchOrderById(newOrder.id)
         if (!result) throw new Error('Pedido criado mas não encontrado')
         return result
     },
 
     async updateOrder(id: string, updates: UpdatePurchaseOrder, items?: CreatePurchaseOrderItem[]): Promise<DomainPurchaseOrderWithItems> {
         if (items !== undefined) {
-            const { error } = await (supabase as any).rpc('update_purchase_order_with_items', {
+            const { error } = await supabase.rpc('update_purchase_order_with_items', {
                 p_order_id:       id,
                 p_fornecedor_id:  updates.fornecedorId!,
                 p_order_date:     updates.orderDate!,
@@ -117,8 +115,8 @@ export const purchaseOrderService = {
         if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus
         if (updates.dataRecebimento !== undefined) dbUpdates.data_recebimento = updates.dataRecebimento
 
-        const { error } = await (supabase
-            .from('purchase_orders') as any)
+        const { error } = await supabase
+            .from('purchase_orders')
             .update(dbUpdates)
             .eq('id', id)
 
@@ -129,8 +127,8 @@ export const purchaseOrderService = {
     },
 
     async deleteOrder(id: string): Promise<void> {
-        const { error } = await (supabase
-            .from('purchase_orders') as any)
+        const { error } = await supabase
+            .from('purchase_orders')
             .delete()
             .eq('id', id)
 
@@ -138,8 +136,8 @@ export const purchaseOrderService = {
     },
 
     async addPayment(orderId: string, payment: { amount: number, method: string, contaId: string, notes?: string, paymentDate?: string }): Promise<void> {
-        const { error: paymentError } = await (supabase
-            .from('purchase_order_payments') as any)
+        const { error: paymentError } = await supabase
+            .from('purchase_order_payments')
             .insert({
                 purchase_order_id: orderId,
                 amount: Math.round(payment.amount * 100) / 100,
@@ -155,8 +153,8 @@ export const purchaseOrderService = {
     },
 
     async deletePayment(paymentId: string): Promise<void> {
-        const { error } = await (supabase
-            .from('purchase_order_payments') as any)
+        const { error } = await supabase
+            .from('purchase_order_payments')
             .delete()
             .eq('id', paymentId)
 

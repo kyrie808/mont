@@ -9,8 +9,8 @@ import { toDomainProduto } from './mappers'
 export class ProdutoService {
     /* CRUD */
     async getAll(includeInactive: boolean = false): Promise<DomainProduto[]> {
-        let query = (supabase
-            .from('produtos') as any)
+        let query = supabase
+            .from('produtos')
             .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg')
             .order('nome')
 
@@ -22,12 +22,12 @@ export class ProdutoService {
         if (error) throw error
 
         // Buscar imagens separadamente
-        const { data: imagens } = await (supabase
-            .from('sis_imagens_produto') as any)
+        const { data: imagens } = await supabase
+            .from('sis_imagens_produto')
             .select('produto_id, url')
 
         // Merge manual
-        const imagensMap = new Map(imagens?.map((i: { produto_id: string, url: string }) => [i.produto_id, i.url]) ?? [])
+        const imagensMap = new Map(imagens?.map((i) => [i.produto_id!, i.url]) ?? [])
 
         return (data || []).map((p: any) => toDomainProduto({
             ...p,
@@ -38,8 +38,8 @@ export class ProdutoService {
     }
 
     async getById(id: string): Promise<DomainProduto | null> {
-        const { data, error } = await (supabase
-            .from('produtos') as any)
+        const { data, error } = await supabase
+            .from('produtos')
             .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
             .eq('id', id)
             .single()
@@ -66,8 +66,8 @@ export class ProdutoService {
             ativo: true
         }
 
-        const { data: created, error } = await (supabase
-            .from('produtos') as any)
+        const { data: created, error } = await supabase
+            .from('produtos')
             .insert(dbInsert)
             .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
             .single()
@@ -93,8 +93,8 @@ export class ProdutoService {
         if (data.ativo !== undefined) dbUpdate.ativo = data.ativo
         if (data.preco_ancoragem !== undefined) dbUpdate.preco_ancoragem = data.preco_ancoragem
 
-        const { data: updated, error } = await (supabase
-            .from('produtos') as any)
+        const { data: updated, error } = await supabase
+            .from('produtos')
             .update(dbUpdate)
             .eq('id', id)
             .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
@@ -109,8 +109,8 @@ export class ProdutoService {
     }
 
     async updateEstoque(id: string, quantidade: number): Promise<DomainProduto> {
-        const { data: updated, error } = await (supabase
-            .from('produtos') as any)
+        const { data: updated, error } = await supabase
+            .from('produtos')
             .update({ estoque_atual: quantidade })
             .eq('id', id)
             .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
@@ -157,7 +157,7 @@ export class ProdutoService {
     }
 
     async addImageReference(produtoId: string, url: string): Promise<void> {
-        const { error } = await (supabase as any).rpc('add_image_reference', {
+        const { error } = await supabase.rpc('add_image_reference', {
             p_produto_id: produtoId,
             p_url: url
         })
@@ -170,7 +170,7 @@ export class ProdutoService {
         if (!fileName) throw new Error('URL de imagem inválida')
 
         // 1. Remove das tabelas via RPC
-        const { error: rpcError } = await (supabase as any)
+        const { error: rpcError } = await supabase
             .rpc('delete_image_reference', { p_produto_id: produtoId })
         if (rpcError) throw rpcError
 

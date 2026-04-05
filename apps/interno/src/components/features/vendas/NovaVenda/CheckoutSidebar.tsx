@@ -44,7 +44,6 @@ export function CheckoutSidebar({
         reset,
         formState: { errors }
     } = useForm<VendaFormData>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(vendaSchema) as any,
         defaultValues: {
             contato_id: contatoId,

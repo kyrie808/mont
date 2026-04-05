@@ -69,8 +69,8 @@ export function useAlertasFinanceiros(enabled: boolean = true): UseAlertasFinanc
                     alertasProcessados.push({
                         venda: {
                             ...venda,
-                            contato: (venda.contato as any),
-                        } as any,
+                            contato: venda.contato,
+                        } as VendaComItens,
                         diasAtraso: differenceInDays(hoje, dataPrevista),
                         status,
                         dataPrevista
