@@ -122,11 +122,157 @@ describe('Sync bidirecional cat_pedidos <-> vendas', () => {
         expect(itensVenda![1].preco_unitario).toBe(produtoA.preco)
     })
 
-    // BUG REAL: trigger fn_sync_cat_pedido_to_venda usa origem='Catálogo Online'
-    // para contatos, mas a constraint contatos_origem_check só aceita 'direto',
-    // 'indicacao', 'catalogo'. O trigger falha silenciosamente (EXCEPTION WHEN OTHERS)
-    // e registra em cat_pedidos_pendentes_vinculacao ao invés de criar a venda.
-    // A RPC criar_pedido usa 'catalogo' (correto), mas o trigger não.
-    // Fix: ALTER FUNCTION fn_sync_cat_pedido_to_venda → trocar 'Catálogo Online' por 'catalogo'
-    it.todo('trigger cria venda quando cat_pedido muda para entregue (blocked by trigger origem bug)')
+    it('trigger cria venda quando cat_pedido muda para entregue', async () => {
+        // Criar pedido via RPC (status = pendente, SEM venda automática)
+        const itens = [
+            {
+                product_id: produtoA.id,
+                product_name: produtoA.nome,
+                quantity: 1,
+                unit_price: produtoA.preco,
+                total: produtoA.preco * 1,
+            },
+        ]
+
+        const { data, error } = await supabase.rpc('criar_pedido', {
+            p_nome_cliente: 'Teste Trigger',
+            p_telefone_cliente: '11977770001',
+            p_endereco_entrega: 'Rua Trigger, 50',
+            p_metodo_entrega: 'entrega',
+            p_metodo_pagamento: 'pix',
+            p_subtotal: produtoA.preco,
+            p_frete: 0,
+            p_total: produtoA.preco,
+            p_observacoes: '',
+            p_indicado_por: '',
+            p_itens: itens as any,
+            p_cep: '01310100',
+            p_logradouro: 'Rua Trigger',
+            p_numero: '50',
+            p_complemento: '',
+            p_bairro: 'Centro',
+            p_cidade: 'São Paulo',
+            p_uf: 'SP',
+        })
+
+        expect(error).toBeNull()
+        const pedidoId = (data as any).id
+
+        // RPC criar_pedido já cria a venda — deletar para testar o trigger isoladamente
+        await supabase.from('itens_venda').delete().eq(
+            'venda_id',
+            (await supabase.from('vendas').select('id').eq('cat_pedido_id', pedidoId).single()).data!.id,
+        )
+        await supabase.from('lancamentos').delete().eq(
+            'venda_id',
+            (await supabase.from('vendas').select('id').eq('cat_pedido_id', pedidoId).single()).data!.id,
+        )
+        await supabase.from('vendas').delete().eq('cat_pedido_id', pedidoId)
+
+        // Resetar status para pendente
+        await supabase.from('cat_pedidos').update({ status: 'pendente' }).eq('id', pedidoId)
+
+        // Agora simular admin marcando como entregue — dispara trigger
+        const { error: updateError } = await supabase
+            .from('cat_pedidos')
+            .update({ status: 'entregue' })
+            .eq('id', pedidoId)
+
+        expect(updateError).toBeNull()
+
+        // Verificar que trigger criou a venda
+        const { data: venda } = await supabase
+            .from('vendas')
+            .select('id, total, origem, cat_pedido_id, pago')
+            .eq('cat_pedido_id', pedidoId)
+            .single()
+
+        expect(venda).not.toBeNull()
+        expect(venda!.total).toBe(produtoA.preco)
+        expect(venda!.origem).toBe('catalogo')
+        expect(venda!.pago).toBe(true)
+
+        // Verificar que NÃO caiu na tabela de pendentes
+        const { data: pendentes } = await supabase
+            .from('cat_pedidos_pendentes_vinculacao')
+            .select('id')
+            .eq('cat_pedido_id', pedidoId)
+
+        expect(pendentes).toHaveLength(0)
+    })
+
+    it('sync venda status → cat_pedidos via trigger', async () => {
+        // Criar pedido via RPC (cria cat_pedidos + venda vinculada)
+        const itens = [
+            {
+                product_id: produtoB.id,
+                product_name: produtoB.nome,
+                quantity: 2,
+                unit_price: produtoB.preco,
+                total: produtoB.preco * 2,
+            },
+        ]
+
+        const { data, error } = await supabase.rpc('criar_pedido', {
+            p_nome_cliente: 'Teste Reverse Sync',
+            p_telefone_cliente: '11966660002',
+            p_endereco_entrega: 'Rua Reverse, 200',
+            p_metodo_entrega: 'entrega',
+            p_metodo_pagamento: 'pix',
+            p_subtotal: produtoB.preco * 2,
+            p_frete: 0,
+            p_total: produtoB.preco * 2,
+            p_observacoes: '',
+            p_indicado_por: '',
+            p_itens: itens as any,
+            p_cep: '01310100',
+            p_logradouro: 'Rua Reverse',
+            p_numero: '200',
+            p_complemento: '',
+            p_bairro: 'Centro',
+            p_cidade: 'São Paulo',
+            p_uf: 'SP',
+        })
+
+        expect(error).toBeNull()
+        const pedidoId = (data as any).id
+
+        // Buscar venda vinculada
+        const { data: venda } = await supabase
+            .from('vendas')
+            .select('id')
+            .eq('cat_pedido_id', pedidoId)
+            .single()
+
+        expect(venda).not.toBeNull()
+
+        // Cancelar a venda no interno — trigger deve sincronizar para cat_pedidos
+        await supabase
+            .from('vendas')
+            .update({ status: 'cancelada' })
+            .eq('id', venda!.id)
+
+        const { data: pedidoCancelado } = await supabase
+            .from('cat_pedidos')
+            .select('status, status_pagamento')
+            .eq('id', pedidoId)
+            .single()
+
+        expect(pedidoCancelado!.status).toBe('cancelado')
+
+        // Atualizar pago na venda — trigger deve sincronizar status_pagamento
+        await supabase
+            .from('vendas')
+            .update({ status: 'entregue', pago: true })
+            .eq('id', venda!.id)
+
+        const { data: pedidoPago } = await supabase
+            .from('cat_pedidos')
+            .select('status, status_pagamento')
+            .eq('id', pedidoId)
+            .single()
+
+        expect(pedidoPago!.status).toBe('entregue')
+        expect(pedidoPago!.status_pagamento).toBe('pago')
+    })
 })
