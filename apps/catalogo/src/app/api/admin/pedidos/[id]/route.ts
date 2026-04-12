@@ -169,7 +169,7 @@ export async function PATCH(
                 data: new Date().toISOString().split('T')[0],
                 contato_id: contatoId,
             })
-        console.error('VENDA_ERROR:', vendaError)
+        if (vendaError) console.error('VENDA_ERROR:', vendaError)
     }
 
     return NextResponse.json(data)

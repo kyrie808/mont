@@ -4,6 +4,47 @@ import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../ty
 import { toDomainVenda, type VendaRowWithRelations } from './mappers'
 import { isToday } from 'date-fns'
 
+/**
+ * Sincroniza alterações da tabela `vendas` → `cat_pedidos`.
+ * Chamado após toda ação de status/pagamento no sistema interno.
+ * Se a venda não for de origem catálogo, não faz nada.
+ * Erros são logados mas nunca bloqueiam a operação principal.
+ */
+async function _syncCatPedido(
+    vendaId: string,
+    update: { status?: string; status_pagamento?: string }
+): Promise<void> {
+    try {
+        // Buscar cat_pedido_id da venda
+        const { data: venda, error: fetchErr } = await supabase
+            .from('vendas')
+            .select('cat_pedido_id, origem')
+            .eq('id', vendaId)
+            .single()
+
+        if (fetchErr || !venda?.cat_pedido_id || venda.origem !== 'catalogo') return
+
+        // Mapear status interno → catálogo (cancelada → cancelado)
+        const catUpdate: Record<string, string> = {}
+        if (update.status) {
+            catUpdate.status = update.status === 'cancelada' ? 'cancelado' : update.status
+        }
+        if (update.status_pagamento) {
+            catUpdate.status_pagamento = update.status_pagamento
+        }
+
+        const { error: syncErr } = await supabase
+            .from('cat_pedidos')
+            .update(catUpdate)
+            .eq('id', venda.cat_pedido_id)
+
+        if (syncErr) {
+            console.error('[sync cat_pedidos] Falha ao sincronizar:', syncErr, { vendaId, catPedidoId: venda.cat_pedido_id, update: catUpdate })
+        }
+    } catch (err) {
+        console.error('[sync cat_pedidos] Erro inesperado:', err)
+    }
+}
 
 export const vendaService = {
     async getVendas(startDate?: Date, endDate?: Date, includePending = false, search?: string, excludeCatalogo = false): Promise<DomainVenda[]> {
@@ -122,6 +163,14 @@ export const vendaService = {
         const { error } = await supabase.from('vendas').update(vUpdate).eq('id', id)
         if (error) throw error
 
+        // Sync status change to cat_pedidos if applicable
+        if (data.status) {
+            await _syncCatPedido(id, { status: data.status })
+        }
+        if (data.pago !== undefined) {
+            await _syncCatPedido(id, { status_pagamento: data.pago ? 'pago' : 'pendente' })
+        }
+
         return this.getVendaById(id)
     },
 
@@ -132,17 +181,46 @@ export const vendaService = {
             .eq('id', id)
 
         if (error) throw error
+
+        // Sync: cancelada (feminino) → cancelado (masculino) in cat_pedidos
+        await _syncCatPedido(id, { status: 'cancelada' })
+
         return true
     },
 
     async deleteVenda(id: string): Promise<boolean> {
-        // Deletar lancamentos primeiro (FK sem CASCADE)
+        // 1. Capturar cat_pedido_id ANTES de deletar (SET NULL na FK apagaria o vínculo)
+        const { data: vendaRow } = await supabase
+            .from('vendas')
+            .select('cat_pedido_id, origem')
+            .eq('id', id)
+            .single()
+
+        const catPedidoId = vendaRow?.origem === 'catalogo' ? vendaRow.cat_pedido_id : null
+
+        // 2. Deletar lancamentos primeiro (FK sem CASCADE)
         const { error: lancError } = await supabase.from('lancamentos').delete().eq('venda_id', id)
         if (lancError) throw lancError
 
-        // vendas DELETE cascadeia para itens_venda e pagamentos_venda
+        // 3. vendas DELETE cascadeia para itens_venda e pagamentos_venda
         const { error } = await supabase.from('vendas').delete().eq('id', id)
         if (error) throw error
+
+        // 4. Limpar cat_pedidos se era venda de catálogo
+        if (catPedidoId) {
+            try {
+                // cat_pedidos_pendentes_vinculacao tem NO ACTION — limpar primeiro
+                await supabase.from('cat_pedidos_pendentes_vinculacao').delete().eq('cat_pedido_id', catPedidoId)
+                // cat_itens_pedido tem CASCADE — deletar cat_pedidos basta
+                const { error: catErr } = await supabase.from('cat_pedidos').delete().eq('id', catPedidoId)
+                if (catErr) {
+                    console.error('[deleteVenda] Falha ao deletar cat_pedidos:', catErr, { catPedidoId })
+                }
+            } catch (err) {
+                console.error('[deleteVenda] Erro inesperado ao limpar cat_pedidos:', err)
+            }
+        }
+
         return true
     },
 
@@ -160,6 +238,18 @@ export const vendaService = {
         })
 
         if (error) throw error
+
+        // After payment, DB trigger may have set pago=true. Check and sync.
+        const { data: updatedVenda } = await supabase
+            .from('vendas')
+            .select('pago')
+            .eq('id', vendaId)
+            .single()
+
+        if (updatedVenda?.pago) {
+            await _syncCatPedido(vendaId, { status_pagamento: 'pago' })
+        }
+
         return true
     },
 
@@ -238,6 +328,18 @@ export const vendaService = {
             .eq('id', pagamento.id)
 
         if (delError) throw delError
+
+        // After removing payment, DB trigger may have set pago=false. Check and sync.
+        const { data: updatedVenda } = await supabase
+            .from('vendas')
+            .select('pago')
+            .eq('id', vendaId)
+            .single()
+
+        if (updatedVenda && !updatedVenda.pago) {
+            await _syncCatPedido(vendaId, { status_pagamento: 'pendente' })
+        }
+
         return true
     },
 

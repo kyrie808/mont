@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx turbo:*)",
+      "WebSearch",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm install:*)",
+      "WebFetch(domain:zod.dev)",
+      "Bash(pnpm --filter catalogo add zod@^4 @hookform/resolvers@^5.2.2 react-hook-form@^7.71.1)",
+      "Bash(pnpm --filter interno add zod@^4 react-hook-form@^7.71.1)",
+      "Bash(node -e \"const z = require\\('zod'\\); console.log\\('ZodError:', typeof z.ZodError\\); console.log\\('ZodIssueCode:', z.ZodIssueCode\\); console.log\\('z.uuid:', typeof z.uuid\\); console.log\\('z.url:', typeof z.url\\); console.log\\('z.email:', typeof z.email\\); console.log\\('z.string\\(\\).uuid:', typeof z.string\\(\\).uuid\\); console.log\\('z.string\\(\\).url:', typeof z.string\\(\\).url\\); console.log\\('z.string\\(\\).email:', typeof z.string\\(\\).email\\);\")",
+      "Bash(node -e \"const z = require\\('zod'\\); console.log\\('version:', z.version || 'unknown'\\); console.log\\('ZodError:', typeof z.ZodError\\); console.log\\('ZodIssueCode:', JSON.stringify\\(z.ZodIssueCode\\)\\); console.log\\('z.uuid:', typeof z.uuid\\); console.log\\('z.url:', typeof z.url\\); console.log\\('z.string\\(\\).uuid:', typeof z.string\\(\\).uuid\\);\")",
+      "Bash(node -e ':*)",
+      "Bash(pnpm turbo:*)",
+      "Bash(ls:*)",
+      "Bash(npx eslint:*)",
+      "Bash(docker:*)",
+      "Bash(supabase --version)",
+      "Bash(npx supabase:*)",
+      "Bash(npm install:*)",
+      "Bash(pnpm --filter interno test -- --run)",
+      "Bash(pnpm --filter interno exec vitest run src/__tests__/vendas.integration.test.ts)",
+      "Bash(pnpm --filter interno exec vitest run src/__tests__/sync.integration.test.ts)",
+      "Bash(pnpm --filter interno exec vitest run src/__tests__/checkout.integration.test.ts)",
+      "Bash(pnpm --filter interno exec vitest run src/__tests__/financeiro.integration.test.ts)",
+      "Bash(grep \"from '@mont/shared'\" apps/interno/src/__tests__/*.ts)",
+      "mcp__supabase-distribuidora__execute_sql",
+      "Bash(pnpm --filter interno test)",
+      "Bash(pnpm build:*)"
+    ]
+  }
+}
