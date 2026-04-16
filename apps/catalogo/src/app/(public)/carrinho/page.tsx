@@ -16,6 +16,8 @@ import Link from 'next/link'
 import CartItemList from './_components/CartItemList'
 import CheckoutForm from './_components/CheckoutForm'
 import { checkoutSchema, type CheckoutFormData } from './types'
+import { ClientTracker } from '@/components/analytics/ClientTracker'
+import { pushEvent } from '@/lib/analytics/dataLayer'
 
 const formatCep = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 8)
@@ -71,6 +73,7 @@ export default function CarrinhoPage() {
     }, [cepValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const onSubmit = async (data: CheckoutFormData) => {
+        if (isSubmitting) return
         setIsSubmitting(true)
 
         try {
@@ -121,6 +124,24 @@ export default function CarrinhoPage() {
             if (!response.ok) {
                 throw new Error('Erro ao salvar pedido')
             }
+
+            const result = await response.json()
+            const transactionId = result.pedido?.id
+
+            pushEvent({
+                event: 'purchase',
+                ecommerce: {
+                    transaction_id: transactionId,
+                    value: total,
+                    currency: 'BRL',
+                    items: items.map(item => ({
+                        item_id: item.product.id,
+                        item_name: item.product.nome,
+                        price: item.product.preco ?? 0,
+                        quantity: item.quantity
+                    }))
+                }
+            })
 
             // Gera mensagem WhatsApp (usa customer_address montado)
             const message = generateWhatsAppMessage(
@@ -176,8 +197,23 @@ export default function CarrinhoPage() {
         )
     }
 
+    const beginCheckoutEvent = {
+        event: 'begin_checkout',
+        ecommerce: {
+            currency: 'BRL',
+            value: total,
+            items: items.map(item => ({
+                item_id: item.product.id,
+                item_name: item.product.nome,
+                price: item.product.preco ?? 0,
+                quantity: item.quantity
+            }))
+        }
+    } as const;
+
     return (
         <>
+            <ClientTracker event={beginCheckoutEvent} />
             <Navbar />
 
             <main className="min-h-screen bg-mont-cream py-20">
