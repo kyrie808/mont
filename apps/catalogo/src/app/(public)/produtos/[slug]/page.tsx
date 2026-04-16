@@ -7,6 +7,7 @@ import type { ProdutoCatalogo } from '@mont/shared'
 import AddToCartSection from './_components/AddToCartSection'
 import RelatedProducts from './_components/RelatedProducts'
 import { notFound } from 'next/navigation'
+import { ClientTracker } from '@/components/analytics/ClientTracker'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -86,8 +87,23 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
 
     const relatedProducts = await getRelatedProducts(product.categoria ?? '', product.id!)
 
+    const analyticsEvent = {
+        event: 'view_item',
+        ecommerce: {
+            currency: 'BRL',
+            value: product.preco ?? 0,
+            items: [{
+                item_id: product.id,
+                item_name: product.nome,
+                price: product.preco ?? 0,
+                quantity: 1
+            }]
+        }
+    } as const;
+
     return (
         <>
+            <ClientTracker event={analyticsEvent} />
             <Navbar />
 
             <main className="min-h-screen bg-mont-cream pt-28 pb-20">

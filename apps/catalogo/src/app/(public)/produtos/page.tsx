@@ -7,6 +7,7 @@ import StoreBanner from './_components/StoreBanner'
 import IngredientsSection from './_components/IngredientsSection'
 import BenefitsCarousel from './_components/BenefitsCarousel'
 import TrustBar from './_components/TrustBar'
+import { ClientTracker } from '@/components/analytics/ClientTracker'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -43,8 +44,23 @@ export default async function ProdutosPage() {
 
     const featuredProduct = products.find(p => p.destaque);
 
+    const analyticsEvent = {
+        event: 'view_item_list',
+        ecommerce: {
+            item_list_id: 'catalogo_completo',
+            item_list_name: 'Catálogo de Produtos',
+            items: products.map((p, index) => ({
+                item_id: p.id,
+                item_name: p.nome,
+                price: p.preco ?? 0,
+                index: index + 1
+            }))
+        }
+    } as const;
+
     return (
         <>
+            <ClientTracker event={analyticsEvent} />
             <Navbar />
 
             <main className="min-h-screen bg-mont-cream pt-20 pb-20">
