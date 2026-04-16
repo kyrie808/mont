@@ -6,6 +6,7 @@ import { Button, Input } from '@/components/ui'
 import { formatCurrency } from '@/lib/utils/format'
 import { DELIVERY_CONFIG } from '@/lib/constants/delivery'
 import OrderSummary from './OrderSummary'
+import { pushEvent } from '@/lib/analytics/dataLayer'
 import type { CheckoutFormData } from '../types'
 
 const formatCep = (value: string) => {
@@ -202,6 +203,7 @@ export default function CheckoutForm({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-mont-gold underline hover:text-mont-espresso transition-colors"
+                                onClick={() => pushEvent({ event: 'whatsapp_support_click', click_location: 'checkout' })}
                             >
                                 Fale com o suporte
                             </a>
