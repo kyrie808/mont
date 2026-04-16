@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { pushEvent } from '@/lib/analytics/dataLayer'export function Footer() {
+import { pushEvent } from '@/lib/analytics/dataLayer'
+
+export function Footer() {
     const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511934417085'
     const whatsappMessage = encodeURIComponent('Olá! Vim pelo site e gostaria de saber mais sobre os produtos.')
 

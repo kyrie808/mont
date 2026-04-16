@@ -16,7 +16,7 @@ import Link from 'next/link'
 import CartItemList from './_components/CartItemList'
 import CheckoutForm from './_components/CheckoutForm'
 import { checkoutSchema, type CheckoutFormData } from './types'
-import { ClientTracker } from '@/components/analytics/ClientTracker'
+import ClientTracker from '@/components/analytics/ClientTracker'
 import { pushEvent } from '@/lib/analytics/dataLayer'
 
 const formatCep = (value: string) => {
@@ -135,8 +135,8 @@ export default function CarrinhoPage() {
                     value: total,
                     currency: 'BRL',
                     items: items.map(item => ({
-                        item_id: item.product.id,
-                        item_name: item.product.nome,
+                        item_id: item.product.id ?? '',
+                        item_name: item.product.nome ?? '',
                         price: item.product.preco ?? 0,
                         quantity: item.quantity
                     }))
@@ -203,8 +203,8 @@ export default function CarrinhoPage() {
             currency: 'BRL',
             value: total,
             items: items.map(item => ({
-                item_id: item.product.id,
-                item_name: item.product.nome,
+                item_id: item.product.id ?? '',
+                item_name: item.product.nome ?? '',
                 price: item.product.preco ?? 0,
                 quantity: item.quantity
             }))
@@ -213,7 +213,7 @@ export default function CarrinhoPage() {
 
     return (
         <>
-            <ClientTracker event={beginCheckoutEvent} />
+            <ClientTracker eventData={beginCheckoutEvent} />
             <Navbar />
 
             <main className="min-h-screen bg-mont-cream py-20">

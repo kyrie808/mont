@@ -33,8 +33,8 @@ export const useCartStore = create<CartState>()(
                         currency: 'BRL',
                         value: (product.preco ?? 0) * quantity,
                         items: [{
-                            item_id: product.id,
-                            item_name: product.nome,
+                            item_id: product.id ?? '',
+                            item_name: product.nome ?? '',
                             price: product.preco ?? 0,
                             quantity: quantity
                         }]
@@ -53,8 +53,8 @@ export const useCartStore = create<CartState>()(
                             currency: 'BRL',
                             value: (itemToRemove.product.preco ?? 0) * itemToRemove.quantity,
                             items: [{
-                                item_id: itemToRemove.product.id,
-                                item_name: itemToRemove.product.nome,
+                                item_id: itemToRemove.product.id ?? '',
+                                item_name: itemToRemove.product.nome ?? '',
                                 price: itemToRemove.product.preco ?? 0,
                                 quantity: itemToRemove.quantity
                             }]

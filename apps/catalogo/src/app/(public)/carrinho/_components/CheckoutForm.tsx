@@ -203,7 +203,7 @@ export default function CheckoutForm({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-mont-gold underline hover:text-mont-espresso transition-colors"
-                                onClick={() => pushEvent({ event: 'whatsapp_support_click', click_location: 'checkout' })}
+                                onClick={() => pushEvent({ event: 'whatsapp_support_click', issue: 'cep_support' })}
                             >
                                 Fale com o suporte
                             </a>

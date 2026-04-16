@@ -13,7 +13,7 @@ export interface ViewItemListEvent {
     ecommerce: {
         item_list_id?: string;
         item_list_name?: string;
-        items: ItemGA4[];
+        items: readonly ItemGA4[];
     };
 }
 
@@ -22,7 +22,7 @@ export interface ViewItemEvent {
     ecommerce: {
         currency: 'BRL';
         value: number;
-        items: ItemGA4[];
+        items: readonly ItemGA4[];
     };
 }
 
@@ -31,7 +31,7 @@ export interface AddToCartEvent {
     ecommerce: {
         currency: 'BRL';
         value: number;
-        items: ItemGA4[];
+        items: readonly ItemGA4[];
     };
 }
 
@@ -40,7 +40,7 @@ export interface RemoveFromCartEvent {
     ecommerce: {
         currency: 'BRL';
         value: number;
-        items: ItemGA4[];
+        items: readonly ItemGA4[];
     };
 }
 
@@ -50,7 +50,7 @@ export interface BeginCheckoutEvent {
         currency: 'BRL';
         value: number;
         coupon?: string;
-        items: ItemGA4[];
+        items: readonly ItemGA4[];
     };
 }
 
@@ -63,14 +63,14 @@ export interface PurchaseEvent {
         tax?: number;
         shipping?: number;
         coupon?: string;
-        items: ItemGA4[];
+        items: readonly ItemGA4[];
     };
 }
 
 // Eventos Costumizados
 export interface WhatsappClickEvent {
     event: 'whatsapp_click';
-    click_location: 'navbar' | 'footer' | 'final_cta' | 'other';
+    click_location: 'navbar' | 'footer' | 'final_cta' | 'header_desktop' | 'header_mobile' | 'other';
     page_path?: string;
 }
 

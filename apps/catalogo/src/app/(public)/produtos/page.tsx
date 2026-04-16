@@ -7,7 +7,7 @@ import StoreBanner from './_components/StoreBanner'
 import IngredientsSection from './_components/IngredientsSection'
 import BenefitsCarousel from './_components/BenefitsCarousel'
 import TrustBar from './_components/TrustBar'
-import { ClientTracker } from '@/components/analytics/ClientTracker'
+import ClientTracker from '@/components/analytics/ClientTracker'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -50,9 +50,10 @@ export default async function ProdutosPage() {
             item_list_id: 'catalogo_completo',
             item_list_name: 'Catálogo de Produtos',
             items: products.map((p, index) => ({
-                item_id: p.id,
-                item_name: p.nome,
+                item_id: p.id ?? '',
+                item_name: p.nome ?? '',
                 price: p.preco ?? 0,
+                quantity: 1,
                 index: index + 1
             }))
         }
@@ -60,7 +61,7 @@ export default async function ProdutosPage() {
 
     return (
         <>
-            <ClientTracker event={analyticsEvent} />
+            <ClientTracker eventData={analyticsEvent} />
             <Navbar />
 
             <main className="min-h-screen bg-mont-cream pt-20 pb-20">
