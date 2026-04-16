@@ -9,6 +9,7 @@ import { FloatingCheeseBread } from '@/components/visual/FloatingCheeseBread'
 import { MountainSilhouette } from '@/components/visual/MountainSilhouette'
 import { GrainTexture } from '@/components/visual/GrainTexture'
 import { heroTextReveal } from '@/lib/gsap/animations'
+import { pushEvent } from '@/lib/analytics/dataLayer'
 
 export default function FinalCTA() {
     const containerRef = useRef<HTMLElement>(null)
@@ -146,6 +147,7 @@ export default function FinalCTA() {
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ display: 'block' }}
+                        onClick={() => pushEvent({ event: 'whatsapp_click', click_location: 'final_cta' })}
                     >
                         <Button
                             variant="primary"
