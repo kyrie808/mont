@@ -56,6 +56,7 @@ export interface BeginCheckoutEvent {
 
 export interface PurchaseEvent {
     event: 'purchase';
+    event_id?: string;
     ecommerce: {
         transaction_id: string; // Obrigatório no nosso setup para deduplicação (UUID pedido.id)
         currency: 'BRL';
@@ -70,6 +71,7 @@ export interface PurchaseEvent {
 // Eventos Costumizados
 export interface WhatsappClickEvent {
     event: 'whatsapp_click';
+    event_id?: string;
     click_location: 'navbar' | 'footer' | 'final_cta' | 'header_desktop' | 'header_mobile' | 'other';
     page_path?: string;
 }
