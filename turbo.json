@@ -12,7 +12,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["META_CAPI_TOKEN", "META_PIXEL_ID"]
     },
     "dev": {
       "cache": false,
