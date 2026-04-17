@@ -43,6 +43,7 @@ export default function RootLayout({
     return (
         <html lang="pt-BR" className={`${playfair.variable} ${dmSans.variable} ${jetbrains.variable} bg-[#3D2B22]`}>
             <head>
+                <meta name="facebook-domain-verification" content="xalko0heebua28ly121mks89yy1t1z" />
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `
