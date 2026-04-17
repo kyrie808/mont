@@ -15,6 +15,14 @@ function hashData(data: string | undefined): string[] {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
+
+        console.log('[Meta CAPI] Received:', { 
+            event_name: body.event_name, 
+            event_id: body.event_id,
+            has_fbp: !!body.user_data?.fbp,
+            has_fbc: !!body.user_data?.fbc
+        })
+
         const { event_name, event_id, event_time, user_data = {}, custom_data = {}, event_source_url } = body
 
         const PIXEL_ID = process.env.META_PIXEL_ID
@@ -69,6 +77,13 @@ export async function POST(req: NextRequest) {
             console.error('[Meta CAPI Error]', result)
             return NextResponse.json({ error: 'Erro ao enviar para o Meta', details: result }, { status: response.status })
         }
+
+        console.log('[Meta CAPI] Success:', { 
+            event_name, 
+            event_id, 
+            meta_status: response.status, 
+            meta_response: result 
+        })
 
         return NextResponse.json({ success: true, fbtrace_id: result.fbtrace_id })
 
