@@ -10,6 +10,7 @@ import { MountainSilhouette } from '@/components/visual/MountainSilhouette'
 import { GrainTexture } from '@/components/visual/GrainTexture'
 import { heroTextReveal } from '@/lib/gsap/animations'
 import { pushEvent } from '@/lib/analytics/dataLayer'
+import { sendServerEvent } from '@/lib/analytics/metaCapi'
 
 export default function FinalCTA() {
     const containerRef = useRef<HTMLElement>(null)
@@ -147,7 +148,11 @@ export default function FinalCTA() {
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ display: 'block' }}
-                        onClick={() => pushEvent({ event: 'whatsapp_click', click_location: 'final_cta' })}
+                        onClick={() => {
+                            const eventId = crypto.randomUUID()
+                            pushEvent({ event: 'whatsapp_click', click_location: 'final_cta', event_id: eventId })
+                            sendServerEvent('Lead', {}, {}, eventId)
+                        }}
                     >
                         <Button
                             variant="primary"

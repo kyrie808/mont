@@ -6,6 +6,7 @@ import gsap from 'gsap'
 import { cn } from '@mont/shared'
 import { useCartStore } from '@/lib/cart/store'
 import { pushEvent } from '@/lib/analytics/dataLayer'
+import { sendServerEvent } from '@/lib/analytics/metaCapi'
 
 interface NavbarProps {
     cartItemCount?: number
@@ -126,7 +127,11 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="font-body text-mont-espresso hover:text-mont-gold transition-colors"
-                                onClick={() => pushEvent({ event: 'whatsapp_click', click_location: 'header_desktop' })}
+                                onClick={() => {
+                                    const eventId = crypto.randomUUID()
+                                    pushEvent({ event: 'whatsapp_click', click_location: 'header_desktop', event_id: eventId })
+                                    sendServerEvent('Lead', {}, {}, eventId)
+                                }}
                             >
                                 Contato
                             </a>
@@ -213,7 +218,9 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                         rel="noopener noreferrer"
                         className="font-display text-3xl text-[#E8601C] hover:text-mont-orange-dark transition-colors pb-4 flex items-center gap-2"
                         onClick={() => {
-                            pushEvent({ event: 'whatsapp_click', click_location: 'header_mobile' })
+                            const eventId = crypto.randomUUID()
+                            pushEvent({ event: 'whatsapp_click', click_location: 'header_mobile', event_id: eventId })
+                            sendServerEvent('Lead', {}, {}, eventId)
                             closeMobileMenu()
                         }}
                     >
