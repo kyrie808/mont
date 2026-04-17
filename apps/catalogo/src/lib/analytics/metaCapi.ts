@@ -47,14 +47,35 @@ export const sendServerEvent = (
             custom_data: customData
         }
 
-        // Fire-and-forget: não usamos await para não atrasar redirecionamentos ou UI
-        fetch('/api/meta-capi', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        }).catch(err => {
-            console.warn('[Meta CAPI] failed to send background event', err)
-        })
+        const payload = JSON.stringify(body)
+
+        // Usa sendBeacon para garantir que o request sobrevive a navegações
+        // (ex: clique no WhatsApp que abre nova aba e pode cancelar fetch normal)
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' })
+            const queued = navigator.sendBeacon('/api/meta-capi', blob)
+            if (!queued) {
+                // Fallback: se sendBeacon falhar (ex: payload muito grande), usa fetch com keepalive
+                fetch('/api/meta-capi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload,
+                    keepalive: true,
+                }).catch(err => {
+                    console.warn('[Meta CAPI] fetch fallback failed', err)
+                })
+            }
+        } else {
+            // Fallback para browsers sem sendBeacon
+            fetch('/api/meta-capi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                keepalive: true,
+            }).catch(err => {
+                console.warn('[Meta CAPI] failed to send event', err)
+            })
+        }
 
     } catch (error) {
         // Falha no tracking não deve quebrar a experiência do usuário
