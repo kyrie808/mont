@@ -18,6 +18,7 @@ import CheckoutForm from './_components/CheckoutForm'
 import { checkoutSchema, type CheckoutFormData } from './types'
 import ClientTracker from '@/components/analytics/ClientTracker'
 import { pushEvent } from '@/lib/analytics/dataLayer'
+import { sendServerEvent } from '@/lib/analytics/metaCapi'
 
 const formatCep = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 8)
@@ -127,9 +128,11 @@ export default function CarrinhoPage() {
 
             const result = await response.json()
             const transactionId = result.pedido?.id
+            const eventId = crypto.randomUUID()
 
             pushEvent({
                 event: 'purchase',
+                event_id: eventId,
                 ecommerce: {
                     transaction_id: transactionId,
                     value: total,
@@ -142,6 +145,20 @@ export default function CarrinhoPage() {
                     }))
                 }
             })
+
+            // Envia evento para o Meta via Conversions API (CAPI)
+            const [firstName, ...lastNameParts] = data.customer_name.trim().split(/\s+/)
+            sendServerEvent('Purchase', {
+                value: total,
+                currency: 'BRL',
+                content_ids: items.map(item => item.product.id),
+                content_type: 'product',
+                order_id: transactionId
+            }, {
+                ph: data.customer_phone,
+                fn: firstName,
+                ln: lastNameParts.join(' ')
+            }, eventId)
 
             // Gera mensagem WhatsApp (usa customer_address montado)
             const message = generateWhatsAppMessage(
