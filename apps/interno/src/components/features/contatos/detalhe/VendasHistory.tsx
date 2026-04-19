@@ -1,10 +1,11 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Edit, Trash2, ShoppingCart } from 'lucide-react'
 import { Button, Modal, ModalActions } from '../../../../components/ui'
 import { useVendas } from '../../../../hooks/useVendas'
 import { formatDate, formatCurrency } from '@mont/shared'
 import type { DomainVenda } from '../../../../types/domain'
+import { getFiadoStatus } from '../../../../utils/fiado'
 
 interface ReceiptCardProps {
     venda: DomainVenda;
@@ -25,11 +26,24 @@ function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
                     <span className="text-lg font-bold text-foreground tabular-nums">
                         {formatCurrency(venda.total)}
                     </span>
-                    {venda.pago ? (
-                        <span className="bg-semantic-green/10 text-semantic-green text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-green/20">Pago</span>
-                    ) : (
-                        <span className="bg-semantic-yellow/10 text-semantic-yellow text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-yellow/20">A Receber</span>
-                    )}
+                    {(() => {
+                        const status = getFiadoStatus(venda)
+                        switch (status.kind) {
+                            case 'pago':
+                                return <span className="bg-semantic-green/10 text-semantic-green text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-green/20">Pago</span>
+                            case 'vencido':
+                                return <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-destructive/20">Vencido ({status.diasAtraso}d)</span>
+                            case 'vence_hoje':
+                                return <span className="bg-warning-strong/10 text-warning-strong text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-warning-strong/20">Vence Hoje</span>
+                            case 'proximo_vencimento':
+                                return <span className="bg-semantic-yellow/10 text-semantic-yellow text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-yellow/20">Vence em {status.dias}d</span>
+                            case 'a_receber_futuro':
+                                return <span className="bg-foreground/5 text-foreground/80 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-foreground/20">A Receber</span>
+                            case 'sem_data':
+                            default:
+                                return <span className="bg-semantic-yellow/10 text-semantic-yellow text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-yellow/20">A Receber</span>
+                        }
+                    })()}
                 </div>
             </div>
 
