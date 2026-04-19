@@ -94,6 +94,9 @@
     --warning: 45 93% 47%;
     /* #eab308 */
     --warning-foreground: 0 0% 100%;
+
+    --warning-strong: 25 95% 53%;
+    --warning-strong-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -135,6 +138,9 @@
 
     --warning: 45 93% 47%;
     --warning-foreground: 120 36% 10%;
+
+    --warning-strong: 25 95% 58%;
+    --warning-strong-foreground: 0 0% 100%;
 
     /* Shadow Scale (Dark — deeper, more pronounced) */
     --shadow-card:     0 1px 3px 0 rgb(0 0 0 / 0.20);
