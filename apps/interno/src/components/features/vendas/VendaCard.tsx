@@ -1,9 +1,10 @@
-﻿import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, DollarSign, Monitor, Truck, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent, CardFooter, Button } from '../../../components/ui'
 import { formatDate, formatCurrency } from '@mont/shared'
 import { FORMA_PAGAMENTO_LABELS } from '../../../constants'
 import { cn } from '@mont/shared'
+import { getFiadoStatus } from '../../../utils/fiado'
 
 import type { DomainVenda } from '../../../types/domain'
 
@@ -44,15 +45,50 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
                         </div>
 
                         {/* Payment Status */}
-                        <div className={cn(
-                            "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border shadow-sm",
-                            (venda.pago || venda.valorPago >= venda.total)
-                                ? "bg-success/10 text-success-foreground border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30"
-                                : "bg-warning/10 text-yellow-700 border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/30"
-                        )}>
-                            <DollarSign className="h-3.5 w-3.5" />
-                            <span>{(venda.pago || venda.valorPago >= venda.total) ? 'Pago' : 'Pagamento Pendente'}</span>
-                        </div>
+                        {(() => {
+                            const status = getFiadoStatus(venda)
+                            
+                            let badgeClass = ""
+                            let badgeText = ""
+
+                            switch (status.kind) {
+                                case 'pago':
+                                    badgeClass = "bg-success/10 text-success-foreground border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30"
+                                    badgeText = "Pago"
+                                    break
+                                case 'vencido':
+                                    badgeClass = "bg-destructive/10 text-destructive border-destructive/20 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30"
+                                    badgeText = `Vencido (${status.diasAtraso}d)`
+                                    break
+                                case 'vence_hoje':
+                                    badgeClass = "bg-warning-strong/10 text-warning-strong border-warning-strong/20"
+                                    badgeText = "Vence hoje"
+                                    break
+                                case 'proximo_vencimento':
+                                    badgeClass = "bg-warning/10 text-yellow-700 border-warning/20 dark:bg-warning/10 dark:text-warning dark:border-warning/20"
+                                    badgeText = `Vence em ${status.dias}d`
+                                    break
+                                case 'a_receber_futuro':
+                                    badgeClass = "bg-foreground/5 text-foreground/80 border-foreground/20"
+                                    badgeText = "A Receber"
+                                    break
+                                case 'sem_data':
+                                default:
+                                    badgeClass = "bg-warning/10 text-yellow-700 border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/30"
+                                    badgeText = "Pendente"
+                                    break
+                            }
+
+                            return (
+                                <div className={cn(
+                                    "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border shadow-sm",
+                                    badgeClass
+                                )}>
+                                    <DollarSign className="h-3.5 w-3.5" />
+                                    <span>{badgeText}</span>
+                                </div>
+                            )
+                        })()}
 
                         {/* Origin Badge */}
                         {venda.origem === 'catalogo' && (
