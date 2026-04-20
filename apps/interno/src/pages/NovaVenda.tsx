@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { useProdutos } from '../hooks/useProdutos'
@@ -152,7 +152,7 @@ export function NovaVenda() {
                     precoUnitario: it.preco_unitario,
                     subtotal: it.subtotal
                 })),
-                dataPrevistaPagamento: data.data_entrega,
+                dataPrevistaPagamento: data.data_prevista_pagamento,
             }
             const venda = await createVenda(vendaData)
             if (venda) {
