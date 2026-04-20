@@ -106,6 +106,9 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
                     <div className="flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
                         <span>{formatDate(venda.data)}</span>
+                        {venda.formaPagamento === 'fiado' && venda.dataPrevistaPagamento && (
+                            <span className="text-muted-foreground">· Vence {formatDate(venda.dataPrevistaPagamento)}</span>
+                        )}
                     </div>
                     <div className="flex items-center gap-1.5">
                         <DollarSign className="h-4 w-4" />

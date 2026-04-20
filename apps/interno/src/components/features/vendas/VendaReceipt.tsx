@@ -1,4 +1,4 @@
-﻿import { formatCurrency, formatDate } from '@mont/shared'
+import { formatCurrency, formatDate } from '@mont/shared'
 import { VendaStatusBadges } from './VendaStatusBadges'
 
 import type { DomainVenda } from '../../../types/domain'
@@ -34,6 +34,11 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
                     <p className="text-xs font-mono text-gray-400 dark:text-gray-500 mt-4">
                         {formatDate(venda.data)}
                     </p>
+                    {venda.formaPagamento === 'fiado' && venda.dataPrevistaPagamento && (
+                        <p className="text-xs font-mono text-gray-400 dark:text-gray-500 mt-1">
+                            Vence em {formatDate(venda.dataPrevistaPagamento)}
+                        </p>
+                    )}
                 </div>
 
                 <div className="w-full border-b-2 border-dashed border-gray-200 dark:border-border my-6 relative">
