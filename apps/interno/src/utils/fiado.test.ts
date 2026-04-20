@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { addDays, subDays, startOfDay } from 'date-fns'
-import { getFiadoStatus, VendaFiadoInput, DIAS_PROXIMO_VENCIMENTO } from './fiado'
+import { getFiadoStatus, DIAS_PROXIMO_VENCIMENTO } from './fiado'
+import type { VendaFiadoInput } from './fiado'
 
 describe('getFiadoStatus', () => {
   const baseVenda: VendaFiadoInput = {
