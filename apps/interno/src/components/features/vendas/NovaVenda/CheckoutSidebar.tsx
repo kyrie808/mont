@@ -1,8 +1,8 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar, DollarSign, CreditCard, FileText, Gift, Truck, ChevronRight } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { addDays } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
 import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
@@ -47,7 +47,7 @@ export function CheckoutSidebar({
         resolver: zodResolver(vendaSchema) as any,
         defaultValues: {
             contato_id: contatoId,
-            data: new Date().toISOString(),
+            data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'pix',
             taxa_entrega: 0,
             parcelas: 1,
@@ -65,7 +65,7 @@ export function CheckoutSidebar({
     useEffect(() => {
         reset({
             contato_id: contatoId,
-            data: new Date().toISOString(),
+            data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'pix',
             taxa_entrega: 0,
             parcelas: 1,
