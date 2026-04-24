@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent, CardFooter, Button } from '../../../comp
 import { formatDate, formatCurrency } from '@mont/shared'
 import { FORMA_PAGAMENTO_LABELS } from '../../../constants'
 import { cn } from '@mont/shared'
-import { getFiadoStatus } from '../../../utils/fiado'
+import { getVendaBadgeStatus } from '@/utils/vendaBadge'
 
 import type { DomainVenda } from '../../../types/domain'
 
@@ -46,7 +46,7 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
 
                         {/* Payment Status */}
                         {(() => {
-                            const status = getFiadoStatus(venda)
+                            const status = getVendaBadgeStatus(venda)
                             
                             let badgeClass = ""
                             let badgeText = ""
@@ -72,6 +72,11 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
                                     badgeClass = "bg-foreground/5 text-foreground/80 border-foreground/20"
                                     badgeText = "A Receber"
                                     break
+                                case 'brinde':
+                                    badgeClass = "bg-muted text-muted-foreground border-border"
+                                    badgeText = "Brinde"
+                                    break
+                                case 'pendente':
                                 case 'sem_data':
                                 default:
                                     badgeClass = "bg-warning/10 text-yellow-700 border-warning/20 dark:bg-warning/20 dark:text-warning dark:border-warning/30"

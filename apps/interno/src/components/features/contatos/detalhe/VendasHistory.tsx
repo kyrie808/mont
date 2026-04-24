@@ -5,7 +5,7 @@ import { Button, Modal, ModalActions } from '../../../../components/ui'
 import { useVendas } from '../../../../hooks/useVendas'
 import { formatDate, formatCurrency } from '@mont/shared'
 import type { DomainVenda } from '../../../../types/domain'
-import { getFiadoStatus } from '../../../../utils/fiado'
+import { getVendaBadgeStatus } from '@/utils/vendaBadge'
 
 interface ReceiptCardProps {
     venda: DomainVenda;
@@ -27,7 +27,7 @@ function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
                         {formatCurrency(venda.total)}
                     </span>
                     {(() => {
-                        const status = getFiadoStatus(venda)
+                        const status = getVendaBadgeStatus(venda)
                         switch (status.kind) {
                             case 'pago':
                                 return <span className="bg-semantic-green/10 text-semantic-green text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-green/20">Pago</span>
@@ -39,9 +39,12 @@ function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
                                 return <span className="bg-semantic-yellow/10 text-semantic-yellow text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-yellow/20">Vence em {status.dias}d</span>
                             case 'a_receber_futuro':
                                 return <span className="bg-foreground/5 text-foreground/80 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-foreground/20">A Receber</span>
+                            case 'brinde':
+                                return <span className="bg-muted text-muted-foreground text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-border">Brinde</span>
+                            case 'pendente':
                             case 'sem_data':
                             default:
-                                return <span className="bg-semantic-yellow/10 text-semantic-yellow text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-yellow/20">A Receber</span>
+                                return <span className="bg-semantic-yellow/10 text-semantic-yellow text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-semantic-yellow/20">Pendente</span>
                         }
                     })()}
                 </div>
