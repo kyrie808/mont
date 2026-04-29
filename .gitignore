@@ -32,3 +32,16 @@ coverage/
 
 # PWA
 dev-dist/
+
+# App specific
+apps/distribuidora/tmp/
+
+# Local artifacts
+*.tsbuildinfo
+**/*.tsbuildinfo
+sync.ps1
+analise-inventar*
+recuperacao-ski*
+artifacts/
+**/artifacts/
+scripts/capturar_*.py
