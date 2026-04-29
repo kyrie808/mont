@@ -45,3 +45,6 @@ recuperacao-ski*
 artifacts/
 **/artifacts/
 scripts/capturar_*.py
+
+# App scaffolding local
+apps/distribuidora/
