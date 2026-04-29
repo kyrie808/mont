@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -34,6 +34,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_contatos_nome_20260429_002736: {
+        Row: {
+          id: string | null
+          nome_antes: string | null
+          snapshot_em: string | null
+          telefone: string | null
+        }
+        Insert: {
+          id?: string | null
+          nome_antes?: string | null
+          snapshot_em?: string | null
+          telefone?: string | null
+        }
+        Update: {
+          id?: string | null
+          nome_antes?: string | null
+          snapshot_em?: string | null
+          telefone?: string | null
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           criado_em: string | null
@@ -52,6 +73,30 @@ export type Database = {
           id?: string
           role?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      backfill_contatos_nome_log: {
+        Row: {
+          criado_em: string
+          id: string
+          snapshot_table_name: string
+          total_atualizados: number
+          total_snapshot: number
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          snapshot_table_name: string
+          total_atualizados: number
+          total_snapshot: number
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          snapshot_table_name?: string
+          total_atualizados?: number
+          total_snapshot?: number
         }
         Relationships: []
       }
@@ -280,6 +325,13 @@ export type Database = {
             referencedRelation: "view_home_alertas"
             referencedColumns: ["contato_id"]
           },
+          {
+            foreignKeyName: "cat_pedidos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
         ]
       }
       cat_pedidos_pendentes_vinculacao: {
@@ -457,6 +509,7 @@ export type Database = {
       contatos: {
         Row: {
           apelido: string | null
+          arquivado_em: string | null
           atualizado_em: string
           bairro: string | null
           cep: string | null
@@ -476,6 +529,7 @@ export type Database = {
           observacoes: string | null
           origem: string
           status: string
+          status_relacionamento: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo: string | null
           telefone: string
           tipo: string
@@ -485,6 +539,7 @@ export type Database = {
         }
         Insert: {
           apelido?: string | null
+          arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
           cep?: string | null
@@ -504,6 +559,7 @@ export type Database = {
           observacoes?: string | null
           origem?: string
           status?: string
+          status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
           telefone: string
           tipo: string
@@ -513,6 +569,7 @@ export type Database = {
         }
         Update: {
           apelido?: string | null
+          arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
           cep?: string | null
@@ -532,6 +589,7 @@ export type Database = {
           observacoes?: string | null
           origem?: string
           status?: string
+          status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
           telefone?: string
           tipo?: string
@@ -573,6 +631,89 @@ export type Database = {
             columns: ["indicado_por_id"]
             isOneToOne: false
             referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "contatos_indicado_por_id_fkey"
+            columns: ["indicado_por_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+        ]
+      }
+      interacoes: {
+        Row: {
+          canal: string | null
+          contato_id: string
+          criado_por: string | null
+          data: string
+          id: string
+          observacao: string | null
+          resultado: string | null
+          tipo: string | null
+        }
+        Insert: {
+          canal?: string | null
+          contato_id: string
+          criado_por?: string | null
+          data?: string
+          id?: string
+          observacao?: string | null
+          resultado?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          canal?: string | null
+          contato_id?: string
+          criado_por?: string | null
+          data?: string
+          id?: string
+          observacao?: string | null
+          resultado?: string | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
             referencedColumns: ["contato_id"]
           },
         ]
@@ -1144,6 +1285,13 @@ export type Database = {
             referencedRelation: "view_home_alertas"
             referencedColumns: ["contato_id"]
           },
+          {
+            foreignKeyName: "purchase_orders_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
         ]
       }
       sis_imagens_produto: {
@@ -1319,6 +1467,13 @@ export type Database = {
             columns: ["contato_id"]
             isOneToOne: false
             referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "vendas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
             referencedColumns: ["contato_id"]
           },
         ]
@@ -1612,6 +1767,21 @@ export type Database = {
         }
         Relationships: []
       }
+      view_relacionamento_kanban: {
+        Row: {
+          aba_atual:
+            | Database["public"]["Enums"]["enum_relacionamento_aba"]
+            | null
+          arquivado_em: string | null
+          contato_id: string | null
+          nome: string | null
+          status_relacionamento:
+            | Database["public"]["Enums"]["enum_relacionamento_status"]
+            | null
+          telefone: string | null
+        }
+        Relationships: []
+      }
       vw_admin_dashboard: {
         Row: {
           faturamento_hoje: number | null
@@ -1750,6 +1920,17 @@ export type Database = {
         Args: { p_produto_id: string }
         Returns: undefined
       }
+      fn_backfill_contatos_nome: { Args: never; Returns: Json }
+      fn_capitalize_name: { Args: { nome: string }; Returns: string }
+      fn_count_words: { Args: { texto: string }; Returns: number }
+      fn_mover_card_relacionamento: {
+        Args: {
+          p_contato_id: string
+          p_novo_status: Database["public"]["Enums"]["enum_relacionamento_status"]
+          p_observacao?: string
+        }
+        Returns: undefined
+      }
       get_areceber_breakdown: {
         Args: never
         Returns: {
@@ -1851,6 +2032,12 @@ export type Database = {
       }
     }
     Enums: {
+      enum_relacionamento_aba: "reativacao" | "recompra" | "cobranca"
+      enum_relacionamento_status:
+        | "a_contatar"
+        | "contatado"
+        | "em_negociacao"
+        | "resolvido"
       purchase_order_payment_status: "paid" | "partial" | "unpaid"
       purchase_order_status: "pending" | "received" | "cancelled"
     }
@@ -1983,6 +2170,13 @@ export const Constants = {
   },
   public: {
     Enums: {
+      enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
+      enum_relacionamento_status: [
+        "a_contatar",
+        "contatado",
+        "em_negociacao",
+        "resolvido",
+      ],
       purchase_order_payment_status: ["paid", "partial", "unpaid"],
       purchase_order_status: ["pending", "received", "cancelled"],
     },

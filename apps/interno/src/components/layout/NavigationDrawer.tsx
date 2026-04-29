@@ -42,7 +42,7 @@ const NAV_GROUPS = [
         label: 'Gestão',
         items: [
             { label: 'Ranking',            path: '/ranking',          icon: Trophy       },
-            { label: 'Recompra',           path: '/recompra',         icon: RefreshCw    },
+            { label: 'Relacionamento',     path: '/relacionamento',   icon: RefreshCw    },
             { label: 'Estoque',            path: '/estoque',          icon: Snowflake    },
             { label: 'Produtos',           path: '/produtos',         icon: Package      },
             { label: 'Pedidos de Compra',  path: '/pedidos-compra',   icon: ClipboardList},

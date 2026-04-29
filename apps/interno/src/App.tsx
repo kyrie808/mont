@@ -13,7 +13,7 @@ const NovaVenda = lazy(() => import('./pages/NovaVenda').then(m => ({ default: m
 const Vendas = lazy(() => import('./pages/Vendas').then(m => ({ default: m.Vendas })))
 const VendaDetalhe = lazy(() => import('./pages/VendaDetalhe').then(m => ({ default: m.VendaDetalhe })))
 const Ranking = lazy(() => import('./pages/Ranking').then(m => ({ default: m.Ranking })))
-const Recompra = lazy(() => import('./pages/Recompra').then(m => ({ default: m.Recompra })))
+const Relacionamento = lazy(() => import('./pages/Relacionamento').then(m => ({ default: m.Relacionamento })))
 const Configuracoes = lazy(() => import('./pages/Configuracoes').then(m => ({ default: m.Configuracoes })))
 const Produtos = lazy(() => import('./pages/Produtos').then(m => ({ default: m.Produtos })))
 const RelatorioFabrica = lazy(() => import('./pages/RelatorioFabrica').then(m => ({ default: m.RelatorioFabrica })))
@@ -53,7 +53,7 @@ function App() {
               <Route path="/vendas/:id/editar" element={<NovaVenda />} />
               <Route path="/ranking" element={<Ranking />} />
               <Route path="/pedidos-compra" element={<PedidosCompra />} />
-              <Route path="/recompra" element={<Recompra />} />
+              <Route path="/relacionamento" element={<Relacionamento />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/produtos" element={<Produtos />} />
               <Route path="/relatorio-fabrica" element={<RelatorioFabrica />} />

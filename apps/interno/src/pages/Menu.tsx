@@ -45,11 +45,11 @@ export function Menu() {
             visible: true
         },
         {
-            title: 'Recompra',
+            title: 'Relacionamento',
             icon: Bell,
             iconColor: 'text-red-600 dark:text-red-400',
             iconBg: 'bg-red-500/10',
-            href: '/recompra',
+            href: '/relacionamento',
             visible: ENABLE_RECOMPRA
         },
         {

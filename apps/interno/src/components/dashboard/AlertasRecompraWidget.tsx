@@ -2,7 +2,6 @@
 import { RotateCw, MessageCircle, Eye, ShoppingCart } from 'lucide-react'
 import { formatPhone } from '@mont/shared'
 import { DashboardCarousel } from './DashboardCarousel'
-import { useRecompra } from '@/hooks/useRecompra'
 import { Card, CardContent } from '@/components/ui/Card'
 import { WidgetSkeleton } from '@/components/ui/WidgetSkeleton'
 import { Badge } from '@/components/ui'
@@ -33,20 +32,16 @@ interface AlertasRecompraWidgetProps {
 
 export function AlertasRecompraWidget({ data, loading: externalLoading }: AlertasRecompraWidgetProps) {
     const navigate = useNavigate()
-    // Skip hook if data is provided
-    const { contatos, loading: internalLoading } = useRecompra(!data)
+    const loading = externalLoading
 
-    const loading = data ? externalLoading : internalLoading
-    const rawAlerts = data || contatos
-
-    // Normalize data if it comes from JSON view / different structure
+    // Widget apenas normaliza a origem de dados sem recalcular regras de atraso.
     const alertas: RecompraAlerta[] = data
         ? data.map(a => ({
             contato: { id: a.contato_id, nome: a.nome, telefone: a.telefone },
             diasSemCompra: a.dias_sem_compra,
             status: 'atrasado'
         }))
-        : (rawAlerts as RecompraAlerta[]).filter(c => c.status === 'atrasado')
+        : []
 
     const handleWhatsApp = (telefone: string, nome: string) => {
         const message = `Olá, ${nome}! Notei que faz um tempinho desde sua última compra. Estamos com promoções especiais hoje!`
@@ -62,7 +57,7 @@ export function AlertasRecompraWidget({ data, loading: externalLoading }: Alerta
                 title="Alertas de Recompra"
                 icon={RotateCw}
                 count={0}
-                onViewAll={() => navigate('/clientes')}
+                onViewAll={() => navigate('/relacionamento?aba=reativacao')}
                 emptyState={
                     <div className="w-full flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border border-dashed">
                         <ShoppingCart className="size-8 text-gray-300 dark:text-gray-600 mb-2" />
@@ -80,7 +75,7 @@ export function AlertasRecompraWidget({ data, loading: externalLoading }: Alerta
             title="Alertas de Recompra"
             icon={RotateCw}
             count={alertas.length}
-            onViewAll={() => navigate('/clientes')}
+            onViewAll={() => navigate('/relacionamento?aba=reativacao')}
         >
             {alertas.map((alerta) => (
                 <div key={alerta.contato.id} className="min-w-[260px] snap-center">
@@ -101,7 +96,7 @@ export function AlertasRecompraWidget({ data, loading: externalLoading }: Alerta
                                 <div className="flex flex-col gap-1">
                                     <button
                                         aria-label={`Ver perfil de ${alerta.contato.nome}`}
-                                        onClick={() => navigate(`/clientes/${alerta.contato.id}`)}
+                                        onClick={() => navigate('/relacionamento?aba=reativacao', { state: { contatoId: alerta.contato.id } })}
                                         className="size-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-primary transition-colors"
                                     >
                                         <Eye className="size-4" />
