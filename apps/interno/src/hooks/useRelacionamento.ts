@@ -25,7 +25,7 @@ export function useKanbanData(aba: RelacionamentoAba) {
 export function useMoverCard() {
     const queryClient = useQueryClient()
 
-    return useMutation<void, Error, MoverCardInput>({
+    return useMutation<void, Error, MoverCardInput, { previousData: Array<[readonly unknown[], KanbanRow[] | undefined]> }>({
         mutationFn: (input) => relacionamentoService.moverCard(input),
         onMutate: async ({ contatoId, novoStatus }) => {
             await queryClient.cancelQueries({ queryKey: RELACIONAMENTO_QUERY_KEY })
