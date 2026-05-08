@@ -36,6 +36,9 @@ dev-dist/
 # App specific
 apps/distribuidora/tmp/
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Local artifacts
 *.tsbuildinfo
 **/*.tsbuildinfo

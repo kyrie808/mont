@@ -127,12 +127,14 @@ Codebase and UI are in **Brazilian Portuguese**. Table names, field names, compo
 ## Testing
 
 - **Framework:** Vitest (configured in `apps/interno`)
-- **Integration tests:** `apps/interno/src/__tests__/` — run against local Docker Supabase
-- **Unit tests:** `apps/interno/src/services/__tests__/`
+- **Integration tests:** `apps/interno/src/__tests__/` and `apps/interno/tests/integration/` — run against local Docker Supabase
+- **Unit tests:** `apps/interno/src/utils/` and `apps/interno/src/services/__tests__/`
+- **Component tests:** `apps/interno/src/components/**/*.test.tsx` — jsdom + Testing Library
 - **Test helpers:** `packages/shared/src/test-utils.ts` (NOT exported from barrel — use subpath `@mont/shared/test-utils`)
 - **Seed data:** `supabase/seed.sql`
 - **Parallelism:** Disabled (`fileParallelism: false`) to avoid race conditions on shared DB
-- **30 tests passing** covering: vendas, sync bidirecional, checkout, financeiro
+- **85 tests passing** across 15 files (38 integration, 43 unit, 4 component)
+- Setup de testes do `apps/interno`: ver `apps/interno/TESTING.md`
 
 ## Deploy
 
