@@ -51,3 +51,9 @@ scripts/capturar_*.py
 
 # App scaffolding local
 apps/distribuidora/
+
+# Backups locais de .env (NUNCA commitar — contém credenciais)
+.env.local.prod-backup
+.env.local*
+apps/*/.env.local*
+apps/*/.env.local.prod-backup
