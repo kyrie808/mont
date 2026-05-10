@@ -57,7 +57,6 @@ export function AlertasRecompraWidget({ data, loading: externalLoading }: Alerta
                 title="Alertas de Recompra"
                 icon={RotateCw}
                 count={0}
-                onViewAll={() => navigate('/relacionamento?aba=reativacao')}
                 emptyState={
                     <div className="w-full flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border border-dashed">
                         <ShoppingCart className="size-8 text-gray-300 dark:text-gray-600 mb-2" />
@@ -96,7 +95,7 @@ export function AlertasRecompraWidget({ data, loading: externalLoading }: Alerta
                                 <div className="flex flex-col gap-1">
                                     <button
                                         aria-label={`Ver perfil de ${alerta.contato.nome}`}
-                                        onClick={() => navigate('/relacionamento?aba=reativacao', { state: { contatoId: alerta.contato.id } })}
+                                        onClick={() => navigate(`/contatos/${alerta.contato.id}`)}
                                         className="size-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-primary transition-colors"
                                     >
                                         <Eye className="size-4" />

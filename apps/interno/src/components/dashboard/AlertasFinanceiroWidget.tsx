@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { DollarSign, MessageCircle, AlertTriangle } from 'lucide-react'
 import { formatCurrency } from '@mont/shared'
 import { DashboardCarousel } from './DashboardCarousel'
@@ -34,7 +33,6 @@ interface AlertasFinanceiroWidgetProps {
 }
 
 export function AlertasFinanceiroWidget({ data, loading: externalLoading }: AlertasFinanceiroWidgetProps) {
-    const navigate = useNavigate()
     // Skip hook if data is provided
     const { alertas, loading: internalLoading } = useAlertasFinanceiros(!data)
 
@@ -64,7 +62,6 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
                 title="Contas a Receber"
                 icon={DollarSign}
                 count={0}
-                onViewAll={() => navigate('/relacionamento?aba=cobranca')}
                 emptyState={
                     <div className="w-full flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border border-dashed">
                         <DollarSign className="size-8 text-gray-300 dark:text-gray-600 mb-2" />
@@ -82,7 +79,6 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
             title="Contas a Receber"
             icon={DollarSign}
             count={atrasados.length}
-            onViewAll={() => navigate('/relacionamento?aba=cobranca')}
         >
             {atrasados.map((alerta) => (
                 <div key={alerta.venda.id} className="min-w-[280px] snap-center">
