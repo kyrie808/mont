@@ -13,19 +13,22 @@ const NovaVenda = lazy(() => import('./pages/NovaVenda').then(m => ({ default: m
 const Vendas = lazy(() => import('./pages/Vendas').then(m => ({ default: m.Vendas })))
 const VendaDetalhe = lazy(() => import('./pages/VendaDetalhe').then(m => ({ default: m.VendaDetalhe })))
 const Ranking = lazy(() => import('./pages/Ranking').then(m => ({ default: m.Ranking })))
-const Relacionamento = lazy(() => import('./pages/Relacionamento').then(m => ({ default: m.Relacionamento })))
+// Rotas parqueadas preservadas mas inativas — acesso bloqueado na sidebar (Fase 4)
+function ParkedRoute() { return null }
+const Relacionamento = ParkedRoute
+const RelatorioFabrica = ParkedRoute
+const Entregas = ParkedRoute
+const FluxoCaixa = ParkedRoute
+const ContasReceber = ParkedRoute
+const ContasAPagar = ParkedRoute
+
 const Configuracoes = lazy(() => import('./pages/Configuracoes').then(m => ({ default: m.Configuracoes })))
 const Produtos = lazy(() => import('./pages/Produtos').then(m => ({ default: m.Produtos })))
-const RelatorioFabrica = lazy(() => import('./pages/RelatorioFabrica').then(m => ({ default: m.RelatorioFabrica })))
 const Estoque = lazy(() => import('./pages/Estoque').then(m => ({ default: m.Estoque })))
-const Entregas = lazy(() => import('./pages/Entregas').then(m => ({ default: m.Entregas })))
 const PedidosCompra = lazy(() => import('./pages/PedidosCompra').then(m => ({ default: m.PedidosCompra })))
 const Menu = lazy(() => import('./pages/Menu').then(m => ({ default: m.Menu })))
 const CatalogoPendentes = lazy(() => import('./pages/CatalogoPendentes').then(m => ({ default: m.CatalogoPendentes })))
-const FluxoCaixa = lazy(() => import('./pages/FluxoCaixa').then(m => ({ default: m.FluxoCaixa })))
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
-const ContasReceber = lazy(() => import('./pages/ContasReceber').then(m => ({ default: m.ContasReceber })))
-const ContasAPagar = lazy(() => import('./pages/ContasAPagar').then(m => ({ default: m.ContasAPagar })))
 
 function PageFallback() {
   return (

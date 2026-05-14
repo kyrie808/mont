@@ -1,6 +1,7 @@
-﻿import { createPortal } from 'react-dom'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { LucideIcon } from 'lucide-react'
 import {
     X,
     LayoutDashboard,
@@ -19,15 +20,29 @@ import {
     Settings,
     Plus,
     BookMarked,
+    Lock,
 } from 'lucide-react'
 import { cn } from '@mont/shared'
+import { useToast } from '../ui/Toast'
 
 interface NavigationDrawerProps {
     isOpen: boolean
     onClose: () => void
 }
 
-const NAV_GROUPS = [
+interface NavItem {
+    label: string
+    path: string
+    icon: LucideIcon
+    locked?: boolean
+}
+
+interface NavGroup {
+    label: string
+    items: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
     {
         label: 'Operações',
         items: [
@@ -35,27 +50,27 @@ const NAV_GROUPS = [
             { label: 'Clientes',    path: '/contatos',     icon: Users           },
             { label: 'Nova Venda',  path: '/nova-venda',   icon: Plus            },
             { label: 'Vendas',      path: '/vendas',       icon: ShoppingCart    },
-            { label: 'Entregas',    path: '/entregas',     icon: Truck           },
+            { label: 'Entregas',    path: '/entregas',     icon: Truck,          locked: true },
         ],
     },
     {
         label: 'Gestão',
         items: [
-            { label: 'Ranking',            path: '/ranking',          icon: Trophy       },
-            { label: 'Relacionamento',     path: '/relacionamento',   icon: RefreshCw    },
-            { label: 'Estoque',            path: '/estoque',          icon: Snowflake    },
-            { label: 'Produtos',           path: '/produtos',         icon: Package      },
-            { label: 'Pedidos de Compra',  path: '/pedidos-compra',   icon: ClipboardList},
+            { label: 'Ranking',            path: '/ranking',          icon: Trophy        },
+            { label: 'Relacionamento',     path: '/relacionamento',   icon: RefreshCw,    locked: true },
+            { label: 'Estoque',            path: '/estoque',          icon: Snowflake     },
+            { label: 'Produtos',           path: '/produtos',         icon: Package       },
+            { label: 'Pedidos de Compra',  path: '/pedidos-compra',   icon: ClipboardList },
         ],
     },
     {
         label: 'Financeiro',
         items: [
-            { label: 'Fluxo de Caixa',     path: '/fluxo-caixa',        icon: Wallet     },
-            { label: 'Contas a Receber',   path: '/contas-a-receber',   icon: CreditCard },
-            { label: 'Contas a Pagar',     path: '/contas-a-pagar',     icon: Receipt    },
-            { label: 'Relatório Fábrica',  path: '/relatorio-fabrica',  icon: FileText   },
-            { label: 'Plano de Contas',    path: '/plano-de-contas',    icon: BookMarked },
+            { label: 'Fluxo de Caixa',     path: '/fluxo-caixa',        icon: Wallet,     locked: true },
+            { label: 'Contas a Receber',   path: '/contas-a-receber',   icon: CreditCard, locked: true },
+            { label: 'Contas a Pagar',     path: '/contas-a-pagar',     icon: Receipt,    locked: true },
+            { label: 'Relatório Fábrica',  path: '/relatorio-fabrica',  icon: FileText,   locked: true },
+            { label: 'Plano de Contas',    path: '/plano-de-contas',    icon: BookMarked, locked: true },
         ],
     },
     {
@@ -69,6 +84,7 @@ const NAV_GROUPS = [
 export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
     const navigate = useNavigate()
     const location = useLocation()
+    const toast = useToast()
 
     const handleNavigate = (path: string) => {
         navigate(path)
@@ -120,20 +136,26 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                                     <div className="space-y-0.5">
                                         {group.items.map((item) => {
                                             const Icon = item.icon
-                                            const isActive = location.pathname === item.path
+                                            const isActive = !item.locked && location.pathname === item.path
                                             return (
                                                 <button
                                                     key={item.path}
-                                                    onClick={() => handleNavigate(item.path)}
+                                                    onClick={item.locked
+                                                        ? () => toast.info('Recurso disponível em breve')
+                                                        : () => handleNavigate(item.path)
+                                                    }
                                                     className={cn(
                                                         'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                                                         isActive
                                                             ? 'bg-primary text-primary-foreground'
-                                                            : 'text-foreground hover:bg-muted'
+                                                            : item.locked
+                                                                ? 'text-muted-foreground opacity-60 cursor-not-allowed'
+                                                                : 'text-foreground hover:bg-muted'
                                                     )}
                                                 >
                                                     <Icon className="h-4 w-4 shrink-0" />
-                                                    {item.label}
+                                                    <span className="flex-1 text-left">{item.label}</span>
+                                                    {item.locked && <Lock className="h-3 w-3 shrink-0" />}
                                                 </button>
                                             )
                                         })}
