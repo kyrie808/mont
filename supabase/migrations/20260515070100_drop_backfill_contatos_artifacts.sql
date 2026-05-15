@@ -1,3 +1,7 @@
+-- Originalmente preparada em 2026-05-09 (timestamp 20260509120000).
+-- Renomeada para 2026-05-15 devido à aplicação da migration 20260515060529
+-- ter avançado a janela cronológica do CLI. Conteúdo SQL inalterado.
+
 -- ============================================================
 -- Onda 1 — H1: cleanup de artefatos do backfill de contatos.nome
 -- ============================================================

@@ -1,3 +1,7 @@
+-- Originalmente preparada em 2026-05-09 (timestamp 20260509120200).
+-- Renomeada para 2026-05-15 devido à aplicação da migration 20260515060529
+-- ter avançado a janela cronológica do CLI. Conteúdo SQL inalterado.
+
 -- ============================================================
 -- Onda 1 — C2: REVOKE EXECUTE em RPCs SECURITY DEFINER de anon
 -- ============================================================
