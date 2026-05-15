@@ -40,6 +40,9 @@ export function PaymentSidebar({
     const restante = Math.max(0, total - valorPago)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [contas, setContas] = useState<Conta[]>([])
+    const [isLoadingContas, setIsLoadingContas] = useState(true)
+    const [contasError, setContasError] = useState<string | null>(null)
+    const [retryCount, setRetryCount] = useState(0)
 
     const formatDateTimeLocal = (isoString: string) => {
         const date = new Date(isoString)
@@ -56,7 +59,6 @@ export function PaymentSidebar({
         handleSubmit,
         setValue,
         watch,
-        reset,
         formState: { errors, isValid }
     } = useForm<PagamentoFormData>({
         mode: 'onChange',
@@ -75,27 +77,24 @@ export function PaymentSidebar({
     const currentMethod = watch('metodo')
 
     useEffect(() => {
-        const now = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T').slice(0, 16)
-        reset({
-            venda_id: vendaId,
-            valor: restante,
-            data: now,
-            metodo: 'pix',
-            conta_id: contas[0]?.id || '',
-            observacao: ''
-        })
-    }, [vendaId, restante, reset, contas])
-
-    useEffect(() => {
         const fetchContas = async () => {
-            const data = await cashFlowService.getContas()
-            setContas(data)
-            if (data.length > 0) {
-                setValue('conta_id', data[0].id)
+            try {
+                setIsLoadingContas(true)
+                setContasError(null)
+                const data = await cashFlowService.getContas()
+                setContas(data)
+                if (data.length > 0) {
+                    setValue('conta_id', data[0].id, { shouldValidate: true })
+                }
+            } catch (err) {
+                console.error('[PaymentSidebar] fetchContas failed:', err)
+                setContasError('Não foi possível carregar as contas. Recarregue a página.')
+            } finally {
+                setIsLoadingContas(false)
             }
         }
         fetchContas()
-    }, [setValue])
+    }, [setValue, retryCount])
 
     const handleConfirm: SubmitHandler<PagamentoFormData> = async (data) => {
         setIsSubmitting(true)
@@ -207,12 +206,29 @@ export function PaymentSidebar({
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1 mb-1 block">
                         Conta de Destino
                     </label>
-                    <Select
-                        {...register('conta_id')}
-                        options={contas.map(ct => ({ value: ct.id, label: ct.nome }))}
-                        error={errors.conta_id?.message}
-                        placeholder="Selecione a conta..."
-                    />
+                    {isLoadingContas ? (
+                        <p className="text-xs text-muted-foreground px-1 py-2">Carregando contas...</p>
+                    ) : contasError ? (
+                        <div className="space-y-1">
+                            <p className="text-xs text-destructive px-1">{contasError}</p>
+                            <button
+                                type="button"
+                                className="text-xs text-primary underline px-1"
+                                onClick={() => setRetryCount(c => c + 1)}
+                            >
+                                Tentar novamente
+                            </button>
+                        </div>
+                    ) : contas.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-1 py-2">Nenhuma conta cadastrada. Cadastre uma conta de destino antes de registrar pagamentos.</p>
+                    ) : (
+                        <Select
+                            {...register('conta_id')}
+                            options={contas.map(ct => ({ value: ct.id, label: ct.nome }))}
+                            error={errors.conta_id?.message}
+                            placeholder="Selecione a conta..."
+                        />
+                    )}
                 </div>
                 <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Data</label>
@@ -275,7 +291,7 @@ export function PaymentSidebar({
             <div className="sticky bottom-0 pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-card -mx-4 px-4 border-t border-border">
                 <Button
                     type="submit"
-                    disabled={isSubmitting || !isValid}
+                    disabled={isSubmitting || isLoadingContas || !!contasError || contas.length === 0 || !isValid}
                     className="w-full py-6 text-lg font-bold uppercase tracking-tight"
                 >
                     {isSubmitting ? 'Processando...' : 'Confirmar Pagamento'}
