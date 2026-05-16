@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -7,6 +7,11 @@
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -34,27 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _backup_contatos_nome_20260429_002736: {
-        Row: {
-          id: string | null
-          nome_antes: string | null
-          snapshot_em: string | null
-          telefone: string | null
-        }
-        Insert: {
-          id?: string | null
-          nome_antes?: string | null
-          snapshot_em?: string | null
-          telefone?: string | null
-        }
-        Update: {
-          id?: string | null
-          nome_antes?: string | null
-          snapshot_em?: string | null
-          telefone?: string | null
-        }
-        Relationships: []
-      }
       admin_users: {
         Row: {
           criado_em: string | null
@@ -73,30 +57,6 @@ export type Database = {
           id?: string
           role?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      backfill_contatos_nome_log: {
-        Row: {
-          criado_em: string
-          id: string
-          snapshot_table_name: string
-          total_atualizados: number
-          total_snapshot: number
-        }
-        Insert: {
-          criado_em?: string
-          id?: string
-          snapshot_table_name: string
-          total_atualizados: number
-          total_snapshot: number
-        }
-        Update: {
-          criado_em?: string
-          id?: string
-          snapshot_table_name?: string
-          total_atualizados?: number
-          total_snapshot?: number
         }
         Relationships: []
       }
@@ -1920,7 +1880,6 @@ export type Database = {
         Args: { p_produto_id: string }
         Returns: undefined
       }
-      fn_backfill_contatos_nome: { Args: never; Returns: Json }
       fn_capitalize_name: { Args: { nome: string }; Returns: string }
       fn_count_words: { Args: { texto: string }; Returns: number }
       fn_mover_card_relacionamento: {
@@ -1993,30 +1952,6 @@ export type Database = {
         Returns: string
       }
       rpc_total_a_receber_dashboard: { Args: never; Returns: Json }
-      rpc_total_a_receber_simples: { Args: never; Returns: number }
-      rpt_churn: {
-        Args: { p_dias_threshold?: number }
-        Returns: {
-          contato_id: string
-          dias_sem_compra: number
-          nome: string
-          qtd_pedidos: number
-          telefone: string
-          total_historico: number
-          ultima_compra: string
-        }[]
-      }
-      rpt_vendas_por_periodo: {
-        Args: { p_agrupamento?: string; p_fim: string; p_inicio: string }
-        Returns: {
-          clientes_unicos: number
-          faturamento: number
-          periodo: string
-          ticket_medio: number
-          total_itens: number
-          total_vendas: number
-        }[]
-      }
       update_purchase_order_with_items: {
         Args: {
           p_fornecedor_id: string
@@ -2182,4 +2117,3 @@ export const Constants = {
     },
   },
 } as const
-
