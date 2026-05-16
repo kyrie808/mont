@@ -148,14 +148,17 @@ Toda regressão de bug crítico exige teste que reproduz o bug ANTES do fix.
 
 ## Backup da produção (manual)
 
-Antes de qualquer migration em produção, rodar:
+Antes de qualquer migration ou operação que possa afetar dados em produção, rodar:
 
 ```powershell
 .\supabase\scripts\dump-prod.ps1
 ```
 
-Saída fica em `supabase/backups/dumps/dump-YYYYMMDD-HHMMSS.sql` (gitignored).
-Retenção é manual — limpar manualmente quando necessário.
+Produz dois arquivos emparelhados em `supabase/backups/dumps/` (gitignored):
+- `dump-schema-YYYYMMDD-HHMMSS.sql` — DDL (tabelas, RPCs, policies)
+- `dump-data-YYYYMMDD-HHMMSS.sql` — INSERTs de dados
+
+Retenção é manual. Limpar dumps antigos quando necessário.
 
 ## Deploy
 
