@@ -136,6 +136,16 @@ Codebase and UI are in **Brazilian Portuguese**. Table names, field names, compo
 - **85 tests passing** across 15 files (38 integration, 43 unit, 4 component)
 - Setup de testes do `apps/interno`: ver `apps/interno/TESTING.md`
 
+## Testes (TDD pragmático)
+
+Para escrever, modificar ou rodar testes no projeto Mont, **consulte `.agent/skills/tdd-mont-pragmatico/SKILL.md` ANTES de qualquer ação**.
+
+Padrão `__TEST__` é obrigatório. Testes rodam contra Supabase de produção via Supabase client real (decisão consciente — não sugerir Docker/mock como "melhoria"). Marcadores permanentes em produção:
+- `__TEST__Cliente`: `contatos.id = '63040302-54d5-4213-8b11-9e208e45174b'`
+- `__TEST__Conta`: `contas.id = 'd1485f56-e8f5-4a3e-84bb-cb104ba7a695'` (ativo=false)
+
+Toda regressão de bug crítico exige teste que reproduz o bug ANTES do fix.
+
 ## Deploy
 
 - **Vercel:** `mont-catalogo` and `mont-interno`, both from `kyrie808/mont`

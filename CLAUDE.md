@@ -127,12 +127,24 @@ Codebase and UI are in **Brazilian Portuguese**. Table names, field names, compo
 ## Testing
 
 - **Framework:** Vitest (configured in `apps/interno`)
-- **Integration tests:** `apps/interno/src/__tests__/` — run against local Docker Supabase
-- **Unit tests:** `apps/interno/src/services/__tests__/`
+- **Integration tests:** `apps/interno/src/__tests__/` and `apps/interno/tests/integration/` — run against local Docker Supabase
+- **Unit tests:** `apps/interno/src/utils/` and `apps/interno/src/services/__tests__/`
+- **Component tests:** `apps/interno/src/components/**/*.test.tsx` — jsdom + Testing Library
 - **Test helpers:** `packages/shared/src/test-utils.ts` (NOT exported from barrel — use subpath `@mont/shared/test-utils`)
 - **Seed data:** `supabase/seed.sql`
 - **Parallelism:** Disabled (`fileParallelism: false`) to avoid race conditions on shared DB
-- **30 tests passing** covering: vendas, sync bidirecional, checkout, financeiro
+- **85 tests passing** across 15 files (38 integration, 43 unit, 4 component)
+- Setup de testes do `apps/interno`: ver `apps/interno/TESTING.md`
+
+## Testes (TDD pragmático)
+
+Para escrever, modificar ou rodar testes no projeto Mont, **consulte `.agent/skills/tdd-mont-pragmatico/SKILL.md` ANTES de qualquer ação**.
+
+Padrão `__TEST__` é obrigatório. Testes rodam contra Supabase de produção via Supabase client real (decisão consciente — não sugerir Docker/mock como "melhoria"). Marcadores permanentes em produção:
+- `__TEST__Cliente`: `contatos.id = '63040302-54d5-4213-8b11-9e208e45174b'`
+- `__TEST__Conta`: `contas.id = 'd1485f56-e8f5-4a3e-84bb-cb104ba7a695'` (ativo=false)
+
+Toda regressão de bug crítico exige teste que reproduz o bug ANTES do fix.
 
 ## Deploy
 
@@ -162,3 +174,58 @@ Codebase and UI are in **Brazilian Portuguese**. Table names, field names, compo
 
 ### Financial tracking zero date: May 1, 2026
 All data before this date is approximate reference. From May 1 onwards, all financial data must be accurate.
+
+## Limites de escopo do agente de execução
+
+### Validação visual é responsabilidade humana
+
+O diretor do projeto valida features visualmente em ambiente local rodando manualmente. O agente NÃO deve:
+
+- Gerar screenshots automatizados.
+- Criar scripts de captura de tela (Playwright headless, Puppeteer, Selenium, etc.) sem solicitação explícita por escrito.
+- Adicionar dependências de automação de UI ao projeto pra esse fim.
+- Criar utilities em `scripts/` cuja única função seja gerar evidência visual.
+
+Quando o agente precisar comprovar que uma feature de UI funciona, a evidência aceita é:
+- Output de teste unitário/integração rodando.
+- SELECT no banco mostrando que a interação principal foi exercitada.
+- Lista de arquivos alterados.
+- Build verde + tsc verde.
+
+Screenshots são tirados pelo diretor quando ele decidir validar. Não pelo agente.
+
+### Não modificar guardas de segurança
+
+Nenhum dos seguintes pode ser tocado pelo agente, em nenhuma circunstância, mesmo "só pra dev" e mesmo "com flag de env":
+
+- AuthGuard / lógica de proteção de rota.
+- Policies RLS do Supabase.
+- Validação Zod em boundaries.
+- Sanitização de input.
+
+Se uma tarefa parece exigir bypass de qualquer um desses, **a tarefa está formulada errada**. Pare e pergunte ao diretor antes de prosseguir. Não invente solução que contorna a guarda.
+
+### Não criar infraestrutura colateral sem solicitação
+
+Se durante uma tarefa o agente identificar que "precisaria de X pra fazer Y" (script auxiliar, env var nova, dependência adicional, refator de arquivo fora do escopo, mock/stub no código de produção), o caminho correto é:
+
+1. Pausar.
+2. Explicar ao diretor o quê precisa e por quê.
+3. Aguardar autorização explícita.
+
+Não criar X assumindo que está autorizado por estar a serviço de Y. A tarefa pedida nunca autoriza modificação colateral de arquitetura.
+
+### Critérios de "concluído"
+
+Concluído é quando os critérios de checklist do prompt original estão atendidos com evidência verificável dentro do escopo dado. Não é quando o agente "acha que está bom" e adicionou utilities pra provar.
+
+### Reportagem de tarefas multi-item
+
+Quando uma instrução do diretor contém múltiplos pontos numerados, a devolutiva DEVE endereçar cada ponto individualmente, com:
+- Número do ponto.
+- O que foi feito (arquivo, função, migration específica).
+- Evidência específica desse ponto (não evidência genérica de build/test).
+
+"Build verde + testes passando" cobre validação de regressão, NÃO cobre confirmação de implementação. Cada ponto pedido precisa de evidência própria.
+
+Pontos não endereçados explicitamente são considerados NÃO FEITOS. Não interpretar silêncio como conclusão tácita.
