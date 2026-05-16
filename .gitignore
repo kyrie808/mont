@@ -57,3 +57,7 @@ apps/distribuidora/
 .env.local*
 apps/*/.env.local*
 apps/*/.env.local.prod-backup
+
+# Supabase dumps completos contêm PII — nunca commitar
+supabase/backups/dumps/*.sql
+!supabase/backups/dumps/.gitkeep

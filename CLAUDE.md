@@ -146,6 +146,17 @@ Padrão `__TEST__` é obrigatório. Testes rodam contra Supabase de produção v
 
 Toda regressão de bug crítico exige teste que reproduz o bug ANTES do fix.
 
+## Backup da produção (manual)
+
+Antes de qualquer migration em produção, rodar:
+
+```powershell
+.\supabase\scripts\dump-prod.ps1
+```
+
+Saída fica em `supabase/backups/dumps/dump-YYYYMMDD-HHMMSS.sql` (gitignored).
+Retenção é manual — limpar manualmente quando necessário.
+
 ## Deploy
 
 - **Vercel:** `mont-catalogo` and `mont-interno`, both from `kyrie808/mont`
