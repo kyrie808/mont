@@ -6,7 +6,6 @@ import {
     Trophy,
     Settings,
     ClipboardList,
-    Refrigerator,
     Unlink,
     DollarSign,
     CalendarClock
@@ -14,7 +13,7 @@ import {
 import { PageContainer } from '../components/layout/PageContainer'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/ui'
-import { ENABLE_GELADEIRA, ENABLE_RECOMPRA } from '../constants/flags'
+import { ENABLE_RECOMPRA } from '../constants/flags'
 
 export function Menu() {
     const navigate = useNavigate()
@@ -27,14 +26,6 @@ export function Menu() {
             iconBg: 'bg-primary/10',
             href: '/entregas',
             visible: true
-        },
-        {
-            title: 'Estoque / Geladeira',
-            icon: Refrigerator,
-            iconColor: 'text-blue-600 dark:text-blue-400',
-            iconBg: 'bg-blue-500/10',
-            href: '/estoque',
-            visible: ENABLE_GELADEIRA
         },
         {
             title: 'Pedidos Compra',
