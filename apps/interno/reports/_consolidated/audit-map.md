@@ -38,7 +38,7 @@
 | P3-T04 | P3 | 14 callbacks `(x: any)` em queries Supabase (9 arquivos) — types existem mas não importados | OPEN |
 | P3-T10 | P3 | Cobertura Zod: 2/21 entidades com validação de boundary — 19 entidades write sem Zod | OPEN |
 | P4-DC01 | P4 | `_parked/contas-a-pagar`: tabelas + view vivas em prod, sem UI — decisão pendente (DROP ou reativar) | OPEN |
-| P4-DC02 | P4 | `AlertasRecompraWidget.tsx:77`: navega para `/relacionamento` (parked, retorna null) → tela em branco silenciosa | OPEN |
+| P4-DC02 | P4 | `AlertasRecompraWidget.tsx:77`: navega para `/relacionamento` (parked, retorna null) → tela em branco silenciosa | RESOLVED |
 | P4-DC03 | P4 | 2 widgets mortos em `src/`: `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` (zero importers, em src/ não em _parked/) | RESOLVED |
 | P5-T04 | P5 | ZERO role/permission tests em todos os 11 SECDEF RPCs | OPEN |
 | P5-T05 | P5 | `add_image_reference`, `delete_image_reference`: zero testes | OPEN |
@@ -49,7 +49,7 @@
 | P5-T10 | P5 | Vitest sem CI gate: sem coverage thresholds, sem GitHub Actions | OPEN |
 | P6-DEP02 | P6 | `vite@7.3.1` — 3 HIGH CVEs (dev server): server.fs.deny bypass, arbitrary file read, .map traversal; fix ≥7.3.2 | RESOLVED |
 | P6-DEP03 | P6 | `serialize-javascript@6.0.2` (via vite-plugin-pwa) — HIGH RCE (build tool, não prod) | OPEN |
-| P6-BUND01 | P6 | `Estoque3DView-C9Zv8QyA.js`: 340.8 KB gzip — excede threshold 200 KB (Three.js lazy-loaded) | OPEN |
+| P6-BUND01 | P6 | `Estoque3DView-C9Zv8QyA.js`: 340.8 KB gzip — excede threshold 200 KB (Three.js lazy-loaded) | RESOLVED |
 
 ### 🟢 MELHORIA
 
@@ -70,7 +70,7 @@
 | P3-T08 | P3 | `database.ts` contém bloco `graphql_public` (CLI artifact — auto-eliminado no próximo gen) | OPEN |
 | P3-T09 | P3 | `useCatalogoPendentes.ts:56`: `const vendaInsert: any` (declaração local) | OPEN |
 | P4-DC04 | P4 | Teste órfão: `backfill_contatos_nome.integration.test.ts` (= P1-TEST01 = P5-T09) | RESOLVED |
-| P4-DC05 | P4 | Feature flags `ENABLE_GELADEIRA=false` + `ENABLE_RECOMPRA=false` — Vite DCE confirmado, code in src/ | OPEN |
+| P4-DC05 | P4 | Feature flags `ENABLE_GELADEIRA=false` + `ENABLE_RECOMPRA=false` — Vite DCE confirmado, code in src/ | RESOLVED |
 | P4-DC06 | P4 | `.env.example` é template AIOS genérico — não documenta VITE_SUPABASE_* | OPEN |
 | P4-DC07 | P4 | `vite.config.ts` proxy `/api → localhost:5000` sem referência em src/ | OPEN |
 | P4-DC08 | P4 | 3 type aliases órfãos em `@mont/shared` (PedidoCatalogo, ItemPedidoCatalogo, ImagemProdutoCatalogo) | RESOLVED |
@@ -98,6 +98,9 @@
 | P1-L01 | `_parked/**` adicionado ao `globalIgnores` em `eslint.config.js` | Onda L.1 |
 | P6-DEP02 | `vite` atualizado para `7.3.2` (3 CVEs dev server corrigidas) | Onda L.1 |
 | P6-DEP04 | Patches aplicados: `react@19.2.6`, `zod@4.4.3`, `supabase-js@2.105.4`, `tanstack-query@5.100.10`, etc. | Onda L.1 |
+| P4-DC05 | `flags.ts` removido; geladeira (7 arquivos) + recompra (3 arquivos) movidos para `_parked/` via `git mv` — decisão (b): park, não reativar | Pré-Hardening D3 |
+| P4-DC02 | `AlertasRecompraWidget` parked (→ `_parked/recompra/`) — bug de navigate para /relacionamento eliminado junto com o widget | Pré-Hardening D3 |
+| P6-BUND01 | `Estoque3DView` parked — chunk Three.js 351 KB gzip eliminado. Bundle pós-D3: ~336 KB gzip JS (de 687 KB pós-L.1; −351 KB = −51%) | Pré-Hardening D3 |
 
 ---
 
@@ -320,7 +323,7 @@
 | Passo | ID(s) | Ação | Estimativa |
 |---|---|---|---|
 | L-10 | P2-DB06 | DROP 16 unused indexes via migration (`idx_scan = 0` em `pg_stat_user_indexes`) | Trivial (15min) |
-| L-13 | P4-DC05 | Decidir `ENABLE_GELADEIRA` + `ENABLE_RECOMPRA`: (a) ativar flags + reintegrar EstoqueWidget/recompraService, ou (b) deletar flags + mover código para _parked/ | Baixo (1h) |
+| L-13 | P4-DC05 | ~~Decidir `ENABLE_GELADEIRA` + `ENABLE_RECOMPRA`~~ — decisão tomada 2026-05-19: opção (b) executada no Pré-Hardening D3 | **DONE** |
 | L-15 | P2-DB03 | Ligar `auth_leaked_password_protection` no Supabase Dashboard (toggle — sem migration) | Trivial (15min) |
 | L-16 | P2-DB01 | `ALTER FUNCTION public.prevent_delete_automatic_plan SET search_path TO 'public'` × 3 funções | Trivial (15min) |
 
