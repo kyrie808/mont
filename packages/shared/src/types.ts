@@ -38,6 +38,3 @@ export type ProdutoUpdate = Update<'produtos'>
 export type ItemVendaInsert = Insert<'itens_venda'>
 
 export type ProdutoCatalogo = View<'vw_catalogo_produtos'>
-export type PedidoCatalogo = Table<'cat_pedidos'>
-export type ItemPedidoCatalogo = Table<'cat_itens_pedido'>
-export type ImagemProdutoCatalogo = Table<'cat_imagens_produto'>

@@ -52,7 +52,4 @@ export type {
     ProdutoUpdate,
     ItemVendaInsert,
     ProdutoCatalogo,
-    PedidoCatalogo,
-    ItemPedidoCatalogo,
-    ImagemProdutoCatalogo,
 } from './types'
