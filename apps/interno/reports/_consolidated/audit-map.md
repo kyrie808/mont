@@ -116,7 +116,7 @@
 
 **Remediação coordenada:**
 1. REVOKE EXECUTE FROM authenticated nas 6 RPCs financeiras + adicionar `IF NOT (SELECT is_admin()) THEN RAISE EXCEPTION`
-2. DROP imediato de `registrar_pagamento_conta_a_pagar` e `criar_obrigacao_parcelada` (UI parked, sem consumidor legítimo)
+2. As 6 RPCs são tratadas uniformemente — 4 ativas (H-4) + 2 parked (H-3). Decisão 2026-05-19: **não dropar** `registrar_pagamento_conta_a_pagar` e `criar_obrigacao_parcelada` — aplicar guards iguais.
 3. `ALTER VIEW ... SET (security_invoker=on)` nas 11 views H4
 4. Adicionar role tests (anon + authenticated não-admin) antes de subir guards para CI
 
@@ -139,7 +139,7 @@
 
 ---
 
-### Cluster: "Contas a Pagar" — Decisão: reativar ou DROP
+### Cluster: "Contas a Pagar" — Decisão: keep parked (2026-05-19)
 
 **IDs:** P4-DC01 (🟡) · P2-DB04 (🟡) · P3-T05 (🔴, parcial) · P5-T08-FIN (🔴, parcial)
 
@@ -150,13 +150,15 @@
 | P3-T05 | 2 RPCs financeiras UNGUARDED nessas tabelas: DROP agora (cluster SECDEF) ou guard ao reativar |
 | P5-T08-FIN | Tabelas vivas sem nenhum teste de validação |
 
-**Cenário A — Reativar:**
+**Decisão 2026-05-19: manter parked por ora.** RPCs recebem guards `is_admin()` na Onda Hardening (H-3), uniformes com as 4 RPCs ativas (H-4).
+
+**Cenário A — Reativar (deferred):**
   - Criar UI (mover de _parked/ para src/)
   - Adicionar 7 indexes (P2-DB04)
-  - Adicionar is_admin() guard nas 2 RPCs
+  - Guards is_admin() já aplicados por H-3 — reutilizar
   - Adicionar integration tests (P5-T08-FIN)
 
-**Cenário B — DROP:**
+**Cenário B — DROP (deferred, requer nova decisão):**
   - Migration: DROP TABLE pagamentos_conta_a_pagar, DROP TABLE contas_a_pagar (CASCADE)
   - DROP VIEW view_contas_a_pagar_dashboard
   - DROP FUNCTION registrar_pagamento_conta_a_pagar, criar_obrigacao_parcelada (resolve P3-T05)
@@ -242,15 +244,15 @@
 |---|---|---|---|---|
 | H-1 | P6-DEP01 | `pnpm --filter catalogo update next@^15.5.18` — patch trivial dentro do minor | `pnpm update` | Trivial (15min) |
 | H-2 | P5-T04 (baseline) | **Role tests do comportamento ATUAL**: documentar o que anon × authenticated não-admin × admin conseguem fazer hoje nas 6 RPCs 🔴 e em contatos UPDATE — baseline antes de qualquer guard | Código | Baixo (1h) |
-| H-3 | P3-T05 | DROP `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` (UI parked, sem consumidor legítimo) | Migration | Trivial (15min) |
-| H-4 | C2 | REVOKE EXECUTE FROM authenticated nas 4 RPCs financeiras ativas + adicionar guard `IF NOT (SELECT is_admin()) THEN RAISE EXCEPTION` no corpo | Migration | Médio (4h) |
+| H-3 | P3-T05 | REVOKE EXECUTE FROM authenticated + guard `is_admin()` nas 2 RPCs parked: `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` (decisão 2026-05-19: manter parked, não dropar) | Migration | Baixo (2h) |
+| H-4 | C2 | REVOKE EXECUTE FROM authenticated nas 4 RPCs financeiras ativas + guard `IF NOT (SELECT is_admin()) THEN RAISE EXCEPTION`: `registrar_despesa_manual`, `registrar_entrada_manual`, `registrar_pagamento_venda`, `update_purchase_order_with_items` | Migration | Médio (4h) |
 | H-5 | H3 | Corrigir policy `contatos.Authenticated update access`: substituir USING(true) por condição adequada | Migration | Baixo (1h) |
 | H-6 | H4 | `ALTER VIEW ranking_compras ... SET (security_invoker=on)` × 11 views | Migration | Baixo (1h) |
 | H-7 | P5-T04 (expected) + P5-T01/T02/T03 | **Role tests do comportamento ESPERADO**: verificar que guards bloqueiam anon + authenticated não-admin; integration tests das 3 RPCs sem cobertura (despesa, entrada, purchase_order) | Código | Médio (4h) |
 | H-8 | P5-T08-FIN (ativas) | Integration tests de DB rejection para `purchase_orders`, `lancamentos`, `configuracoes`, `produtos` | Código | Médio (4h) |
 | H-9 | P2-DB05 | Trocar `auth.uid()` RAW por `(SELECT auth.uid())` em 2 policies (admin_users + interacoes) | Migration | Trivial (15min) |
 
-**Total estimado: ~15h** (15min + 1h + 15min + 4h + 1h + 1h + 4h + 4h + 15min)
+**Total estimado: ~17h** (15min + 1h + 2h + 4h + 1h + 1h + 4h + 4h + 15min — H-3 subiu 15min→2h por não dropar)
 
 ---
 
@@ -262,8 +264,7 @@
    - `rls_policy_always_true` → 0 (exceto 3 policies INSERT público de P2-DB02 — residue aceito)
    - `security_definer_view` → 0
 2. Suíte de role tests cobrindo (anon × authenticated não-admin × admin) para:
-   - As 4 RPCs financeiras guardadas: `registrar_despesa_manual`, `registrar_entrada_manual`, `registrar_pagamento_venda`, `update_purchase_order_with_items`
-   - Confirmação de ausência das 2 DROPadas via `SELECT FROM pg_proc WHERE proname IN ('registrar_pagamento_conta_a_pagar', 'criar_obrigacao_parcelada')` → 0 rows
+   - As 6 RPCs financeiras guardadas: `registrar_despesa_manual`, `registrar_entrada_manual`, `registrar_pagamento_venda`, `update_purchase_order_with_items`, `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada`
 3. `pnpm audit` retorna zero CVEs 🔴 em `apps/catalogo`
 
 ---
@@ -367,7 +368,7 @@
 | **TOTAL** | **9** | **24** | **28** | **61** |
 
 **Estimativas por onda:**
-- Onda Hardening: ~15h (9 passos — H-1 a H-9)
+- Onda Hardening: ~17h (9 passos — H-1 a H-9; H-3 subiu para 2h por D1)
 - Onda Limpeza L.1: ~2.5h (patches + dead code óbvio)
 - Onda Limpeza L.2: ~9h (type safety)
 - Onda Limpeza L.3: ~2h (DB + decisões)
