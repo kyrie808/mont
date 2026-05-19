@@ -23,7 +23,6 @@ import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { AlertasFinanceiroWidget } from '@/components/dashboard/AlertasFinanceiroWidget'
-import { AlertasRecompraWidget } from '@/components/dashboard/AlertasRecompraWidget'
 
 import { TopIndicadoresWidget } from '@/components/dashboard/TopIndicadoresWidget'
 import { UltimasVendasWidget } from '@/components/dashboard/UltimasVendasWidget'
@@ -107,7 +106,7 @@ export function Dashboard() {
         setIsRefreshing(false)
     }, [refetch])
 
-    const totalAlerts = (metrics?.financial?.alertas_financeiros?.length || 0) + (metrics?.alertas_recompra?.length || 0)
+    const totalAlerts = metrics?.financial?.alertas_financeiros?.length || 0
 
     return (
         <>
@@ -297,10 +296,6 @@ export function Dashboard() {
                         <div className="space-y-8">
                             <AlertasFinanceiroWidget
                                 data={metrics?.financial?.alertas_financeiros}
-                                loading={isLoading}
-                            />
-                            <AlertasRecompraWidget
-                                data={metrics?.alertas_recompra}
                                 loading={isLoading}
                             />
                         </div>

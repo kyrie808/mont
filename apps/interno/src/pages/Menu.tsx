@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import {
     Truck,
     Package,
-    Bell,
     Trophy,
     Settings,
     ClipboardList,
@@ -13,7 +12,6 @@ import {
 import { PageContainer } from '../components/layout/PageContainer'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/ui'
-import { ENABLE_RECOMPRA } from '../constants/flags'
 
 export function Menu() {
     const navigate = useNavigate()
@@ -34,14 +32,6 @@ export function Menu() {
             iconBg: 'bg-accent/10',
             href: '/pedidos-compra',
             visible: true
-        },
-        {
-            title: 'Relacionamento',
-            icon: Bell,
-            iconColor: 'text-red-600 dark:text-red-400',
-            iconBg: 'bg-red-500/10',
-            href: '/relacionamento',
-            visible: ENABLE_RECOMPRA
         },
         {
             title: 'Ranking',
