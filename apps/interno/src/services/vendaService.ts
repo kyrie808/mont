@@ -25,7 +25,7 @@ async function _syncCatPedido(
         if (fetchErr || !venda?.cat_pedido_id || venda.origem !== 'catalogo') return
 
         // Mapear status interno → catálogo (cancelada → cancelado)
-        const catUpdate: Record<string, string> = {}
+        const catUpdate: { status?: string; status_pagamento?: string } = {}
         if (update.status) {
             catUpdate.status = update.status === 'cancelada' ? 'cancelado' : update.status
         }
