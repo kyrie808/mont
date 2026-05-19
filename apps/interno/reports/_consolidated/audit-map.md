@@ -26,7 +26,7 @@
 
 | ID | Fase | Descrição | Status |
 |---|---|---|---|
-| P1-L01 | P1 | `_parked/` não excluído do ESLint — polui contagem de erros (10e+6w dos 72 totais) | OPEN |
+| P1-L01 | P1 | `_parked/` não excluído do ESLint — polui contagem de erros (10e+6w dos 72 totais) | RESOLVED |
 | P1-L02 | P1 | 29 `no-explicit-any` em produção (16 arquivos) | OPEN |
 | P2-DB02 | P2 | 3 policies `rls_policy_always_true` para INSERT público (contatos, cat_pedidos, cat_itens_pedido) — sem rate limit | STILL_OPEN |
 | P2-DB04 | P2/P6 | 7 FKs sem índice: `contas_a_pagar` (×3: created_by, plano_conta_id, updated_by) + `pagamentos_conta_a_pagar` (×4: conta_a_pagar_id, conta_id, created_by, updated_by) | STILL_OPEN |
@@ -39,15 +39,15 @@
 | P3-T10 | P3 | Cobertura Zod: 2/21 entidades com validação de boundary — 19 entidades write sem Zod | OPEN |
 | P4-DC01 | P4 | `_parked/contas-a-pagar`: tabelas + view vivas em prod, sem UI — decisão pendente (DROP ou reativar) | OPEN |
 | P4-DC02 | P4 | `AlertasRecompraWidget.tsx:77`: navega para `/relacionamento` (parked, retorna null) → tela em branco silenciosa | OPEN |
-| P4-DC03 | P4 | 2 widgets mortos em `src/`: `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` (zero importers, em src/ não em _parked/) | OPEN |
+| P4-DC03 | P4 | 2 widgets mortos em `src/`: `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` (zero importers, em src/ não em _parked/) | RESOLVED |
 | P5-T04 | P5 | ZERO role/permission tests em todos os 11 SECDEF RPCs | OPEN |
 | P5-T05 | P5 | `add_image_reference`, `delete_image_reference`: zero testes | OPEN |
 | P5-T06 | P5 | `registrar_pagamento_venda`: happy path ✓ — zero boundary, zero role | OPEN |
 | P5-T07 | P5 | Schemas Zod (contato, venda, pagamento): zero unit tests de validação | OPEN |
 | P5-T08 | P5 | ~12 entidades não-financeiras sem nenhum critério de validação testado | OPEN |
-| P5-T09 | P5 | Teste órfão failing: `backfill_contatos_nome.integration.test.ts` (= P4-DC04) | OPEN |
+| P5-T09 | P5 | Teste órfão failing: `backfill_contatos_nome.integration.test.ts` (= P4-DC04) | RESOLVED |
 | P5-T10 | P5 | Vitest sem CI gate: sem coverage thresholds, sem GitHub Actions | OPEN |
-| P6-DEP02 | P6 | `vite@7.3.1` — 3 HIGH CVEs (dev server): server.fs.deny bypass, arbitrary file read, .map traversal; fix ≥7.3.2 | OPEN |
+| P6-DEP02 | P6 | `vite@7.3.1` — 3 HIGH CVEs (dev server): server.fs.deny bypass, arbitrary file read, .map traversal; fix ≥7.3.2 | RESOLVED |
 | P6-DEP03 | P6 | `serialize-javascript@6.0.2` (via vite-plugin-pwa) — HIGH RCE (build tool, não prod) | OPEN |
 | P6-BUND01 | P6 | `Estoque3DView-C9Zv8QyA.js`: 340.8 KB gzip — excede threshold 200 KB (Three.js lazy-loaded) | OPEN |
 
@@ -61,7 +61,7 @@
 | P1-L06 | P1 | 3 erros `react-hooks/preserve-manual-memoization` em useContatos.ts | OPEN |
 | P1-L07 | P1 | 3 warnings `react-hooks/exhaustive-deps` em useContatos.ts (toast faltando) | OPEN |
 | P1-L08 | P1 | 3 erros `no-empty-object-type` em vite-env.d.ts (boilerplate) | OPEN |
-| P1-TEST01 | P1 | Teste órfão: backfill_contatos_nome.integration.test.ts (= P4-DC04 = P5-T09) | OPEN |
+| P1-TEST01 | P1 | Teste órfão: backfill_contatos_nome.integration.test.ts (= P4-DC04 = P5-T09) | RESOLVED |
 | P2-DB01 | P2 | 3 funções com `search_path` mutável (não SECDEF — baixo risco) | STILL_OPEN |
 | P2-DB03 | P2 | `auth_leaked_password_protection` desligado no Supabase Auth | STILL_OPEN |
 | P2-DB06 | P2/P6 | 16 unused indexes (espaço em disco, sem risco) | STILL_OPEN |
@@ -69,17 +69,17 @@
 | P3-T06 | P3 | `DomainProduto`: campo duplicado `preco_ancoragem` (snake) + `precoAncoragem` (camel) | OPEN |
 | P3-T08 | P3 | `database.ts` contém bloco `graphql_public` (CLI artifact — auto-eliminado no próximo gen) | OPEN |
 | P3-T09 | P3 | `useCatalogoPendentes.ts:56`: `const vendaInsert: any` (declaração local) | OPEN |
-| P4-DC04 | P4 | Teste órfão: `backfill_contatos_nome.integration.test.ts` (= P1-TEST01 = P5-T09) | OPEN |
+| P4-DC04 | P4 | Teste órfão: `backfill_contatos_nome.integration.test.ts` (= P1-TEST01 = P5-T09) | RESOLVED |
 | P4-DC05 | P4 | Feature flags `ENABLE_GELADEIRA=false` + `ENABLE_RECOMPRA=false` — Vite DCE confirmado, code in src/ | OPEN |
 | P4-DC06 | P4 | `.env.example` é template AIOS genérico — não documenta VITE_SUPABASE_* | OPEN |
 | P4-DC07 | P4 | `vite.config.ts` proxy `/api → localhost:5000` sem referência em src/ | OPEN |
-| P4-DC08 | P4 | 3 type aliases órfãos em `@mont/shared` (PedidoCatalogo, ItemPedidoCatalogo, ImagemProdutoCatalogo) | OPEN |
-| P4-DC09 | P4 | 6 npm deps não usadas: @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, clsx, dotenv, tailwind-merge | OPEN |
-| P4-DC10 | P4 | Arquivos órfãos em src/: utils duplicados, barrel files vazios, widgets experimentais (WarRoomWidget, TacticalActionCard) | OPEN |
+| P4-DC08 | P4 | 3 type aliases órfãos em `@mont/shared` (PedidoCatalogo, ItemPedidoCatalogo, ImagemProdutoCatalogo) | RESOLVED |
+| P4-DC09 | P4 | 6 npm deps não usadas removidas: @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, clsx, dotenv, tailwind-merge. Bundle pós-L.1: ~687 KB gzip JS (pré-L.1: 663.5 KB; +23.5 KB overhead do Vite 7 — Estoque3DView ainda presente a 351 KB, parked em D3) | RESOLVED |
+| P4-DC10 | P4 | Arquivos órfãos em src/: utils duplicados, barrel files vazios, widgets experimentais (WarRoomWidget, TacticalActionCard) | RESOLVED |
 | P5-T11 | P5 | Sem `__fixtures__/`: helpers inline duplicados por arquivo de teste | OPEN |
 | P5-T12 | P5 | ~20 `as any` em spec files (cascade de P3-T01/T02 — resolve automaticamente) | OPEN |
 | P6-SEC01 | P6 | `test-utils.ts`: LOCAL_SERVICE_KEY hardcoded (`iss=supabase-demo` — Docker local, sem validade em prod) | OPEN |
-| P6-DEP04 | P6 | Vários patches disponíveis: react 19.2.4→19.2.6, zod 4.3.6→4.4.3, supabase-js 2.101.1→2.105.4, tanstack-query 5.96.1→5.100.10 | OPEN |
+| P6-DEP04 | P6 | Vários patches disponíveis: react 19.2.4→19.2.6, zod 4.3.6→4.4.3, supabase-js 2.101.1→2.105.4, tanstack-query 5.96.1→5.100.10 | RESOLVED |
 
 ---
 
@@ -90,6 +90,14 @@
 | C1 | Bucket `products`: policies de escrita anon removidas, substituídas por admin-only | Onda 1 |
 | H1 | Tabelas `_backup_contatos_*` + `fn_backfill_contatos_nome` dropadas | Onda 1 |
 | C2 (lado anon) | REVOKE EXECUTE em 20 RPCs para anon — apenas `criar_pedido` permanece intencional | Onda 1 |
+| P4-DC04 / P5-T09 / P1-TEST01 | `backfill_contatos_nome.integration.test.ts` removido (`git rm`) — RPC + tabela dropadas na Onda 1 | Onda L.1 |
+| P4-DC03 | `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` deletados (zero importers, em src/) | Onda L.1 |
+| P4-DC10 | Utils duplicados (`cn.ts`, `formatters.ts`, `lib/utils.ts`) + barrel files + `WarRoomWidget.tsx` + `TacticalActionCard.tsx` removidos | Onda L.1 |
+| P4-DC09 | 6 deps removidas: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`, `clsx`, `dotenv`, `tailwind-merge`. Bundle pós-L.1: ~687 KB gzip (pré: 663.5 KB; +23.5 KB Vite 7 overhead; Estoque3DView 351 KB ainda presente — parked em D3) | Onda L.1 |
+| P4-DC08 | 3 type aliases órfãos removidos de `@mont/shared`: `PedidoCatalogo`, `ItemPedidoCatalogo`, `ImagemProdutoCatalogo` + barrel re-exports | Onda L.1 |
+| P1-L01 | `_parked/**` adicionado ao `globalIgnores` em `eslint.config.js` | Onda L.1 |
+| P6-DEP02 | `vite` atualizado para `7.3.2` (3 CVEs dev server corrigidas) | Onda L.1 |
+| P6-DEP04 | Patches aplicados: `react@19.2.6`, `zod@4.4.3`, `supabase-js@2.105.4`, `tanstack-query@5.100.10`, etc. | Onda L.1 |
 
 ---
 
