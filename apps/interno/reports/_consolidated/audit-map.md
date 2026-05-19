@@ -133,7 +133,7 @@
 | P2-DB07 | 18 sobreposições "admin full access" + "authenticated read" — redundância que complica auditoria de policies |
 
 **Remediação coordenada:**
-1. H3: Substituir USING(true) por `USING(id = (SELECT auth.uid()::uuid FROM contatos WHERE user_id = auth.uid()))` ou restringir por role
+1. H3: Substituir USING(true) por `USING((SELECT is_admin()))` — contatos UPDATE restrito a admin (decisão 2026-05-19)
 2. P2-DB02: Adicionar `with_check = (length(nome) > 2 AND telefone ~ '^\d{10,13}$')` nas insert policies públicas
 3. P2-DB07: Consolidar admin+authenticated em policy `FOR ALL` unificada por tabela (backlog — não bloqueia H3)
 
@@ -246,7 +246,7 @@
 | H-2 | P5-T04 (baseline) | **Role tests do comportamento ATUAL**: documentar o que anon × authenticated não-admin × admin conseguem fazer hoje nas 6 RPCs 🔴 e em contatos UPDATE — baseline antes de qualquer guard | Código | Baixo (1h) |
 | H-3 | P3-T05 | REVOKE EXECUTE FROM authenticated + guard `is_admin()` nas 2 RPCs parked: `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` (decisão 2026-05-19: manter parked, não dropar) | Migration | Baixo (2h) |
 | H-4 | C2 | REVOKE EXECUTE FROM authenticated nas 4 RPCs financeiras ativas + guard `IF NOT (SELECT is_admin()) THEN RAISE EXCEPTION`: `registrar_despesa_manual`, `registrar_entrada_manual`, `registrar_pagamento_venda`, `update_purchase_order_with_items` | Migration | Médio (4h) |
-| H-5 | H3 | Corrigir policy `contatos.Authenticated update access`: substituir USING(true) por condição adequada | Migration | Baixo (1h) |
+| H-5 | H3 | Corrigir policy `contatos.Authenticated update access`: substituir USING(true) por `USING((SELECT is_admin()))` — contatos = admin only (decisão 2026-05-19) | Migration | Baixo (1h) |
 | H-6 | H4 | `ALTER VIEW ranking_compras ... SET (security_invoker=on)` × 11 views | Migration | Baixo (1h) |
 | H-7 | P5-T04 (expected) + P5-T01/T02/T03 | **Role tests do comportamento ESPERADO**: verificar que guards bloqueiam anon + authenticated não-admin; integration tests das 3 RPCs sem cobertura (despesa, entrada, purchase_order) | Código | Médio (4h) |
 | H-8 | P5-T08-FIN (ativas) | Integration tests de DB rejection para `purchase_orders`, `lancamentos`, `configuracoes`, `produtos` | Código | Médio (4h) |
