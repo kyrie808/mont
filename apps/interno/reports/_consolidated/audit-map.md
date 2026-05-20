@@ -14,8 +14,8 @@
 |---|---|---|---|
 | H3 | P2/P6 | `contatos.Authenticated update access` — USING(true) WITH_CHECK(true): qualquer autenticado pode UPDATE qualquer contato | STILL_OPEN |
 | H4 | P2/P6 | 11 views com `SECURITY DEFINER` — bypassam RLS do consumidor | STILL_OPEN |
-| C2 | P2/P6 | 6 RPCs financeiras UNGUARDED: `registrar_pagamento_venda`, `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada`, `update_purchase_order_with_items`, `registrar_despesa_manual`, `registrar_entrada_manual` — authenticated executa sem is_admin() | STILL_OPEN |
-| P3-T05 | P3/P4 | 2 RPCs financeiras UNGUARDED com UI parked no DB: `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada` — subconjunto de C2 + contexto: front parked ≠ RPC morta | STILL_OPEN |
+| C2 | P2/P6 | 6 RPCs financeiras UNGUARDED: `registrar_pagamento_venda`, `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada`, `update_purchase_order_with_items`, `registrar_despesa_manual`, `registrar_entrada_manual` — authenticated executa sem is_admin() | RESOLVED |
+| P3-T05 | P3/P4 | 2 RPCs financeiras UNGUARDED com UI parked no DB: `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada` — subconjunto de C2 + contexto: front parked ≠ RPC morta | RESOLVED |
 | P5-T01 | P5 | `registrar_despesa_manual`: zero testes — RPC financeira crítica (INSERT lancamento + trigger saldo) | OPEN |
 | P5-T02 | P5 | `registrar_entrada_manual`: zero testes — RPC financeira crítica (INSERT lancamento + trigger saldo) | OPEN |
 | P5-T03 | P5 | `update_purchase_order_with_items`: zero testes — RPC financeira crítica (jsonb array, DELETE/INSERT items) | OPEN |
@@ -90,6 +90,8 @@
 | C1 | Bucket `products`: policies de escrita anon removidas, substituídas por admin-only | Onda 1 |
 | H1 | Tabelas `_backup_contatos_*` + `fn_backfill_contatos_nome` dropadas | Onda 1 |
 | C2 (lado anon) | REVOKE EXECUTE em 20 RPCs para anon — apenas `criar_pedido` permanece intencional | Onda 1 |
+| C2 | 9 RPCs (6 financeiras + `add_image_reference`, `delete_image_reference`, `rpc_total_a_receber_dashboard`) guardadas com `is_admin()` — design: zero REVOKE de `authenticated` (admin e non-admin compartilham o mesmo role Postgres `authenticated`); guard: `NOT is_admin() AND COALESCE(auth.role(),'') <> 'service_role'`. **Nota advisor:** `authenticated_security_definer_function_executable` continua listando as 9 funções — EXECUTE grant de `authenticated` preservado intencionalmente; guard é o mecanismo de enforcement, não REVOKE | H-3 |
+| P3-T05 | `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` — subconjunto de C2; guards `is_admin()` aplicados uniformemente junto com as 7 outras RPCs em H-3 | H-3 |
 | P4-DC04 / P5-T09 / P1-TEST01 | `backfill_contatos_nome.integration.test.ts` removido (`git rm`) — RPC + tabela dropadas na Onda 1 | Onda L.1 |
 | P4-DC03 | `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` deletados (zero importers, em src/) | Onda L.1 |
 | P4-DC10 | Utils duplicados (`cn.ts`, `formatters.ts`, `lib/utils.ts`) + barrel files + `WarRoomWidget.tsx` + `TacticalActionCard.tsx` removidos | Onda L.1 |
@@ -106,22 +108,25 @@
 
 ## 3. Clusters de Achados
 
-### Cluster: "SECDEF RPCs sem guarda" — Attack surface financeira ativa
+### Cluster: "SECDEF RPCs sem guarda" — ✅ Parcialmente resolvido (H-3)
 
-**IDs:** C2 (🔴) · P3-T05 (🔴) · P5-T04 (🟡) · H4 (🔴)
+**IDs:** C2 (✅ RESOLVED) · P3-T05 (✅ RESOLVED) · P5-T04 (🟡 OPEN — role tests manuais feitos, sem automação) · H4 (🔴 STILL_OPEN)
 
-| ID | Contribuição ao cluster |
-|---|---|
-| C2 | 6 RPCs financeiras: authenticated executa sem is_admin() |
-| P3-T05 | 2 dessas 6 (registrar_pagamento_conta_a_pagar + criar_obrigacao_parcelada) têm UI parked — ainda mais urgente: DROP ou guard |
-| H4 | 11 views SECDEF: RLS do consumidor contornada silenciosamente |
-| P5-T04 | Zero role tests — sem detectação de regressão quando guards forem adicionados |
+| ID | Contribuição ao cluster | Status |
+|---|---|---|
+| C2 | 9 RPCs (6 financeiras + image + dashboard): guard `is_admin()` aplicado via H-3 | ✅ RESOLVED |
+| P3-T05 | `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada`: guard aplicado uniformemente em H-3 | ✅ RESOLVED |
+| H4 | 11 views SECDEF: RLS do consumidor contornada silenciosamente | 🔴 STILL_OPEN |
+| P5-T04 | 30 role tests manuais documentados em `post-apply.md` — sem automação Vitest | 🟡 PARTIAL |
 
-**Remediação coordenada:**
-1. REVOKE EXECUTE FROM authenticated nas 6 RPCs financeiras + adicionar `IF NOT (SELECT is_admin()) THEN RAISE EXCEPTION`
-2. As 6 RPCs são tratadas uniformemente — 4 ativas (H-4) + 2 parked (H-3). Decisão 2026-05-19: **não dropar** `registrar_pagamento_conta_a_pagar` e `criar_obrigacao_parcelada` — aplicar guards iguais.
-3. `ALTER VIEW ... SET (security_invoker=on)` nas 11 views H4
-4. Adicionar role tests (anon + authenticated não-admin) antes de subir guards para CI
+**Remediação executada (H-3, 2026-05-20):**
+- Guard `NOT is_admin() AND COALESCE(auth.role(),'') <> 'service_role'` em 8 funções plpgsql
+- WHERE `AND (SELECT public.is_admin())` em `rpc_total_a_receber_dashboard` (LANGUAGE sql)
+- Zero REVOKE de `authenticated` — design intencional: admin e non-admin compartilham role Postgres
+- Advisor `authenticated_security_definer_function_executable` continua listando (proacl inalterado)
+- Migration: `supabase/migrations/20260520084613_hardening_h3_guard_is_admin.sql`
+
+**Próximo:** H-4 (views SECDEF) + automação de role tests em Vitest
 
 ---
 
@@ -247,8 +252,8 @@
 |---|---|---|---|---|
 | H-1 | P6-DEP01 | `pnpm --filter catalogo update next@^15.5.18` — patch trivial dentro do minor | `pnpm update` | Trivial (15min) |
 | H-2 | P5-T04 (baseline) | **Role tests do comportamento ATUAL**: documentar o que anon × authenticated não-admin × admin conseguem fazer hoje nas 6 RPCs 🔴 e em contatos UPDATE — baseline antes de qualquer guard | Código | Baixo (1h) |
-| H-3 | P3-T05 | REVOKE EXECUTE FROM authenticated + guard `is_admin()` nas 2 RPCs parked: `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` (decisão 2026-05-19: manter parked, não dropar) | Migration | Baixo (2h) |
-| H-4 | C2 | REVOKE EXECUTE FROM authenticated nas 4 RPCs financeiras ativas + guard `IF NOT (SELECT is_admin()) THEN RAISE EXCEPTION`: `registrar_despesa_manual`, `registrar_entrada_manual`, `registrar_pagamento_venda`, `update_purchase_order_with_items` | Migration | Médio (4h) |
+| H-3 | C2 + P3-T05 | ✅ **DONE 2026-05-20** — Guard `is_admin()` nas 9 RPCs (6 financeiras + add_image_reference + delete_image_reference + rpc_total). Zero REVOKE (admin e non-admin compartilham role `authenticated`). Migration: `20260520084613_hardening_h3_guard_is_admin.sql`. 30/30 role tests OK. | Migration | ✅ |
+| H-4 | C2 | ✅ **DONE — subsumed by H-3** (as 4 RPCs ativas cobertas pela migration de H-3 junto com as 2 parked) | — | ✅ |
 | H-5 | H3 | Corrigir policy `contatos.Authenticated update access`: substituir USING(true) por `USING((SELECT is_admin()))` — contatos = admin only (decisão 2026-05-19) | Migration | Baixo (1h) |
 | H-6 | H4 | `ALTER VIEW ranking_compras ... SET (security_invoker=on)` × 11 views | Migration | Baixo (1h) |
 | H-7 | P5-T04 (expected) + P5-T01/T02/T03 | **Role tests do comportamento ESPERADO**: verificar que guards bloqueiam anon + authenticated não-admin; integration tests das 3 RPCs sem cobertura (despesa, entrada, purchase_order) | Código | Médio (4h) |
@@ -368,17 +373,19 @@
 | Phase 4 | 0 | 3 | 7 | 10 |
 | Phase 5 | 4 | 7 | 2 | 13 |
 | Phase 6 | 1 | 3 | 2 | 6 |
-| **TOTAL** | **9** | **24** | **28** | **61** |
+| **TOTAL** | **7** | **24** | **28** | **59** |
+
+*(C2 e P3-T05 — 2 🔴 — fechados em H-3 2026-05-20)*
 
 **Estimativas por onda:**
-- Onda Hardening: ~17h (9 passos — H-1 a H-9; H-3 subiu para 2h por D1)
+- Onda Hardening: H-3 ✅ (9 RPCs, 30/30 testes) · H-4 ✅ (subsumed) · restante: H-5 a H-9 (~11h)
 - Onda Limpeza L.1: ~2.5h (patches + dead code óbvio)
 - Onda Limpeza L.2: ~9h (type safety)
 - Onda Limpeza L.3: ~2h (DB + decisões)
 - Onda Reativação/DROP: ~3h tudo DROP / ~3,5 dias tudo reativar
 
 **Acumulado por onda (IDs):**
-- Onda Hardening: 9 🔴 + 1 🟡 (P2-DB05) = 10 itens
+- Onda Hardening: 7 🔴 restantes + 1 🟡 (P2-DB05) = 8 itens abertos
 - Onda Limpeza: 16 itens 🟢/🟡
 - Onda Reativação/DROP: 5 features para decidir
 
