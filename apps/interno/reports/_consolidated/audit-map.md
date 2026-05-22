@@ -12,7 +12,7 @@
 
 | ID | Fase | Descrição | Status |
 |---|---|---|---|
-| H3 | P2/P6 | `contatos.Authenticated update access` — USING(true) WITH_CHECK(true): qualquer autenticado pode UPDATE qualquer contato | STILL_OPEN |
+| H3 | P2/P6 | `contatos.Authenticated update access` — USING(true) WITH_CHECK(true): qualquer autenticado pode UPDATE qualquer contato | RESOLVED |
 | H4 | P2/P6 | 11 views com `SECURITY DEFINER` — bypassam RLS do consumidor | STILL_OPEN |
 | C2 | P2/P6 | 6 RPCs financeiras UNGUARDED: `registrar_pagamento_venda`, `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada`, `update_purchase_order_with_items`, `registrar_despesa_manual`, `registrar_entrada_manual` — authenticated executa sem is_admin() | RESOLVED |
 | P3-T05 | P3/P4 | 2 RPCs financeiras UNGUARDED com UI parked no DB: `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada` — subconjunto de C2 + contexto: front parked ≠ RPC morta | RESOLVED |
@@ -92,6 +92,7 @@
 | C2 (lado anon) | REVOKE EXECUTE em 20 RPCs para anon — apenas `criar_pedido` permanece intencional | Onda 1 |
 | C2 | 9 RPCs (6 financeiras + `add_image_reference`, `delete_image_reference`, `rpc_total_a_receber_dashboard`) guardadas com `is_admin()` — design: zero REVOKE de `authenticated` (admin e non-admin compartilham o mesmo role Postgres `authenticated`); guard: `NOT is_admin() AND COALESCE(auth.role(),'') <> 'service_role'`. **Nota advisor:** `authenticated_security_definer_function_executable` continua listando as 9 funções — EXECUTE grant de `authenticated` preservado intencionalmente; guard é o mecanismo de enforcement, não REVOKE | H-3 |
 | P3-T05 | `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` — subconjunto de C2; guards `is_admin()` aplicados uniformemente junto com as 7 outras RPCs em H-3 | H-3 |
+| H3 | `contatos.Authenticated update access` — USING/WITH CHECK substituídos por `(SELECT public.is_admin())`; non-admin bloqueado por RLS antes do trigger `tr_contatos_audit`. Não afeta SELECT, INSERT público, ou acesso admin. Migration: `20260522090658_hardening_h5_contatos_update_admin_only.sql`. 4/4 role tests OK. | H-5 |
 | P4-DC04 / P5-T09 / P1-TEST01 | `backfill_contatos_nome.integration.test.ts` removido (`git rm`) — RPC + tabela dropadas na Onda 1 | Onda L.1 |
 | P4-DC03 | `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` deletados (zero importers, em src/) | Onda L.1 |
 | P4-DC10 | Utils duplicados (`cn.ts`, `formatters.ts`, `lib/utils.ts`) + barrel files + `WarRoomWidget.tsx` + `TacticalActionCard.tsx` removidos | Onda L.1 |
@@ -130,20 +131,24 @@
 
 ---
 
-### Cluster: "RLS permissivo"
+### Cluster: "RLS permissivo" — ✅ Parcialmente resolvido (H-5)
 
-**IDs:** H3 (🔴) · P2-DB02 (🟡) · P2-DB07 (🟡)
+**IDs:** H3 (✅ RESOLVED) · P2-DB02 (🟡) · P2-DB07 (🟡)
 
-| ID | Contribuição ao cluster |
-|---|---|
-| H3 | contatos UPDATE USING(true): qualquer login pode alterar telefone, endereço, status_relacionamento de qualquer contato |
-| P2-DB02 | 3 policies INSERT público sem validação de payload — contatos anônimos, pedidos do catálogo |
-| P2-DB07 | 18 sobreposições "admin full access" + "authenticated read" — redundância que complica auditoria de policies |
+| ID | Contribuição ao cluster | Status |
+|---|---|---|
+| H3 | contatos UPDATE USING(true): qualquer login podia alterar telefone, endereço, status_relacionamento de qualquer contato | ✅ RESOLVED (H-5) |
+| P2-DB02 | 3 policies INSERT público sem validação de payload — contatos anônimos, pedidos do catálogo | 🟡 STILL_OPEN |
+| P2-DB07 | 18 sobreposições "admin full access" + "authenticated read" — redundância que complica auditoria de policies | 🟡 STILL_OPEN |
 
-**Remediação coordenada:**
-1. H3: Substituir USING(true) por `USING((SELECT is_admin()))` — contatos UPDATE restrito a admin (decisão 2026-05-19)
-2. P2-DB02: Adicionar `with_check = (length(nome) > 2 AND telefone ~ '^\d{10,13}$')` nas insert policies públicas
-3. P2-DB07: Consolidar admin+authenticated em policy `FOR ALL` unificada por tabela (backlog — não bloqueia H3)
+**Remediação executada (H-5, 2026-05-22):**
+- `Authenticated update access` em `contatos`: `USING(true) / WITH CHECK(true)` → `(SELECT public.is_admin()) / (SELECT public.is_admin())`
+- Non-admin UPDATE bloqueado (RLS rejeita antes do trigger `tr_contatos_audit`)
+- Admin UPDATE inalterado; SELECT inalterado; INSERT público inalterado
+
+**Restante:**
+1. P2-DB02: Adicionar `with_check = (length(nome) > 2 AND telefone ~ '^\d{10,13}$')` nas insert policies públicas
+2. P2-DB07: Consolidar admin+authenticated em policy `FOR ALL` unificada por tabela (backlog)
 
 ---
 
@@ -254,7 +259,7 @@
 | H-2 | P5-T04 (baseline) | **Role tests do comportamento ATUAL**: documentar o que anon × authenticated não-admin × admin conseguem fazer hoje nas 6 RPCs 🔴 e em contatos UPDATE — baseline antes de qualquer guard | Código | Baixo (1h) |
 | H-3 | C2 + P3-T05 | ✅ **DONE 2026-05-20** — Guard `is_admin()` nas 9 RPCs (6 financeiras + add_image_reference + delete_image_reference + rpc_total). Zero REVOKE (admin e non-admin compartilham role `authenticated`). Migration: `20260520084613_hardening_h3_guard_is_admin.sql`. 30/30 role tests OK. | Migration | ✅ |
 | H-4 | C2 | ✅ **DONE — subsumed by H-3** (as 4 RPCs ativas cobertas pela migration de H-3 junto com as 2 parked) | — | ✅ |
-| H-5 | H3 | Corrigir policy `contatos.Authenticated update access`: substituir USING(true) por `USING((SELECT is_admin()))` — contatos = admin only (decisão 2026-05-19) | Migration | Baixo (1h) |
+| H-5 | H3 | ✅ **DONE 2026-05-22** — Policy `contatos.Authenticated update access`: USING/WITH CHECK `true` → `(SELECT public.is_admin())`. Non-admin UPDATE bloqueado (0 rows); admin UPDATE passa; SELECT inalterado. Migration: `20260522090658_hardening_h5_contatos_update_admin_only.sql`. 4/4 role tests OK. | Migration | ✅ |
 | H-6 | H4 | `ALTER VIEW ranking_compras ... SET (security_invoker=on)` × 11 views | Migration | Baixo (1h) |
 | H-7 | P5-T04 (expected) + P5-T01/T02/T03 | **Role tests do comportamento ESPERADO**: verificar que guards bloqueiam anon + authenticated não-admin; integration tests das 3 RPCs sem cobertura (despesa, entrada, purchase_order) | Código | Médio (4h) |
 | H-8 | P5-T08-FIN (ativas) | Integration tests de DB rejection para `purchase_orders`, `lancamentos`, `configuracoes`, `produtos` | Código | Médio (4h) |
