@@ -20,7 +20,7 @@
 | P5-T02 | P5 | `registrar_entrada_manual`: zero testes — RPC financeira crítica (INSERT lancamento + trigger saldo) | OPEN |
 | P5-T03 | P5 | `update_purchase_order_with_items`: zero testes — RPC financeira crítica (jsonb array, DELETE/INSERT items) | OPEN |
 | P5-T08-FIN | P5 | 7 entidades financeiras sem Zod e sem critério de validação testado: `purchase_orders`, `lancamentos`, `contas_a_pagar`, `pagamentos_conta_a_pagar`, `plano_de_contas`, `configuracoes`, `produtos` | OPEN |
-| P6-DEP01 | P6 | `next@15.5.14` em `apps/catalogo` — 4 HIGH middleware bypass CVEs (GHSA-26hh, GHSA-267c, GHSA-492v, GHSA-36qx); fix ≥15.5.18 | OPEN |
+| P6-DEP01 | P6 | `next@15.5.14` em `apps/catalogo` — 4 HIGH middleware bypass CVEs (GHSA-26hh, GHSA-267c, GHSA-492v, GHSA-36qx); fix ≥15.5.18 | RESOLVED |
 
 ### 🟡 IMPORTANTE
 
@@ -30,7 +30,7 @@
 | P1-L02 | P1 | 29 `no-explicit-any` em produção (16 arquivos) | OPEN |
 | P2-DB02 | P2 | 3 policies `rls_policy_always_true` para INSERT público (contatos, cat_pedidos, cat_itens_pedido) — sem rate limit | STILL_OPEN |
 | P2-DB04 | P2/P6 | 7 FKs sem índice: `contas_a_pagar` (×3: created_by, plano_conta_id, updated_by) + `pagamentos_conta_a_pagar` (×4: conta_a_pagar_id, conta_id, created_by, updated_by) | STILL_OPEN |
-| P2-DB05 | P2/P6 | 2 policies com `auth.uid()` RAW (re-avalia por row): `admin_users` + `interacoes` | STILL_OPEN |
+| P2-DB05 | P2/P6 | 2 policies com `auth.uid()` RAW (re-avalia por row): `admin_users` + `interacoes` | RESOLVED |
 | P2-DB07 | P2/P6 | 18 multiple_permissive_policies (admin ALL + authenticated SELECT sobrepostos) | STILL_OPEN |
 | P2-DB08 | P2 | Migration `20260423224225` não-idempotente: cada `db reset` cria tabela `_backup_contatos_nome_<TS>` com PII | STILL_OPEN |
 | P3-T01 | P3 | `mappers.ts:28-32`: 5 aliases `= any` + 2 cascade (lines 215, 257) — PurchaseOrderRow, CatalogOrderRow etc | OPEN |
@@ -105,6 +105,8 @@
 | P4-DC05 | `flags.ts` removido; geladeira (7 arquivos) + recompra (3 arquivos) movidos para `_parked/` via `git mv` — decisão (b): park, não reativar | Pré-Hardening D3 |
 | P4-DC02 | `AlertasRecompraWidget` parked (→ `_parked/recompra/`) — bug de navigate para /relacionamento eliminado junto com o widget | Pré-Hardening D3 |
 | P6-BUND01 | `Estoque3DView` parked — chunk Three.js 351 KB gzip eliminado. Bundle pós-D3: ~336 KB gzip JS (de 687 KB pós-L.1; −351 KB = −51%) | Pré-Hardening D3 |
+| P6-DEP01 | `next` atualizado para `^15.5.18` — 4 HIGH middleware bypass CVEs (GHSA-26hh, GHSA-267c, GHSA-492v, GHSA-36qx) corrigidas. `pnpm-lock.yaml` confirma `next@15.5.18`. | H-1 |
+| P2-DB05 | `auth.uid()` RAW → `(SELECT auth.uid())` em 2 policies: `admin_users` USING + `interacoes` WITH CHECK. Migration: `20260522141000_hardening_h9_authuid_initplan.sql`. Role tests: interacoes T3 (próprio uid) PASSOU, T4 (uid alheio) BLOQUEADO pelo with_check. admin_users: recursão pré-existente confirmada (idêntica antes e depois de H-9, não introduzida pela troca). Rollback: `supabase/rollbacks/H-9-pre-snapshot.sql`. | H-9 |
 
 ---
 
@@ -256,17 +258,40 @@
 
 | Passo | ID(s) | Ação | Tipo | Estimativa |
 |---|---|---|---|---|
-| H-1 | P6-DEP01 | `pnpm --filter catalogo update next@^15.5.18` — patch trivial dentro do minor | `pnpm update` | Trivial (15min) |
+| H-1 | P6-DEP01 | ✅ **DONE** — `next@15.5.18` instalado. 4 HIGH CVEs corrigidas. | `pnpm update` | ✅ |
 | H-2 | P5-T04 (baseline) | **Role tests do comportamento ATUAL**: documentar o que anon × authenticated não-admin × admin conseguem fazer hoje nas 6 RPCs 🔴 e em contatos UPDATE — baseline antes de qualquer guard | Código | Baixo (1h) |
 | H-3 | C2 + P3-T05 | ✅ **DONE 2026-05-20** — Guard `is_admin()` nas 9 RPCs (6 financeiras + add_image_reference + delete_image_reference + rpc_total). Zero REVOKE (admin e non-admin compartilham role `authenticated`). Migration: `20260520084613_hardening_h3_guard_is_admin.sql`. 30/30 role tests OK. | Migration | ✅ |
 | H-4 | C2 | ✅ **DONE — subsumed by H-3** (as 4 RPCs ativas cobertas pela migration de H-3 junto com as 2 parked) | — | ✅ |
 | H-5 | H3 | ✅ **DONE 2026-05-22** — Policy `contatos.Authenticated update access`: USING/WITH CHECK `true` → `(SELECT public.is_admin())`. Non-admin UPDATE bloqueado (0 rows); admin UPDATE passa; SELECT inalterado. Migration: `20260522090658_hardening_h5_contatos_update_admin_only.sql`. 4/4 role tests OK. | Migration | ✅ |
 | H-6 | H4 | ✅ **DONE 2026-05-22** — 11 views em 2 migrations: `h6a_security_invoker_safe_views` (5 SAFE: ranking_compras, ranking_indicacoes, vw_catalogo_produtos, view_relacionamento_kanban, crm_view_operational_snapshot) + `h6b_security_invoker_risk_views` (6 RISK: view_extrato_mensal, view_fluxo_resumo, vw_marketing_pedidos, vw_admin_dashboard, view_contas_a_pagar_dashboard, rpt_projecao_pagamentos). Testes: admin JWT lê normal em todas; non-admin JWT retorna vazio/parcial sem erro; vw_catalogo_produtos anon retorna 10 produtos. | Migration | ✅ |
-| H-7 | P5-T04 (expected) + P5-T01/T02/T03 | **Role tests do comportamento ESPERADO**: verificar que guards bloqueiam anon + authenticated não-admin; integration tests das 3 RPCs sem cobertura (despesa, entrada, purchase_order) | Código | Médio (4h) |
-| H-8 | P5-T08-FIN (ativas) | Integration tests de DB rejection para `purchase_orders`, `lancamentos`, `configuracoes`, `produtos` | Código | Médio (4h) |
-| H-9 | P2-DB05 | Trocar `auth.uid()` RAW por `(SELECT auth.uid())` em 2 policies (admin_users + interacoes) | Migration | Trivial (15min) |
+| H-7 | P5-T04 (expected) + P5-T01/T02/T03 | ⏩ **DEFERRED → L.2** — Role tests automatizados + integration tests das 3 RPCs sem cobertura. Dívida de teste documentada; guards DB estão ativos. | Código | Médio (4h) |
+| H-8 | P5-T08-FIN (ativas) | ⏩ **DEFERRED → L.2** — Integration tests de DB rejection para entidades financeiras. Dívida de teste documentada; não bloqueia fechamento da Onda. | Código | Médio (4h) |
+| H-9 | P2-DB05 | ✅ **DONE 2026-05-22** — `(SELECT auth.uid())` em `admin_users` USING + `interacoes` WITH CHECK. Migration: `20260522141000_hardening_h9_authuid_initplan.sql`. 2/2 role tests OK (interacoes). | Migration | ✅ |
 
 **Total estimado: ~17h** (15min + 1h + 2h + 4h + 1h + 1h + 4h + 4h + 15min — H-3 subiu 15min→2h por não dropar)
+
+---
+
+### 🏁 Onda Hardening — FECHADA (2026-05-22)
+
+| Passo | Status | Observação |
+|---|---|---|
+| H-1 (P6-DEP01) | ✅ DONE | `next@15.5.18` — 4 HIGH CVEs corrigidas |
+| H-2 (P5-T04 baseline) | ✅ DONE | Comportamento atual documentado (`docs(hardening): H-2 baseline`) |
+| H-3 (C2 + P3-T05) | ✅ DONE | Guard `is_admin()` nas 9 RPCs SECDEF. Migration `20260520084613`. 30/30 testes OK. |
+| H-4 (C2 lado anon) | ✅ DONE | Subsumed por H-3 — REVOKE anon em 20 RPCs + guard uniforme |
+| H-5 (H3 contatos) | ✅ DONE | `contatos.Authenticated update access` restrita a admin. Migration `20260522090658`. 4/4 testes OK. |
+| H-6 (H4 views) | ✅ DONE | 11 views SECURITY DEFINER → security_invoker. Migrations `h6a` + `h6b`. Testes admin/non-admin/anon OK. |
+| H-7 (P5-T04 + P5-T01/T02/T03) | ⏩ L.2 | Dívida de teste automatizado — guards DB ativos, automação Vitest pendente |
+| H-8 (P5-T08-FIN) | ⏩ L.2 | Dívida de teste automatizado — entidades financeiras sem coverage de rejeição |
+| H-9 (P2-DB05) | ✅ DONE | `(SELECT auth.uid())` em 2 policies. Migration `20260522141000`. Testes interacoes OK. |
+
+**Critérios de fechamento — Estado final:**
+- `get_advisors` → zero `security_definer_view` ✅ (H-6) · zero RPCs anon/authenticated não-admin sem guard ✅ (H-3) · `rls_policy_always_true` residual = 3 policies INSERT público aceitas (P2-DB02, intencional) ✅
+- Testes automatizados de role: H-7/H-8 → dívida L.2, não bloqueador de fechamento
+- `pnpm audit` CVEs 🔴: P6-DEP01 RESOLVED (next@15.5.18) ✅
+
+**🔴 abertos remanescentes pós-fechamento:** 4 (P5-T01, P5-T02, P5-T03, P5-T08-FIN) — todos cobertos por H-7/H-8 deferred → Onda L.2
 
 ---
 
@@ -381,7 +406,7 @@
 | Phase 6 | 1 | 3 | 2 | 6 |
 | **TOTAL** | **5** | **24** | **28** | **57** |
 
-*(C2, P3-T05 — fechados H-3 2026-05-20 · H3 — fechado H-5 2026-05-22 · H4 — fechado H-6 2026-05-22 · 🔴 abertos: 5)*
+*(C2, P3-T05 — fechados H-3 2026-05-20 · H3 — fechado H-5 2026-05-22 · H4 — fechado H-6 2026-05-22 · P6-DEP01 — fechado H-1 · P2-DB05 — fechado H-9 2026-05-22 · Onda Hardening FECHADA 2026-05-22 · **🔴 abertos: 4** [P5-T01/T02/T03/T08-FIN → L.2] · **🟡: −1** [P2-DB05 RESOLVED])*
 
 **Estimativas por onda:**
 - Onda Hardening: H-3 ✅ (9 RPCs, 30/30 testes) · H-4 ✅ (subsumed) · restante: H-5 a H-9 (~11h)
