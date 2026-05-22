@@ -16,10 +16,10 @@
 | H4 | P2/P6 | 11 views com `SECURITY DEFINER` — bypassam RLS do consumidor | RESOLVED |
 | C2 | P2/P6 | 6 RPCs financeiras UNGUARDED: `registrar_pagamento_venda`, `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada`, `update_purchase_order_with_items`, `registrar_despesa_manual`, `registrar_entrada_manual` — authenticated executa sem is_admin() | RESOLVED |
 | P3-T05 | P3/P4 | 2 RPCs financeiras UNGUARDED com UI parked no DB: `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada` — subconjunto de C2 + contexto: front parked ≠ RPC morta | RESOLVED |
-| P5-T01 | P5 | `registrar_despesa_manual`: zero testes — RPC financeira crítica (INSERT lancamento + trigger saldo) | OPEN |
-| P5-T02 | P5 | `registrar_entrada_manual`: zero testes — RPC financeira crítica (INSERT lancamento + trigger saldo) | OPEN |
-| P5-T03 | P5 | `update_purchase_order_with_items`: zero testes — RPC financeira crítica (jsonb array, DELETE/INSERT items) | OPEN |
-| P5-T08-FIN | P5 | 7 entidades financeiras sem Zod e sem critério de validação testado: `purchase_orders`, `lancamentos`, `contas_a_pagar`, `pagamentos_conta_a_pagar`, `plano_de_contas`, `configuracoes`, `produtos` | OPEN |
+| P5-T01 | P5 | `registrar_despesa_manual`: RPC financeira PROTEGIDA por guard `is_admin()` (H-3) — vulnerabilidade de acesso FECHADA. Sem teste automatizado de regressão. ⏩ **RECLASSIFICADO → 🟡** (dívida de teste) | RECLASSIFIED 🟡 |
+| P5-T02 | P5 | `registrar_entrada_manual`: RPC financeira PROTEGIDA por guard `is_admin()` (H-3) — vulnerabilidade de acesso FECHADA. Sem teste automatizado de regressão. ⏩ **RECLASSIFICADO → 🟡** (dívida de teste) | RECLASSIFIED 🟡 |
+| P5-T03 | P5 | `update_purchase_order_with_items`: RPC financeira PROTEGIDA por guard `is_admin()` (H-3) — vulnerabilidade de acesso FECHADA. Sem teste automatizado de regressão. ⏩ **RECLASSIFICADO → 🟡** (dívida de teste) | RECLASSIFIED 🟡 |
+| P5-T08-FIN | P5 | **ÚNICO 🔴 ativo pós-Hardening.** 7 entidades financeiras sem Zod e sem critério de validação testado: `purchase_orders`, `lancamentos`, `contas_a_pagar`, `pagamentos_conta_a_pagar`, `plano_de_contas`, `configuracoes`, `produtos` — dado inválido pode entrar no banco sem rejeição. Hardening não cobriu. → **L.2** | OPEN |
 | P6-DEP01 | P6 | `next@15.5.14` em `apps/catalogo` — 4 HIGH middleware bypass CVEs (GHSA-26hh, GHSA-267c, GHSA-492v, GHSA-36qx); fix ≥15.5.18 | RESOLVED |
 
 ### 🟡 IMPORTANTE
@@ -40,6 +40,9 @@
 | P4-DC01 | P4 | `_parked/contas-a-pagar`: tabelas + view vivas em prod, sem UI — decisão pendente (DROP ou reativar) | OPEN |
 | P4-DC02 | P4 | `AlertasRecompraWidget.tsx:77`: navega para `/relacionamento` (parked, retorna null) → tela em branco silenciosa | RESOLVED |
 | P4-DC03 | P4 | 2 widgets mortos em `src/`: `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` (zero importers, em src/ não em _parked/) | RESOLVED |
+| P5-T01 | P5 | `registrar_despesa_manual`: PROTEGIDA por `is_admin()` (H-3). **Dívida de teste:** zero integration tests de regressão (happy path + boundary + role block) | OPEN |
+| P5-T02 | P5 | `registrar_entrada_manual`: PROTEGIDA por `is_admin()` (H-3). **Dívida de teste:** zero integration tests de regressão | OPEN |
+| P5-T03 | P5 | `update_purchase_order_with_items`: PROTEGIDA por `is_admin()` (H-3). **Dívida de teste:** zero integration tests de regressão (jsonb array, DELETE/INSERT items) | OPEN |
 | P5-T04 | P5 | ZERO role/permission tests em todos os 11 SECDEF RPCs | OPEN |
 | P5-T05 | P5 | `add_image_reference`, `delete_image_reference`: zero testes | OPEN |
 | P5-T06 | P5 | `registrar_pagamento_venda`: happy path ✓ — zero boundary, zero role | OPEN |
@@ -200,19 +203,19 @@
 
 ---
 
-### Cluster: "Cobertura testes financeiros" — Risco de regressão
+### Cluster: "Cobertura testes financeiros" — Dívida de teste (acesso fechado pelo Hardening)
 
-**IDs:** P5-T01 (🔴) · P5-T02 (🔴) · P5-T03 (🔴) · P5-T06 (🟡) · P5-T08-FIN (🔴)
+**IDs:** P5-T01 (🟡 reclassificado) · P5-T02 (🟡 reclassificado) · P5-T03 (🟡 reclassificado) · P5-T06 (🟡) · P5-T08-FIN (🔴 único risco ativo)
 
-| ID | RPC / Entidade | Gap |
-|---|---|---|
-| P5-T01 | `registrar_despesa_manual` | Zero testes |
-| P5-T02 | `registrar_entrada_manual` | Zero testes |
-| P5-T03 | `update_purchase_order_with_items` | Zero testes |
-| P5-T06 | `registrar_pagamento_venda` | Happy path only — sem boundary, sem role |
-| P5-T08-FIN | `purchase_orders`, `lancamentos`, `configuracoes`, `produtos`, + parked entities | Zero validação testada |
+| ID | RPC / Entidade | Acesso | Gap de teste |
+|---|---|---|---|
+| P5-T01 | `registrar_despesa_manual` | ✅ PROTEGIDA `is_admin()` | Zero integration tests de regressão |
+| P5-T02 | `registrar_entrada_manual` | ✅ PROTEGIDA `is_admin()` | Zero integration tests de regressão |
+| P5-T03 | `update_purchase_order_with_items` | ✅ PROTEGIDA `is_admin()` | Zero integration tests de regressão |
+| P5-T06 | `registrar_pagamento_venda` | ✅ PROTEGIDA `is_admin()` | Happy path only — sem boundary, sem role |
+| P5-T08-FIN | `purchase_orders`, `lancamentos`, `configuracoes`, `produtos`, + parked | ⚠️ SEM Zod, SEM validação | Dado inválido entra no banco sem rejeição |
 
-**Contexto:** Data de referência financeira é 01/05/2026. Lançamentos incorretos afetam diretamente KPIs do Dashboard. Cada RPC listada afeta `contas.saldo_atual` via trigger `update_conta_saldo_lancamento`.
+**Contexto pós-Hardening:** Vulnerabilidades de acesso = 0 (guards `is_admin()` ativos em todos). Risco ativo restante: P5-T08-FIN — ausência de boundary validation Zod nas 7 entidades financeiras vivas. Data de referência financeira 01/05/2026: lançamentos incorretos afetam KPIs do Dashboard via trigger `update_conta_saldo_lancamento`.
 
 ---
 
@@ -291,7 +294,11 @@
 - Testes automatizados de role: H-7/H-8 → dívida L.2, não bloqueador de fechamento
 - `pnpm audit` CVEs 🔴: P6-DEP01 RESOLVED (next@15.5.18) ✅
 
-**🔴 abertos remanescentes pós-fechamento:** 4 (P5-T01, P5-T02, P5-T03, P5-T08-FIN) — todos cobertos por H-7/H-8 deferred → Onda L.2
+**Estado honesto pós-fechamento:**
+- Vulnerabilidades de acesso: **0** — todas fechadas (guards is_admin() + RLS + views security_invoker + next CVEs)
+- Dívida de teste sobre código protegido: **3** (P5-T01, P5-T02, P5-T03 → 🟡, deferred L.2)
+- Validação de input ausente (risco ativo): **1** (P5-T08-FIN → 🔴, L.2 prioridade máxima)
+- **🔴 remanescente: 1** (P5-T08-FIN único)
 
 ---
 
@@ -338,17 +345,21 @@
 
 ---
 
-#### L.2 — Type safety
+#### L.2 — Type safety + Dívida de testes financeiros
 
 *Executa independente de L.1. P5-T12 resolve como cascade automática de L-8/L-9 (sem custo adicional).*
 
+*Prioridade interna: P5-T08-FIN primeiro (único risco ativo 🔴). P5-T01/T02/T03 logo após (acesso protegido, mas sem coverage).*
+
 | Passo | ID(s) | Ação | Estimativa |
 |---|---|---|---|
+| L-17 | **P5-T08-FIN** 🔴 | **Zod schemas para 7 entidades financeiras** vivas (`purchase_orders`, `lancamentos`, `contas_a_pagar`, `pagamentos_conta_a_pagar`, `plano_de_contas`, `configuracoes`, `produtos`) + integration tests de rejeição de input inválido no boundary. **Único risco ativo pós-Hardening.** | Alto (6h) |
+| L-18 | P5-T01 + P5-T02 + P5-T03 | Integration tests de regressão para `registrar_despesa_manual`, `registrar_entrada_manual`, `update_purchase_order_with_items` (happy path + boundary + role block via `is_admin()`). Acesso já protegido — cobertura em falta. | Médio (4h) |
 | L-8 | P3-T01 + P3-T02 | Substituir aliases `= any` em `mappers.ts:28-32` (5 raízes + 2 cascade automáticas) e `dashboardService.ts:3-5` (3 view aliases) por `Tables<T>` | Médio (4h) |
 | L-9 | P3-T04 | Tipar 14 callbacks `(x: any)` em queries Supabase (9 arquivos) com `Tables<T>` ou `Pick<>` inline — ver tabela S3 de Phase 3 | Médio (4h) |
 | L-14 | P5-T07 | Adicionar unit tests de schema Zod: `contatoSchema` (phone refine), `vendaSchema` (fiado → data obrigatória), `pagamentoSchema` (data não-futura UTC-3) | Baixo (1h) |
 
-**Total L.2: ~9h**
+**Total L.2: ~19h** (+10h vs. original: L-17 6h + L-18 4h)
 
 ---
 
@@ -406,7 +417,7 @@
 | Phase 6 | 1 | 3 | 2 | 6 |
 | **TOTAL** | **5** | **24** | **28** | **57** |
 
-*(C2, P3-T05 — fechados H-3 2026-05-20 · H3 — fechado H-5 2026-05-22 · H4 — fechado H-6 2026-05-22 · P6-DEP01 — fechado H-1 · P2-DB05 — fechado H-9 2026-05-22 · Onda Hardening FECHADA 2026-05-22 · **🔴 abertos: 4** [P5-T01/T02/T03/T08-FIN → L.2] · **🟡: −1** [P2-DB05 RESOLVED])*
+*(C2, P3-T05 — fechados H-3 2026-05-20 · H3 — fechado H-5 2026-05-22 · H4 — fechado H-6 2026-05-22 · P6-DEP01 — fechado H-1 · P2-DB05 — fechado H-9 2026-05-22 · Onda Hardening FECHADA 2026-05-22 · **🔴 remanescente: 1** [P5-T08-FIN — validação de input] · P5-T01/T02/T03 reclassificados → **🟡** [dívida de teste, acesso protegido] · vulnerabilidades de acesso = 0)*
 
 **Estimativas por onda:**
 - Onda Hardening: H-3 ✅ (9 RPCs, 30/30 testes) · H-4 ✅ (subsumed) · restante: H-5 a H-9 (~11h)
@@ -415,9 +426,10 @@
 - Onda Limpeza L.3: ~2h (DB + decisões)
 - Onda Reativação/DROP: ~3h tudo DROP / ~3,5 dias tudo reativar
 
-**Acumulado por onda (IDs):**
-- Onda Hardening: 7 🔴 restantes + 1 🟡 (P2-DB05) = 8 itens abertos
-- Onda Limpeza: 16 itens 🟢/🟡
+**Acumulado por onda (IDs) — pós-Hardening:**
+- Onda Hardening: **FECHADA** — vulnerabilidades de acesso = 0
+- Onda Limpeza L.2: **🔴 P5-T08-FIN** (L-17, prioridade máxima) + P5-T01/T02/T03 🟡 (L-18) + type safety (L-8/9/14)
+- Onda Limpeza L.1/L.3: patches + dead code + DB (independente da Hardening)
 - Onda Reativação/DROP: 5 features para decidir
 
 **Positivos notáveis (não são findings):**
