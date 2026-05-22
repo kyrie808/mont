@@ -13,7 +13,7 @@
 | ID | Fase | Descrição | Status |
 |---|---|---|---|
 | H3 | P2/P6 | `contatos.Authenticated update access` — USING(true) WITH_CHECK(true): qualquer autenticado pode UPDATE qualquer contato | RESOLVED |
-| H4 | P2/P6 | 11 views com `SECURITY DEFINER` — bypassam RLS do consumidor | STILL_OPEN |
+| H4 | P2/P6 | 11 views com `SECURITY DEFINER` — bypassam RLS do consumidor | RESOLVED |
 | C2 | P2/P6 | 6 RPCs financeiras UNGUARDED: `registrar_pagamento_venda`, `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada`, `update_purchase_order_with_items`, `registrar_despesa_manual`, `registrar_entrada_manual` — authenticated executa sem is_admin() | RESOLVED |
 | P3-T05 | P3/P4 | 2 RPCs financeiras UNGUARDED com UI parked no DB: `registrar_pagamento_conta_a_pagar`, `criar_obrigacao_parcelada` — subconjunto de C2 + contexto: front parked ≠ RPC morta | RESOLVED |
 | P5-T01 | P5 | `registrar_despesa_manual`: zero testes — RPC financeira crítica (INSERT lancamento + trigger saldo) | OPEN |
@@ -93,6 +93,7 @@
 | C2 | 9 RPCs (6 financeiras + `add_image_reference`, `delete_image_reference`, `rpc_total_a_receber_dashboard`) guardadas com `is_admin()` — design: zero REVOKE de `authenticated` (admin e non-admin compartilham o mesmo role Postgres `authenticated`); guard: `NOT is_admin() AND COALESCE(auth.role(),'') <> 'service_role'`. **Nota advisor:** `authenticated_security_definer_function_executable` continua listando as 9 funções — EXECUTE grant de `authenticated` preservado intencionalmente; guard é o mecanismo de enforcement, não REVOKE | H-3 |
 | P3-T05 | `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada` — subconjunto de C2; guards `is_admin()` aplicados uniformemente junto com as 7 outras RPCs em H-3 | H-3 |
 | H3 | `contatos.Authenticated update access` — USING/WITH CHECK substituídos por `(SELECT public.is_admin())`; non-admin bloqueado por RLS antes do trigger `tr_contatos_audit`. Não afeta SELECT, INSERT público, ou acesso admin. Migration: `20260522090658_hardening_h5_contatos_update_admin_only.sql`. 4/4 role tests OK. | H-5 |
+| H4 | 11 views `SECURITY DEFINER` → `security_invoker`. Migrations: `h6a_security_invoker_safe_views` (5 SAFE) + `h6b_security_invoker_risk_views` (6 RISK, ordem base→dependente). Backup pré-apply: `dump-schema/data-20260522-110532.sql`. Admin JWT: todas retornam dados; non-admin: retorna vazio/parcial sem erro; `vw_catalogo_produtos` anon: 10 produtos. | H-6 |
 | P4-DC04 / P5-T09 / P1-TEST01 | `backfill_contatos_nome.integration.test.ts` removido (`git rm`) — RPC + tabela dropadas na Onda 1 | Onda L.1 |
 | P4-DC03 | `AlertasContasAPagarWidget.tsx` + `LogisticsWidget.tsx` deletados (zero importers, em src/) | Onda L.1 |
 | P4-DC10 | Utils duplicados (`cn.ts`, `formatters.ts`, `lib/utils.ts`) + barrel files + `WarRoomWidget.tsx` + `TacticalActionCard.tsx` removidos | Onda L.1 |
@@ -111,13 +112,13 @@
 
 ### Cluster: "SECDEF RPCs sem guarda" — ✅ Parcialmente resolvido (H-3)
 
-**IDs:** C2 (✅ RESOLVED) · P3-T05 (✅ RESOLVED) · P5-T04 (🟡 OPEN — role tests manuais feitos, sem automação) · H4 (🔴 STILL_OPEN)
+**IDs:** C2 (✅ RESOLVED) · P3-T05 (✅ RESOLVED) · H4 (✅ RESOLVED — H-6) · P5-T04 (🟡 OPEN — role tests manuais feitos, sem automação)
 
 | ID | Contribuição ao cluster | Status |
 |---|---|---|
 | C2 | 9 RPCs (6 financeiras + image + dashboard): guard `is_admin()` aplicado via H-3 | ✅ RESOLVED |
 | P3-T05 | `registrar_pagamento_conta_a_pagar` + `criar_obrigacao_parcelada`: guard aplicado uniformemente em H-3 | ✅ RESOLVED |
-| H4 | 11 views SECDEF: RLS do consumidor contornada silenciosamente | 🔴 STILL_OPEN |
+| H4 | 11 views SECDEF: RLS do consumidor contornada silenciosamente | ✅ RESOLVED (H-6) |
 | P5-T04 | 30 role tests manuais documentados em `post-apply.md` — sem automação Vitest | 🟡 PARTIAL |
 
 **Remediação executada (H-3, 2026-05-20):**
@@ -260,7 +261,7 @@
 | H-3 | C2 + P3-T05 | ✅ **DONE 2026-05-20** — Guard `is_admin()` nas 9 RPCs (6 financeiras + add_image_reference + delete_image_reference + rpc_total). Zero REVOKE (admin e non-admin compartilham role `authenticated`). Migration: `20260520084613_hardening_h3_guard_is_admin.sql`. 30/30 role tests OK. | Migration | ✅ |
 | H-4 | C2 | ✅ **DONE — subsumed by H-3** (as 4 RPCs ativas cobertas pela migration de H-3 junto com as 2 parked) | — | ✅ |
 | H-5 | H3 | ✅ **DONE 2026-05-22** — Policy `contatos.Authenticated update access`: USING/WITH CHECK `true` → `(SELECT public.is_admin())`. Non-admin UPDATE bloqueado (0 rows); admin UPDATE passa; SELECT inalterado. Migration: `20260522090658_hardening_h5_contatos_update_admin_only.sql`. 4/4 role tests OK. | Migration | ✅ |
-| H-6 | H4 | `ALTER VIEW ranking_compras ... SET (security_invoker=on)` × 11 views | Migration | Baixo (1h) |
+| H-6 | H4 | ✅ **DONE 2026-05-22** — 11 views em 2 migrations: `h6a_security_invoker_safe_views` (5 SAFE: ranking_compras, ranking_indicacoes, vw_catalogo_produtos, view_relacionamento_kanban, crm_view_operational_snapshot) + `h6b_security_invoker_risk_views` (6 RISK: view_extrato_mensal, view_fluxo_resumo, vw_marketing_pedidos, vw_admin_dashboard, view_contas_a_pagar_dashboard, rpt_projecao_pagamentos). Testes: admin JWT lê normal em todas; non-admin JWT retorna vazio/parcial sem erro; vw_catalogo_produtos anon retorna 10 produtos. | Migration | ✅ |
 | H-7 | P5-T04 (expected) + P5-T01/T02/T03 | **Role tests do comportamento ESPERADO**: verificar que guards bloqueiam anon + authenticated não-admin; integration tests das 3 RPCs sem cobertura (despesa, entrada, purchase_order) | Código | Médio (4h) |
 | H-8 | P5-T08-FIN (ativas) | Integration tests de DB rejection para `purchase_orders`, `lancamentos`, `configuracoes`, `produtos` | Código | Médio (4h) |
 | H-9 | P2-DB05 | Trocar `auth.uid()` RAW por `(SELECT auth.uid())` em 2 policies (admin_users + interacoes) | Migration | Trivial (15min) |
@@ -373,14 +374,14 @@
 | | 🔴 | 🟡 | 🟢 | Total |
 |---|:---:|:---:|:---:|:---:|
 | Phase 1 | 0 | 2 | 8 | 10 |
-| Phase 2 | 3 | 5 | 4 | 12 |
+| Phase 2 | 1 | 5 | 4 | 10 |
 | Phase 3 | 1 | 4 | 5 | 10 |
 | Phase 4 | 0 | 3 | 7 | 10 |
 | Phase 5 | 4 | 7 | 2 | 13 |
 | Phase 6 | 1 | 3 | 2 | 6 |
-| **TOTAL** | **7** | **24** | **28** | **59** |
+| **TOTAL** | **5** | **24** | **28** | **57** |
 
-*(C2 e P3-T05 — 2 🔴 — fechados em H-3 2026-05-20)*
+*(C2, P3-T05 — fechados H-3 2026-05-20 · H3 — fechado H-5 2026-05-22 · H4 — fechado H-6 2026-05-22 · 🔴 abertos: 5)*
 
 **Estimativas por onda:**
 - Onda Hardening: H-3 ✅ (9 RPCs, 30/30 testes) · H-4 ✅ (subsumed) · restante: H-5 a H-9 (~11h)
