@@ -21,6 +21,7 @@ import {
     Plus,
     BookMarked,
     Lock,
+    BarChart3,
 } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useToast } from '../ui/Toast'
@@ -57,7 +58,8 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Gestão',
         items: [
             { label: 'Ranking',            path: '/ranking',          icon: Trophy        },
-            { label: 'Relacionamento',     path: '/relacionamento',   icon: RefreshCw,    locked: true },
+            { label: 'Relatórios',         path: '/relatorios',       icon: BarChart3     },
+            { label: 'Relacionamento',     path: '/relacionamento',   icon: RefreshCw },
             { label: 'Estoque',            path: '/estoque',          icon: Snowflake     },
             { label: 'Produtos',           path: '/produtos',         icon: Package       },
             { label: 'Pedidos de Compra',  path: '/pedidos-compra',   icon: ClipboardList },

@@ -15,7 +15,7 @@ const VendaDetalhe = lazy(() => import('./pages/VendaDetalhe').then(m => ({ defa
 const Ranking = lazy(() => import('./pages/Ranking').then(m => ({ default: m.Ranking })))
 // Rotas parqueadas preservadas mas inativas — acesso bloqueado na sidebar (Fase 4)
 function ParkedRoute() { return null }
-const Relacionamento = ParkedRoute
+const Relacionamento = lazy(() => import('./pages/Relacionamento').then(m => ({ default: m.Relacionamento })))
 const RelatorioFabrica = ParkedRoute
 const Entregas = ParkedRoute
 const FluxoCaixa = ParkedRoute
@@ -28,6 +28,7 @@ const Produtos = lazy(() => import('./pages/Produtos').then(m => ({ default: m.P
 const PedidosCompra = lazy(() => import('./pages/PedidosCompra').then(m => ({ default: m.PedidosCompra })))
 const Menu = lazy(() => import('./pages/Menu').then(m => ({ default: m.Menu })))
 const CatalogoPendentes = lazy(() => import('./pages/CatalogoPendentes').then(m => ({ default: m.CatalogoPendentes })))
+const Relatorios = lazy(() => import('./pages/Relatorios').then(m => ({ default: m.Relatorios })))
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
 
 function PageFallback() {
@@ -67,6 +68,7 @@ function App() {
               <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
               <Route path="/contas-a-receber" element={<ContasReceber />} />
               <Route path="/contas-a-pagar" element={<ContasAPagar />} />
+              <Route path="/relatorios" element={<Relatorios />} />
 
               {/* Redirects */}
               <Route path="/clientes" element={<Navigate to="/contatos" replace />} />
