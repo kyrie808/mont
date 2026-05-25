@@ -49,6 +49,7 @@ describe('VendasHistory payment badge', () => {
 
     expect(screen.getByText(/^Pendente$/)).toBeInTheDocument()
     expect(screen.queryByText(/^Pago$/)).not.toBeInTheDocument()
+    expect(mockUseVendas).toHaveBeenCalledWith({ excludeCatalogo: true, contatoId: 'contato-1' })
   })
 
   it('renderiza badge Brinde para venda brinde', () => {

@@ -1,4 +1,4 @@
-﻿
+
 import { TrendingUp, Crown, Target, Building2 } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useVendas } from '../../../../hooks/useVendas'
@@ -18,10 +18,9 @@ function GamificationBadge({ icon: Icon, label, colorClass }: { icon: React.Comp
 }
 
 export function LoyaltyJourney({ contatoId, isB2B }: { contatoId: string, isB2B: boolean }) {
-    const { vendas: todasVendas } = useVendas({ excludeCatalogo: true })
+    const { vendas: contatoVendas } = useVendas({ excludeCatalogo: true, contatoId })
     const { getIndicadorById } = useIndicacoes()
 
-    const contatoVendas = todasVendas.filter(v => v.contatoId === contatoId)
     const vendasValidas = contatoVendas.filter(v => v.status !== 'cancelada')
     const indicadorInfo = getIndicadorById(contatoId)
     const indicacoesConvertidas = indicadorInfo?.indicacoesConvertidas || 0

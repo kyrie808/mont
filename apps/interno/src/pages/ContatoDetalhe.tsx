@@ -25,7 +25,7 @@ export function ContatoDetalhe() {
     const toast = useToast()
     const { contato, loading, error, refetch } = useContato(id)
     const { deleteContato } = useContatos()
-    const { vendas: vendasRaw } = useVendas({ excludeCatalogo: true })
+    const { vendas: vendasRaw } = useVendas({ excludeCatalogo: true, contatoId: id })
     const { getIndicadorById } = useIndicacoes()
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -36,8 +36,7 @@ export function ContatoDetalhe() {
     if (error || !contato) return <> <Header title="Erro" showBack /><PageContainer><div className="text-red-500">Contato não encontrado</div></PageContainer> </>
 
     // Cálculo de nível para passar pro Hero
-    const todasVendas = vendasRaw.filter(v => v.contatoId === id)
-    const vendasValidas = todasVendas.filter(v => v.status !== 'cancelada')
+    const vendasValidas = vendasRaw.filter(v => v.status !== 'cancelada')
     const indicadorInfo = getIndicadorById(id || '')
     const indicacoesConvertidas = indicadorInfo?.indicacoesConvertidas || 0
     const nivelCliente = calcularNivelCliente(vendasValidas.length, indicacoesConvertidas)

@@ -10,6 +10,7 @@ interface UseVendasOptions {
     search?: string
     enabled?: boolean
     excludeCatalogo?: boolean
+    contatoId?: string
 }
 
 interface UseVendasReturn {
@@ -29,15 +30,15 @@ interface UseVendasReturn {
     deleteUltimoPagamento: (vendaId: string) => Promise<boolean>
 }
 
-export function useVendas({ startDate, endDate, includePending = false, search, enabled = true, excludeCatalogo = false }: UseVendasOptions = {}): UseVendasReturn {
+export function useVendas({ startDate, endDate, includePending = false, search, enabled = true, excludeCatalogo = false, contatoId }: UseVendasOptions = {}): UseVendasReturn {
     const queryClient = useQueryClient()
-    const queryKey = ['vendas', startDate?.toISOString(), endDate?.toISOString(), includePending, search, excludeCatalogo]
+    const queryKey = ['vendas', startDate?.toISOString(), endDate?.toISOString(), includePending, search, excludeCatalogo, contatoId]
 
     const { data, isLoading, error, refetch } = useQuery({
         queryKey,
         queryFn: async () => {
             const [vendasData, totalAReceber] = await Promise.all([
-                vendaService.getVendas(startDate, endDate, includePending, search, excludeCatalogo),
+                vendaService.getVendas(startDate, endDate, includePending, search, excludeCatalogo, contatoId),
                 vendaService.getTotalAReceber()
             ])
 

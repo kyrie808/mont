@@ -47,7 +47,7 @@ async function _syncCatPedido(
 }
 
 export const vendaService = {
-    async getVendas(startDate?: Date, endDate?: Date, includePending = false, search?: string, excludeCatalogo = false): Promise<DomainVenda[]> {
+    async getVendas(startDate?: Date, endDate?: Date, includePending = false, search?: string, excludeCatalogo = false, contatoId?: string): Promise<DomainVenda[]> {
         let query = supabase
             .from('vendas')
             .select(`
@@ -57,6 +57,10 @@ export const vendaService = {
                 pagamentos:pagamentos_venda(*)
             `)
             .order('criado_em', { ascending: false })
+
+        if (contatoId) {
+            query = query.eq('contato_id', contatoId)
+        }
 
         if (excludeCatalogo) {
             query = query.neq('origem', 'catalogo')

@@ -98,10 +98,7 @@ function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
 
 export function VendasHistory({ contatoId }: { contatoId: string }) {
     const navigate = useNavigate()
-    const { vendas: todasVendas, loading, error, deleteVenda } = useVendas({ excludeCatalogo: true })
-
-    // Filter locally
-    const vendas = todasVendas.filter(v => v.contatoId === contatoId)
+    const { vendas, loading, error, deleteVenda } = useVendas({ excludeCatalogo: true, contatoId })
     const [vendaToDelete, setVendaToDelete] = useState<string | null>(null)
 
     const handleDelete = async () => {
