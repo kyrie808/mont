@@ -11,15 +11,16 @@ Documento vivo. Atualizar após cada fatia entregue.
 | 0 | Diagnóstico inicial (view, enum, RLS, padrão de migration) | ✅ FEITA |
 | 1 | Timeline read-only + kanban drag + gesto de ações no card | ✅ FEITA |
 | 2 | Registro de feedback em side sheet próprio | ✅ FEITA |
-| 3a | Tags de campanha — migration + RLS + tipos gerados | pendente |
-| 3b | Tags de campanha — UI (chip no card, sheet de tags) | pendente |
+| 3a | Tags de campanha — migration + RLS + tipos gerados | ✅ FEITA |
+| 3b-1 | Tags de campanha — motor TagsSideSheet (criar, aplicar, remover) | ✅ FEITA |
+| 3b-2 | Tags de campanha — chips na face do card (estilo Trello recolhido) | ✅ FEITA |
 
 **Ordem real de entrega:** timeline → feedback → tags (difere da ordem original que
 previa feedback dentro da timeline).
 
 ---
 
-## Arquitetura atual (pós-Fatia 2)
+## Arquitetura atual (pós-Fatia 3)
 
 ### Componentes do módulo
 ```
@@ -28,24 +29,31 @@ apps/interno/src/
   components/relacionamento/
     TimelineSideSheet.tsx           — histórico read-only (movimentações + feedbacks)
     FeedbackSideSheet.tsx           — form de registro de feedback (sheet próprio)
+    TagsSideSheet.tsx               — gerenciar tags do contato (criar, aplicar, remover)
   hooks/
     useRelacionamento.ts            — useKanbanData, useMoverCard
     useInteracoes.ts                — useInteracoes, useRegistrarFeedback
+    useTags.ts                      — useTags, useContatoTags, useCriarTag, useAplicarTag, useRemoverTag
   services/
     interacaoService.ts             — getByContato, criarFeedback
     relacionamentoService.ts        — moverCard
+    tagService.ts                   — listTags, listContatoTags, criarTag, aplicarTag, removerTag
 ```
 
 ### Fluxo de UI
-- Click no card → ActionBar com dois botões empilhados verticalmente:
-  - **Linha do tempo** → abre `TimelineSideSheet` (read-only, fecha o sheet de feedback)
-  - **Feedback** → abre `FeedbackSideSheet` (form, fecha o sheet de timeline)
+- Click no card → ActionBar com três botões empilhados verticalmente:
+  - **Linha do tempo** → abre `TimelineSideSheet` (read-only, fecha os demais)
+  - **Feedback** → abre `FeedbackSideSheet` (form, fecha os demais)
+  - **Tags** → abre `TagsSideSheet` (chips aplicados + picker + criar-e-aplicar, fecha os demais)
 - Só um sheet aberto por vez (mutual exclusion por estado separado no board)
+- Face do card: barras coloridas estilo Trello recolhido no topo (nome no `title` hover)
 
 ### Tabelas envolvidas
 - `contatos` — PK `id uuid`, coluna `status_relacionamento enum_relacionamento_status`
 - `interacoes` — `tipo`, `canal`, `observacao`, `resultado`, `contato_id`, `criado_por`
 - `view_relacionamento_kanban` — agrega contatos com `aba_atual` e `status_relacionamento`
+- `tags` — lookup global: `id uuid`, `nome text UNIQUE`, `cor text`, `criado_em`
+- `contato_tags` — associação N:N: `contato_id FK`, `tag_id FK`, `criado_em`
 
 ---
 
@@ -71,6 +79,28 @@ for aberta (query invalidada por `useRegistrarFeedback.onSuccess`).
 A policy de INSERT em `interacoes` aceita `criado_por IS NULL`. Sistema é
 single-admin, sem atribuição de autor. Não puxar `auth.uid()` à toa.
 
+### Tags: cor LIVRE, sem paleta restrita
+A cor de cada tag é um hex livre escolhido pelo usuário via `<input type="color">`.
+Não existe paleta fechada. Contraste do texto sobre a cor é calculado em runtime
+por luminância Rec601 (`textColorForBg`). Não reabrir esse ponto.
+
+### Chips no card: barra colorida, sem texto
+A representação visual de tag na face do card é uma barra colorida (`h-[5px] w-8`)
+sem texto visível — nome aparece apenas no `title` (hover). O `TagsSideSheet` já
+mostra o nome completo. Não adicionar texto na barra sem necessidade explícita.
+
+### `useContatoTags` busca global, filtra em memória
+`useContatoTags()` retorna TODAS as `contato_tags` em uma única query (sem parâmetro
+de `contato_id`). Cada `CardBody` filtra em memória. React Query deduplicou — zero
+fetches paralelos. Mutations invalidam `['contato_tags']` → chips atualizam na hora.
+Não recriar a `view_relacionamento_kanban` para incluir tags; fetch separado é a
+decisão adotada.
+
+### Sem tela de gestão global de tags
+Não existe (e não está planejada) uma tela administrativa de tags. Tags são criadas
+ad-hoc dentro do `TagsSideSheet` de cada contato. A unicidade é garantida por
+`UNIQUE` no banco (`error.code === '23505'` → mensagem amigável ao usuário).
+
 ---
 
 ## Dívida consciente
@@ -84,54 +114,22 @@ de analytics de conversão entre colunas.
 
 ---
 
-## Fatia 3 — Diagnóstico (read-only, levantado em 2026-05-30)
+## Próximo: Migração da planilha (Fatia 4 — destravada pela Fatia 3)
 
-### Banco
+As tags existem. A próxima fatia natural é importar os contatos da planilha de
+campanhas e gravar as campanhas como tags.
 
-**Tabelas de tags:** nenhuma existe hoje (`tags`, `contato_tags`, `tag`,
-`tags_campanha` — todas ausentes). Banco parte do zero para essa feature.
+### Fluxo previsto
+1. **Diagnóstico de match** — cruzar contatos da planilha com `contatos` da base,
+   casar por nome (fuzzy ou exact). Identificar taxa de match e casos ambíguos.
+2. **Decisão de granularidade** — cada campanha da planilha vira uma tag?
+   ou agrupamentos? (Definir com o diretor antes de executar.)
+3. **Script de importação** — para cada linha da planilha com match confirmado:
+   - Garantir que a tag-campanha existe em `tags` (INSERT OR IGNORE).
+   - Inserir em `contato_tags` (upsert ON CONFLICT DO NOTHING).
+4. **Validação** — SELECT de contagem por tag, conferência manual de amostra.
 
-**`view_relacionamento_kanban`:** tem `security_invoker=on`
-(`reloptions = ["security_invoker=on"]`). Qualquer view nova do módulo deve espelhar
-isso (ver migration `20260522133520_h6b_security_invoker_safe_views.sql`).
-
-**`contatos` (PK e FK target):**
-- PK: `id uuid NOT NULL DEFAULT gen_random_uuid()`
-- `contato_tags` deve usar `contato_id uuid NOT NULL REFERENCES contatos(id) ON DELETE CASCADE`
-
-### Padrão de RLS (tabelas do módulo)
-
-| Tabela | cmd | roles | qual |
-|--------|-----|-------|------|
-| contatos | ALL | authenticated | `is_admin()` |
-| contatos | SELECT | authenticated | `true` |
-| interacoes | ALL | authenticated | `is_admin()` |
-| interacoes | INSERT | authenticated | `criado_por = auth.uid() OR criado_por IS NULL` |
-| interacoes | SELECT | authenticated | `true` |
-| vendas | ALL | authenticated | `is_admin()` |
-| vendas | SELECT | authenticated | `true` |
-
-**Padrão para `contato_tags`:** espelhar `interacoes`:
-- SELECT: `authenticated`, `qual = true`
-- ALL (INSERT/UPDATE/DELETE): `authenticated`, `qual = is_admin()`
-- (Sem INSERT especial pois não há campo `criado_por` previsto em tags)
-
-### Convenção de migrations
-Pasta: `supabase/migrations/`
-Formato: `YYYYMMDDHHMMSS_descricao_snake_case.sql`
-Última: `20260523090000_rpt_ltv_add_status_atividade.sql`
-Próxima (Fatia 3a): algo como `20260530HHMMSS_relacionamento_tags_campanha.sql`
-
-### Referências a tags no código existente
-- `TimelineSideSheet.tsx`: importa ícone `Tag` (lucide-react) e tem entrada em
-  `TIPO_CONFIG` para `tipo = 'tag'` — ícone azul, sem lógica de dados. Placeholder
-  visual já existe; a lógica de dados (tabela + insert + render real) é a Fatia 3.
-- Nenhum outro arquivo renderiza ou consulta tags.
-
-### Pré-requisitos para Fatia 3a
-1. Migration: criar `tags` (id, nome, cor, criado_em) + `contato_tags`
-   (contato_id FK, tag_id FK, criado_em) — decidir se `tags` é lookup global ou
-   free-form por contato.
-2. RLS conforme padrão acima.
-3. `npx supabase gen types typescript --local` para atualizar `database.ts`.
-4. Só então partir para Fatia 3b (UI).
+### Pré-requisitos
+- Planilha de campanhas disponível (formato a definir).
+- Taxa de match aceitável para nome → `contatos.id`.
+- Autorização explícita antes de qualquer escrita em produção.
