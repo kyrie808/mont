@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
     DragOverlay,
@@ -6,7 +6,6 @@ import {
     PointerSensor,
     pointerWithin,
     type CollisionDetection,
-    type DragCancelEvent,
     useDroppable,
     useSensor,
     useSensors,
@@ -15,7 +14,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { History, Loader2, MessageSquare, Phone, UserRound } from 'lucide-react'
+import { History, Loader2, MessageSquare, Phone, Tag, UserRound } from 'lucide-react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { cn } from '@mont/shared'
 import { Header } from '../components/layout/Header'
@@ -30,6 +29,7 @@ import {
 } from '../hooks/useRelacionamento'
 import { TimelineSideSheet } from '../components/relacionamento/TimelineSideSheet'
 import { FeedbackSideSheet } from '../components/relacionamento/FeedbackSideSheet'
+import { TagsSideSheet } from '../components/relacionamento/TagsSideSheet'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -101,9 +101,11 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
 function ActionBar({
     onTimelineClick,
     onFeedbackClick,
+    onTagsClick,
 }: {
     onTimelineClick: () => void
     onFeedbackClick: () => void
+    onTagsClick: () => void
 }) {
     return (
         <div
@@ -129,6 +131,14 @@ function ActionBar({
                 <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                 Feedback
             </button>
+            <button
+                type="button"
+                onClick={onTagsClick}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+                <Tag className="h-3.5 w-3.5 shrink-0" />
+                Tags
+            </button>
         </div>
     )
 }
@@ -143,12 +153,14 @@ function SortableCard({
     onCardClick,
     onTimelineClick,
     onFeedbackClick,
+    onTagsClick,
 }: {
     card: KanbanRow & { contato_id: string }
     showActions: boolean
     onCardClick: () => void
     onTimelineClick: () => void
     onFeedbackClick: () => void
+    onTagsClick: () => void
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: card.contato_id,
@@ -174,7 +186,11 @@ function SortableCard({
             <div className={isDragging ? 'invisible' : undefined}>
                 <CardBody card={card} />
                 {showActions && !isDragging && (
-                    <ActionBar onTimelineClick={onTimelineClick} onFeedbackClick={onFeedbackClick} />
+                    <ActionBar
+                        onTimelineClick={onTimelineClick}
+                        onFeedbackClick={onFeedbackClick}
+                        onTagsClick={onTagsClick}
+                    />
                 )}
             </div>
         </div>
@@ -305,17 +321,17 @@ export function Relacionamento() {
         return 'reativacao'
     }, [location.state, searchParams])
 
-    const [abaAtiva, setAbaAtiva] = useState<RelacionamentoAba>(abaInicial)
     const [activeCardId, setActiveCardId] = useState<string | null>(null)
     const [actionCardId, setActionCardId] = useState<string | null>(null)
     const [timelineTarget, setTimelineTarget] = useState<TimelineTarget | null>(null)
     const [feedbackTarget, setFeedbackTarget] = useState<TimelineTarget | null>(null)
+    const [tagsTarget, setTagsTarget] = useState<TimelineTarget | null>(null)
     const dragHappenedRef = useRef(false)
 
     // Per-column visible card limit — resets on tab change.
     const [visibleLimits, setVisibleLimits] = useState<Record<RelacionamentoStatus, number>>(EMPTY_LIMITS)
 
-    const { data = [], isLoading, error } = useKanbanData(abaAtiva)
+    const { data = [], isLoading, error } = useKanbanData(abaInicial)
     const moverCard = useMoverCard()
 
     const sensors = useSensors(
@@ -323,10 +339,6 @@ export function Relacionamento() {
             activationConstraint: { distance: 6 },
         })
     )
-
-    useEffect(() => {
-        if (abaInicial !== abaAtiva) setAbaAtiva(abaInicial)
-    }, [abaAtiva, abaInicial])
 
     // ── Derived data (preserved) ──────────────────────────────────────────────
     const colunas = useMemo(() => {
@@ -352,12 +364,12 @@ export function Relacionamento() {
     // ── Handlers (preserved) ──────────────────────────────────────────────────
     const handleTrocarAba = (value: string) => {
         const novaAba = value as RelacionamentoAba
-        setAbaAtiva(novaAba)
         setSearchParams({ aba: novaAba })
         setVisibleLimits(EMPTY_LIMITS)
         setActionCardId(null)
         setTimelineTarget(null)
         setFeedbackTarget(null)
+        setTagsTarget(null)
     }
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -366,7 +378,7 @@ export function Relacionamento() {
         setActionCardId(null)
     }
 
-    const handleDragCancel = (_event: DragCancelEvent) => {
+    const handleDragCancel = () => {
         setActiveCardId(null)
         setTimeout(() => { dragHappenedRef.current = false }, 0)
     }
@@ -408,6 +420,7 @@ export function Relacionamento() {
     const handleOpenTimeline = (card: KanbanRow & { contato_id: string }) => {
         setActionCardId(null)
         setFeedbackTarget(null)
+        setTagsTarget(null)
         setTimelineTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
@@ -418,7 +431,19 @@ export function Relacionamento() {
     const handleOpenFeedback = (card: KanbanRow & { contato_id: string }) => {
         setActionCardId(null)
         setTimelineTarget(null)
+        setTagsTarget(null)
         setFeedbackTarget({
+            contatoId: card.contato_id,
+            nomeContato: card.nome ?? 'Sem nome',
+            statusAtual: card.status_relacionamento ?? 'a_contatar',
+        })
+    }
+
+    const handleOpenTags = (card: KanbanRow & { contato_id: string }) => {
+        setActionCardId(null)
+        setTimelineTarget(null)
+        setFeedbackTarget(null)
+        setTagsTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
             statusAtual: card.status_relacionamento ?? 'a_contatar',
@@ -448,7 +473,7 @@ export function Relacionamento() {
                 <div className="space-y-4">
 
                     {/* Tabs — usa o estilo padrão do design system */}
-                    <Tabs value={abaAtiva} onValueChange={handleTrocarAba}>
+                    <Tabs value={abaInicial} onValueChange={handleTrocarAba}>
                         <TabsList>
                             {ABAS.map((aba) => (
                                 <TabsTrigger key={aba.value} value={aba.value}>
@@ -515,6 +540,7 @@ export function Relacionamento() {
                                                             onCardClick={() => handleCardClick(card)}
                                                             onTimelineClick={() => handleOpenTimeline(card)}
                                                             onFeedbackClick={() => handleOpenFeedback(card)}
+                                                            onTagsClick={() => handleOpenTags(card)}
                                                         />
                                                     ))}
 
@@ -572,6 +598,16 @@ export function Relacionamento() {
                     contatoId={feedbackTarget.contatoId}
                     nomeContato={feedbackTarget.nomeContato}
                     statusAtual={feedbackTarget.statusAtual}
+                />
+            )}
+
+            {tagsTarget && (
+                <TagsSideSheet
+                    isOpen
+                    onClose={() => setTagsTarget(null)}
+                    contatoId={tagsTarget.contatoId}
+                    nomeContato={tagsTarget.nomeContato}
+                    statusAtual={tagsTarget.statusAtual}
                 />
             )}
         </>
