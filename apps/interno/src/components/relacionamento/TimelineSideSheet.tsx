@@ -57,6 +57,14 @@ const TIPO_CONFIG_DEFAULT: TipoConfig = {
     iconColor: 'text-muted-foreground',
 }
 
+const CANAL_LABEL: Record<string, string> = {
+    whatsapp: 'WhatsApp',
+    instagram: 'Instagram',
+    google: 'Google',
+    outro: 'Outro',
+}
+
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatRelativo(dateStr: string): string | null {
@@ -93,6 +101,10 @@ function getEventTitle(item: Interacao): string {
             ? (RESULTADO_LABEL[item.resultado] ?? item.resultado)
             : '?'
         return `Movido para ${label}`
+    }
+    if (item.tipo === 'feedback') {
+        const canalLabel = item.canal ? (CANAL_LABEL[item.canal] ?? item.canal) : null
+        return canalLabel ? `Feedback · ${canalLabel}` : 'Feedback'
     }
     return item.tipo ?? 'Interação'
 }
@@ -157,7 +169,10 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
                     {title}
                 </p>
                 {item.observacao && (
-                    <p className="mt-0.5 truncate text-[11px] leading-[1.4] text-muted-foreground/70">
+                    <p className={cn(
+                        'mt-0.5 text-[11px] leading-[1.4] text-muted-foreground/70',
+                        item.tipo === 'feedback' ? 'whitespace-pre-wrap break-words' : 'truncate',
+                    )}>
                         {item.observacao}
                     </p>
                 )}
@@ -177,7 +192,7 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
     )
 }
 
-// ─── PanelContent (stateful, reusado em mobile e desktop) ─────────────────────
+// ─── PanelContent ─────────────────────────────────────────────────────────────
 
 interface PanelContentProps {
     onClose: () => void

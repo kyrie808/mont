@@ -2,6 +2,13 @@ import type { Database } from '@mont/shared'
 import { supabase } from '../lib/supabase'
 
 export type Interacao = Database['public']['Tables']['interacoes']['Row']
+export type Canal = 'google' | 'instagram' | 'whatsapp' | 'outro'
+
+interface CriarFeedbackInput {
+    contatoId: string
+    canal: Canal
+    texto: string
+}
 
 class InteracaoService {
     async getByContato(contatoId: string): Promise<Interacao[]> {
@@ -16,6 +23,20 @@ class InteracaoService {
         }
 
         return data ?? []
+    }
+
+    async criarFeedback({ contatoId, canal, texto }: CriarFeedbackInput): Promise<void> {
+        const insert: Database['public']['Tables']['interacoes']['Insert'] = {
+            contato_id: contatoId,
+            tipo: 'feedback',
+            canal,
+            observacao: texto,
+            resultado: null,
+        }
+        const { error } = await supabase.from('interacoes').insert(insert)
+        if (error) {
+            throw new Error(`Erro ao registrar feedback: ${error.message}`)
+        }
     }
 }
 

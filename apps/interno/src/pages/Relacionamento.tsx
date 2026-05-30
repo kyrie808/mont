@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { History, Loader2, Phone, UserRound } from 'lucide-react'
+import { History, Loader2, MessageSquare, Phone, UserRound } from 'lucide-react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { cn } from '@mont/shared'
 import { Header } from '../components/layout/Header'
@@ -29,6 +29,7 @@ import {
     type RelacionamentoStatus,
 } from '../hooks/useRelacionamento'
 import { TimelineSideSheet } from '../components/relacionamento/TimelineSideSheet'
+import { FeedbackSideSheet } from '../components/relacionamento/FeedbackSideSheet'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -97,10 +98,16 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
 
 // ─── ActionBar ────────────────────────────────────────────────────────────────
 
-function ActionBar({ onTimelineClick }: { onTimelineClick: () => void }) {
+function ActionBar({
+    onTimelineClick,
+    onFeedbackClick,
+}: {
+    onTimelineClick: () => void
+    onFeedbackClick: () => void
+}) {
     return (
         <div
-            className="mt-2 flex items-center gap-1.5 border-t border-white/[0.06] pt-2"
+            className="mt-2 flex flex-col items-start gap-1 border-t border-white/[0.06] pt-2"
             // stopPropagation em pointerDown: impede que pressionar os botões
             // ative o drag do dnd-kit (cujos listeners ficam no div pai do card).
             onPointerDown={(e) => e.stopPropagation()}
@@ -113,6 +120,14 @@ function ActionBar({ onTimelineClick }: { onTimelineClick: () => void }) {
             >
                 <History className="h-3.5 w-3.5 shrink-0" />
                 Linha do tempo
+            </button>
+            <button
+                type="button"
+                onClick={onFeedbackClick}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+                <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                Feedback
             </button>
         </div>
     )
@@ -127,11 +142,13 @@ function SortableCard({
     showActions,
     onCardClick,
     onTimelineClick,
+    onFeedbackClick,
 }: {
     card: KanbanRow & { contato_id: string }
     showActions: boolean
     onCardClick: () => void
     onTimelineClick: () => void
+    onFeedbackClick: () => void
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: card.contato_id,
@@ -157,7 +174,7 @@ function SortableCard({
             <div className={isDragging ? 'invisible' : undefined}>
                 <CardBody card={card} />
                 {showActions && !isDragging && (
-                    <ActionBar onTimelineClick={onTimelineClick} />
+                    <ActionBar onTimelineClick={onTimelineClick} onFeedbackClick={onFeedbackClick} />
                 )}
             </div>
         </div>
@@ -292,6 +309,7 @@ export function Relacionamento() {
     const [activeCardId, setActiveCardId] = useState<string | null>(null)
     const [actionCardId, setActionCardId] = useState<string | null>(null)
     const [timelineTarget, setTimelineTarget] = useState<TimelineTarget | null>(null)
+    const [feedbackTarget, setFeedbackTarget] = useState<TimelineTarget | null>(null)
     const dragHappenedRef = useRef(false)
 
     // Per-column visible card limit — resets on tab change.
@@ -339,6 +357,7 @@ export function Relacionamento() {
         setVisibleLimits(EMPTY_LIMITS)
         setActionCardId(null)
         setTimelineTarget(null)
+        setFeedbackTarget(null)
     }
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -388,7 +407,18 @@ export function Relacionamento() {
 
     const handleOpenTimeline = (card: KanbanRow & { contato_id: string }) => {
         setActionCardId(null)
+        setFeedbackTarget(null)
         setTimelineTarget({
+            contatoId: card.contato_id,
+            nomeContato: card.nome ?? 'Sem nome',
+            statusAtual: card.status_relacionamento ?? 'a_contatar',
+        })
+    }
+
+    const handleOpenFeedback = (card: KanbanRow & { contato_id: string }) => {
+        setActionCardId(null)
+        setTimelineTarget(null)
+        setFeedbackTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
             statusAtual: card.status_relacionamento ?? 'a_contatar',
@@ -484,6 +514,7 @@ export function Relacionamento() {
                                                             showActions={actionCardId === card.contato_id}
                                                             onCardClick={() => handleCardClick(card)}
                                                             onTimelineClick={() => handleOpenTimeline(card)}
+                                                            onFeedbackClick={() => handleOpenFeedback(card)}
                                                         />
                                                     ))}
 
@@ -531,6 +562,16 @@ export function Relacionamento() {
                     contatoId={timelineTarget.contatoId}
                     nomeContato={timelineTarget.nomeContato}
                     statusAtual={timelineTarget.statusAtual}
+                />
+            )}
+
+            {feedbackTarget && (
+                <FeedbackSideSheet
+                    isOpen
+                    onClose={() => setFeedbackTarget(null)}
+                    contatoId={feedbackTarget.contatoId}
+                    nomeContato={feedbackTarget.nomeContato}
+                    statusAtual={feedbackTarget.statusAtual}
                 />
             )}
         </>
