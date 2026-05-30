@@ -30,6 +30,7 @@ import {
 import { TimelineSideSheet } from '../components/relacionamento/TimelineSideSheet'
 import { FeedbackSideSheet } from '../components/relacionamento/FeedbackSideSheet'
 import { TagsSideSheet } from '../components/relacionamento/TagsSideSheet'
+import { useContatoTags } from '../hooks/useTags'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -71,9 +72,26 @@ interface TimelineTarget {
 // ─── Card content (shared between SortableCard and OverlayCard) ───────────────
 
 function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
+    const { data: allContatoTags = [] } = useContatoTags()
+    const cardTags = allContatoTags
+        .filter((ct) => ct.contato_id === card.contato_id)
+        .map((ct) => ct.tag)
+
     const status = card.status_relacionamento ?? 'a_contatar'
     return (
         <>
+            {cardTags.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-1">
+                    {cardTags.map((tag) => (
+                        <span
+                            key={tag.id}
+                            title={tag.nome}
+                            className="h-[5px] w-8 rounded-sm"
+                            style={{ backgroundColor: tag.cor }}
+                        />
+                    ))}
+                </div>
+            )}
             <p className="truncate text-[13px] font-semibold leading-[1.35] text-foreground">
                 {card.nome ?? 'Sem nome'}
             </p>
