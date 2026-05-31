@@ -52,8 +52,8 @@ apps/interno/src/
 - `contatos` — PK `id uuid`, coluna `status_relacionamento enum_relacionamento_status`
 - `interacoes` — `tipo`, `canal`, `observacao`, `resultado`, `contato_id`, `criado_por`
 - `view_relacionamento_kanban` — agrega contatos com `aba_atual` e `status_relacionamento`
-- `tags` — lookup global: `id uuid`, `nome text UNIQUE`, `cor text`, `criado_em`
-- `contato_tags` — associação N:N: `contato_id FK`, `tag_id FK`, `criado_em`
+- `tags` — lookup global: `id uuid`, `nome text`, único case-insensitive via índice em lower(nome), `cor text`, `created_at`
+- `contato_tags` — associação N:N: `contato_id FK`, `tag_id FK`, `created_at`
 
 ---
 
@@ -125,7 +125,7 @@ campanhas e gravar as campanhas como tags.
 2. **Decisão de granularidade** — cada campanha da planilha vira uma tag?
    ou agrupamentos? (Definir com o diretor antes de executar.)
 3. **Script de importação** — para cada linha da planilha com match confirmado:
-   - Garantir que a tag-campanha existe em `tags` (INSERT OR IGNORE).
+   - Garantir que a tag-campanha existe em `tags` (INSERT ... ON CONFLICT DO NOTHING).
    - Inserir em `contato_tags` (upsert ON CONFLICT DO NOTHING).
 4. **Validação** — SELECT de contagem por tag, conferência manual de amostra.
 
