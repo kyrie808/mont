@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -1823,12 +1798,21 @@ export type Database = {
             | Database["public"]["Enums"]["enum_relacionamento_aba"]
             | null
           arquivado_em: string | null
+          atraso: number | null
+          balde_cheio: boolean | null
           contato_id: string | null
+          dias_sem_compra: number | null
+          intervalo_medio: number | null
           nome: string | null
+          primeira_compra: string | null
+          proxima_esperada: string | null
           status_relacionamento:
             | Database["public"]["Enums"]["enum_relacionamento_status"]
             | null
+          sumido: boolean | null
           telefone: string | null
+          total_pedidos: number | null
+          ultima_compra: string | null
         }
         Relationships: []
       }
@@ -2190,9 +2174,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],

@@ -13,12 +13,20 @@ interface MoverCardInput {
 
 export class RelacionamentoService {
     async getKanbanData(aba: RelacionamentoAba): Promise<KanbanRow[]> {
-        const { data, error } = await supabase
+        const base = supabase
             .from('view_relacionamento_kanban')
             .select('*')
             .eq('aba_atual', aba)
             .is('arquivado_em', null)
-            .order('nome', { ascending: true })
+
+        // recompra: mais atrasados primeiro; reativacao: mais tempo sem 2a compra primeiro
+        const { data, error } = await (
+            aba === 'recompra'
+                ? base.order('atraso', { ascending: false, nullsFirst: false })
+                : aba === 'reativacao'
+                ? base.order('dias_sem_compra', { ascending: false, nullsFirst: false })
+                : base.order('nome', { ascending: true })
+        )
 
         if (error) {
             throw new Error(`Erro ao carregar Kanban de relacionamento: ${error.message}`)

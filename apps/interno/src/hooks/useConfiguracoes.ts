@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
-interface CicloRecompra {
-    b2c: number
-    b2b: number
+interface ConfigRelacionamento {
+    limiarReativacao: number
+    multiplicadorSumido: number
 }
 
 interface RecompensaIndicacao {
@@ -13,14 +13,14 @@ interface RecompensaIndicacao {
 }
 
 interface Configuracoes {
-    cicloRecompra: CicloRecompra
+    relacionamento: ConfigRelacionamento
     recompensaIndicacao: RecompensaIndicacao
     mensagemRecompra: string
     taxaEntregaPadrao: number
 }
 
 const DEFAULT_CONFIG: Configuracoes = {
-    cicloRecompra: { b2c: 15, b2b: 7 },
+    relacionamento: { limiarReativacao: 30, multiplicadorSumido: 1.5 },
     recompensaIndicacao: { tipo: 'desconto', valor: 5 },
     mensagemRecompra: 'Olá {{nome}}! Faz {{dias}} dias que você não compra conosco. Que tal fazer um novo pedido? 🧀',
     taxaEntregaPadrao: 0,
@@ -50,14 +50,18 @@ export function useConfiguracoes(): UseConfiguracoesReturn {
 
             if (queryError) throw queryError
 
-            // Parse config values
             const configObj = { ...DEFAULT_CONFIG }
 
-            data?.forEach((item: any) => {
+            data?.forEach((item: { chave: string; valor: unknown }) => {
                 switch (item.chave) {
-                    case 'ciclo_recompra':
-                        configObj.cicloRecompra = item.valor as unknown as CicloRecompra
+                    case 'relacionamento': {
+                        const val = item.valor as { limiar_reativacao: number; multiplicador_sumido: number }
+                        configObj.relacionamento = {
+                            limiarReativacao: val.limiar_reativacao ?? 30,
+                            multiplicadorSumido: val.multiplicador_sumido ?? 1.5,
+                        }
                         break
+                    }
                     case 'recompensa_indicacao':
                         configObj.recompensaIndicacao = item.valor as unknown as RecompensaIndicacao
                         break

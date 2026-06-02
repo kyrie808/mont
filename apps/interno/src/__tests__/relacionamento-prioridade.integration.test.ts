@@ -39,6 +39,12 @@ async function criarVenda(contatoId: string, args: Partial<{ data: string; forma
     if (error) throw new Error(error.message)
 }
 
+function diasAtras(n: number) {
+    const d = new Date()
+    d.setDate(d.getDate() - n)
+    return d.toISOString().slice(0, 10)
+}
+
 beforeEach(async () => {
     await cleanTestData(supabase)
 })
@@ -51,77 +57,183 @@ afterAll(async () => {
     await cleanTestData(supabase)
 })
 
-describe('view_relacionamento_kanban prioridade', () => {
-    it('cliente sem fiado e sem inatividade fica em recompra', async () => {
-        const contatoId = await criarContato({ nome: 'Cliente Recompra' })
+describe('view_relacionamento_kanban — modelo de balde (Fatia 4)', () => {
+
+    // ── 0 compras ────────────────────────────────────────────────────────────
+
+    it('0 compras: fora do kanban (aba_atual NULL, total_pedidos 0)', async () => {
+        const id = await criarContato({ nome: 'Lead Sem Compras' })
 
         const { data, error } = await supabase
             .from('view_relacionamento_kanban')
-            .select('aba_atual, status_relacionamento')
-            .eq('contato_id', contatoId)
+            .select('aba_atual, total_pedidos, balde_cheio')
+            .eq('contato_id', id)
+            .single()
+
+        expect(error).toBeNull()
+        expect(data?.aba_atual).toBeNull()
+        expect(data?.total_pedidos).toBe(0)
+        expect(data?.balde_cheio).toBe(false)
+    })
+
+    // ── 1 compra balde cheio (dias < 30) ─────────────────────────────────────
+
+    it('1 compra balde cheio (< 30d): aba recompra + balde_cheio=true + atraso NULL', async () => {
+        const id = await criarContato({ nome: 'Balde Cheio' })
+        await criarVenda(id, { data: diasAtras(1) })
+
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('aba_atual, total_pedidos, balde_cheio, atraso, sumido')
+            .eq('contato_id', id)
             .single()
 
         expect(error).toBeNull()
         expect(data?.aba_atual).toBe('recompra')
-        expect(data?.status_relacionamento).toBe('a_contatar')
+        expect(data?.total_pedidos).toBe(1)
+        expect(data?.balde_cheio).toBe(true)
+        expect(data?.atraso).toBeNull()    // sem ritmo derivável
+        expect(data?.sumido).toBe(false)   // sem ritmo, nunca sumido
     })
 
-    it('cliente com fiado em aberto cai em cobranca', async () => {
-        const contatoId = await criarContato({ nome: 'Cliente Cobranca' })
-        await criarVenda(contatoId, { forma: 'fiado', pago: false, status: 'entregue' })
+    it('1 compra balde cheio: aparece no fundo do recompra (atraso NULL ordena último)', async () => {
+        // Confirma que a ordenação DESC NULLS LAST do service coloca balde cheio no fundo
+        const id = await criarContato({ nome: 'Balde Cheio Fundo' })
+        await criarVenda(id, { data: diasAtras(5) })
 
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('view_relacionamento_kanban')
-            .select('aba_atual')
-            .eq('contato_id', contatoId)
+            .select('atraso')
+            .eq('contato_id', id)
             .single()
 
-        expect(error).toBeNull()
-        expect(data?.aba_atual).toBe('cobranca')
+        expect(data?.atraso).toBeNull()
     })
 
-    it('com fiado em aberto + inatividade simultanea, cobranca tem prioridade', async () => {
-        const dataAntiga = new Date()
-        dataAntiga.setDate(dataAntiga.getDate() - 90)
+    // ── 1 compra balde vazio (dias >= 30) ─────────────────────────────────────
 
-        const contatoId = await criarContato({
-            nome: 'Cliente Prioridade Cobranca',
-            criadoEm: dataAntiga.toISOString(),
-        })
-
-        await criarVenda(contatoId, {
-            forma: 'fiado',
-            pago: false,
-            status: 'entregue',
-            data: dataAntiga.toISOString().slice(0, 10),
-        })
+    it('1 compra balde vazio (>= 30d): aba reativacao + balde_cheio=false', async () => {
+        const id = await criarContato({ nome: 'Balde Vazio' })
+        await criarVenda(id, { data: diasAtras(31) })
 
         const { data, error } = await supabase
             .from('view_relacionamento_kanban')
-            .select('aba_atual')
-            .eq('contato_id', contatoId)
-            .single()
-
-        expect(error).toBeNull()
-        expect(data?.aba_atual).toBe('cobranca')
-    })
-
-    it('cliente antigo sem fiado e sem venda recente cai em reativacao', async () => {
-        const dataAntiga = new Date()
-        dataAntiga.setDate(dataAntiga.getDate() - 90)
-
-        const contatoId = await criarContato({
-            nome: 'Cliente Reativacao Sem Venda',
-            criadoEm: dataAntiga.toISOString(),
-        })
-
-        const { data, error } = await supabase
-            .from('view_relacionamento_kanban')
-            .select('aba_atual')
-            .eq('contato_id', contatoId)
+            .select('aba_atual, total_pedidos, balde_cheio, dias_sem_compra')
+            .eq('contato_id', id)
             .single()
 
         expect(error).toBeNull()
         expect(data?.aba_atual).toBe('reativacao')
+        expect(data?.total_pedidos).toBe(1)
+        expect(data?.balde_cheio).toBe(false)
+        expect(data?.dias_sem_compra).toBeGreaterThanOrEqual(31)
+    })
+
+    // ── >=2 compras ───────────────────────────────────────────────────────────
+
+    it('>= 2 compras: aba recompra com ritmo derivado + balde_cheio=false', async () => {
+        const id = await criarContato({ nome: 'Ciclo Recompra' })
+        await criarVenda(id, { data: diasAtras(60) })
+        await criarVenda(id, { data: diasAtras(30) })
+
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('aba_atual, total_pedidos, balde_cheio, intervalo_medio, atraso')
+            .eq('contato_id', id)
+            .single()
+
+        expect(error).toBeNull()
+        expect(data?.aba_atual).toBe('recompra')
+        expect(data?.total_pedidos).toBe(2)
+        expect(data?.balde_cheio).toBe(false)
+        expect(data?.intervalo_medio).toBe(30)
+        expect(data?.atraso).toBeDefined()
+    })
+
+    it('>= 2 compras frio: permanece em recompra (nao migra pra reativacao)', async () => {
+        const id = await criarContato({ nome: 'Dois Frio' })
+        await criarVenda(id, { data: diasAtras(200) })
+        await criarVenda(id, { data: diasAtras(100) })
+
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('aba_atual, balde_cheio, atraso')
+            .eq('contato_id', id)
+            .single()
+
+        expect(error).toBeNull()
+        expect(data?.aba_atual).toBe('recompra')  // nunca reativacao
+        expect(data?.balde_cheio).toBe(false)
+        expect(data?.atraso).toBeGreaterThan(0)   // positivo = atrasado
+    })
+
+    // ── Cobrança ──────────────────────────────────────────────────────────────
+
+    it('fiado aberto: aba cobranca (prioridade sobre tier)', async () => {
+        const id = await criarContato({ nome: 'Fiado Aberto' })
+        await criarVenda(id, { forma: 'fiado', pago: false })
+
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('aba_atual')
+            .eq('contato_id', id)
+            .single()
+
+        expect(error).toBeNull()
+        expect(data?.aba_atual).toBe('cobranca')
+    })
+
+    it('fiado aberto + >= 2 compras: cobranca tem prioridade', async () => {
+        const id = await criarContato({ nome: 'Fiado Mais 2' })
+        await criarVenda(id, { data: diasAtras(60) })
+        await criarVenda(id, { data: diasAtras(30), forma: 'fiado', pago: false })
+
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('aba_atual')
+            .eq('contato_id', id)
+            .single()
+
+        expect(error).toBeNull()
+        expect(data?.aba_atual).toBe('cobranca')
+    })
+
+    // ── Brinde não conta ──────────────────────────────────────────────────────
+
+    it('brinde nao conta como compra: aba NULL (0 compras)', async () => {
+        const id = await criarContato({ nome: 'Só Brinde' })
+        await criarVenda(id, { forma: 'brinde', pago: false })
+
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('aba_atual, total_pedidos')
+            .eq('contato_id', id)
+            .single()
+
+        expect(error).toBeNull()
+        expect(data?.aba_atual).toBeNull()
+        expect(data?.total_pedidos).toBe(0)
+    })
+
+    // ── Fan-out zero ──────────────────────────────────────────────────────────
+
+    it('nenhum contato aparece em mais de uma aba (fan-out zero)', async () => {
+        const { data: fanout } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('contato_id, aba_atual')
+
+        if (!fanout) return
+
+        const counts = new Map<string, Set<string>>()
+        for (const row of fanout) {
+            if (!row.contato_id || !row.aba_atual) continue
+            const set = counts.get(row.contato_id) ?? new Set()
+            set.add(row.aba_atual)
+            counts.set(row.contato_id, set)
+        }
+
+        for (const [id, abas] of counts) {
+            expect(abas.size, `contato ${id} em múltiplas abas`).toBe(1)
+        }
     })
 })

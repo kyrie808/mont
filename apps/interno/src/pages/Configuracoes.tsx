@@ -14,7 +14,7 @@ import { useCep } from '../hooks/useCep'
 import type { Json } from '@mont/shared'
 
 // Sub-components
-import { ConfiguracaoCiclo } from '../components/features/configuracoes/ConfiguracaoCiclo'
+import { ConfiguracaoRelacionamento } from '../components/features/configuracoes/ConfiguracaoRelacionamento'
 import { ConfiguracaoRecompensas } from '../components/features/configuracoes/ConfiguracaoRecompensas'
 import { ConfiguracaoMensagens } from '../components/features/configuracoes/ConfiguracaoMensagens'
 import { ConfiguracaoLocalizacao } from '../components/features/configuracoes/ConfiguracaoLocalizacao'
@@ -33,8 +33,7 @@ export function Configuracoes() {
     const { config, loading, refetch } = useConfiguracoes()
 
     // Local state for editing
-    const [cicloB2C, setCicloB2C] = useState(15)
-    const [cicloB2B, setCicloB2B] = useState(7)
+    const [limiarReativacao, setLimiarReativacao] = useState(30)
     const [recompensaValor, setRecompensaValor] = useState(5)
     const [mensagemRecompra, setMensagemRecompra] = useState('')
 
@@ -66,8 +65,7 @@ export function Configuracoes() {
     // Sync with config when loaded
     useEffect(() => {
         if (!loading) {
-            setCicloB2C(config.cicloRecompra.b2c)
-            setCicloB2B(config.cicloRecompra.b2b)
+            setLimiarReativacao(config.relacionamento.limiarReativacao)
             setRecompensaValor(config.recompensaIndicacao.valor)
             setMensagemRecompra(config.mensagemRecompra)
 
@@ -143,8 +141,11 @@ export function Configuracoes() {
         try {
             await Promise.all([
                 supabase.from('configuracoes').upsert({
-                    chave: 'ciclo_recompra',
-                    valor: { b2c: cicloB2C, b2b: cicloB2B },
+                    chave: 'relacionamento',
+                    valor: {
+                        limiar_reativacao: limiarReativacao,
+                        multiplicador_sumido: config.relacionamento.multiplicadorSumido,
+                    },
                 }, { onConflict: 'chave' }),
                 supabase.from('configuracoes').upsert({
                     chave: 'recompensa_indicacao',
@@ -170,8 +171,7 @@ export function Configuracoes() {
     }
 
     const handleReset = () => {
-        setCicloB2C(config.cicloRecompra.b2c)
-        setCicloB2B(config.cicloRecompra.b2b)
+        setLimiarReativacao(config.relacionamento.limiarReativacao)
         setRecompensaValor(config.recompensaIndicacao.valor)
         setMensagemRecompra(config.mensagemRecompra)
         ;supabase.from('configuracoes').select('valor').eq('chave', 'locais_partida').maybeSingle()
@@ -184,8 +184,7 @@ export function Configuracoes() {
     }
 
     const hasChanges =
-        cicloB2C !== config.cicloRecompra.b2c ||
-        cicloB2B !== config.cicloRecompra.b2b ||
+        limiarReativacao !== config.relacionamento.limiarReativacao ||
         recompensaValor !== config.recompensaIndicacao.valor ||
         mensagemRecompra !== config.mensagemRecompra
 
@@ -197,22 +196,22 @@ export function Configuracoes() {
 
                     {!loading && (
                         <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 text-gray-900 dark:text-gray-100">
-                            <ConfiguracaoCiclo 
-                                cicloB2C={cicloB2C} setCicloB2C={setCicloB2C}
-                                cicloB2B={cicloB2B} setCicloB2B={setCicloB2B}
+                            <ConfiguracaoRelacionamento
+                                limiarReativacao={limiarReativacao}
+                                setLimiarReativacao={setLimiarReativacao}
                             />
-                            
-                            <ConfiguracaoRecompensas 
-                                recompensaValor={recompensaValor} 
+
+                            <ConfiguracaoRecompensas
+                                recompensaValor={recompensaValor}
                                 setRecompensaValor={setRecompensaValor}
                             />
 
-                            <ConfiguracaoMensagens 
+                            <ConfiguracaoMensagens
                                 mensagemRecompra={mensagemRecompra}
                                 setMensagemRecompra={setMensagemRecompra}
                             />
 
-                            <ConfiguracaoLocalizacao 
+                            <ConfiguracaoLocalizacao
                                 locais={locais}
                                 handleRemoveLocal={handleRemoveLocal}
                                 novoLocalNome={novoLocalNome}
