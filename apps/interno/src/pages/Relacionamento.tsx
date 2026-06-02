@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { History, Loader2, MessageSquare, Phone, Tag, UserRound } from 'lucide-react'
+import { HelpCircle, History, Loader2, MessageSquare, Phone, Tag, UserRound, X } from 'lucide-react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { cn } from '@mont/shared'
 import { Header } from '../components/layout/Header'
@@ -30,6 +30,7 @@ import {
 import { TimelineSideSheet } from '../components/relacionamento/TimelineSideSheet'
 import { FeedbackSideSheet } from '../components/relacionamento/FeedbackSideSheet'
 import { TagsSideSheet } from '../components/relacionamento/TagsSideSheet'
+import { LinhaMotivo } from '../components/relacionamento/LinhaMotivo'
 import { useContatoTags } from '../hooks/useTags'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -95,10 +96,11 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
             <p className="truncate text-[13px] font-semibold leading-[1.35] text-foreground">
                 {card.nome ?? 'Sem nome'}
             </p>
-            <div className="mt-0.5 mb-2 flex items-center gap-1 text-[10.5px] text-muted-foreground">
+            <div className="mt-0.5 mb-1 flex items-center gap-1 text-[10.5px] text-muted-foreground">
                 <UserRound className="h-3 w-3 shrink-0 text-warning/70" />
                 <span>ID: {card.contato_id.slice(0, 8)}</span>
             </div>
+            <LinhaMotivo card={card} />
             <div className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-black/25 px-2 py-[5px]">
                 <div className="flex min-w-0 items-center gap-1.5">
                     <Phone className="h-3 w-3 shrink-0 text-primary/60" />
@@ -339,6 +341,7 @@ export function Relacionamento() {
         return 'reativacao'
     }, [location.state, searchParams])
 
+    const [legendaAberta, setLegendaAberta] = useState(false)
     const [activeCardId, setActiveCardId] = useState<string | null>(null)
     const [actionCardId, setActionCardId] = useState<string | null>(null)
     const [timelineTarget, setTimelineTarget] = useState<TimelineTarget | null>(null)
@@ -479,7 +482,22 @@ export function Relacionamento() {
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <>
-            <Header title="Relacionamento" showBack centerTitle transparent />
+            <Header
+                title="Relacionamento"
+                showBack
+                centerTitle
+                transparent
+                rightAction={
+                    <button
+                        type="button"
+                        aria-label="Legenda do kanban"
+                        onClick={() => setLegendaAberta(true)}
+                        className="flex size-9 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                    >
+                        <HelpCircle className="h-5 w-5" />
+                    </button>
+                }
+            />
 
             {/*
                 PageContainer: sem backdrop-filter, blur, nem gradiente neste nível
@@ -627,6 +645,64 @@ export function Relacionamento() {
                     nomeContato={tagsTarget.nomeContato}
                     statusAtual={tagsTarget.statusAtual}
                 />
+            )}
+
+            {legendaAberta && (
+                <div
+                    className="fixed inset-0 z-overlay flex items-end bg-black/60 backdrop-blur-sm"
+                    onClick={() => setLegendaAberta(false)}
+                >
+                    <div
+                        className="max-h-[82vh] w-full overflow-y-auto rounded-t-2xl border border-white/[0.09] border-b-0 bg-card p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="mb-5 flex items-center justify-between">
+                            <h2 className="text-[15px] font-bold text-foreground">Como funciona o Kanban</h2>
+                            <button
+                                type="button"
+                                aria-label="Fechar legenda"
+                                onClick={() => setLegendaAberta(false)}
+                                className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-5 text-[12.5px] leading-[1.6]">
+                            <section>
+                                <h3 className="mb-2 text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/70">Abas</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="font-semibold text-foreground">Recompra</p>
+                                        <p className="text-muted-foreground">Clientes que já compram com você. Cuide do ritmo — ofereça no momento certo, antes que eles busquem outra opção. Os mais atrasados ficam no topo.</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-foreground">Reativação</p>
+                                        <p className="text-muted-foreground">Compraram 1 vez e não voltaram. O balde esvaziou. O objetivo é a 2ª venda — chamar, perguntar se gostou, fazer a oferta certa.</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-foreground">Cobrança</p>
+                                        <p className="text-muted-foreground">Têm fiado em aberto. Resolva isso antes de qualquer ação comercial.</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div className="border-t border-white/[0.07]" />
+
+                            <section>
+                                <h3 className="mb-2 text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/70">Termos do card</h3>
+                                <div className="space-y-2">
+                                    <p><span className="font-semibold text-foreground">balde cheio</span><span className="text-muted-foreground"> — comprou há pouco, o produto provavelmente ainda está em casa. Sem pressa.</span></p>
+                                    <p><span className="font-semibold text-foreground">balde vazio</span><span className="text-muted-foreground"> — passou do prazo de consumo sem 2ª compra. Hora de chamar.</span></p>
+                                    <p><span className="font-semibold text-foreground">no ritmo</span><span className="text-muted-foreground"> — dentro do intervalo normal desse cliente. Sem urgência.</span></p>
+                                    <p><span className="font-semibold text-foreground">atrasou Xd</span><span className="text-muted-foreground"> — X dias além do esperado. Bom momento para oferecer.</span></p>
+                                    <p><span className="font-semibold text-foreground">sumiu</span><span className="text-muted-foreground"> — muito além do ciclo esperado. O cliente esfriou. Vale chamar hoje.</span></p>
+                                    <p><span className="font-semibold text-foreground">compra a cada ~Xd</span><span className="text-muted-foreground"> — intervalo médio entre as compras desse cliente (calculado pelo histórico dele, não um valor global).</span></p>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     )

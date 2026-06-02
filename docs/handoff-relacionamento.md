@@ -15,6 +15,7 @@ Documento vivo. Atualizar após cada fatia entregue.
 | 3b-1 | Tags de campanha — motor TagsSideSheet (criar, aplicar, remover) | ✅ FEITA |
 | 3b-2 | Tags de campanha — chips na face do card | ✅ FEITA |
 | 4 | Reescrita da view de recompra/reativação (ritmo derivado) + 2 consertos | ✅ FEITA |
+| Card | Card self-explicável — linha de motivo + tooltip + legenda "?" | ✅ FEITA |
 | 5 | Perfil do cliente (sheet read-only de contexto) | 🔜 planejada |
 | — | Migração da planilha de campanhas → tags | 🔜 pendente (destravada) |
 
@@ -22,21 +23,23 @@ Ordem real de entrega: timeline → feedback → tags.
 
 ---
 
-## Arquitetura atual (pós-Fatia 3)
+## Arquitetura atual (pós-Fatia Card)
 
 ```
 apps/interno/src/
-  pages/Relacionamento.tsx          — página kanban (board + sheets)
+  pages/Relacionamento.tsx          — página kanban (board + sheets + legenda "?")
   components/relacionamento/
     TimelineSideSheet.tsx           — histórico read-only
     FeedbackSideSheet.tsx           — form de registro de feedback
     TagsSideSheet.tsx               — gerenciar tags do contato
+    motivoCard.ts                   — helper puro: texto + tooltip + cor + glyph por aba/estado
+    LinhaMotivo.tsx                 — linha de motivo com tooltip hover/tap
   hooks/  useRelacionamento.ts, useInteracoes.ts, useTags.ts
   services/ interacaoService.ts, relacionamentoService.ts, tagService.ts
 ```
 
 Click no card → ActionBar com 3 botões empilhados (Linha do tempo / Feedback / Tags); um sheet por vez.
-Face do card: barras coloridas estilo Trello recolhido (nome no title hover).
+Face do card: [tags chips] → nome → ID → **linha de motivo** → telefone + badge.
 
 ---
 
@@ -113,6 +116,39 @@ atraso = hoje - proxima_esperada   ← positivo = atrasado; negativo = adiantado
 
 **Fiado no perfil: três estados (trava 31/05)**
 `nunca usou | quitou | em aberto`, derivado de `vendas.forma_pagamento + pago`. NÃO é booleano "já comprou fiado?". "Em aberto" deve bater com o cliente estar na aba Cobrança. Uso: objeção de preço de quem QUITOU → ofertar prazo com segurança; quem tem EM ABERTO → não oferecer mais fiado.
+
+---
+
+## Spec — Fatia Card (linha de motivo)
+
+### Régua card vs perfil (trava 02/06)
+
+O card mostra **somente o que explica a posição** (por que este cliente está aqui e qual é a urgência). Todo o resto — LTV, ticket médio, histórico completo, fiado 3 estados, último produto — vai para o **Perfil (Fatia 5)**.
+
+### Linha de motivo — rótulos por estado
+
+| Estado | Linha exibida | Cor |
+|--------|--------------|-----|
+| cobranca | `fiado em aberto` | `text-warning-strong` (laranja) |
+| reativacao | `1ª compra · sumiu há {dias_sem_compra}d` 🪣vazio | `text-primary/75` (verde neon) |
+| recompra · balde cheio | `1ª compra há {dias_sem_compra}d · balde cheio` 🪣cheio | `text-muted-foreground/40` (apagado) |
+| recompra ≥2 · sumido | `compra a cada ~{ciclo}d · sumiu ({atraso}d atrasado)` | `text-destructive` (vermelho) |
+| recompra ≥2 · atrasou | `compra a cada ~{ciclo}d · atrasou {atraso}d` | `text-warning` (âmbar) |
+| recompra ≥2 · no ritmo | `compra a cada ~{ciclo}d · no ritmo` | `text-muted-foreground/60` (calmo) |
+
+**Regra do número exibido = chave de ordenação da coluna:** recompra ≥2 mostra `atraso` (mesma chave que ordena a coluna por urgência); reativação mostra `dias_sem_compra` (idem). O operador entende por que o card está naquele nível de fila sem saber as regras.
+
+**Guard:** `ciclo = Math.max(1, Math.round(intervalo_medio))` — evita exibir "a cada ~0d" quando duas compras caem no mesmo dia.
+
+**Balde glyph:** silhueta SVG inline, 11×12px, apenas nos estados de 1 compra. ≥2 compras usa cor + texto (ritmo derivado calculável), sem glyph.
+
+### Gauge / radial — PARQUEADO (nota de design para Fatia 5 + Relatórios)
+
+Não entra no card. Ideia registrada para uso posterior:
+- **Balde no Perfil:** balde que esvazia progressivamente ao longo da janela do limiar (cheio = acabou de comprar; vazio = passou o prazo). Representa o grau de consumo.
+- **Anel de atraso (≥2):** anel de progresso no Perfil ou em Relatórios para visualizar o quanto o cliente passou do ritmo esperado.
+
+Esses elementos pertencem ao contexto de análise do Perfil (espaço para mais dados) e de Relatórios — não ao card que é contexto de varredura rápida.
 
 ---
 

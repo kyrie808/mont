@@ -152,7 +152,7 @@ describe('view_relacionamento_kanban — modelo de balde (Fatia 4)', () => {
 
     it('>= 2 compras frio: permanece em recompra (nao migra pra reativacao)', async () => {
         const id = await criarContato({ nome: 'Dois Frio' })
-        await criarVenda(id, { data: diasAtras(200) })
+        await criarVenda(id, { data: diasAtras(160) })  // intervalo=60d → proxima=diasAtras(40) → atraso=40
         await criarVenda(id, { data: diasAtras(100) })
 
         const { data, error } = await supabase
