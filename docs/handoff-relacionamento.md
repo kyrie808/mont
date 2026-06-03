@@ -18,8 +18,12 @@ Documento vivo. Atualizar após cada fatia entregue.
 | Card | Card self-explicável — linha de motivo + tooltip + legenda "?" | ✅ FEITA |
 | 5 | Perfil do cliente (sheet read-only de contexto) | 🔜 planejada |
 | — | Migração da planilha de campanhas → tags | 🔜 pendente (destravada) |
+| **F·diag** | **Diagnóstico Financeiro** (Dashboard Home + Relatórios) — achados A–E | ✅ FEITA |
+| **F·1** | Convergência ticket médio (A) + relabels B/C/D | 🔄 banco em prod · front em working tree (A ✅, B ✅, C ✅, D parcial) |
+| **F·op** | Cadastro de despesas operacionais (Luccas + mãe) | 🔜 pendente (operacional) |
 
 Ordem real de entrega: timeline → feedback → tags.
+Track Financeiro (F·*) é a ativação da decisão #4 — "eleger a regra da LTV como canônica e convergir o front". Independente das fatias do CRM, mesmo app/método.
 
 ---
 
@@ -117,6 +121,17 @@ atraso = hoje - proxima_esperada   ← positivo = atrasado; negativo = adiantado
 **Fiado no perfil: três estados (trava 31/05)**
 `nunca usou | quitou | em aberto`, derivado de `vendas.forma_pagamento + pago`. NÃO é booleano "já comprou fiado?". "Em aberto" deve bater com o cliente estar na aba Cobrança. Uso: objeção de preço de quem QUITOU → ofertar prazo com segurança; quem tem EM ABERTO → não oferecer mais fiado.
 
+**Lucro líquido — `custo_fabrica` FORA por design; `liquido == bruto` é falta de opex, NÃO bug (trava 02/06)**
+
+NÃO existe subtração de `custo_fabrica` no `lucro_liquido` hoje — e está correto assim. NÃO mandar o Claude Code "remover" nada daqui (engano comum: o valor aparece como *coluna* na view, mas não entra na *conta*). Fórmula viva confirmada: `lucro_liquido = lucro_bruto − despesas_operacionais`.
+
+- `custo_fabrica` (de `purchase_order_payments`) = CMV pago em PRESTAÇÃO ao Mont Massas (via Izualino). O custo do produto vendido JÁ está embutido no `lucro_bruto` (competência — mai/26: faturamento R$12.146 − ~R$7.114 de custo = bruto R$5.032). `custo_fabrica` (R$2.545 em mai) é o lado CAIXA do mesmo estoque. Somar no líquido contaria o custo duas vezes. Fica fora; é indicador de contas-a-pagar à fábrica, não dedução de lucro.
+- `lucro_liquido == lucro_bruto` HOJE porque `despesas_operacionais = 0`: nada em `lancamentos` passa no filtro da CTE `desp_op` (`tipo='saida' AND origem NOT IN ('migracao_historica','compra_fabrica')`). Não é cálculo errado, é dado incompleto. Efeito: o líquido SUPERESTIMA o lucro real (ignora opex). Conserto = cadastrar opex (track operacional F·op), não mexer em fórmula.
+
+**Ticket médio canônico = por evento `(contato_id, data)` (trava 02/06) — CONVERGIDO ✅**
+
+Mesma régua da `rpt_ltv` (decisão #4). `view_home_financeiro.ticket_medio` usava `AVG(linhas)` → subestimava (mai/26: R$59,54 / 204 linhas vs. canônico R$62,93 / 193 eventos — 11 linhas = múltiplos itens entregues ao mesmo cliente no mesmo dia). **Convergido em prod via migration `20260602200000_fix_ticket_medio_por_evento_home.sql`** (aplicada 02/06, não commitada). Fórmula: `SUM(total filtrado) / NULLIF(COUNT(DISTINCT (contato_id, data)) filtrado, 0)`, `WITH (security_invoker = true)` preservado, sem ROUND (front formata). `vendas.data` é `date` — sem cast necessário. Se um `pedido_id` real surgir no schema, revisitar `rpt_ltv` + esta JUNTAS — não divergir.
+
 ---
 
 ## Spec — Fatia Card (linha de motivo)
@@ -188,6 +203,7 @@ Meta: views limpas, zero frankenstein. Por isso este track fica isolado.
 2. ~~Confirmar: cliente ≥2 que esfria fundo fica em recompra-com-atraso~~ ✅ **Confirmado**
 3. Campos núcleo do Perfil (Fatia 5): dias sem compra, última compra (produto+data), LTV/total, nº de compras, atraso na recompra, fiado (3 estados), telefone clicável — confirmar lista.
 4. Migração da planilha: granularidade (cada campanha = 1 tag?) + diagnóstico de match por nome antes de qualquer escrita.
+5. **Despesas operacionais — cadastro (track F·op, com a mãe).** Luccas + mãe vão cadastrar opex básica pra alimentar `lancamentos` e fazer o líquido divergir do bruto (e, de quebra, incentivar o pai a separar conta PF × Mont). PRÉ-REQUISITO TÉCNICO (a diagnosticar antes): confirmar que o caminho de cadastro grava `lancamentos(tipo='saida', origem ∉ {migracao_historica, compra_fabrica})` — senão o cadastro não reflete no líquido e o incentivo morre na origem. Módulo fiscal já existe mas o pai não usou; separação de conta física já foi tentada e parkeada.
 
 **Track futuro (NÃO desta fatia):** "nutrição de 1ª recompra" — acompanhar clientes de 1 compra warm rumo à 2ª compra dentro do grace period. Candidato a trigger no WhatsApp-K.
 
@@ -214,6 +230,53 @@ Mexe SÓ na lógica de classificação + os 2 consertos. NÃO toca estoque/produ
 
 ---
 
+## Fatia F — Convergência Financeira (Dashboard Home + Relatórios). Escopo BOUNDED.
+
+Origem: decisão #4 (eleger a regra da LTV como canônica e convergir o front) + diagnóstico financeiro 02/06 (achados A–E). Mexe SÓ no ticket médio (view) e em labels/guard de front. NÃO toca `lucro_liquido`/`custo_fabrica` (decisão travada acima — está correto).
+
+### Estado verificado (03/06 — contra código + git)
+
+> `git status`: `M` = working tree (não commitado). `??` = untracked.
+
+- **A — ticket médio (BANCO):** ✅ **APLICADO EM PROD** (MCP 02/06).
+  - Migration `supabase/migrations/20260602200000_fix_ticket_medio_por_evento_home.sql` existe como `??` (untracked, não commitada).
+  - Fórmula: `SUM(filtrado) / NULLIF(COUNT(DISTINCT (contato_id, data)) filtrado, 0)`. `security_invoker=true`. Sem ROUND.
+  - **Pendente:** commitar (junto com B/C/D).
+
+- **B — label "A Receber" (FRONT):** ✅ **IMPLEMENTADO** em working tree.
+  - `Dashboard.tsx:210` — `trend={`— ${aReceberGlobal.total_vendas_abertas} itens a receber`}`
+  - **Pendente:** commitar.
+  - **Decisão em aberto (diretor):** diagnóstico 03/06 revelou 8 contatos (não 9) com vendas entregues pago=false sem fiado — todos PIX mal-marcado (R$545 total, datas abr–mai/26). Dois caminhos: (1) manter COUNT(linhas) no RPC e só ajustar o label, ou (2) mudar o RPC para COUNT(DISTINCT contato_id) com guard `is_admin` preservado. Decisão afeta o `trend` numérico: hoje mostra 148 itens, mostraria ~130 clientes.
+
+- **C — label "30d" e botões (FRONT):** ✅ **IMPLEMENTADO** em working tree.
+  - `TabFinanceiro.tsx:144` — `{`Faturamento · ${currMesAbrev}/${fat.ano}`}`. `currMesAbrev = MES_ABBREV[(fat.mes ?? 1) - 1]` (line 118) — vem de `fat.mes`, confirmado.
+  - `Relatorios.tsx` — `handlePeriod` sem toast; botões 90d/6m/1a: `disabled`, `cursor:'not-allowed'`, `opacity:0.4`.
+  - **Pendente:** commitar.
+
+- **D — guard mês em curso (FRONT):** 🔄 **PARCIALMENTE IMPLEMENTADO** em working tree.
+  - `calculations.ts:101` — helper `isMesEmCurso(ano, mes)` adicionado.
+  - `Dashboard.tsx:155-156` — Faturamento KpiCard: `trend` e `trendDirection` guarded com `isMesEmCurso`.
+  - `TabFinanceiro.tsx:120-123` — `emCurso`, `evolHeadline`, DeltaPill condicional: guarded.
+  - **Pendente (código):** `Dashboard.tsx:197` — Ticket Médio KpiCard ainda tem `trend="Estável"` hardcoded e `trendDirection="neutral"` sem guard. Pendência: definir comportamento para mês em curso (ex: `"mês em curso"` no trend, ou manter `"Estável"` — é texto fixo, não comparação, então pode ser aceitável; depende de decisão do diretor).
+  - **Pendente:** commitar após resolver trend do Ticket Médio.
+
+- **E — lucro líquido:** ✅ **ENCERRADO** (decisão travada). Zero código alterado. Track operacional F·op.
+
+- **F·op — cadastro de despesa:** ❌ **NÃO INICIADO**. Investigação read-only pendente: confirmar que o caminho de cadastro grava `lancamentos(tipo='saida', origem NOT IN ('migracao_historica','compra_fabrica'))`, e mapear a fonte do "R$3.498 para sair" exibido na projeção 30d do TabFinanceiro (saldo previsto `totalPagar`).
+
+### O que falta pra concluir a Fatia F (ordem)
+
+| # | Item | Natureza | Depende de |
+|---|------|----------|-----------|
+| 1 | Definir comportamento do trend "Estável" no Ticket Médio (mês em curso vs sempre) | **decisão do diretor** | — |
+| 2 | Aplicar guard D no Ticket Médio (ou documentar que "Estável" é intencional) | front (sem checkpoint) | #1 |
+| 3 | Commitar A + B + C + D juntos (`supabase/migrations/…`, `calculations.ts`, `Dashboard.tsx`, `TabFinanceiro.tsx`, `Relatorios.tsx`) | commit | #2 |
+| 4 | Validação visual no browser pelo diretor (B/C/D) | validação humana | #3 |
+| 5 | Decidir label "A Receber": COUNT(linhas) vs COUNT(DISTINCT contato_id) no RPC | **decisão do diretor** | diagnóstico 03/06 |
+| 6 | Se decisão #5 = DISTINCT: migration nova no RPC `rpc_total_a_receber_dashboard`, preservar `is_admin` | banco (com checkpoint) | #5 |
+| 7 | F·op: diagnóstico read-only do caminho de cadastro de despesa operacional | read-only | — |
+| 8 | F·op: Luccas + mãe cadastram opex básica; confirmar que liquido diverge do bruto | operacional (humano) | #7 |
+
 ## Depois — Fatia 5 (Perfil) e Migração da planilha
 
 - **Perfil:** sheet read-only com os campos núcleo + fiado 3 estados + atraso derivado.
@@ -230,3 +293,12 @@ Mexe SÓ na lógica de classificação + os 2 consertos. NÃO toca estoque/produ
 - [ ] Fatia 5: Perfil
 - [ ] Migração planilha
 - [ ] (Track separado, sem pressa) estoque/categorias/lotes → validade no produto → teto de validade
+- [x] Diagnóstico Financeiro (achados A–E) ← FEITO
+- [x] Diagnóstico read-only de schema/front ← FEITO (02/06)
+- [x] F·1 A — ticket por evento (banco): migration aplicada em prod 02/06
+- [x] F·1 B — label "itens a receber" (front): Dashboard.tsx working tree
+- [x] F·1 C — label dinâmico + botões disabled (front): TabFinanceiro + Relatorios working tree
+- [ ] F·1 D — guard mês em curso: parcial (Faturamento ✅ + TabFinanceiro ✅ · Ticket Médio trend pendente de decisão)
+- [ ] F·1: commitar A+B+C+D (após resolver trend Ticket Médio + aprovação do diretor)
+- [ ] F·1: decisão label A Receber — COUNT(linhas) vs COUNT(DISTINCT contato_id) (diagnóstico 03/06 entregue)
+- [ ] F·op: confirmar caminho de cadastro de despesa → Luccas + mãe cadastram opex básica
