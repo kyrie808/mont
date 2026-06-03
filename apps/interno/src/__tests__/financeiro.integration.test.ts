@@ -81,7 +81,7 @@ describe('Faturamento exclui brindes', () => {
         const { data } = await supabase.rpc('rpc_total_a_receber_dashboard')
         const result = data as any
         expect(result.total_a_receber).toBe(150)
-        expect(result.total_vendas_abertas).toBe(1)
+        expect(result.total_contatos_abertos).toBe(1)
     })
 })
 

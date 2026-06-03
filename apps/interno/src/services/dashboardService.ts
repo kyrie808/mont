@@ -245,14 +245,14 @@ export const dashboardService = {
 
     async getTotalAReceber(): Promise<{
         total_a_receber: number
-        total_vendas_abertas: number
+        total_contatos_abertos: number
     }> {
         const { data, error } = await supabase.rpc('rpc_total_a_receber_dashboard')
-        if (error || !data) return { total_a_receber: 0, total_vendas_abertas: 0 }
-        const result = data as { total_a_receber: number; total_vendas_abertas: number }
+        if (error || !data) return { total_a_receber: 0, total_contatos_abertos: 0 }
+        const result = data as { total_a_receber: number; total_contatos_abertos: number }
         return {
             total_a_receber: Number(result.total_a_receber) || 0,
-            total_vendas_abertas: Number(result.total_vendas_abertas) || 0
+            total_contatos_abertos: Number(result.total_contatos_abertos) || 0
         }
     }
 }

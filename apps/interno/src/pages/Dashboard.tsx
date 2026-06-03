@@ -22,6 +22,7 @@ import { cn } from '@mont/shared'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { KpiCard } from '@/components/dashboard/KpiCard'
+import { isMesEmCurso } from '../utils/calculations'
 import { AlertasFinanceiroWidget } from '@/components/dashboard/AlertasFinanceiroWidget'
 
 import { TopIndicadoresWidget } from '@/components/dashboard/TopIndicadoresWidget'
@@ -39,7 +40,7 @@ export function Dashboard() {
     const { data: metrics, isLoading: isLoadingMetrics, refetch } = useDashboardMetrics(month, year)
     const [lucroData, setLucroData] = useState({ lucro_bruto: 0, receita_bruta: 0, lucro_liquido: 0, margem_liquida_pct: 0 })
     const [liquidadoData, setLiquidadoData] = useState({ vendas_liquidadas: 0, total_liquidado: 0 })
-    const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_vendas_abertas: 0 })
+    const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_contatos_abertos: 0 })
     const [isLoadingLucro, setIsLoadingLucro] = useState(true)
 
     const isLoading = isLoadingMetrics || isLoadingLucro
@@ -151,8 +152,8 @@ export function Dashboard() {
                             title="Faturamento"
                             value={formatCurrency(metrics?.financial?.faturamento_mes_atual || 0)}
                             progress={100}
-                            trend={`${metrics?.financial?.variacao_percentual?.toFixed(1) || 0}%`}
-                            trendDirection={(metrics?.financial?.variacao_percentual || 0) >= 0 ? 'up' : 'down'}
+                            trend={isMesEmCurso(year, month) ? 'mês em curso' : `${metrics?.financial?.variacao_percentual?.toFixed(1) || 0}%`}
+                            trendDirection={isMesEmCurso(year, month) ? 'neutral' : (metrics?.financial?.variacao_percentual || 0) >= 0 ? 'up' : 'down'}
                             icon={TrendingUp}
                             className="col-span-2 md:col-span-1"
                             variant="default"
@@ -193,7 +194,7 @@ export function Dashboard() {
                             title="Ticket Médio"
                             value={formatCurrency(metrics?.financial?.ticket_medio_mes_atual || 0)}
                             progress={75}
-                            trend="Estável"
+                            trend={isMesEmCurso(year, month) ? 'mês em curso' : 'Estável'}
                             trendDirection="neutral"
                             icon={ArrowUp}
                             className="col-span-1"
@@ -206,9 +207,9 @@ export function Dashboard() {
                             title="A Receber"
                             value={formatCurrency(aReceberGlobal.total_a_receber)}
                             progress={50}
-                            trend={`— ${aReceberGlobal.total_vendas_abertas} pendências`}
+                            trend={`— ${aReceberGlobal.total_contatos_abertos} clientes a receber`}
                             trendDirection="neutral"
-                            trendColor={aReceberGlobal.total_vendas_abertas > 0 ? "yellow" : "green"}
+                            trendColor={aReceberGlobal.total_contatos_abertos > 0 ? "yellow" : "green"}
                             icon={TrendingDown}
                             className="col-span-1"
                             variant="compact"
