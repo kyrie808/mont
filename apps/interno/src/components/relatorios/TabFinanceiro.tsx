@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { isMesEmCurso } from '../../utils/calculations'
 import { AlertTriangle, DollarSign, PiggyBank, CreditCard } from 'lucide-react'
 import {
     useRptFaturamentoComparativo,
@@ -116,7 +117,10 @@ export function TabFinanceiro({ animKey }: Props) {
     const maxFat = fat8m.reduce((a, b) => a.valor > b.valor ? a : b, { label: '?', valor: 0 })
     const currMesAbrev = MES_ABBREV[(fat.mes ?? 1) - 1]
     const prevMesAbrev = (fat.mes ?? 1) > 1 ? MES_ABBREV[(fat.mes! - 2)] : MES_ABBREV[11]
-    const evolHeadline = `${currMesAbrev} está ${Math.abs(delta).toFixed(1)}% ${delta >= 0 ? 'acima' : 'abaixo'} de ${prevMesAbrev}.`
+    const emCurso = isMesEmCurso(fat.ano ?? 0, fat.mes ?? 0)
+    const evolHeadline = emCurso
+        ? `${currMesAbrev}/${fat.ano} · mês em curso.`
+        : `${currMesAbrev} está ${Math.abs(delta).toFixed(1)}% ${delta >= 0 ? 'acima' : 'abaixo'} de ${prevMesAbrev}.`
 
     const topPg   = pagamentos[0]
     const fiadoPg = pagamentos.find(p => p.forma?.toLowerCase().includes('fiado'))
@@ -137,7 +141,7 @@ export function TabFinanceiro({ animKey }: Props) {
                             letterSpacing: '0.18em', color: C_MUTED_FG,
                         }}>
                             <DollarSign size={11} strokeWidth={2.4} />
-                            Faturamento · 30d
+                            {`Faturamento · ${currMesAbrev}/${fat.ano}`}
                         </div>
                         <div style={{
                             fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
@@ -145,13 +149,19 @@ export function TabFinanceiro({ animKey }: Props) {
                             letterSpacing: '-0.04em', lineHeight: 1, marginTop: 6,
                         }}>{fmtBRL(faturamento)}</div>
                         <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <DeltaPill delta={delta} size="md" />
-                            <span style={{ fontSize: 11, color: C_MUTED_FG, fontWeight: 500 }}>
-                                vs. mês ant. ·{' '}
-                                <span style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums' }}>
-                                    {fmtBRL(fatAnterior)}
-                                </span>
-                            </span>
+                            {emCurso ? (
+                                <span style={{ fontSize: 11, color: C_MUTED_FG, fontWeight: 600 }}>mês em curso</span>
+                            ) : (
+                                <>
+                                    <DeltaPill delta={delta} size="md" />
+                                    <span style={{ fontSize: 11, color: C_MUTED_FG, fontWeight: 500 }}>
+                                        vs. mês ant. ·{' '}
+                                        <span style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums' }}>
+                                            {fmtBRL(fatAnterior)}
+                                        </span>
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div style={{ flexShrink: 0, paddingTop: 4 }}>

@@ -98,6 +98,11 @@ export function filtrarVendasPorPeriodo(
     })
 }
 
+export function isMesEmCurso(ano: number, mes: number): boolean {
+    const hoje = new Date()
+    return ano === hoje.getFullYear() && mes === hoje.getMonth() + 1
+}
+
 /**
  * Agrupa vendas por mês
  */

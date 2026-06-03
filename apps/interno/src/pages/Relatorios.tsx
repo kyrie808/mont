@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useToast } from '../components/ui/Toast'
 import { TabFinanceiro } from '../components/relatorios/TabFinanceiro'
 import { TabClientes } from '../components/relatorios/TabClientes'
 import { TabProdutos } from '../components/relatorios/TabProdutos'
@@ -27,7 +26,6 @@ const PERIODS: { id: PeriodId; label: string }[] = [
 
 export function Relatorios() {
     const navigate   = useNavigate()
-    const toast      = useToast()
     const [tab,     setTab]     = useState<TabId>('financeiro')
     const [period,  setPeriod]  = useState<PeriodId>('30d')
     const [animKey, setAnimKey] = useState(0)
@@ -39,11 +37,7 @@ export function Relatorios() {
     }
 
     function handlePeriod(p: PeriodId) {
-        if (p === period) return
-        if (p !== '30d') {
-            toast.info('Disponível em breve')
-            return
-        }
+        if (p === period || p !== '30d') return
         setPeriod(p)
         setAnimKey(k => k + 1)
     }
@@ -90,14 +84,16 @@ export function Relatorios() {
                             return (
                                 <button
                                     key={p.id}
+                                    disabled={p.id !== '30d'}
                                     onClick={() => handlePeriod(p.id)}
                                     style={{
                                         padding: '5px 12px', borderRadius: 999, border: 'none',
                                         fontFamily: 'Lexend', fontSize: 11, fontWeight: 700,
-                                        letterSpacing: '0.04em', cursor: 'pointer',
+                                        letterSpacing: '0.04em',
+                                        cursor: p.id !== '30d' ? 'not-allowed' : 'pointer',
                                         background: active ? C_FG : C_MUTED,
                                         color:      active ? 'hsl(var(--background))' : C_MUTED_FG,
-                                        opacity:    p.id !== '30d' ? 0.5 : 1,
+                                        opacity:    p.id !== '30d' ? 0.4 : 1,
                                         transition: 'background 0.15s, color 0.15s',
                                     }}
                                 >

@@ -64,7 +64,7 @@ export function KpiCard({
             default: return 'bg-gray-100 dark:bg-gray-800 text-gray-500'
         }
     }
-    const TrendIcon = Icon || (trendDirection === 'up' ? TrendingUp : trendDirection === 'down' ? TrendingDown : Minus)
+    const TrendIcon = trendDirection === 'neutral' ? Minus : (Icon || (trendDirection === 'up' ? TrendingUp : TrendingDown))
 
     const isCompact = variant === 'compact'
 
