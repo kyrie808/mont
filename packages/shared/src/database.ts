@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -2025,6 +2025,7 @@ export type Database = {
         }
         Returns: string
       }
+      rpc_perfil_extras: { Args: { p_contato_id: string }; Returns: Json }
       rpc_total_a_receber_dashboard: { Args: never; Returns: Json }
       update_purchase_order_with_items: {
         Args: {

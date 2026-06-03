@@ -1,4 +1,4 @@
-import type { Database } from '@mont/shared'
+import type { Database, Tables } from '@mont/shared'
 import { supabase } from '../lib/supabase'
 
 export type RelacionamentoAba = Database['public']['Enums']['enum_relacionamento_aba']
@@ -9,6 +9,11 @@ interface MoverCardInput {
     contatoId: string
     novoStatus: RelacionamentoStatus
     observacao?: string
+}
+
+export interface PerfilExtras {
+    ultimo_produto: string | null
+    fiado_estado: 'em_aberto' | 'quitou' | 'nunca_usou'
 }
 
 export class RelacionamentoService {
@@ -33,6 +38,24 @@ export class RelacionamentoService {
         }
 
         return data ?? []
+    }
+
+    async getPerfilExtras(contatoId: string): Promise<PerfilExtras | null> {
+        const { data, error } = await supabase.rpc('rpc_perfil_extras', {
+            p_contato_id: contatoId,
+        })
+        if (error) throw new Error(`Erro ao carregar perfil extras: ${error.message}`)
+        return data as PerfilExtras | null
+    }
+
+    async getLtvContato(contatoId: string): Promise<Tables<'rpt_ltv_por_cliente'> | null> {
+        const { data, error } = await supabase
+            .from('rpt_ltv_por_cliente')
+            .select('*')
+            .eq('contato_id', contatoId)
+            .maybeSingle()
+        if (error) throw new Error(`Erro ao carregar LTV do contato: ${error.message}`)
+        return data
     }
 
     async moverCard(input: MoverCardInput): Promise<void> {

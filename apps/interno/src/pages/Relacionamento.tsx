@@ -30,6 +30,7 @@ import {
 import { TimelineSideSheet } from '../components/relacionamento/TimelineSideSheet'
 import { FeedbackSideSheet } from '../components/relacionamento/FeedbackSideSheet'
 import { TagsSideSheet } from '../components/relacionamento/TagsSideSheet'
+import { PerfilSideSheet } from '../components/relacionamento/PerfilSideSheet'
 import { LinhaMotivo } from '../components/relacionamento/LinhaMotivo'
 import { useContatoTags } from '../hooks/useTags'
 
@@ -68,6 +69,10 @@ interface TimelineTarget {
     contatoId: string
     nomeContato: string
     statusAtual: RelacionamentoStatus
+}
+
+interface PerfilTarget extends TimelineTarget {
+    kanbanRow: KanbanRow
 }
 
 // ─── Card content (shared between SortableCard and OverlayCard) ───────────────
@@ -122,10 +127,12 @@ function ActionBar({
     onTimelineClick,
     onFeedbackClick,
     onTagsClick,
+    onPerfilClick,
 }: {
     onTimelineClick: () => void
     onFeedbackClick: () => void
     onTagsClick: () => void
+    onPerfilClick: () => void
 }) {
     return (
         <div
@@ -159,6 +166,14 @@ function ActionBar({
                 <Tag className="h-3.5 w-3.5 shrink-0" />
                 Tags
             </button>
+            <button
+                type="button"
+                onClick={onPerfilClick}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+                <UserRound className="h-3.5 w-3.5 shrink-0" />
+                Perfil
+            </button>
         </div>
     )
 }
@@ -174,6 +189,7 @@ function SortableCard({
     onTimelineClick,
     onFeedbackClick,
     onTagsClick,
+    onPerfilClick,
 }: {
     card: KanbanRow & { contato_id: string }
     showActions: boolean
@@ -181,6 +197,7 @@ function SortableCard({
     onTimelineClick: () => void
     onFeedbackClick: () => void
     onTagsClick: () => void
+    onPerfilClick: () => void
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: card.contato_id,
@@ -210,6 +227,7 @@ function SortableCard({
                         onTimelineClick={onTimelineClick}
                         onFeedbackClick={onFeedbackClick}
                         onTagsClick={onTagsClick}
+                        onPerfilClick={onPerfilClick}
                     />
                 )}
             </div>
@@ -347,6 +365,7 @@ export function Relacionamento() {
     const [timelineTarget, setTimelineTarget] = useState<TimelineTarget | null>(null)
     const [feedbackTarget, setFeedbackTarget] = useState<TimelineTarget | null>(null)
     const [tagsTarget, setTagsTarget] = useState<TimelineTarget | null>(null)
+    const [perfilTarget, setPerfilTarget] = useState<PerfilTarget | null>(null)
     const dragHappenedRef = useRef(false)
 
     // Per-column visible card limit — resets on tab change.
@@ -391,6 +410,7 @@ export function Relacionamento() {
         setTimelineTarget(null)
         setFeedbackTarget(null)
         setTagsTarget(null)
+        setPerfilTarget(null)
     }
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -442,6 +462,7 @@ export function Relacionamento() {
         setActionCardId(null)
         setFeedbackTarget(null)
         setTagsTarget(null)
+        setPerfilTarget(null)
         setTimelineTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
@@ -453,6 +474,7 @@ export function Relacionamento() {
         setActionCardId(null)
         setTimelineTarget(null)
         setTagsTarget(null)
+        setPerfilTarget(null)
         setFeedbackTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
@@ -464,10 +486,24 @@ export function Relacionamento() {
         setActionCardId(null)
         setTimelineTarget(null)
         setFeedbackTarget(null)
+        setPerfilTarget(null)
         setTagsTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
             statusAtual: card.status_relacionamento ?? 'a_contatar',
+        })
+    }
+
+    const handleOpenPerfil = (card: KanbanRow & { contato_id: string }) => {
+        setActionCardId(null)
+        setTimelineTarget(null)
+        setFeedbackTarget(null)
+        setTagsTarget(null)
+        setPerfilTarget({
+            contatoId: card.contato_id,
+            nomeContato: card.nome ?? 'Sem nome',
+            statusAtual: card.status_relacionamento ?? 'a_contatar',
+            kanbanRow: card,
         })
     }
 
@@ -577,6 +613,7 @@ export function Relacionamento() {
                                                             onTimelineClick={() => handleOpenTimeline(card)}
                                                             onFeedbackClick={() => handleOpenFeedback(card)}
                                                             onTagsClick={() => handleOpenTags(card)}
+                                                            onPerfilClick={() => handleOpenPerfil(card)}
                                                         />
                                                     ))}
 
@@ -644,6 +681,17 @@ export function Relacionamento() {
                     contatoId={tagsTarget.contatoId}
                     nomeContato={tagsTarget.nomeContato}
                     statusAtual={tagsTarget.statusAtual}
+                />
+            )}
+
+            {perfilTarget && (
+                <PerfilSideSheet
+                    isOpen
+                    onClose={() => setPerfilTarget(null)}
+                    contatoId={perfilTarget.contatoId}
+                    nomeContato={perfilTarget.nomeContato}
+                    statusAtual={perfilTarget.statusAtual}
+                    kanbanRow={perfilTarget.kanbanRow}
                 />
             )}
 
