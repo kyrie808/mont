@@ -16,7 +16,7 @@ Documento vivo. Atualizar após cada fatia entregue.
 | 3b-2 | Tags de campanha — chips na face do card | ✅ FEITA |
 | 4 | Reescrita da view de recompra/reativação (ritmo derivado) + 2 consertos | ✅ FEITA |
 | Card | Card self-explicável — linha de motivo + tooltip + legenda "?" | ✅ FEITA |
-| 5 | Perfil do cliente (sheet read-only de contexto) | 🔜 planejada |
+| 5 | Perfil do cliente (sheet read-only de contexto) — 6 seções + ranking de produtos | ✅ FEITA — `c767f9a` + `e1add29` + `fffa500` (03/06) |
 | — | Migração da planilha de campanhas → tags | 🔜 pendente (destravada) |
 | **F·diag** | **Diagnóstico Financeiro** (Dashboard Home + Relatórios) — achados A–E | ✅ FEITA |
 | **F·1** | Convergência ticket médio (A) + relabels B/C/D + RPC a-receber COUNT(DISTINCT) | ✅ FEITA — A/B/C/D commitados + RPC em prod (03/06) |
@@ -36,13 +36,15 @@ apps/interno/src/
     TimelineSideSheet.tsx           — histórico read-only
     FeedbackSideSheet.tsx           — form de registro de feedback
     TagsSideSheet.tsx               — gerenciar tags do contato
+    PerfilSideSheet.tsx             — perfil read-only (6 seções: Identificação / Ritmo / Financeiro / Fiado / Última compra / Produtos comprados)
     motivoCard.ts                   — helper puro: texto + tooltip + cor + glyph por aba/estado
     LinhaMotivo.tsx                 — linha de motivo com tooltip hover/tap
-  hooks/  useRelacionamento.ts, useInteracoes.ts, useTags.ts
+  hooks/  useRelacionamento.ts, useInteracoes.ts, useTags.ts, usePerfilExtras.ts, useLtvContato.ts
   services/ interacaoService.ts, relacionamentoService.ts, tagService.ts
+    (+ getPerfilExtras, getLtvContato via contatoService ou próprio)
 ```
 
-Click no card → ActionBar com 3 botões empilhados (Linha do tempo / Feedback / Tags); um sheet por vez.
+Click no card → ActionBar com **4 botões** empilhados (Perfil / Linha do tempo / Feedback / Tags); um sheet por vez.
 Face do card: [tags chips] → nome → ID → **linha de motivo** → telefone + badge.
 
 ---
@@ -120,6 +122,12 @@ atraso = hoje - proxima_esperada   ← positivo = atrasado; negativo = adiantado
 
 **Fiado no perfil: três estados (trava 31/05)**
 `nunca usou | quitou | em aberto`, derivado de `vendas.forma_pagamento + pago`. NÃO é booleano "já comprou fiado?". "Em aberto" deve bater com o cliente estar na aba Cobrança. Uso: objeção de preço de quem QUITOU → ofertar prazo com segurança; quem tem EM ABERTO → não oferecer mais fiado.
+
+**`fiado_estado` no perfil vem da view, NÃO re-derivado de vendas (trava 03/06)**
+`fiado_estado='em_aberto'` é lido diretamente de `aba_atual='cobranca'` em `view_relacionamento_kanban` — fonte única de verdade. Proibido criar lógica paralela que recalcule o estado de fiado a partir de `vendas`. A view já faz esse trabalho; re-derivar quebraria a consistência entre o card e o perfil.
+
+**Todo RPC novo nasce com guard `is_admin` no topo (trava 03/06)**
+`rpc_perfil_extras(contato_id)` e todos os RPCs futuros devem começar com `IF NOT is_admin() THEN RAISE EXCEPTION 'Acesso negado'; END IF;` como primeira instrução. Sem exceção.
 
 **Lucro líquido — `custo_fabrica` FORA por design; `liquido == bruto` é falta de opex, NÃO bug (trava 02/06)**
 
@@ -201,7 +209,7 @@ Meta: views limpas, zero frankenstein. Por isso este track fica isolado.
 
 1. ~~Valor do limiar de reativação~~ ✅ **30 dias** (configurável em `configuracoes.relacionamento`)
 2. ~~Confirmar: cliente ≥2 que esfria fundo fica em recompra-com-atraso~~ ✅ **Confirmado**
-3. Campos núcleo do Perfil (Fatia 5): dias sem compra, última compra (produto+data), LTV/total, nº de compras, atraso na recompra, fiado (3 estados), telefone clicável — confirmar lista.
+3. ~~Campos núcleo do Perfil (Fatia 5)~~ ✅ **Entregue** — 6 seções: Identificação / Ritmo (atraso, ciclo, dias sem compra) / Financeiro (LTV, ticket, nº compras) / Fiado (3 estados) / Última compra (produto+data) / Produtos comprados (ranking por qtd). `c767f9a` + `e1add29` + `fffa500`.
 4. Migração da planilha: granularidade (cada campanha = 1 tag?) + diagnóstico de match por nome antes de qualquer escrita.
 5. ~~**Despesas operacionais — cadastro (track F·op).** PRÉ-REQUISITO TÉCNICO verificado 03/06: caminho grava `lancamentos(tipo='saida', origem='manual')`, passa no filtro desp_op, cai no lucro_liquido. UI parqueada. **ADIADO** por decisão do diretor — última prioridade do roadmap.~~ ✅ Encerrado como questão aberta.
 
@@ -268,22 +276,56 @@ Origem: decisão #4 (eleger a regra da LTV como canônica e convergir o front) +
 
 Todos os itens A–D commitados e aplicados em prod. RPC a-receber COUNT(DISTINCT) implementado. F·op encanamento verificado e adiado por decisão do diretor. Nota aberta: brinde/desp_op (acima).
 
-## Depois — Fatia 5 (Perfil) e Migração da planilha
+## Track Futuro — IA de Sugestão de Mensagem (planejado / não-iniciado)
 
-- **Perfil:** sheet read-only com os campos núcleo + fiado 3 estados + atraso derivado.
-- **Planilha:** diagnóstico de match → granularidade → import com OK explícito. (Coluna A mistura DDM=tag, 1ºContato/CTA=funil, Feedback=interação, Whats Incorreto=qualidade; Onda fora.)
+**Objetivo:** no Perfil do cliente, a IA analisa o contexto e rascunha uma mensagem de WhatsApp personalizada. O operador lê, edita se quiser, e copia/cola manualmente. A IA nunca contacta — humano no meio, sempre.
+
+**Arquitetura planejada:**
+
+1. **Edge Function Supabase** recebe `contato_id`.
+2. Agrega variáveis server-side: estágio/aba (`cobranca|reativacao|recompra`), `dias_sem_compra`, `atraso`, produtos + qtd (ranking já entregue), `fiado_estado`, ticket médio.
+3. Chama LLM (Groq/Llama ou Claude API) com prompt estruturado. Chave da API fica no servidor — nunca exposta ao front.
+4. Retorna mensagem rascunho + botão "Copiar" no `PerfilSideSheet`.
+
+**Requisitos do prompt (antes de implementar, criar skill `mont-brand-voice`):**
+
+| Requisito | Detalhe |
+|-----------|---------|
+| Brand voice | Tom Mont (skill `mont-brand-voice` — ainda não existe) |
+| Ramificação por estágio | cobrança → gentil; reativação → win-back; recompra → nudge de recompra |
+| Respeitar fiado | `em_aberto` → não oferecer mais fiado na mensagem |
+| CRÍTICO | Só dados reais; proibido inventar promoção, preço ou data que não esteja no banco |
+| Rascunho editável | Campo textarea editável antes de copiar |
+
+**Dependência já entregue:** ranking de produtos por cliente (`rpc_perfil_extras` — Fatia 5.1 `e1add29`).
+
+**Estado:** planejado pelo diretor — não iniciado. Não há branch, não há código.
+
+---
+
+## Próximo — Migração da Planilha → Tags
+
+**Diagnóstico pendente antes de qualquer escrita:** verificar match de nomes + granularidade (cada campanha = 1 tag?). Coluna A da planilha mistura DDM=tag, 1ºContato/CTA=funil, Feedback=interação, Whats Incorreto=qualidade — definir o que vira tag e o que é descartado.
+
+---
+
+## Roadmap — próximas ações (ordem de prioridade)
+
+| Prioridade | Item | Estado |
+|-----------|------|--------|
+| 🔜 Próxima | Migração planilha → tags | pendente (destravada) |
+| 🔜 Depois | IA de sugestão de mensagem | planejado / não-iniciado |
+| ⏸ Adiado | F·op — cadastro opex (fluxo-caixa) | última prioridade |
+| ⏸ Sem pressa | Estoque / categorias / lotes / validade | parqueado |
+| ⏸ Sem pressa | @mont/ui, migração migrations, archive repos | roadmap técnico |
 
 ---
 
 ## TODO (processos — ordem)
 
 - [x] Atualizar este handoff (Claude Code) ← meta-tarefa
-- [ ] Diretor responder decisões em aberto 1–3
-- [ ] Abrir chat NOVO de execução, semeado por este handoff
 - [x] Fatia 4: reescrita da view + 2 consertos
-- [ ] Fatia 5: Perfil
-- [ ] Migração planilha
-- [ ] (Track separado, sem pressa) estoque/categorias/lotes → validade no produto → teto de validade
+- [x] Fatia 5: Perfil do cliente (PerfilSideSheet read-only + ranking de produtos) — `c767f9a` + `e1add29` + `fffa500`
 - [x] Diagnóstico Financeiro (achados A–E) ← FEITO
 - [x] Diagnóstico read-only de schema/front ← FEITO (02/06)
 - [x] F·1 A — ticket por evento (banco): migration commitada `43d4772`
@@ -292,3 +334,6 @@ Todos os itens A–D commitados e aplicados em prod. RPC a-receber COUNT(DISTINC
 - [x] F·1 D — guard mês em curso: commitado `575da7d` (KpiCard neutral renderiza traço)
 - [x] F·1: A+B+C+D commitados em prod (03/06)
 - [x] F·op: encanamento verificado — `saida/manual` passa no desp_op; UI parqueada; ADIADO por decisão do diretor
+- [ ] Migração planilha → tags (diagnóstico → import com OK explícito)
+- [ ] IA de sugestão de mensagem (criar skill `mont-brand-voice` → Edge Function → front)
+- [ ] (Track separado, sem pressa) estoque/categorias/lotes → validade no produto → teto de validade
