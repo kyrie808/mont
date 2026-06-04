@@ -11,9 +11,15 @@ interface MoverCardInput {
     observacao?: string
 }
 
+export interface ProdutoRanking {
+    produto: string
+    quantidade: number
+}
+
 export interface PerfilExtras {
     ultimo_produto: string | null
     fiado_estado: 'em_aberto' | 'quitou' | 'nunca_usou'
+    produtos: ProdutoRanking[]
 }
 
 export class RelacionamentoService {

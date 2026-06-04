@@ -5,6 +5,7 @@ import { Badge } from '../ui'
 import { useContato } from '../../hooks/useContatos'
 import { useContatoTags } from '../../hooks/useTags'
 import { usePerfilExtras, useLtvContato } from '../../hooks/usePerfilSideSheet'
+import type { ProdutoRanking } from '../../services/relacionamentoService'
 import type { KanbanRow, RelacionamentoStatus } from '../../hooks/useRelacionamento'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -104,6 +105,17 @@ function SkeletonPerfil() {
                 <div className="h-2.5 w-2/3 rounded-full bg-white/[0.05]" />
                 <div className="h-2.5 w-1/3 rounded-full bg-white/[0.04]" />
             </div>
+            {/* Produtos comprados */}
+            <div className="space-y-1.5">
+                <div className="h-2 w-1/3 rounded-full bg-white/[0.07]" />
+                {[0.9, 0.6, 0.45, 0.3].map((w, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full bg-white/[0.05]" style={{ width: `${w * 60}%` }} />
+                        <div className="h-2.5 w-4 rounded-full bg-white/[0.04]" />
+                        <div className="h-2.5 w-28 rounded-full bg-white/[0.04]" />
+                    </div>
+                ))}
+            </div>
         </div>
     )
 }
@@ -154,6 +166,42 @@ function FiadoCard({ estado }: { estado: 'em_aberto' | 'quitou' | 'nunca_usou' }
                     <p className={cn('mt-0.5 text-[11px]', config.msgCls)}>{config.msg}</p>
                 )}
             </div>
+        </div>
+    )
+}
+
+// ─── ProdutosRanking ──────────────────────────────────────────────────────────
+
+const MAX_PRODUTOS_VISIBLE = 8
+
+function ProdutosRanking({ produtos }: { produtos: ProdutoRanking[] }) {
+    if (produtos.length === 0) return null
+
+    const visible = produtos.slice(0, MAX_PRODUTOS_VISIBLE)
+    const hidden = produtos.length - MAX_PRODUTOS_VISIBLE
+    const max = visible[0]?.quantidade ?? 1
+
+    return (
+        <div className="space-y-1">
+            {visible.map(({ produto, quantidade }) => (
+                <div key={produto} className="flex items-center gap-2">
+                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                        <div
+                            className="absolute inset-y-0 left-0 rounded-full bg-primary/40"
+                            style={{ width: `${(quantidade / max) * 100}%` }}
+                        />
+                    </div>
+                    <span className="w-4 shrink-0 text-right text-[11px] font-semibold tabular-nums text-muted-foreground/70">
+                        {quantidade}
+                    </span>
+                    <span className="w-36 truncate text-[11px] text-foreground/80">{produto}</span>
+                </div>
+            ))}
+            {hidden > 0 && (
+                <p className="pt-0.5 text-[10px] text-muted-foreground/40">
+                    +{hidden} produto{hidden > 1 ? 's' : ''}
+                </p>
+            )}
         </div>
     )
 }
@@ -346,6 +394,14 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                                 />
                             </div>
                         </div>
+
+                        {/* Produtos comprados */}
+                        {extras?.produtos && extras.produtos.length > 0 && (
+                            <div>
+                                <SectionLabel>Produtos comprados</SectionLabel>
+                                <ProdutosRanking produtos={extras.produtos} />
+                            </div>
+                        )}
 
                     </div>
                 )}
