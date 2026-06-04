@@ -643,6 +643,13 @@ export type Database = {
             referencedRelation: "view_relacionamento_kanban"
             referencedColumns: ["contato_id"]
           },
+          {
+            foreignKeyName: "contatos_origem_fkey"
+            columns: ["origem"]
+            isOneToOne: false
+            referencedRelation: "origens"
+            referencedColumns: ["slug"]
+          },
         ]
       }
       interacoes: {
@@ -880,6 +887,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      origens: {
+        Row: {
+          ativo: boolean
+          label: string
+          ordem: number
+          slug: string
+        }
+        Insert: {
+          ativo?: boolean
+          label: string
+          ordem?: number
+          slug: string
+        }
+        Update: {
+          ativo?: boolean
+          label?: string
+          ordem?: number
+          slug?: string
+        }
+        Relationships: []
       }
       pagamentos_conta_a_pagar: {
         Row: {
@@ -2189,3 +2217,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.105.0 (currently installed v2.95.1)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
