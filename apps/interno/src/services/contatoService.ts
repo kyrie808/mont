@@ -16,7 +16,8 @@ export class ContatoService {
                 *,
                 indicador:contatos!indicado_por_id (
                     id,
-                    nome
+                    nome,
+                    telefone
                 )
             `)
             .order('criado_em', { ascending: false })
@@ -45,13 +46,7 @@ export class ContatoService {
     async getById(id: string): Promise<DomainContato | null> {
         const { data, error } = await supabase
             .from('contatos')
-            .select(`
-                *,
-                indicador:contatos!indicado_por_id (
-                    id,
-                    nome
-                )
-            `)
+            .select('*')
             .eq('id', id)
             .single()
 
@@ -60,7 +55,18 @@ export class ContatoService {
             return null
         }
 
-        return toDomainContato(data)
+        // Self-referencing FK join returns wrong direction in PostgREST; lookup separately
+        let indicador: { id: string; nome: string; telefone?: string | null } | null = null
+        if (data.indicado_por_id) {
+            const { data: ind } = await supabase
+                .from('contatos')
+                .select('id, nome, telefone')
+                .eq('id', data.indicado_por_id)
+                .single()
+            indicador = ind
+        }
+
+        return toDomainContato({ ...data, indicador })
     }
 
     async create(data: CreateContato): Promise<DomainContato> {
@@ -105,7 +111,8 @@ export class ContatoService {
                 *,
                 indicador:contatos!indicado_por_id (
                     id,
-                    nome
+                    nome,
+                    telefone
                 )
             `)
             .single()
@@ -160,7 +167,8 @@ export class ContatoService {
                 *,
                 indicador:contatos!indicado_por_id (
                     id,
-                    nome
+                    nome,
+                    telefone
                 )
             `)
             .single()

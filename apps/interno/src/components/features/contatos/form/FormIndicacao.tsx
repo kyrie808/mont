@@ -1,9 +1,9 @@
 ﻿import { Search, X, Check } from 'lucide-react'
 import { formatPhone } from '@mont/shared'
-import type { DomainContato } from '@/types/domain'
+import type { DomainContato, IndicadorRef } from '@/types/domain'
 
 interface FormIndicacaoProps {
-    selectedIndicador: DomainContato | null
+    selectedIndicador: IndicadorRef | null
     handleClearIndicador: () => void
     indicadorSearch: string
     setIndicadorSearch: (val: string) => void
@@ -28,9 +28,11 @@ export function FormIndicacao({
                 <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-lg">
                     <div>
                         <p className="font-medium text-foreground">{selectedIndicador.nome}</p>
-                        <p className="text-xs text-muted-foreground">
-                            {formatPhone(selectedIndicador.telefone)}
-                        </p>
+                        {selectedIndicador.telefone && (
+                            <p className="text-xs text-muted-foreground">
+                                {formatPhone(selectedIndicador.telefone)}
+                            </p>
+                        )}
                     </div>
                     <button
                         type="button"

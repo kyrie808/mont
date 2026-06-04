@@ -6,7 +6,7 @@ import { contatoSchema, type ContatoFormData } from '../../schemas/contato'
 import { useContatos } from '../../hooks/useContatos'
 import { useToast } from '../ui/Toast'
 import { useCep } from '../../hooks/useCep'
-import type { DomainContato, CreateContato } from '../../types/domain'
+import type { DomainContato, CreateContato, IndicadorRef } from '../../types/domain'
 
 // Sub-components
 import { FormIdentidade } from '../features/contatos/form/FormIdentidade'
@@ -34,7 +34,7 @@ export function ContatoFormModal({
 
     const [indicadorSearch, setIndicadorSearch] = useState('')
     const [indicadorResults, setIndicadorResults] = useState<DomainContato[]>([])
-    const [selectedIndicador, setSelectedIndicador] = useState<DomainContato | null>(null)
+    const [selectedIndicador, setSelectedIndicador] = useState<IndicadorRef | null>(null)
     const [showIndicadorDropdown, setShowIndicadorDropdown] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -90,6 +90,7 @@ export function ContatoFormModal({
                 cidade: contato.cidade || '',
                 uf: contato.uf || '',
             } as any)
+            setSelectedIndicador(contato.indicador ?? null)
         } else if (isOpen) {
             reset()
             setSelectedIndicador(null)
@@ -164,7 +165,7 @@ export function ContatoFormModal({
                                     setIndicadorSearch={setIndicadorSearch}
                                     showIndicadorDropdown={showIndicadorDropdown}
                                     indicadorResults={indicadorResults}
-                                    handleSelectIndicador={(c) => { setSelectedIndicador(c); setValue('indicado_por_id', c.id); setShowIndicadorDropdown(false); }}
+                                    handleSelectIndicador={(c) => { setSelectedIndicador({ id: c.id, nome: c.nome, telefone: c.telefone }); setValue('indicado_por_id', c.id); setShowIndicadorDropdown(false); }}
                                 />
                             </div>
                         )}

@@ -38,7 +38,7 @@ type CatalogOrderItemRow = any
 export type ContatoRowWithIndicador = ContatoRow & {
     email?: string | null
     observacao?: string | null
-    indicador?: { id: string; nome: string } | null
+    indicador?: { id: string; nome: string; telefone?: string | null } | null
 }
 
 export type ItemVendaRowWithProduto = ItemVendaRow & {
@@ -89,10 +89,13 @@ export const toDomainContato = (dbContato: ContatoRowWithIndicador): DomainConta
         tipo: (dbContato.tipo || 'B2C') as DomainContato['tipo'],
         subtipo: dbContato.subtipo || null,
         indicadoPorId: dbContato.indicado_por_id,
-        indicador: dbContato.indicador ? {
-            id: dbContato.indicador.id,
-            nome: dbContato.indicador.nome
-        } : null,
+        indicador: (() => {
+            // PostgREST self-referencing join may return [] (wrong direction) or an object
+            const raw = Array.isArray(dbContato.indicador)
+                ? (dbContato.indicador as Array<{ id: string; nome: string; telefone?: string | null }>)[0] ?? null
+                : dbContato.indicador
+            return raw ? { id: raw.id, nome: raw.nome, telefone: raw.telefone ?? null } : null
+        })(),
         criadoEm: dbContato.criado_em || new Date().toISOString(),
         atualizadoEm: dbContato.atualizado_em || dbContato.criado_em || new Date().toISOString(),
         bairro: dbContato.bairro || null,

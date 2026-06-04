@@ -13,6 +13,12 @@ export type VendaStatus = 'pendente' | 'entregue' | 'cancelada'
 export type PagamentoMetodo = 'pix' | 'dinheiro' | 'cartao' | 'fiado' | 'brinde' | 'pre_venda'
 export type PagamentoStatus = 'pendente' | 'pago'
 
+export interface IndicadorRef {
+    id: string
+    nome: string
+    telefone?: string | null
+}
+
 export interface DomainContato {
     id: string
     nome: string
@@ -24,10 +30,7 @@ export interface DomainContato {
     status: 'lead' | 'cliente' | 'inativo' | 'fornecedor'
     origem: 'direto' | 'indicacao' | 'catalogo'
     indicadoPorId?: string | null
-    indicador?: {
-        id: string
-        nome: string
-    } | null
+    indicador?: IndicadorRef | null
     endereco?: string | null
     // Address breakdown
     logradouro?: string | null
