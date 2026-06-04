@@ -61,12 +61,12 @@ export function generateWhatsAppMessage(
     message += `*Subtotal:* ${formatCurrency(subtotal)}\n`
 
     if (formData.delivery_method === 'entrega') {
-        message += deliveryFee === 0
-            ? '*Entrega:* Grátis (SBC)\n'
-            : `*Entrega:* ${formatCurrency(deliveryFee)}\n`
+        message += '*Valor do frete:* a conferir\n'
     }
 
-    message += `*Total:* ${formatCurrency(total)}\n`
+    message += formData.delivery_method === 'entrega'
+        ? `*Total:* ${formatCurrency(subtotal)} + frete\n`
+        : `*Total:* ${formatCurrency(total)}\n`
     message += `*Pagamento:* ${paymentMethodLabels[formData.payment_method]}\n`
 
     // Informações adicionais

@@ -25,7 +25,9 @@ export default function OrderSummary({ subtotal, frete, total, deliveryMethod, f
 
             <div className="flex justify-between text-xl font-bold text-mont-espresso pt-2 border-t border-mont-surface">
                 <span>Total</span>
-                <span className="text-mont-gold">{formatCurrency(total)}</span>
+                <span className="text-mont-gold">
+                    {deliveryMethod === 'entrega' ? `${formatCurrency(subtotal)} + frete` : formatCurrency(total)}
+                </span>
             </div>
         </div>
     )
