@@ -1,5 +1,9 @@
 # Handoff — Módulo Relacionamento (CRM Pós-Venda)
 
+> **STATUS: ENCERRADO — 04/06/2026**
+> Escopo principal do módulo Relacionamento concluído (Fatias 0–5 + Track F·*).
+> Itens residuais (migração planilha, IA mensagem, opex, estoque) são tracks futuros independentes — rastrear em novos documentos ou issues.
+
 Documento vivo. Atualizar após cada fatia entregue.
 
 ---
@@ -21,6 +25,7 @@ Documento vivo. Atualizar após cada fatia entregue.
 | **F·diag** | **Diagnóstico Financeiro** (Dashboard Home + Relatórios) — achados A–E | ✅ FEITA |
 | **F·1** | Convergência ticket médio (A) + relabels B/C/D + RPC a-receber COUNT(DISTINCT) | ✅ FEITA — A/B/C/D commitados + RPC em prod (03/06) |
 | **F·op** | Cadastro de despesas operacionais (Luccas + mãe) | 🔜 ADIADO — encanamento ✅ verificado; tela parqueada; pós-roadmap |
+| **CRM·bug** | Fix "Indicado por" abre vazio no Editar Contato | ✅ FEITA — 04/06 (3 bugs em cadeia: estado não inicializado + join PostgREST direção errada + mapper tratando `[]` como truthy) |
 
 Ordem real de entrega: timeline → feedback → tags.
 Track Financeiro (F·*) é a ativação da decisão #4 — "eleger a regra da LTV como canônica e convergir o front". Independente das fatias do CRM, mesmo app/método.
@@ -334,6 +339,7 @@ Todos os itens A–D commitados e aplicados em prod. RPC a-receber COUNT(DISTINC
 - [x] F·1 D — guard mês em curso: commitado `575da7d` (KpiCard neutral renderiza traço)
 - [x] F·1: A+B+C+D commitados em prod (03/06)
 - [x] F·op: encanamento verificado — `saida/manual` passa no desp_op; UI parqueada; ADIADO por decisão do diretor
-- [ ] Migração planilha → tags (diagnóstico → import com OK explícito)
-- [ ] IA de sugestão de mensagem (criar skill `mont-brand-voice` → Edge Function → front)
-- [ ] (Track separado, sem pressa) estoque/categorias/lotes → validade no produto → teto de validade
+- [x] Fix "Indicado por" (ContatoFormModal + contatoService.getById + mappers) — 04/06
+- [ ] *(track futuro)* Migração planilha → tags (diagnóstico → import com OK explícito)
+- [ ] *(track futuro)* IA de sugestão de mensagem (criar skill `mont-brand-voice` → Edge Function → front)
+- [ ] *(track separado, sem pressa)* estoque/categorias/lotes → validade no produto → teto de validade
