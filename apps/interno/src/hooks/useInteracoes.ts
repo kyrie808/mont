@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { interacaoService, type Interacao, type Canal } from '../services/interacaoService'
+import { interacaoService, type Interacao, type Canal, type ResultadoPontoContato } from '../services/interacaoService'
 
 export function useInteracoes(contatoId: string | null) {
     return useQuery<Interacao[]>({
@@ -26,4 +26,21 @@ export function useRegistrarFeedback() {
     })
 }
 
-export type { Interacao, Canal }
+interface RegistrarPontoContatoInput {
+    contatoId: string
+    canal: Canal
+    resultado: ResultadoPontoContato
+    observacao?: string
+}
+
+export function useRegistrarPontoContato() {
+    const queryClient = useQueryClient()
+    return useMutation<void, Error, RegistrarPontoContatoInput>({
+        mutationFn: (input) => interacaoService.criarPontoContato(input),
+        onSuccess: (_data, variables) => {
+            void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
+        },
+    })
+}
+
+export type { Interacao, Canal, ResultadoPontoContato }

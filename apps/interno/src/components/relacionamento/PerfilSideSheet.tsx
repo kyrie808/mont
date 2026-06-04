@@ -1,10 +1,13 @@
+import { useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Phone, AlertTriangle, CheckCircle, MinusCircle } from 'lucide-react'
-import { cn, formatCurrency, formatDate, formatPhone } from '@mont/shared'
+import { cn, formatCurrency, formatDate, formatDateTime, formatPhone } from '@mont/shared'
 import { Badge } from '../ui'
 import { useContato } from '../../hooks/useContatos'
 import { useContatoTags } from '../../hooks/useTags'
 import { usePerfilExtras, useLtvContato } from '../../hooks/usePerfilSideSheet'
+import { useInteracoes, useRegistrarPontoContato, type ResultadoPontoContato } from '../../hooks/useInteracoes'
+import type { Canal } from '../../hooks/useInteracoes'
 import type { ProdutoRanking } from '../../services/relacionamentoService'
 import type { KanbanRow, RelacionamentoStatus } from '../../hooks/useRelacionamento'
 
@@ -23,6 +26,27 @@ const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'defa
     em_negociacao: 'default',
     resolvido: 'success',
 }
+
+const CANAL_OPTIONS: Array<{ value: Canal; label: string }> = [
+    { value: 'whatsapp', label: 'WhatsApp' },
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'google', label: 'Google' },
+    { value: 'outro', label: 'Outro' },
+]
+
+const CANAL_BADGE_VARIANT: Record<Canal, 'success' | 'default' | 'warning' | 'secondary'> = {
+    whatsapp: 'success',
+    instagram: 'default',
+    google: 'warning',
+    outro: 'secondary',
+}
+
+const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoPontoContato; label: string }> = [
+    { value: 'respondeu', label: 'Respondeu' },
+    { value: 'sem_resposta', label: 'Sem resposta' },
+    { value: 'aceitou', label: 'Aceitou' },
+    { value: 'recusou', label: 'Recusou' },
+]
 
 const GRAIN_BG =
     `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`
@@ -67,7 +91,6 @@ function DataRow({ label, value }: { label: string; value: string | null | undef
 function SkeletonPerfil() {
     return (
         <div className="animate-pulse px-4 py-4 space-y-5">
-            {/* Identificação */}
             <div className="space-y-2">
                 <div className="h-2 w-1/4 rounded-full bg-white/[0.07]" />
                 <div className="h-3 w-2/3 rounded-full bg-white/[0.07]" />
@@ -77,7 +100,6 @@ function SkeletonPerfil() {
                     <div className="h-5 w-16 rounded-full bg-white/[0.05]" />
                 </div>
             </div>
-            {/* Ritmo */}
             <div className="space-y-1.5">
                 <div className="h-2 w-1/5 rounded-full bg-white/[0.07]" />
                 {[0.5, 0.4, 0.6].map((w, i) => (
@@ -87,7 +109,6 @@ function SkeletonPerfil() {
                     </div>
                 ))}
             </div>
-            {/* Financeiro */}
             <div className="space-y-1.5">
                 <div className="h-2 w-1/4 rounded-full bg-white/[0.07]" />
                 {[0.45, 0.5, 0.35].map((w, i) => (
@@ -97,15 +118,12 @@ function SkeletonPerfil() {
                     </div>
                 ))}
             </div>
-            {/* Fiado */}
             <div className="h-14 rounded-xl bg-white/[0.04]" />
-            {/* Última compra */}
             <div className="space-y-1.5">
                 <div className="h-2 w-1/4 rounded-full bg-white/[0.07]" />
                 <div className="h-2.5 w-2/3 rounded-full bg-white/[0.05]" />
                 <div className="h-2.5 w-1/3 rounded-full bg-white/[0.04]" />
             </div>
-            {/* Produtos comprados */}
             <div className="space-y-1.5">
                 <div className="h-2 w-1/3 rounded-full bg-white/[0.07]" />
                 {[0.9, 0.6, 0.45, 0.3].map((w, i) => (
@@ -206,6 +224,130 @@ function ProdutosRanking({ produtos }: { produtos: ProdutoRanking[] }) {
     )
 }
 
+// ─── FeedbackItem ─────────────────────────────────────────────────────────────
+
+function FeedbackItem({ canal, observacao, data }: { canal: string | null; observacao: string | null; data: string }) {
+    const variant = canal ? (CANAL_BADGE_VARIANT[canal as Canal] ?? 'secondary') : 'secondary'
+    const canalLabel = canal ? (CANAL_OPTIONS.find((o) => o.value === canal)?.label ?? canal) : null
+
+    return (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-1.5">
+            <div className="flex items-center gap-2">
+                {canalLabel && (
+                    <Badge variant={variant} className="px-1.5 py-0 text-[10px]">
+                        {canalLabel}
+                    </Badge>
+                )}
+                <span className="text-[10.5px] text-muted-foreground/50">
+                    {formatDateTime(data)}
+                </span>
+            </div>
+            {observacao && (
+                <p className="text-[12px] leading-[1.4] text-foreground/80 whitespace-pre-wrap break-words">
+                    {observacao}
+                </p>
+            )}
+        </div>
+    )
+}
+
+// ─── PontoContatoForm ─────────────────────────────────────────────────────────
+
+function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: () => void }) {
+    const [canal, setCanal] = useState<Canal>('whatsapp')
+    const [resultado, setResultado] = useState<ResultadoPontoContato>('respondeu')
+    const [observacao, setObservacao] = useState('')
+    const { mutate, isPending, error: mutError } = useRegistrarPontoContato()
+
+    const handleSubmit = (e: FormEvent) => {
+        e.preventDefault()
+        if (isPending) return
+        mutate(
+            { contatoId, canal, resultado, observacao: observacao.trim() || undefined },
+            { onSuccess: () => { setObservacao(''); onClose() } },
+        )
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-3 px-4 py-3">
+            {/* Plataforma */}
+            <div className="space-y-1.5">
+                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Plataforma</p>
+                <select
+                    value={canal}
+                    onChange={(e) => setCanal(e.target.value as Canal)}
+                    disabled={isPending}
+                    className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
+                >
+                    {CANAL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value} className="bg-card">
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Resposta */}
+            <div className="space-y-1.5">
+                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Resposta</p>
+                <div className="flex flex-wrap gap-1.5">
+                    {RESULTADO_PONTO_OPTIONS.map((opt) => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => setResultado(opt.value)}
+                            className={cn(
+                                'rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50',
+                                resultado === opt.value
+                                    ? 'border-primary/40 bg-primary/15 text-primary'
+                                    : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:border-white/[0.15] hover:text-foreground',
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Nota */}
+            <div className="space-y-1.5">
+                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Nota (opcional)</p>
+                <textarea
+                    value={observacao}
+                    onChange={(e) => setObservacao(e.target.value)}
+                    disabled={isPending}
+                    placeholder="Detalhe o contato…"
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                />
+            </div>
+
+            {mutError && (
+                <p className="text-[11px] text-destructive">{mutError.message}</p>
+            )}
+
+            <div className="flex gap-2">
+                <button
+                    type="submit"
+                    disabled={isPending}
+                    className="flex-1 rounded-lg bg-primary/15 px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    {isPending ? 'Salvando…' : 'Salvar'}
+                </button>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={isPending}
+                    className="rounded-lg px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:opacity-40"
+                >
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    )
+}
+
 // ─── PanelContent ─────────────────────────────────────────────────────────────
 
 interface PanelContentProps {
@@ -217,10 +359,15 @@ interface PanelContentProps {
 }
 
 function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow }: PanelContentProps) {
+    const [showPontoContato, setShowPontoContato] = useState(false)
+
     const { contato, loading: contatoLoading } = useContato(contatoId)
     const { data: allContatoTags = [], isLoading: tagsLoading } = useContatoTags()
     const { data: ltv, isLoading: ltvLoading } = useLtvContato(contatoId)
     const { data: extras, isLoading: extrasLoading } = usePerfilExtras(contatoId)
+    const { data: interacoes, isLoading: interacoesLoading } = useInteracoes(contatoId)
+
+    const feedbacks = (interacoes ?? []).filter((i) => i.tipo === 'feedback')
 
     const inicial = nomeContato.trim()[0]?.toUpperCase() ?? '?'
     const isLoading = contatoLoading || tagsLoading || ltvLoading || extrasLoading
@@ -236,6 +383,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
 
     return (
         <div className="relative flex h-full flex-col overflow-hidden bg-card">
+            {/* Grain overlay */}
             <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 z-0"
@@ -270,142 +418,200 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                 </button>
             </div>
 
-            {/* Section label */}
-            <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
-                <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
-                    Perfil do cliente
-                </p>
-            </div>
+            {showPontoContato ? (
+                <>
+                    {/* Section label */}
+                    <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+                        <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
+                            Registrar contato
+                        </p>
+                    </div>
+                    {/* Form */}
+                    <div className="no-scrollbar relative z-10 flex-1 overflow-y-auto">
+                        <PontoContatoForm
+                            contatoId={contatoId}
+                            onClose={() => setShowPontoContato(false)}
+                        />
+                    </div>
+                </>
+            ) : (
+                <>
+                    {/* Section label */}
+                    <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+                        <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
+                            Perfil do cliente
+                        </p>
+                    </div>
 
-            {/* Body */}
-            <div className="no-scrollbar relative z-10 flex-1 overflow-y-auto">
-                {isLoading ? (
-                    <SkeletonPerfil />
-                ) : (
-                    <div className="space-y-5 px-4 py-4">
+                    {/* Body */}
+                    <div className="no-scrollbar relative z-10 flex-1 overflow-y-auto">
+                        {isLoading ? (
+                            <SkeletonPerfil />
+                        ) : (
+                            <div className="space-y-5 px-4 py-4">
 
-                        {/* Identificação */}
-                        <div>
-                            <SectionLabel>Identificação</SectionLabel>
-                            <div className="space-y-0.5">
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-[13px] font-semibold text-foreground leading-snug">
-                                        {contato?.nome ?? nomeContato}
-                                    </span>
-                                    {contato?.apelido && (
-                                        <span className="text-[11px] text-muted-foreground/60">
-                                            ({contato.apelido})
-                                        </span>
+                                {/* Identificação */}
+                                <div>
+                                    <SectionLabel>Identificação</SectionLabel>
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-[13px] font-semibold text-foreground leading-snug">
+                                                {contato?.nome ?? nomeContato}
+                                            </span>
+                                            {contato?.apelido && (
+                                                <span className="text-[11px] text-muted-foreground/60">
+                                                    ({contato.apelido})
+                                                </span>
+                                            )}
+                                        </div>
+                                        {(contato?.tipo || contato?.subtipo) && (
+                                            <p className="text-[11px] text-muted-foreground/60">
+                                                {[contato.tipo, contato.subtipo].filter(Boolean).join(' · ')}
+                                            </p>
+                                        )}
+                                        {contato?.telefone && (
+                                            <button
+                                                type="button"
+                                                onClick={handleWhatsApp}
+                                                className="mt-1 flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-black/25 px-2 py-[5px] text-[11px] text-muted-foreground transition-colors hover:border-white/[0.12] hover:text-foreground"
+                                            >
+                                                <Phone className="h-3 w-3 shrink-0 text-primary/60" />
+                                                {formatPhone(contato.telefone)}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {appliedTags.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {appliedTags.map((tag) => (
+                                                <span
+                                                    key={tag.id}
+                                                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                                                    style={{
+                                                        backgroundColor: tag.cor,
+                                                        color: textColorForBg(tag.cor),
+                                                    }}
+                                                >
+                                                    {tag.nome}
+                                                </span>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                                {(contato?.tipo || contato?.subtipo) && (
-                                    <p className="text-[11px] text-muted-foreground/60">
-                                        {[contato.tipo, contato.subtipo].filter(Boolean).join(' · ')}
-                                    </p>
-                                )}
-                                {contato?.telefone && (
-                                    <button
-                                        type="button"
-                                        onClick={handleWhatsApp}
-                                        className="mt-1 flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-black/25 px-2 py-[5px] text-[11px] text-muted-foreground transition-colors hover:border-white/[0.12] hover:text-foreground"
-                                    >
-                                        <Phone className="h-3 w-3 shrink-0 text-primary/60" />
-                                        {formatPhone(contato.telefone)}
-                                    </button>
-                                )}
-                            </div>
-                            {appliedTags.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {appliedTags.map((tag) => (
-                                        <span
-                                            key={tag.id}
-                                            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                                            style={{
-                                                backgroundColor: tag.cor,
-                                                color: textColorForBg(tag.cor),
-                                            }}
-                                        >
-                                            {tag.nome}
-                                        </span>
-                                    ))}
+
+                                {/* Ritmo */}
+                                <div>
+                                    <SectionLabel>Ritmo</SectionLabel>
+                                    <div className="space-y-0.5">
+                                        <DataRow
+                                            label="Dias sem compra"
+                                            value={kanbanRow.dias_sem_compra != null ? `${kanbanRow.dias_sem_compra} dias` : null}
+                                        />
+                                        <DataRow
+                                            label="Atraso"
+                                            value={kanbanRow.atraso != null && kanbanRow.atraso > 0 ? `${kanbanRow.atraso} dias` : null}
+                                        />
+                                        <DataRow
+                                            label="Próxima esperada"
+                                            value={kanbanRow.proxima_esperada ? formatDate(kanbanRow.proxima_esperada) : null}
+                                        />
+                                    </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Ritmo */}
-                        <div>
-                            <SectionLabel>Ritmo</SectionLabel>
-                            <div className="space-y-0.5">
-                                <DataRow
-                                    label="Dias sem compra"
-                                    value={kanbanRow.dias_sem_compra != null ? `${kanbanRow.dias_sem_compra} dias` : null}
-                                />
-                                <DataRow
-                                    label="Atraso"
-                                    value={kanbanRow.atraso != null && kanbanRow.atraso > 0 ? `${kanbanRow.atraso} dias` : null}
-                                />
-                                <DataRow
-                                    label="Próxima esperada"
-                                    value={kanbanRow.proxima_esperada ? formatDate(kanbanRow.proxima_esperada) : null}
-                                />
-                            </div>
-                        </div>
+                                {/* Financeiro */}
+                                <div>
+                                    <SectionLabel>Financeiro</SectionLabel>
+                                    <div className="space-y-0.5">
+                                        <DataRow
+                                            label="LTV total"
+                                            value={ltv?.ltv_total != null ? formatCurrency(Number(ltv.ltv_total)) : null}
+                                        />
+                                        <DataRow
+                                            label="Ticket médio"
+                                            value={ltv?.ticket_medio != null ? formatCurrency(Number(ltv.ticket_medio)) : null}
+                                        />
+                                        <DataRow
+                                            label="Nº de compras"
+                                            value={ltv?.total_pedidos != null ? `${ltv.total_pedidos} pedidos` : null}
+                                        />
+                                    </div>
+                                </div>
 
-                        {/* Financeiro */}
-                        <div>
-                            <SectionLabel>Financeiro</SectionLabel>
-                            <div className="space-y-0.5">
-                                <DataRow
-                                    label="LTV total"
-                                    value={ltv?.ltv_total != null ? formatCurrency(Number(ltv.ltv_total)) : null}
-                                />
-                                <DataRow
-                                    label="Ticket médio"
-                                    value={ltv?.ticket_medio != null ? formatCurrency(Number(ltv.ticket_medio)) : null}
-                                />
-                                <DataRow
-                                    label="Nº de compras"
-                                    value={ltv?.total_pedidos != null ? `${ltv.total_pedidos} pedidos` : null}
-                                />
-                            </div>
-                        </div>
+                                {/* Fiado */}
+                                <div>
+                                    <SectionLabel>Fiado</SectionLabel>
+                                    {extras ? (
+                                        <FiadoCard estado={extras.fiado_estado} />
+                                    ) : (
+                                        <FiadoCard estado="nunca_usou" />
+                                    )}
+                                </div>
 
-                        {/* Fiado */}
-                        <div>
-                            <SectionLabel>Fiado</SectionLabel>
-                            {extras ? (
-                                <FiadoCard estado={extras.fiado_estado} />
-                            ) : (
-                                <FiadoCard estado="nunca_usou" />
-                            )}
-                        </div>
+                                {/* Última compra */}
+                                <div>
+                                    <SectionLabel>Última compra</SectionLabel>
+                                    <div className="space-y-0.5">
+                                        <DataRow
+                                            label="Produto"
+                                            value={extras?.ultimo_produto ?? null}
+                                        />
+                                        <DataRow
+                                            label="Data"
+                                            value={kanbanRow.ultima_compra ? formatDate(kanbanRow.ultima_compra) : null}
+                                        />
+                                    </div>
+                                </div>
 
-                        {/* Última compra */}
-                        <div>
-                            <SectionLabel>Última compra</SectionLabel>
-                            <div className="space-y-0.5">
-                                <DataRow
-                                    label="Produto"
-                                    value={extras?.ultimo_produto ?? null}
-                                />
-                                <DataRow
-                                    label="Data"
-                                    value={kanbanRow.ultima_compra ? formatDate(kanbanRow.ultima_compra) : null}
-                                />
-                            </div>
-                        </div>
+                                {/* Produtos comprados */}
+                                {extras?.produtos && extras.produtos.length > 0 && (
+                                    <div>
+                                        <SectionLabel>Produtos comprados</SectionLabel>
+                                        <ProdutosRanking produtos={extras.produtos} />
+                                    </div>
+                                )}
 
-                        {/* Produtos comprados */}
-                        {extras?.produtos && extras.produtos.length > 0 && (
-                            <div>
-                                <SectionLabel>Produtos comprados</SectionLabel>
-                                <ProdutosRanking produtos={extras.produtos} />
+                                {/* Feedback */}
+                                <div>
+                                    <SectionLabel>Feedback</SectionLabel>
+                                    {interacoesLoading ? (
+                                        <div className="animate-pulse space-y-2">
+                                            <div className="h-14 rounded-xl bg-white/[0.04]" />
+                                            <div className="h-14 rounded-xl bg-white/[0.04]" />
+                                        </div>
+                                    ) : feedbacks.length === 0 ? (
+                                        <p className="text-[11px] text-muted-foreground/40">
+                                            Nenhum feedback registrado
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {feedbacks.map((fb) => (
+                                                <FeedbackItem
+                                                    key={fb.id}
+                                                    canal={fb.canal}
+                                                    observacao={fb.observacao}
+                                                    data={fb.data}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                             </div>
                         )}
-
                     </div>
-                )}
-            </div>
+
+                    {/* Sticky footer — registrar ponto de contato */}
+                    <div className="relative z-10 shrink-0 border-t border-white/[0.06] px-4 py-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowPontoContato(true)}
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:border-white/[0.12] hover:bg-white/[0.07] hover:text-foreground"
+                        >
+                            <Phone className="h-3.5 w-3.5 shrink-0" />
+                            Registrar contato
+                        </button>
+                    </div>
+                </>
+            )}
         </div>
     )
 }

@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { X, ArrowRightLeft, MessageSquare, Tag } from 'lucide-react'
+import { X, ArrowRightLeft, MessageSquare, Tag, PhoneCall } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { Badge } from '../ui'
@@ -48,6 +48,12 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
         dotBorder: 'border-blue-400/25',
         iconColor: 'text-blue-400',
     },
+    ponto_contato: {
+        icon: PhoneCall,
+        dotBg: 'bg-emerald-400/10',
+        dotBorder: 'border-emerald-400/25',
+        iconColor: 'text-emerald-400',
+    },
 }
 
 const TIPO_CONFIG_DEFAULT: TipoConfig = {
@@ -62,6 +68,13 @@ const CANAL_LABEL: Record<string, string> = {
     instagram: 'Instagram',
     google: 'Google',
     outro: 'Outro',
+}
+
+const RESULTADO_PONTO_CONTATO_LABEL: Record<string, string> = {
+    respondeu: 'Respondeu',
+    sem_resposta: 'Sem resposta',
+    aceitou: 'Aceitou',
+    recusou: 'Recusou',
 }
 
 
@@ -105,6 +118,12 @@ function getEventTitle(item: Interacao): string {
     if (item.tipo === 'feedback') {
         const canalLabel = item.canal ? (CANAL_LABEL[item.canal] ?? item.canal) : null
         return canalLabel ? `Feedback · ${canalLabel}` : 'Feedback'
+    }
+    if (item.tipo === 'ponto_contato') {
+        const canalLabel = item.canal ? (CANAL_LABEL[item.canal] ?? item.canal) : null
+        const resultadoLabel = item.resultado ? (RESULTADO_PONTO_CONTATO_LABEL[item.resultado] ?? item.resultado) : null
+        const parts = ['Contato', canalLabel, resultadoLabel].filter(Boolean)
+        return parts.join(' · ')
     }
     return item.tipo ?? 'Interação'
 }

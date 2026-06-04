@@ -3,11 +3,19 @@ import { supabase } from '../lib/supabase'
 
 export type Interacao = Database['public']['Tables']['interacoes']['Row']
 export type Canal = 'google' | 'instagram' | 'whatsapp' | 'outro'
+export type ResultadoPontoContato = 'respondeu' | 'sem_resposta' | 'aceitou' | 'recusou'
 
 interface CriarFeedbackInput {
     contatoId: string
     canal: Canal
     texto: string
+}
+
+interface CriarPontoContatoInput {
+    contatoId: string
+    canal: Canal
+    resultado: ResultadoPontoContato
+    observacao?: string
 }
 
 class InteracaoService {
@@ -36,6 +44,20 @@ class InteracaoService {
         const { error } = await supabase.from('interacoes').insert(insert)
         if (error) {
             throw new Error(`Erro ao registrar feedback: ${error.message}`)
+        }
+    }
+
+    async criarPontoContato({ contatoId, canal, resultado, observacao }: CriarPontoContatoInput): Promise<void> {
+        const insert: Database['public']['Tables']['interacoes']['Insert'] = {
+            contato_id: contatoId,
+            tipo: 'ponto_contato',
+            canal,
+            resultado,
+            observacao: observacao ?? null,
+        }
+        const { error } = await supabase.from('interacoes').insert(insert)
+        if (error) {
+            throw new Error(`Erro ao registrar ponto de contato: ${error.message}`)
         }
     }
 }
