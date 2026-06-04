@@ -1,0 +1,101 @@
+-- Backup pré-Fatia 4 (2026-05-31)
+-- Linha configuracoes.ciclo_recompra (será deletada pela migration)
+-- Docker indisponível; dump completo não foi possível.
+
+chave           | valor
+----------------+----------------------------
+ciclo_recompra  | {"b2b": 7, "b2c": 15}
+
+-- DDL atual: view_relacionamento_kanban
+-- (preservada abaixo para rollback manual se necessário)
+
+CREATE OR REPLACE VIEW view_relacionamento_kanban AS
+ WITH config AS (
+         SELECT COALESCE((configuracoes.valor ->> 'b2c'::text)::integer, 15) AS ciclo_b2c,
+            COALESCE((configuracoes.valor ->> 'b2b'::text)::integer, 7) AS ciclo_b2b
+           FROM configuracoes
+          WHERE configuracoes.chave = 'ciclo_recompra'::text
+         LIMIT 1
+        ), ultima_compra AS (
+         SELECT v.contato_id,
+            max(v.data) AS ultima_compra_data
+           FROM vendas v
+          WHERE v.status = 'entregue'::text AND v.forma_pagamento <> 'brinde'::text
+          GROUP BY v.contato_id
+        ), fiado_aberto AS (
+         SELECT v.contato_id,
+            bool_or(v.status = 'entregue'::text AND v.forma_pagamento = 'fiado'::text AND v.pago = false) AS tem_fiado_aberto
+           FROM vendas v
+          GROUP BY v.contato_id
+        )
+ SELECT c.id AS contato_id,
+    c.nome,
+    c.telefone,
+    c.status_relacionamento,
+    c.arquivado_em,
+        CASE
+            WHEN COALESCE(fa.tem_fiado_aberto, false) THEN 'cobranca'::enum_relacionamento_aba
+            WHEN (CURRENT_DATE - COALESCE(uc.ultima_compra_data, c.ultimo_contato::date, c.criado_em::date)) >
+            CASE
+                WHEN c.tipo = 'B2B'::text THEN COALESCE(( SELECT config.ciclo_b2b
+                   FROM config), 7)
+                ELSE COALESCE(( SELECT config.ciclo_b2c
+                   FROM config), 15)
+            END THEN 'reativacao'::enum_relacionamento_aba
+            ELSE 'recompra'::enum_relacionamento_aba
+        END AS aba_atual
+   FROM contatos c
+     LEFT JOIN ultima_compra uc ON uc.contato_id = c.id
+     LEFT JOIN fiado_aberto fa ON fa.contato_id = c.id;
+
+-- DDL atual: view_home_alertas
+CREATE OR REPLACE VIEW view_home_alertas AS
+ WITH ultima_compra AS (
+         SELECT vendas.contato_id,
+            max(vendas.data) AS ultima_data
+           FROM vendas
+          WHERE vendas.status = 'entregue'::text
+          GROUP BY vendas.contato_id
+        )
+ SELECT c.id AS contato_id,
+    c.nome,
+    c.telefone,
+    uc.ultima_data AS data_ultima_compra,
+    CURRENT_DATE - uc.ultima_data AS dias_sem_compra
+   FROM contatos c
+     JOIN ultima_compra uc ON c.id = uc.contato_id
+  WHERE (CURRENT_DATE - uc.ultima_data) > 45
+  ORDER BY (CURRENT_DATE - uc.ultima_data) DESC
+ LIMIT 10;
+
+-- DDL atual: rpt_ltv_por_cliente
+CREATE OR REPLACE VIEW rpt_ltv_por_cliente AS
+ WITH ciclo AS (
+         SELECT (configuracoes.valor ->> 'b2b'::text)::integer AS b2b,
+            (configuracoes.valor ->> 'b2c'::text)::integer AS b2c
+           FROM configuracoes
+          WHERE configuracoes.chave = 'ciclo_recompra'::text
+        )
+ SELECT c.id AS contato_id, c.nome, c.telefone, c.tipo, c.status,
+    count(v.id) AS total_pedidos, sum(v.total) AS ltv_total,
+    round(avg(v.total), 2) AS ticket_medio, min(v.data) AS primeira_compra,
+    max(v.data) AS ultima_compra, max(v.data) - min(v.data) AS dias_relacionamento,
+        CASE
+            WHEN (CURRENT_DATE - max(v.data)) <=
+            CASE c.tipo
+                WHEN 'B2B'::text THEN ciclo.b2b
+                ELSE ciclo.b2c
+            END THEN 'ativo'::text
+            WHEN (CURRENT_DATE - max(v.data)) <= (
+            CASE c.tipo
+                WHEN 'B2B'::text THEN ciclo.b2b
+                ELSE ciclo.b2c
+            END * 2) THEN 'risco'::text
+            ELSE 'adormecido'::text
+        END AS status_atividade
+   FROM contatos c
+     JOIN vendas v ON v.contato_id = c.id
+     CROSS JOIN ciclo
+  WHERE v.status <> 'cancelada'::text AND v.forma_pagamento <> 'brinde'::text
+  GROUP BY c.id, c.nome, c.telefone, c.tipo, c.status, ciclo.b2b, ciclo.b2c
+  ORDER BY (sum(v.total)) DESC;
