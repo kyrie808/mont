@@ -1,12 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { Target } from 'lucide-react'
 import type { UseFormRegister, FieldErrors } from 'react-hook-form'
 import type { ContatoFormData } from '@/schemas/contato'
 import {
     CONTATO_TIPO_LABELS,
-    CONTATO_ORIGEM_LABELS,
     SUBTIPOS_B2B_LABELS,
     CONTATO_STATUS_LABELS,
 } from '@/constants'
+import { supabase } from '@/lib/supabase'
 
 interface FormClassificacaoProps {
     register: UseFormRegister<ContatoFormData>
@@ -15,6 +16,20 @@ interface FormClassificacaoProps {
 }
 
 export function FormClassificacao({ register, errors, tipoValue }: FormClassificacaoProps) {
+    const { data: origens = [] } = useQuery({
+        queryKey: ['origens'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('origens')
+                .select('slug, label')
+                .eq('ativo', true)
+                .order('ordem')
+            if (error) throw error
+            return data
+        },
+        staleTime: Infinity,
+    })
+
     return (
         <div className="space-y-4">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -67,8 +82,8 @@ export function FormClassificacao({ register, errors, tipoValue }: FormClassific
                         className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-0"
                         {...register('origem')}
                     >
-                        {Object.entries(CONTATO_ORIGEM_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>{label}</option>
+                        {origens.map(({ slug, label }) => (
+                            <option key={slug} value={slug}>{label}</option>
                         ))}
                     </select>
                 </div>

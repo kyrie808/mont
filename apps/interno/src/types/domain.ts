@@ -28,7 +28,7 @@ export interface DomainContato {
     tipo: 'B2C' | 'B2B' | 'FORNECEDOR' | 'catalogo'
     subtipo?: string | null
     status: 'lead' | 'cliente' | 'inativo' | 'fornecedor'
-    origem: 'direto' | 'indicacao' | 'catalogo'
+    origem: string
     indicadoPorId?: string | null
     indicador?: IndicadorRef | null
     endereco?: string | null

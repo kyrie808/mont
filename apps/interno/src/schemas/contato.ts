@@ -16,7 +16,7 @@ export const contatoSchema = z.object({
     tipo: z.enum(['B2C', 'B2B', 'FORNECEDOR']),
     subtipo: z.string().optional().nullable(),
     status: z.enum(['lead', 'cliente', 'inativo', 'fornecedor']),
-    origem: z.enum(['direto', 'indicacao', 'catalogo']),
+    origem: z.string().min(1, 'Origem é obrigatória'),
     indicado_por_id: z.string().uuid().optional().nullable(),
     endereco: z.string().optional().nullable(),
     cep: z.string().optional().nullable(),
@@ -38,7 +38,7 @@ export const contatoFiltrosSchema = z.object({
     busca: z.string().optional(),
     tipo: z.enum(['B2C', 'B2B', 'FORNECEDOR', 'todos']).default('todos'),
     status: z.enum(['lead', 'cliente', 'inativo', 'fornecedor', 'todos']).default('todos'),
-    origem: z.enum(['direto', 'indicacao', 'catalogo', 'todos']).default('todos'),
+    origem: z.string().default('todos'),
 })
 
 export type ContatoFiltros = z.infer<typeof contatoFiltrosSchema>
