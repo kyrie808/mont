@@ -1,6 +1,6 @@
 ---
 name: tdd-mont-pragmatico
-description: TDD practices for Mont project. TRIGGER every time you write, modify, or run tests. Covers __TEST__ namespacing, production Supabase usage, cleanup patterns, and regression policy. Do NOT suggest Docker/isolation as alternative — this is a deliberate project decision.
+description: TDD practices for Mont project. TRIGGER every time you write, modify, or run tests. Integration tests run against PRODUCTION authenticated as a dedicated test account (teste@teste.com); cleanup is scoped by created_by. Do NOT suggest Docker, service_role, __TEST__ prefixes, or CI — deliberate project decisions.
 allowed-tools: Read, Write, Bash, Grep
 ---
 
@@ -12,173 +12,94 @@ allowed-tools: Read, Write, Bash, Grep
 
 ## Princípio fundamental
 
-Testes rodam contra **Supabase de produção**. Trade-off consciente: economia de tokens + zero overhead de Docker supera o risco em projeto solo com janela de execução controlada.
+Testes de integração rodam contra **Supabase de produção**, autenticados como uma **conta-teste dedicada** (`teste@teste.com`, uid `627bc83a-8e02-4949-ab6b-7efae29c4ac5`). Decisão consciente: sem Docker, sem CI. A segurança vem do **escopo por `created_by`**, não de isolamento de ambiente.
 
-**NÃO sugerir:**
-- Docker / `supabase start` local como "ambiente isolado"
-- Mock total do Supabase client em testes de integração
-- CI automático (GitHub Actions, Vercel hooks)
+**NÃO sugerir / NÃO usar:**
+- Docker / `supabase start` local como "ambiente isolado".
+- `service_role` nos testes (bypassa o `auth.uid()` → `created_by` fica nulo → o cleanup-por-conta para de funcionar). **Sempre logar como a conta-teste.**
+- Mock total do Supabase client em testes de integração.
+- CI automático (GitHub Actions, Vercel hooks).
+- Prefixos `__TEST__` / marcadores permanentes / preflight / global-teardown — **arquitetura ANTIGA, abolida** (06/06/2026). Não recriar.
 
-Isso não é gambiarra a ser corrigida — foi decisão deliberada do Luccas.
+## Como funciona (modelo conta-teste)
 
-## Namespacing `__TEST__`
+O trigger `handle_audit_fields` carimba `created_by = auth.uid()` em todo insert. Como os testes logam como a conta-teste, **tudo que eles criam fica marcado com o uid dela**. O cleanup deleta SOMENTE esse `created_by` (e os filhos ancorados nesses pais). Dado de qualquer outra conta (ex. `adm@distribuidora.com.br`, uid `e9cbd39c-...`) é **estruturalmente intocável**.
 
-Todo dado criado por teste **DEVE** ter prefixo `__TEST__` em campo identificável da tabela:
+**Garantia de segurança:** `cleanTestData` tem um GUARD — aborta com erro se a sessão não for a conta-teste. É impossível apagar dado real por acidente.
 
-| Tabela | Campo a prefixar |
-|--------|-----------------|
-| `contatos` | `nome` |
-| `contas` | `nome` |
-| `vendas`, `lancamentos`, `pagamentos_venda` | `observacoes` |
-| `produtos` | `codigo` |
-
-### Marcadores permanentes (NÃO criar novos — reusar os existentes)
-
-```
-__TEST__Cliente → contatos.id = '63040302-54d5-4213-8b11-9e208e45174b'
-__TEST__Conta   → contas.id   = 'd1485f56-e8f5-4a3e-84bb-cb104ba7a695' (ativo=false)
-```
-
-Testes que precisam de um contato referenciado: usar `__TEST__Cliente`.
-Testes que precisam de conta de destino para pagamento: usar `__TEST__Conta`.
-
-Vendas/lançamentos criados pelo teste: prefixar `observacoes` com `__TEST__<nome_da_suite>__` para rastreabilidade.
-
-## Pré-flight check
-
-Antes de qualquer test run, validar que os marcadores existem:
+## Harness (`@mont/shared/test-utils`)
 
 ```typescript
-// apps/interno/src/__tests__/setup.ts
-async function preflightCheck() {
-  const { data: cliente } = await supabase
-    .from('contatos')
-    .select('id')
-    .eq('id', '63040302-54d5-4213-8b11-9e208e45174b')
-    .single()
+import { createTestClient, cleanTestData, TEST_USER_ID } from '@mont/shared/test-utils'
 
-  const { data: conta } = await supabase
-    .from('contas')
-    .select('id, ativo')
-    .eq('id', 'd1485f56-e8f5-4a3e-84bb-cb104ba7a695')
-    .single()
+let supabase: Awaited<ReturnType<typeof createTestClient>>
 
-  if (!cliente || !conta) {
-    throw new Error('__TEST__ markers missing in production. Aborting test run. Re-seed via migration before retrying.')
-  }
-}
-```
+beforeAll(async () => {
+  supabase = await createTestClient()   // anon + signIn como conta-teste; valida uid
+})
 
-## Cleanup por suite
-
-Cada suite mantém array de `createdIds` e limpa em `afterEach` na ordem FK correta:
-
-```
-lancamentos → pagamentos_venda → itens_venda → vendas → cat_itens_pedido → cat_pedidos → contatos (extras) → contas (extras)
-```
-
-**NÃO deletar** os marcadores permanentes nos cleanups.
-
-```typescript
 afterEach(async () => {
-  await supabase.from('lancamentos').delete().in('id', createdLancamentoIds)
-  await supabase.from('pagamentos_venda').delete().in('id', createdPagamentoIds)
-  await supabase.from('itens_venda').delete().in('id', createdItemIds)
-  await supabase.from('vendas').delete().in('id', createdVendaIds)
-  await supabase.from('cat_itens_pedido').delete().in('id', createdCatItemIds)
-  await supabase.from('cat_pedidos').delete().in('id', createdCatPedidoIds)
-  // NUNCA incluir '63040302-54d5-4213-8b11-9e208e45174b' nem 'd1485f56-e8f5-4a3e-84bb-cb104ba7a695'
-  await supabase.from('contatos').delete().in('id', createdContatoIds)
-  await supabase.from('contas').delete().in('id', createdContaIds)
-  // Reset arrays
-  createdLancamentoIds = []
-  createdPagamentoIds = []
-  createdItemIds = []
-  createdVendaIds = []
-  createdCatItemIds = []
-  createdCatPedidoIds = []
-  createdContatoIds = []
-  createdContaIds = []
+  await cleanTestData(supabase)          // deleta só o created_by da conta-teste
 })
 ```
 
-## Safety net global
+- `createTestClient()` — **async**. Cria client anon, loga como a conta-teste, valida que `auth.uid() === TEST_USER_ID`. Aponta pra produção via env.
+- `cleanTestData(client)` — guard + deletes escopados em ordem FK. Cobre o grafo vendas/checkout/compras/contas-a-pagar.
 
-`globalTeardown` roda ao final independente de passes/falhas — captura qualquer vazamento de cleanup específico:
+**Cobertura do cleanup** (não precisa prefixar nada — o `created_by` é automático):
+- **6 tabelas com `created_by`** (delete direto): `contas`, `contatos`, `vendas`, `lancamentos`, `contas_a_pagar`, `pagamentos_conta_a_pagar`.
+- **Filhas sem `created_by`** (ancoradas no pai): `itens_venda`/`pagamentos_venda` (via `vendas`), `cat_pedidos`/`cat_itens_pedido` (via `contatos`), `purchase_orders`/itens/payments (via `contatos`).
+
+## Credenciais
+
+Em `apps/interno/.env.local` (gitignored), nunca no git:
+```
+VITE_TEST_USER_EMAIL=teste@teste.com
+VITE_TEST_USER_PASSWORD=...
+```
+
+## Padrão de teste
+
+Cada teste **cria seus próprios dados** logado como a conta-teste (contato, conta, venda…) — todos ganham `created_by` da conta-teste automaticamente — faz as asserções, e o `afterEach` chama `cleanTestData`. Não reusar dados de outras contas; não há mais marcadores permanentes.
 
 ```typescript
-// apps/interno/src/__tests__/global-teardown.ts
-const MARKER_IDS = [
-  '63040302-54d5-4213-8b11-9e208e45174b',  // __TEST__Cliente
-  'd1485f56-e8f5-4a3e-84bb-cb104ba7a695',  // __TEST__Conta
-]
-
-export default async function teardown() {
-  await supabase.from('lancamentos').delete().like('observacoes', '__TEST__%')
-  await supabase.from('pagamentos_venda').delete().like('observacoes', '__TEST__%')
-  await supabase.from('vendas').delete().like('observacoes', '__TEST__%')
-  await supabase
+async function criarContato(nome = 'Cliente Teste') {
+  const { data, error } = await supabase
     .from('contatos')
-    .delete()
-    .like('nome', '__TEST__%')
-    .not('id', 'in', `(${MARKER_IDS.map(id => `'${id}'`).join(',')})`)
-  await supabase
-    .from('contas')
-    .delete()
-    .like('nome', '__TEST__%')
-    .not('id', 'in', `(${MARKER_IDS.map(id => `'${id}'`).join(',')})`)
+    .insert({ nome, telefone: '11955550000', tipo: 'B2C', status: 'cliente', origem: 'direto' })
+    .select('id').single()
+  if (error) throw error
+  return data
 }
 ```
 
 ## Janela de execução
 
-- ✅ Execução manual pelo Luccas: `pnpm test:integration` ou `pnpm --filter interno test`
-- ❌ NUNCA em CI automático (Vercel, GitHub Actions)
-- ❌ NUNCA enquanto o Gilmar está logado e usando o sistema (race condition real com dados sendo manipulados simultaneamente)
-- Janela ideal: madrugada ou final de semana
+- ✅ Execução manual: `pnpm --filter interno test`.
+- ❌ NUNCA em CI automático.
+- ❌ NUNCA enquanto o Gilmar está logado e usando o sistema (asserções podem ler dado mudando ao vivo — agora não há risco de PERDA de dado, mas há de teste flaky).
+- Janela ideal: madrugada ou final de semana.
+- `fileParallelism: false` no vitest.config — obrigatório (banco compartilhado).
 
-## Stack e estrutura de arquivos
+## Camada unit/component (jsdom, sem banco)
 
-```
-apps/interno/src/
-├── __tests__/
-│   ├── setup.ts                          # preflight check + client compartilhado
-│   ├── global-teardown.ts                # safety net pós-suite
-│   └── integration/
-│       ├── vendas.test.ts
-│       ├── financeiro.test.ts
-│       └── ...
-├── components/
-│   └── features/.../
-│       └── __tests__/
-│           └── *.test.tsx                # testes de componente colocalizados
-└── services/
-    └── __tests__/
-        └── *.spec.ts                     # testes unitários de serviço
-```
-
-- Supabase client real (`@supabase/supabase-js`) apontado para produção via env vars
-- Mocks SÓ de serviços externos não-Supabase (Evolution API, Cloudflare Tunnel, etc.)
-- `fileParallelism: false` no vitest.config — obrigatório para evitar race conditions no banco compartilhado
+Testes de função pura e de componente (`*.spec.ts`, `*.test.tsx`) NÃO usam o harness, NÃO tocam o banco (mockam ou são puros). Rodam sempre, seguros. Ex.: `PaymentSidebar.test.tsx` (regressão de race condition), `mappers.spec.ts`. Mantê-los.
 
 ## Política de regressão
 
 Para todo bug crítico em produção:
-
-1. **Escrever teste que reproduz o bug (vai FALHAR)** — antes do fix
-2. Implementar o fix
-3. Verificar que o teste passa
-4. Commit único contendo teste + fix (nunca separado)
-
-Bugs cobertos até agora:
-- `PaymentSidebar` race condition → `apps/interno/src/components/features/vendas/__tests__/PaymentSidebar.test.tsx`
+1. **Escrever teste que reproduz o bug (vai FALHAR)** — antes do fix.
+2. Implementar o fix.
+3. Verificar que o teste passa.
+4. Commit único contendo teste + fix.
 
 ## O que NÃO fazer
 
-- ❌ Sugerir Docker / `supabase start` como alternativa
-- ❌ Criar novos `__TEST__Cliente` ou `__TEST__Conta` — os marcadores já existem em produção
-- ❌ Mockar Supabase client em testes de integração
-- ❌ Commitar testes sem `afterEach` de cleanup completo
-- ❌ Rodar testes em CI automático
-- ❌ Deletar os marcadores permanentes (`63040302-54d5...` e `d1485f56-e8f5...`)
-- ❌ Usar `as any` em código de teste (mesma regra do código de produção)
+- ❌ Docker / `supabase start` como alternativa.
+- ❌ `service_role` em teste de integração (quebra o `created_by`).
+- ❌ Mockar Supabase client em teste de integração.
+- ❌ Commitar teste sem `afterEach(cleanTestData)`.
+- ❌ Rodar em CI automático.
+- ❌ Recriar prefixos `__TEST__` / marcadores permanentes (arquitetura abolida).
+- ❌ Inserir contas de CLIENTE em `admin_users` (a conta-teste é exceção interna autorizada; clientes, nunca — ver o gate da área do cliente).
+- ❌ `as any` em código de teste (mesma regra do código de produção).

@@ -38,11 +38,10 @@ pnpm turbo build                          # Build all
 pnpm turbo build --filter=catalogo        # Build catalog only
 pnpm turbo build --filter=interno         # Build internal only
 
-# Tests (run against local Docker database)
-npx supabase start                        # Start local DB first
-pnpm --filter interno test                # Run all tests
-pnpm turbo test                           # Run all tests via turbo
-npx supabase stop                         # Stop local DB after
+# Tests (NO Docker — integration runs against PRODUCTION as the dedicated test account)
+pnpm --filter interno test                # Unit/component (jsdom) + integration
+# Integration authenticates as teste@teste.com; cleanup scoped by created_by.
+# Never run while Gilmar is using the system. See skill tdd-mont-pragmatico.
 
 # Type checking
 pnpm --filter catalogo exec tsc --noEmit
@@ -129,22 +128,19 @@ Codebase and UI are in **Brazilian Portuguese**. Table names, field names, compo
 ## Testing
 
 - **Framework:** Vitest (configured in `apps/interno`)
-- **Integration tests:** `apps/interno/src/__tests__/` and `apps/interno/tests/integration/` — run against local Docker Supabase
-- **Unit tests:** `apps/interno/src/utils/` and `apps/interno/src/services/__tests__/`
-- **Component tests:** `apps/interno/src/components/**/*.test.tsx` — jsdom + Testing Library
-- **Test helpers:** `packages/shared/src/test-utils.ts` (NOT exported from barrel — use subpath `@mont/shared/test-utils`)
-- **Seed data:** `supabase/seed.sql`
-- **Parallelism:** Disabled (`fileParallelism: false`) to avoid race conditions on shared DB
-- **85 tests passing** across 15 files (38 integration, 43 unit, 4 component)
-- Setup de testes do `apps/interno`: ver `apps/interno/TESTING.md`
+- **Two layers:**
+  - **Unit/component (jsdom, no DB):** `src/utils/`, `src/services/__tests__/`, `src/components/**/*.test.tsx`. Pure or mocked — always safe. (61 tests across 9 files.)
+  - **Integration (against PRODUCTION):** authenticated as the dedicated test account `teste@teste.com`. Cleanup is scoped by `created_by` (the test account's `auth.uid()`) + parent-anchored for child tables — real data is structurally untouchable. (Old Docker/table-wipe integration suite was nuked 06/06/2026; rebuild on the new harness per module.)
+- **Test helpers:** `packages/shared/src/test-utils.ts` (`createTestClient`, `cleanTestData`, `TEST_USER_ID`) — subpath `@mont/shared/test-utils`. NO Docker, NO service_role, NO `__TEST__` prefixes.
+- **Parallelism:** Disabled (`fileParallelism: false`) — shared DB.
+- **Window:** manual only; never CI; never while Gilmar is using the system.
+- **Full rules:** skill `tdd-mont-pragmatico` (`.claude/skills/tdd-mont-pragmatico/SKILL.md`).
 
 ## Testes (TDD pragmático)
 
-Para escrever, modificar ou rodar testes no projeto Mont, **consulte `.agent/skills/tdd-mont-pragmatico/SKILL.md` ANTES de qualquer ação**.
+Para escrever, modificar ou rodar testes no projeto Mont, **consulte `.claude/skills/tdd-mont-pragmatico/SKILL.md` ANTES de qualquer ação**.
 
-Padrão `__TEST__` é obrigatório. Testes rodam contra Supabase de produção via Supabase client real (decisão consciente — não sugerir Docker/mock como "melhoria"). Marcadores permanentes em produção:
-- `__TEST__Cliente`: `contatos.id = '63040302-54d5-4213-8b11-9e208e45174b'`
-- `__TEST__Conta`: `contas.id = 'd1485f56-e8f5-4a3e-84bb-cb104ba7a695'` (ativo=false)
+Arquitetura ÚNICA (06/06/2026): testes de integração rodam contra **produção** autenticados como a **conta-teste dedicada** (`teste@teste.com`, uid `627bc83a-...`, é admin em `admin_users`). O trigger `handle_audit_fields` carimba `created_by = auth.uid()`; o cleanup (`cleanTestData`) deleta SOMENTE esse `created_by` + filhos ancorados no pai, com guard que aborta se a sessão não for a conta-teste. **Não usar** Docker, `service_role`, prefixos `__TEST__` ou marcadores permanentes (arquitetura antiga abolida). Credenciais em `apps/interno/.env.local` (gitignored).
 
 Toda regressão de bug crítico exige teste que reproduz o bug ANTES do fix.
 
