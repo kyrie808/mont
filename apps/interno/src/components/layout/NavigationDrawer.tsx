@@ -68,7 +68,7 @@ const NAV_GROUPS: NavGroup[] = [
     {
         label: 'Financeiro',
         items: [
-            { label: 'Fluxo de Caixa',     path: '/fluxo-caixa',        icon: Wallet,     locked: true },
+            { label: 'Fluxo de Caixa',     path: '/fluxo-caixa',        icon: Wallet      },
             { label: 'Contas a Receber',   path: '/contas-a-receber',   icon: CreditCard, locked: true },
             { label: 'Contas a Pagar',     path: '/contas-a-pagar',     icon: Receipt,    locked: true },
             { label: 'Relatório Fábrica',  path: '/relatorio-fabrica',  icon: FileText,   locked: true },

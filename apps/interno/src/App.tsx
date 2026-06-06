@@ -18,7 +18,7 @@ function ParkedRoute() { return null }
 const Relacionamento = lazy(() => import('./pages/Relacionamento').then(m => ({ default: m.Relacionamento })))
 const RelatorioFabrica = ParkedRoute
 const Entregas = ParkedRoute
-const FluxoCaixa = ParkedRoute
+const FluxoCaixa = lazy(() => import('./pages/FluxoCaixa').then(m => ({ default: m.FluxoCaixa })))
 const ContasReceber = ParkedRoute
 const ContasAPagar = ParkedRoute
 const Estoque = ParkedRoute

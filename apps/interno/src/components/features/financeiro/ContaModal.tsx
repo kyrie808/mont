@@ -36,6 +36,7 @@ export function ContaModal({ isOpen, onClose, onSuccess }: ContaModalProps) {
             onSuccess?.()
             onClose()
         } catch (error) {
+            console.error('[ContaModal] createConta failed:', error)
             toast.error('Erro ao criar conta')
         } finally {
             setIsLoading(false)
