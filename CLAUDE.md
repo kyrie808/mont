@@ -15,7 +15,9 @@ This file provides guidance to Claude Code when working with this repository.
 
 1. **Zero `as any`** — Type correctly always. Only 3 accepted: zodResolver/react-hook-form incompatibility.
 2. **Zero hacks** — Architect like a senior engineer. If something is wrong, fix it properly.
-3. **Never alter production database directly** — All changes go through local Docker → migration → test → `npx supabase db push`.
+3. **Production database — discipline by risk:**
+   - **Code/UI changes** (componentes, services, frontend): run directly against production. Zero DB risk — apps already point to prod via `.env.local`. No Docker, no ceremony.
+   - **Schema/data changes** (tables, columns, views, RPCs, triggers, RLS, UPDATE/DELETE on real rows): NEVER ad-hoc in the Studio. **Always** (a) back up first (`supabase/scripts/dump-prod.ps1`) and (b) write the change as a versioned migration file — even when applying straight to prod. Local Docker validation is the ideal but is currently OFF by conscious decision (solo dev, 2 users). Reconsider Docker only on a real trigger: a 3rd user/employee, complex/risky schema work, or a near-miss prod incident.
 4. **Zero unauthorized visual changes** — Do NOT rewrite UI components. If scope is type changes, change types only. Never change CSS, animations, text, layout, colors without explicit authorization.
 5. **Diagnosis first, execution second** — Analyze current state before implementing. "No frankensteins."
 6. **Checkpoint per stage** — Commit, build, report before advancing.

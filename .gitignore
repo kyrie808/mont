@@ -36,8 +36,9 @@ dev-dist/
 # App specific
 apps/distribuidora/tmp/
 
-# Claude Code local settings
-.claude/settings.local.json
+# Claude Code — tudo local. Skills: fonte canônica é .agent/skills/ (versionado);
+# .claude/skills é um junction pra ela (não duplica, não versiona).
+.claude/
 
 # Local artifacts
 *.tsbuildinfo

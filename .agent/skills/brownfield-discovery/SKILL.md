@@ -25,11 +25,11 @@ Comprehensive 6-phase diagnostic tool for brownfield codebases. This skill perfo
 
 Execute commands and capture ALL outputs:
 
-1. `npm run build` — capture TypeScript compilation errors
-2. `npm run lint` — capture ESLint violations
-3. `npm run test` — capture test failures and output
+1. `pnpm turbo build` — capture TypeScript compilation errors (per-app: `pnpm turbo build --filter=interno` / `--filter=catalogo`)
+2. `pnpm --filter interno lint` and `pnpm --filter catalogo lint` — capture ESLint violations
+3. `pnpm --filter interno test` — capture test failures and output
 
-If commands don't exist in package.json scripts, mark as `⚠️ NÃO VERIFICADO`.
+This is a pnpm + Turborepo monorepo — NOT `npm run`. If a command isn't wired here, mark as `⚠️ NÃO VERIFICADO`.
 
 **What to capture:**
 - Build-blocking TypeScript errors (file path, line, message)
@@ -74,8 +74,8 @@ Check for Supabase MCP availability in available_tools.
 
 Read type definition files and compare with actual usage:
 
-1. Read database types: `src/types/database.ts` or auto-generated Supabase types
-2. Read domain types: `src/types/domain.ts` or equivalent
+1. Read database types: `packages/shared/src/database.ts` (auto-generated, single source of truth — manual aliases live in `packages/shared/src/types.ts`)
+2. Read domain types: `apps/interno/src/types/domain.ts` or equivalent
 3. Grep for type usage across codebase
 
 **What to capture:**
@@ -88,7 +88,7 @@ Read type definition files and compare with actual usage:
 - Enum values defined in types but not used/missing in DB
 
 **Mapper verification:**
-- Read the mappers file (commonly src/services/mappers.ts)
+- Read the mappers file (`apps/interno/src/services/mappers.ts`)
 - For each mapper function, verify that ALL source fields (snake_case) map to ALL destination fields (camelCase)
 - Report fields that exist in DB types but are missing in domain types
 - Report fields that exist in domain types but are missing in DB types
@@ -130,7 +130,7 @@ Analyze React components and UI code:
 
 Check test coverage and critical paths:
 
-1. Check if `--coverage` flag works with `npm run test`
+1. Check if `--coverage` flag works with `pnpm --filter interno test`
 2. List all test files (usually `*.test.ts`, `*.test.tsx`, `*.spec.ts`)
 3. Identify critical modules without test files
 

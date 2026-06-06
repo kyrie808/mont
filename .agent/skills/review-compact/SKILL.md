@@ -26,3 +26,7 @@ Severities: 🔴 BREAK (will crash) · 🟡 WARN (potential bug) · 🟢 STYLE (
 
 Do NOT comment on: formatting, variable naming, import order.
 Maximum output: 15 lines.
+
+## Relação com `/code-review`
+
+Esta skill é a checagem **barata do dia-a-dia**, focada no domínio Mont (cadeia de tipos, invalidação de cache, arquitetura dois-projetos). Para o **portão pesado antes de mergear** — revisão completa de correção, com olhos frescos — usar `/code-review`. Não são redundantes: papéis diferentes.
