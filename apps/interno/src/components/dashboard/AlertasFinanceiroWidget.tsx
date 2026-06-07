@@ -54,7 +54,7 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
         window.open(url, '_blank')
     }
 
-    if (loading) return <div className="h-40 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+    if (loading) return <div className="h-40 animate-pulse bg-muted rounded-xl" />
 
     if (atrasados.length === 0) {
         return (
@@ -64,8 +64,8 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
                 count={0}
                 emptyState={
                     <div className="w-full flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border border-dashed">
-                        <DollarSign className="size-8 text-gray-300 dark:text-gray-600 mb-2" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma pendência urgente</p>
+                        <DollarSign className="size-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Nenhuma pendência urgente</p>
                     </div>
                 }
             >
@@ -82,11 +82,11 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
         >
             {atrasados.map((alerta) => (
                 <div key={alerta.venda.id} className="min-w-[280px] snap-center">
-                    <Card className="h-full bg-card border-l-4 border-l-semantic-red border-y-border hover:border-y-border/80 shadow-sm transition-all">
+                    <Card className="h-full bg-card border-l-4 border-l-semantic-red border-y-border hover:border-y-border/80 shadow-card transition-all">
                         <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white truncate max-w-[160px]">
+                                    <h3 className="font-bold text-foreground truncate max-w-[160px]">
                                         {alerta.venda.contato?.nome || 'Cliente'}
                                     </h3>
                                     <p className="text-xs text-semantic-red font-semibold flex items-center gap-1 mt-0.5">
@@ -95,14 +95,14 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <span className="block text-lg font-bold text-gray-900 dark:text-white">
+                                    <span className="block text-lg font-bold text-foreground">
                                         {formatCurrency(alerta.venda.total)}
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50 dark:border-gray-800/50">
-                                <span className="text-xs text-gray-400">
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                                <span className="text-xs text-muted-foreground">
                                     Vencimento: {formatRelativeDate(alerta.dataPrevista)}
                                 </span>
                                 <button
@@ -111,7 +111,7 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
                                         alerta.venda.contato?.nome || '',
                                         alerta.venda.total
                                     )}
-                                    className="flex items-center gap-1.5 text-xs font-bold text-semantic-green hover:text-green-600 transition-colors bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-full"
+                                    className="flex items-center gap-1.5 text-xs font-bold text-semantic-green hover:text-success transition-colors bg-success/10 px-3 py-1.5 rounded-full"
                                 >
                                     <MessageCircle className="size-3.5" />
                                     Cobrar

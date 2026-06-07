@@ -1,4 +1,4 @@
-﻿import { ShoppingCart, Clock, ArrowRight } from 'lucide-react'
+import { ShoppingCart, Clock, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDashboardFilter } from '@/hooks/useDashboardFilter'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -35,7 +35,7 @@ export function UltimasVendasWidget({ data, loading: externalLoading }: UltimasV
         }))
         : (rawVendas as VendaAlerta[]).slice(0, 5)
 
-    if (loading) return <div className="h-[300px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+    if (loading) return <div className="h-[300px] animate-pulse bg-muted rounded-xl" />
 
     if (latestSales.length === 0) return null
 
@@ -44,13 +44,13 @@ export function UltimasVendasWidget({ data, loading: externalLoading }: UltimasV
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                     <ShoppingCart className="size-4 text-primary" />
-                    <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+                    <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">
                         Últimas Vendas
                     </h2>
                 </div>
                 <button
                     onClick={() => navigate('/vendas')}
-                    className="text-xs font-medium text-primary hover:text-green-600 transition-colors flex items-center gap-1"
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                 >
                     Ver todas
                     <ArrowRight className="size-3" />
@@ -72,10 +72,10 @@ export function UltimasVendasWidget({ data, loading: externalLoading }: UltimasV
                                 )} />
 
                                 <div>
-                                    <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-none mb-1 group-hover:text-primary transition-colors">
+                                    <h3 className="text-sm font-bold text-foreground leading-none mb-1 group-hover:text-primary transition-colors">
                                         {venda.contato?.nome || 'Cliente não identificado'}
                                     </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                    <p className="text-xs text-muted-foreground font-medium">
                                         {formatRelativeDate(venda.data)}
                                     </p>
                                 </div>
@@ -83,18 +83,18 @@ export function UltimasVendasWidget({ data, loading: externalLoading }: UltimasV
 
                             <div className="flex items-center gap-4">
                                 {!venda.pago && venda.status !== 'cancelada' && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-[10px] font-bold text-yellow-600 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-800">
+                                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-[10px] font-bold text-warning-strong border border-warning/20">
                                         <Clock className="size-3" />
                                         Não pago
                                     </span>
                                 )}
 
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                <span className="text-sm font-bold text-foreground">
                                     {formatCurrency(venda.total)}
                                 </span>
                             </div>
 
-                            <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-gradient-to-r from-primary to-green-400 group-hover:w-full transition-all duration-500 ease-out" />
+                            <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-gradient-to-r from-primary to-success group-hover:w-full transition-all duration-500 ease-out" />
                         </CardContent>
                     </Card>
                 ))}

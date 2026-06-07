@@ -42,7 +42,7 @@ export function MonthPicker({ selectedMonth, onMonthSelect, className }: MonthPi
                             )}></span>
                             <span className={cn(
                                 "relative z-10 text-sm font-medium transition-colors duration-200",
-                                isSelected ? "text-background font-bold" : "text-gray-500 dark:text-gray-400"
+                                isSelected ? "text-background font-bold" : "text-muted-foreground"
 
                             )}>
                                 {month}

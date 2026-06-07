@@ -40,6 +40,23 @@
 }
 
 @layer base {
+  /*
+   * ──────────────────────────────────────────────────────────────────
+   *  MAPA SEMÂNTICO DOS TOKENS  (regra de ouro: mapear pela FUNÇÃO, não pelo tom)
+   *  Use as classes de token (bg-… / text-… / border-…) em vez de cores cruas (zinc/emerald/slate…).
+   *  Trocar um valor abaixo re-tematiza o app inteiro de uma linha só.
+   *
+   *  primary      → marca / CTA principal (neon green). Ações primárias (Nova Venda, salvar).
+   *  success      → positivo / entrada / receita / quitado / status ok.
+   *  destructive  → negativo / perigo / saída / erro / excluir.
+   *  warning(-strong) → atenção / pendente / a receber.
+   *  muted(-foreground) → superfícies e textos secundários, labels, ícones neutros.
+   *  foreground / background → texto principal / superfície base.
+   *      Inversões (hero card, tooltip, FAB neutro) = `bg-foreground text-background`.
+   *  card         → superfície de cards.   accent → destaque secundário (amarelo).
+   *  border / input / ring → chrome de formulário (borda, input, anel de foco).
+   * ──────────────────────────────────────────────────────────────────
+   */
   :root {
     /* Stitch Light Theme (Default) */
     --background: 0 0% 100%;

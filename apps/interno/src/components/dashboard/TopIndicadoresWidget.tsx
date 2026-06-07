@@ -18,7 +18,7 @@ export function TopIndicadoresWidget({ data, loading: externalLoading }: TopIndi
     const loading = data ? externalLoading : internalLoading
     const rawData = data || hookData
 
-    if (loading) return <div className="h-40 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+    if (loading) return <div className="h-40 animate-pulse bg-muted rounded-xl" />
 
     // Map data to expected format if it comes from JSON view
     const validIndicadores = rawData.map(i => {
@@ -37,7 +37,7 @@ export function TopIndicadoresWidget({ data, loading: externalLoading }: TopIndi
         <div className="flex flex-col gap-3 mt-4">
             <div className="flex items-center gap-2 px-1">
                 <Trophy className="size-4 text-semantic-yellow" />
-                <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+                <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">
                     Ranking de Indicações
                 </h2>
             </div>
@@ -75,19 +75,19 @@ function TopIndicadorCard({ indicador, index }: { indicador: TopIndicador, index
                 <div className="flex items-center gap-4">
                     <div className={cn(
                         "flex items-center justify-center size-10 rounded-full font-bold text-lg shadow-inner",
-                        isTop3 ? "bg-white/30 backdrop-blur-sm text-black" : "bg-gray-100 dark:bg-gray-800 text-gray-500"
+                        isTop3 ? "bg-white/30 backdrop-blur-sm text-black" : "bg-muted text-muted-foreground"
                     )}>
                         {index + 1}
                     </div>
                     <div>
-                        <h3 className={cn("font-bold text-sm", isTop3 ? "text-black dark:text-white mix-blend-hard-light" : "text-gray-900 dark:text-white")}>
+                        <h3 className={cn("font-bold text-sm", isTop3 ? "text-black dark:text-white mix-blend-hard-light" : "text-foreground")}>
                             {indicador.nome}
                         </h3>
                         <div className="flex flex-col gap-0.5">
-                            <p className={cn("text-xs font-medium opacity-80", isTop3 ? "text-black dark:text-white" : "text-gray-500")}>
+                            <p className={cn("text-xs font-medium opacity-80", isTop3 ? "text-black dark:text-white" : "text-muted-foreground")}>
                                 {indicador.totalIndicados} {indicador.totalIndicados === 1 ? 'cliente indicado' : 'clientes indicados'}
                             </p>
-                            <p className={cn("text-[10px] font-bold", isTop3 ? "text-black/70 dark:text-white/70" : "text-semantic-violet")}>
+                            <p className={cn("text-[10px] font-bold", isTop3 ? "text-black/70 dark:text-white/70" : "text-primary")}>
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(indicador.totalVendasIndicados)} em vendas
                             </p>
                         </div>

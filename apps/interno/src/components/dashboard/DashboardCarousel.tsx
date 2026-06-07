@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@mont/shared'
 
@@ -26,12 +26,12 @@ export function DashboardCarousel({
             {/* Header */}
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
-                    <Icon className="size-4 text-gray-500 dark:text-gray-400" />
-                    <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+                    <Icon className="size-4 text-muted-foreground" />
+                    <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">
                         {title}
                     </h2>
                     {count !== undefined && count > 0 && (
-                        <span className="bg-red-100 dark:bg-red-900/30 text-semantic-red text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        <span className="bg-destructive/10 text-semantic-red text-[10px] font-bold px-2 py-0.5 rounded-full">
                             {count}
                         </span>
                     )}
