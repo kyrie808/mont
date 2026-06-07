@@ -23,10 +23,10 @@ interface PaymentSidebarProps {
 }
 
 const PAYMENT_METHODS = [
-    { value: 'pix', label: 'Pix', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { value: 'dinheiro', label: 'Dinheiro', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { value: 'cartao', label: 'Cartão', icon: CreditCard, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-    { value: 'fiado', label: 'Fiado', icon: CalendarIcon, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { value: 'pix', label: 'Pix', icon: FileText },
+    { value: 'dinheiro', label: 'Dinheiro', icon: DollarSign },
+    { value: 'cartao', label: 'Cartão', icon: CreditCard },
+    { value: 'fiado', label: 'Fiado', icon: CalendarIcon },
 ]
 
 export function PaymentSidebar({
@@ -188,11 +188,12 @@ export function PaymentSidebar({
                                 type="button"
                                 onClick={() => setValue('metodo', method.value as PagamentoFormData['metodo'])}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5",
+                                    "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                                     isSelected
-                                        ? cn("border-primary ring-1 ring-primary/20", method.bg, method.color)
+                                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
                                         : "border-border bg-card text-muted-foreground hover:bg-muted"
                                 )}
+                                aria-pressed={isSelected}
                                 aria-label={`Pagamento via ${method.label}`}
                             >
                                 <Icon className="w-5 h-5" />

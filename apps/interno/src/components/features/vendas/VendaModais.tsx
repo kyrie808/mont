@@ -45,10 +45,10 @@ export function VendaModais({
                 title="Excluir Venda"
                 size="sm"
             >
-                <p className="text-gray-600 mb-4 dark:text-gray-300">
+                <p className="text-muted-foreground mb-4">
                     Tem certeza que deseja excluir esta venda?
                     <br />
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                         Esta ação não pode ser desfeita.
                     </span>
                 </p>
@@ -68,10 +68,10 @@ export function VendaModais({
                 title="Cancelar Venda"
                 size="sm"
             >
-                <p className="text-gray-600 mb-4 dark:text-gray-300">
+                <p className="text-muted-foreground mb-4">
                     Tem certeza que deseja cancelar esta venda?
                     <br />
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                         O estoque será restaurado se a venda já foi entregue.
                     </span>
                 </p>
@@ -91,7 +91,7 @@ export function VendaModais({
                 title="Reverter Entrega"
                 size="sm"
             >
-                <p className="text-gray-600 mb-4 dark:text-gray-300">
+                <p className="text-muted-foreground mb-4">
                     Deseja desfazer a entrega e marcar esta venda como <strong>Pendente</strong> novamente?
                 </p>
                 <ModalActions>

@@ -132,7 +132,7 @@ export function VendaDetalhe() {
     if (loading) return <LoadingScreen message="Carregando detalhes..." />
     if (error || !venda) return (
         <div className="p-4 text-center">
-            <p className="text-red-500 mb-4">{error || 'Venda não encontrada'}</p>
+            <p className="text-destructive mb-4">{error || 'Venda não encontrada'}</p>
             <Button onClick={() => navigate('/vendas')}>Voltar</Button>
         </div>
     )

@@ -44,7 +44,7 @@ export function VendaAcoesPrincipais({
 
             {venda.pago && venda.status !== 'cancelada' && (
                 <Button
-                    className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 border-transparent"
+                    className="flex-1 bg-destructive/10 text-destructive hover:bg-destructive/20 border-transparent"
                     variant="outline"
                     onClick={() => setShowUndoPaymentConfirm(true)}
                     disabled={loadingAction}

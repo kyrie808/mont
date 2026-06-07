@@ -21,7 +21,7 @@ export function VendaAcoesSecundarias({
             <div className="flex gap-3">
                 <Button
                     variant="outline"
-                    className="flex-1 border-gray-200 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
+                    className="flex-1 border-border hover:bg-muted"
                     onClick={handleShare}
                 >
                     <Printer className="h-4 w-4 mr-2" />
@@ -33,7 +33,7 @@ export function VendaAcoesSecundarias({
                         {venda.status !== 'cancelada' && venda.status !== 'entregue' && setShowCancelModal && (
                             <Button
                                 variant="outline"
-                                className="flex-1 border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10"
+                                className="flex-1 border-warning-strong/30 text-warning-strong hover:bg-warning-strong/10"
                                 onClick={() => setShowCancelModal(true)}
                             >
                                 <Ban className="h-4 w-4 mr-2" />
@@ -43,7 +43,7 @@ export function VendaAcoesSecundarias({
                         {venda.status === 'cancelada' && (
                             <Button
                                 variant="outline"
-                                className="flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                                className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10"
                                 onClick={() => setShowDeleteModal(true)}
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -54,7 +54,7 @@ export function VendaAcoesSecundarias({
                 ) : (
                     <Button
                         variant="outline"
-                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                        className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10"
                         onClick={() => setShowDeleteModal(true)}
                     >
                         <Trash2 className="h-4 w-4 mr-2" />
