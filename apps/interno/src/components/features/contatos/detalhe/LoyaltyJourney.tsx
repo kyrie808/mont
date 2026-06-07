@@ -48,11 +48,11 @@ export function LoyaltyJourney({ contatoId, isB2B }: { contatoId: string, isB2B:
 
                     <div className="grid grid-cols-[40px_1fr] gap-x-2 relative">
                         {/* Timeline Line */}
-                        <div className="absolute left-[19px] top-8 bottom-0 w-[2px] bg-gradient-to-b from-primary/50 via-border to-transparent pointer-events-none" />
+                        <div className="absolute left-[19px] top-8 bottom-0 w-[2px] bg-linear-to-b from-primary/50 via-border to-transparent pointer-events-none" />
 
                         {/* Current Node */}
                         <div className="flex flex-col items-center z-10">
-                            <div className="flex items-center justify-center size-8 rounded-full bg-accent/10 border border-accent text-accent shadow-[0_0_15px_theme(colors.accent.DEFAULT)] animate-pulse-slow">
+                            <div className="flex items-center justify-center size-8 rounded-full bg-accent/10 border border-accent text-accent shadow-[0_0_15px_var(--color-accent)] animate-pulse-slow">
                                 <Crown className="h-4 w-4" />
                             </div>
                         </div>
@@ -75,16 +75,16 @@ export function LoyaltyJourney({ contatoId, isB2B }: { contatoId: string, isB2B:
                             {/* Progress Bar (Glow) */}
                             <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden border border-border shadow-inner">
                                 <div
-                                    className="bg-gradient-to-r from-success/80 via-primary to-success h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_theme(colors.primary.DEFAULT)] relative overflow-hidden"
+                                    className="bg-linear-to-r from-success/80 via-primary to-success h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_var(--color-primary)] relative overflow-hidden"
                                     style={{ width: `${progressPercent}%` }}
                                 >
                                     {/* Shimmer Effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-shimmer" />
+                                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-shimmer" />
                                 </div>
                             </div>
 
                             {/* Mission/Goal Intel */}
-                            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-card to-card/50 border border-border relative group overflow-hidden">
+                            <div className="mt-4 p-4 rounded-xl bg-linear-to-r from-card to-card/50 border border-border relative group overflow-hidden">
                                 <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                                 <div className="flex items-start gap-4 relative z-10">

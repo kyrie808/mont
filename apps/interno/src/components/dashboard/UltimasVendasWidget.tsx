@@ -94,7 +94,7 @@ export function UltimasVendasWidget({ data, loading: externalLoading }: UltimasV
                                 </span>
                             </div>
 
-                            <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-gradient-to-r from-primary to-success group-hover:w-full transition-all duration-500 ease-out" />
+                            <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-linear-to-r from-primary to-success group-hover:w-full transition-all duration-500 ease-out" />
                         </CardContent>
                     </Card>
                 ))}

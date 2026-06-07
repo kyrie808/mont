@@ -39,7 +39,7 @@ export function FormClassificacao({ register, errors, tipoValue }: FormClassific
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tipo</label>
                     <select
-                        className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-0"
+                        className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-hidden focus:ring-0"
                         {...register('tipo')}
                     >
                         {Object.entries(CONTATO_TIPO_LABELS).map(([value, label]) => (
@@ -53,7 +53,7 @@ export function FormClassificacao({ register, errors, tipoValue }: FormClassific
                     <div className="space-y-1 animate-in fade-in slide-in-from-left-2">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Subtipo</label>
                         <select
-                            className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-0"
+                            className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-hidden focus:ring-0"
                             {...register('subtipo')}
                         >
                             <option value="">Selecione...</option>
@@ -67,7 +67,7 @@ export function FormClassificacao({ register, errors, tipoValue }: FormClassific
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Status</label>
                     <select
-                        className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-0"
+                        className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-hidden focus:ring-0"
                         {...register('status')}
                     >
                         {Object.entries(CONTATO_STATUS_LABELS).map(([value, label]) => (
@@ -79,7 +79,7 @@ export function FormClassificacao({ register, errors, tipoValue }: FormClassific
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Origem</label>
                     <select
-                        className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-0"
+                        className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 px-3 py-2 text-sm focus:outline-hidden focus:ring-0"
                         {...register('origem')}
                     >
                         {origens.map(({ slug, label }) => (

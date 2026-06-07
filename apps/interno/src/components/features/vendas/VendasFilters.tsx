@@ -40,7 +40,7 @@ export function VendasFilters({
                 <input
                     type="text"
                     placeholder="Buscar por cliente ou ID…"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring shadow-card transition-colors"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-2 focus:ring-ring shadow-card transition-colors"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -49,7 +49,7 @@ export function VendasFilters({
             <div className="space-y-3 pb-2">
                 {/* Delivery Filters */}
                 <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <Truck className="h-4 w-4" />
                     </div>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1 w-full min-w-0 pr-4 -mr-4">
@@ -86,7 +86,7 @@ export function VendasFilters({
 
                 {/* Payment Filters */}
                 <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-success/10 text-success">
+                    <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-success/10 text-success">
                         <DollarSign className="h-4 w-4" />
                     </div>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1 w-full min-w-0 pr-4 -mr-4">

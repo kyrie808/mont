@@ -58,7 +58,7 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
 
 const TIPO_CONFIG_DEFAULT: TipoConfig = {
     icon: MessageSquare,
-    dotBg: 'bg-foreground/[0.05]',
+    dotBg: 'bg-foreground/5',
     dotBorder: 'border-border',
     iconColor: 'text-muted-foreground',
 }
@@ -142,12 +142,12 @@ function SkeletonTimeline() {
                 <div key={i} className="relative flex gap-3 pb-5">
                     <div className="flex w-7 shrink-0 flex-col items-center">
                         <div className="h-7 w-7 rounded-full bg-foreground/[0.07]" />
-                        {i < 3 && <div className="mt-1 w-px flex-1 bg-foreground/[0.04]" />}
+                        {i < 3 && <div className="mt-1 w-px flex-1 bg-foreground/4" />}
                     </div>
                     <div className="flex-1 space-y-2 pt-1">
                         <div className="h-3 rounded-full bg-foreground/[0.07]" style={{ width: `${w * 100}%` }} />
-                        <div className="h-2.5 w-1/2 rounded-full bg-foreground/[0.05]" />
-                        <div className="h-2 w-1/3 rounded-full bg-foreground/[0.04]" />
+                        <div className="h-2.5 w-1/2 rounded-full bg-foreground/5" />
+                        <div className="h-2 w-1/3 rounded-full bg-foreground/4" />
                     </div>
                 </div>
             ))}
@@ -178,7 +178,7 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
                     <Icon className={cn('h-[11px] w-[11px]', config.iconColor)} />
                 </div>
                 {!isLast && (
-                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-foreground/[0.09] to-transparent" />
+                    <div className="mt-1 w-px flex-1 bg-linear-to-b from-foreground/9 to-transparent" />
                 )}
             </div>
 
@@ -190,7 +190,7 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
                 {item.observacao && (
                     <p className={cn(
                         'mt-0.5 text-[11px] leading-[1.4] text-muted-foreground/70',
-                        item.tipo === 'feedback' ? 'whitespace-pre-wrap break-words' : 'truncate',
+                        item.tipo === 'feedback' ? 'whitespace-pre-wrap wrap-break-word' : 'truncate',
                     )}>
                         {item.observacao}
                     </p>
@@ -321,7 +321,7 @@ export function TimelineSideSheet({ isOpen, onClose, ...rest }: TimelineSideShee
     if (!isOpen) return null
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
+        <aside className="fixed right-0 top-0 z-9999 h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <PanelContent onClose={onClose} {...rest} />
         </aside>,
         document.body,

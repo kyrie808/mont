@@ -79,7 +79,7 @@ function NavButton({ active, onClick, icon: Icon, label }: NavButtonProps) {
             onClick={onClick}
             className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-1 py-1 rounded-lg transition-colors",
-                "h-14 min-w-[3.5rem]", // Touch target
+                "h-14 min-w-14", // Touch target
                 active ? "text-primary" : "text-muted-foreground hover:bg-muted"
             )}
         >

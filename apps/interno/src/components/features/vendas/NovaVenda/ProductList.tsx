@@ -59,14 +59,14 @@ export function ProductList({ produtos, loading, getQuantity, onAdd, onUpdateQua
 
     return (
         <div className="space-y-4 h-full flex flex-col">
-            <div className="relative flex-shrink-0">
+            <div className="relative shrink-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <input
                     type="text"
                     placeholder="Buscar produtos…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60 shadow-card"
+                    className="w-full pl-10 pr-4 py-3 border border-input rounded-xl focus:outline-hidden focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60 shadow-card"
                 />
             </div>
 
@@ -114,7 +114,7 @@ export function ProductList({ produtos, loading, getQuantity, onAdd, onUpdateQua
                                     >
                                         <Minus className="h-5 w-5 text-foreground" />
                                     </button>
-                                    <span className="font-bold text-foreground text-base min-w-[2rem] text-center">
+                                    <span className="font-bold text-foreground text-base min-w-8 text-center">
                                         {qty}
                                     </span>
                                     <button

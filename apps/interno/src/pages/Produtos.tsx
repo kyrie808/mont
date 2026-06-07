@@ -305,7 +305,7 @@ export function Produtos() {
                                             hover
                                         >
                                             <div className="p-4 flex items-center gap-4">
-                                                <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0 overflow-hidden border border-gray-200">
+                                                <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden border border-gray-200">
                                                     {produto.imagemUrl ? (
                                                         <img src={produto.imagemUrl} alt={produto.nome} className="h-full w-full object-cover" />
                                                     ) : (

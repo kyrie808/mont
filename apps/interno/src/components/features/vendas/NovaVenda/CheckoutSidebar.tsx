@@ -133,7 +133,7 @@ export function CheckoutSidebar({
                                     aria-pressed={isSelected}
                                     onClick={() => setValue('forma_pagamento', method.id as VendaFormData['forma_pagamento'])}
                                     className={cn(
-                                        "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                        "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                                         isSelected
                                             ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
                                             : "border-border bg-background text-muted-foreground hover:bg-muted"
@@ -163,7 +163,7 @@ export function CheckoutSidebar({
                                             type="number"
                                             value={valorRecebido}
                                             onChange={(e) => setValorRecebido(e.target.value ? Number(e.target.value) : '')}
-                                            className="w-full pl-9 pr-4 py-2.5 bg-background text-foreground border border-success/30 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-success"
+                                            className="w-full pl-9 pr-4 py-2.5 bg-background text-foreground border border-success/30 rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-success"
                                             placeholder="0,00"
                                         />
                                     </div>
@@ -188,7 +188,7 @@ export function CheckoutSidebar({
                                     type="date"
                                     {...register('data_prevista_pagamento')}
                                     className={cn(
-                                        "w-full px-3 py-2 bg-background text-foreground border rounded-lg outline-none focus-visible:ring-2",
+                                        "w-full px-3 py-2 bg-background text-foreground border rounded-lg outline-hidden focus-visible:ring-2",
                                         errors.data_prevista_pagamento
                                             ? "border-destructive focus-visible:ring-destructive"
                                             : "border-warning-strong/30 focus-visible:ring-warning-strong"
@@ -264,7 +264,7 @@ export function CheckoutSidebar({
                                 type="number"
                                 step="0.50"
                                 {...register('taxa_entrega', { valueAsNumber: true })}
-                                className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-lg text-lg font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring tabular-nums"
+                                className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-lg text-lg font-bold outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums"
                                 placeholder="0,00"
                                 autoFocus
                             />
@@ -280,7 +280,7 @@ export function CheckoutSidebar({
                     <textarea
                         {...register('observacoes')}
                         rows={2}
-                        className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none text-sm placeholder:text-muted-foreground/60"
+                        className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-xl outline-hidden focus-visible:ring-2 focus-visible:ring-ring resize-none text-sm placeholder:text-muted-foreground/60"
                         placeholder="Ex: Deixar na portaria…"
                     />
                 </div>
@@ -299,7 +299,7 @@ export function CheckoutSidebar({
                     <button
                         type="button"
                         onClick={onBack}
-                        className="h-14 px-5 rounded-2xl border border-border bg-background text-foreground font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="h-14 px-5 rounded-2xl border border-border bg-background text-foreground font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                         <ChevronRight className="h-5 w-5 rotate-180" />
                         Voltar

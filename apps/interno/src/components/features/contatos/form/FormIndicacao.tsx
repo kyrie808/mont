@@ -50,7 +50,7 @@ export function FormIndicacao({
                             type="text"
                             value={indicadorSearch}
                             onChange={(e) => setIndicadorSearch(e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground"
+                            className="flex h-10 w-full rounded-md border border-black/20 bg-background/50 pl-10 pr-3 py-2 text-sm focus:outline-hidden focus:ring-0 text-foreground placeholder:text-muted-foreground"
                         />
                     </div>
                     {showIndicadorDropdown && indicadorResults.length > 0 && (

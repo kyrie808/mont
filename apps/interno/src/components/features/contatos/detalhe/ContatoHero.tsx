@@ -40,9 +40,9 @@ export function ContatoHero({ contato, nivel, onEdit }: ContatoHeroProps) {
                 <div className="relative mb-4 group cursor-pointer">
                     <div className={cn(
                         "flex items-center justify-center w-28 h-28 rounded-full border-4 shadow-elevated transition-transform group-hover:scale-105",
-                        isGold ? "bg-gradient-to-br from-yellow-400 to-amber-600 border-yellow-300/50" :
-                            isSilver ? "bg-gradient-to-br from-slate-300 to-slate-500 border-slate-300/50" :
-                                "bg-gradient-to-br from-primary to-primary/70 border-primary/30"
+                        isGold ? "bg-linear-to-br from-yellow-400 to-amber-600 border-yellow-300/50" :
+                            isSilver ? "bg-linear-to-br from-slate-300 to-slate-500 border-slate-300/50" :
+                                "bg-linear-to-br from-primary to-primary/70 border-primary/30"
                     )}>
                         <AvatarIcon className="h-12 w-12 text-white drop-shadow-md" />
                     </div>

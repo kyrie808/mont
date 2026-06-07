@@ -33,7 +33,7 @@ export function VendaStatusBadges({ venda }: VendaStatusBadgesProps) {
                             'warning'
                 }
                 className={cn(
-                    "px-4 py-1.5 text-xs tracking-wide uppercase shadow-sm transition-colors",
+                    "px-4 py-1.5 text-xs tracking-wide uppercase shadow-xs transition-colors",
                     venda.status === 'entregue' && "bg-success text-success-foreground hover:bg-success/80 shadow-lg shadow-success/40 dark:shadow-success/20"
                 )}
             >

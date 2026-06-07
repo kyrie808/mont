@@ -42,7 +42,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                         <div className="relative w-full h-48 bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-inner group">
                             {/* Tactical Overlay */}
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')] opacity-20 pointer-events-none z-10" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
+                            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
 
                             {/* Map Iframe */}
                             <iframe

@@ -90,7 +90,7 @@ export function ProductNicknamesModal({ isOpen, onClose }: ProductNicknamesModal
                         placeholder="Buscar produto..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent outline-none"
+                        className="w-full pl-9 pr-4 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent outline-hidden"
                     />
                 </div>
 

@@ -34,7 +34,7 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                 )}
             </div>
 
-            <div className="bg-card rounded-[2rem] border border-border shadow-elevated overflow-hidden">
+            <div className="bg-card rounded-4xl border border-border shadow-elevated overflow-hidden">
                 {loadingExtrato ? (
                     <div className="p-12 flex flex-col items-center gap-4">
                         <div className="w-8 h-8 border-4 border-foreground border-t-transparent rounded-full animate-spin" />

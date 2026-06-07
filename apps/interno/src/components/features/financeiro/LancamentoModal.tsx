@@ -28,7 +28,7 @@ interface LancamentoModalProps {
     onSuccess?: () => void
 }
 
-const inputBase = "flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+const inputBase = "flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function LancamentoModal({ type, isOpen, onClose, onSuccess }: LancamentoModalProps) {
     const toast = useToast()

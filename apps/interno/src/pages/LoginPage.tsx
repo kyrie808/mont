@@ -74,7 +74,7 @@ export function LoginPage() {
                     </div>
 
                     {/* Login Form - Simple Card style as in Dashboard widgets */}
-                    <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-8 shadow-sm">
+                    <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-8 shadow-xs">
                         <form onSubmit={handleLogin} className="space-y-6">
                             <div className="space-y-2">
                                 <label htmlFor="login-email" className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
@@ -88,7 +88,7 @@ export function LoginPage() {
                                         placeholder="comandante@mont.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none font-display"
+                                        className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-hidden font-display"
                                     />
                                 </div>
                             </div>
@@ -105,7 +105,7 @@ export function LoginPage() {
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none font-display"
+                                        className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-hidden font-display"
                                     />
                                 </div>
                             </div>
@@ -113,7 +113,7 @@ export function LoginPage() {
                             <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full bg-primary hover:opacity-90 text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group border-none shadow-sm h-auto"
+                                className="w-full bg-primary hover:opacity-90 text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group border-none shadow-xs h-auto"
                             >
                                 {isLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />

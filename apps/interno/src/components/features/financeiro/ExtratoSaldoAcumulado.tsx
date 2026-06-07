@@ -22,7 +22,7 @@ export function ExtratoSaldoAcumulado({
                 </h2>
             </div>
 
-            <div className="bg-card rounded-[2rem] border border-border shadow-elevated overflow-hidden">
+            <div className="bg-card rounded-4xl border border-border shadow-elevated overflow-hidden">
                 {loadingExtratoDeSaldo ? (
                     <div className="p-12 flex flex-col items-center gap-4">
                         <div className="w-8 h-8 border-4 border-foreground border-t-transparent rounded-full animate-spin" />
@@ -82,7 +82,7 @@ export function ExtratoSaldoAcumulado({
                 const reconciliado = Math.abs(diferenca) < 0.01
                 return (
                     <div className={cn(
-                        "p-5 rounded-[1.5rem] border flex flex-col sm:flex-row sm:items-center gap-3",
+                        "p-5 rounded-3xl border flex flex-col sm:flex-row sm:items-center gap-3",
                         reconciliado
                             ? "bg-success/10 border-success/30"
                             : "bg-destructive/10 border-destructive/30"

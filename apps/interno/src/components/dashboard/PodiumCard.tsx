@@ -20,9 +20,9 @@ interface PodiumCardProps {
 // (um pódio É ouro/prata/bronze) — decorativos, NÃO substituir por tokens semânticos.
 function getGradient(ranking: number): string {
     switch (ranking) {
-        case 1: return "bg-gradient-to-r from-yellow-300 to-yellow-500 text-yellow-900 border-yellow-400"
-        case 2: return "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-900 border-gray-400"
-        case 3: return "bg-gradient-to-r from-orange-300 to-orange-400 text-orange-900 border-orange-400"
+        case 1: return "bg-linear-to-r from-yellow-300 to-yellow-500 text-yellow-900 border-yellow-400"
+        case 2: return "bg-linear-to-r from-gray-300 to-gray-400 text-gray-900 border-gray-400"
+        case 3: return "bg-linear-to-r from-orange-300 to-orange-400 text-orange-900 border-orange-400"
         default: return "bg-card text-foreground border-border"
     }
 }
@@ -41,7 +41,7 @@ export function PodiumCard({
     return (
         <Card className={cn(
             "relative overflow-hidden border transition-all hover:scale-[1.01]",
-            isTop3 ? "border-0 shadow-lg" : "shadow-sm"
+            isTop3 ? "border-0 shadow-lg" : "shadow-xs"
         )}>
             <div className={cn("absolute inset-0 opacity-20", gradientClass)}></div>
 
@@ -49,7 +49,7 @@ export function PodiumCard({
                 <div className="flex items-center gap-4">
                     <div className={cn(
                         "flex items-center justify-center size-10 rounded-full font-bold text-lg shadow-inner",
-                        isTop3 ? "bg-white/30 backdrop-blur-sm text-black" : "bg-muted text-muted-foreground"
+                        isTop3 ? "bg-white/30 backdrop-blur-xs text-black" : "bg-muted text-muted-foreground"
                     )}>
                         {index + 1}
                     </div>

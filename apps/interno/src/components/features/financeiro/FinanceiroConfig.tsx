@@ -70,7 +70,7 @@ export function FinanceiroConfig({
                         {loadingContas ? (
                             <div className="p-8 text-center text-muted-foreground animate-pulse uppercase font-black text-xs">Carregando contas...</div>
                         ) : contas.map(conta => (
-                            <div key={conta.id} className="bg-card p-5 rounded-[2rem] border border-border shadow-card flex items-center justify-between">
+                            <div key={conta.id} className="bg-card p-5 rounded-4xl border border-border shadow-card flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center text-muted-foreground border border-border">
                                         <Building2 className="w-6 h-6" />

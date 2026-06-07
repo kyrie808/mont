@@ -61,12 +61,12 @@ export function Modal({
         <>
             {/* Backdrop — own fixed layer */}
             <div
-                className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm"
+                className="fixed inset-0 z-9998 bg-black/50 backdrop-blur-xs"
                 onClick={onClose}
             />
 
             {/* Centering wrapper — pointer-events-none so backdrop click-through works */}
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+            <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 pointer-events-none">
                 {/* Panel — pointer-events-auto to capture own interactions */}
                 <div
                     className={`

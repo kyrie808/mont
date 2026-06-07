@@ -94,18 +94,18 @@ function SkeletonPerfil() {
             <div className="space-y-2">
                 <div className="h-2 w-1/4 rounded-full bg-foreground/[0.07]" />
                 <div className="h-3 w-2/3 rounded-full bg-foreground/[0.07]" />
-                <div className="h-2.5 w-1/2 rounded-full bg-foreground/[0.05]" />
+                <div className="h-2.5 w-1/2 rounded-full bg-foreground/5" />
                 <div className="flex gap-1.5 mt-1">
-                    <div className="h-5 w-12 rounded-full bg-foreground/[0.05]" />
-                    <div className="h-5 w-16 rounded-full bg-foreground/[0.05]" />
+                    <div className="h-5 w-12 rounded-full bg-foreground/5" />
+                    <div className="h-5 w-16 rounded-full bg-foreground/5" />
                 </div>
             </div>
             <div className="space-y-1.5">
                 <div className="h-2 w-1/5 rounded-full bg-foreground/[0.07]" />
                 {[0.5, 0.4, 0.6].map((w, i) => (
                     <div key={i} className="flex justify-between">
-                        <div className="h-2.5 rounded-full bg-foreground/[0.05]" style={{ width: `${w * 50}%` }} />
-                        <div className="h-2.5 w-1/4 rounded-full bg-foreground/[0.04]" />
+                        <div className="h-2.5 rounded-full bg-foreground/5" style={{ width: `${w * 50}%` }} />
+                        <div className="h-2.5 w-1/4 rounded-full bg-foreground/4" />
                     </div>
                 ))}
             </div>
@@ -113,24 +113,24 @@ function SkeletonPerfil() {
                 <div className="h-2 w-1/4 rounded-full bg-foreground/[0.07]" />
                 {[0.45, 0.5, 0.35].map((w, i) => (
                     <div key={i} className="flex justify-between">
-                        <div className="h-2.5 rounded-full bg-foreground/[0.05]" style={{ width: `${w * 50}%` }} />
-                        <div className="h-2.5 w-1/4 rounded-full bg-foreground/[0.04]" />
+                        <div className="h-2.5 rounded-full bg-foreground/5" style={{ width: `${w * 50}%` }} />
+                        <div className="h-2.5 w-1/4 rounded-full bg-foreground/4" />
                     </div>
                 ))}
             </div>
-            <div className="h-14 rounded-xl bg-foreground/[0.04]" />
+            <div className="h-14 rounded-xl bg-foreground/4" />
             <div className="space-y-1.5">
                 <div className="h-2 w-1/4 rounded-full bg-foreground/[0.07]" />
-                <div className="h-2.5 w-2/3 rounded-full bg-foreground/[0.05]" />
-                <div className="h-2.5 w-1/3 rounded-full bg-foreground/[0.04]" />
+                <div className="h-2.5 w-2/3 rounded-full bg-foreground/5" />
+                <div className="h-2.5 w-1/3 rounded-full bg-foreground/4" />
             </div>
             <div className="space-y-1.5">
                 <div className="h-2 w-1/3 rounded-full bg-foreground/[0.07]" />
                 {[0.9, 0.6, 0.45, 0.3].map((w, i) => (
                     <div key={i} className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full bg-foreground/[0.05]" style={{ width: `${w * 60}%` }} />
-                        <div className="h-2.5 w-4 rounded-full bg-foreground/[0.04]" />
-                        <div className="h-2.5 w-28 rounded-full bg-foreground/[0.04]" />
+                        <div className="h-1.5 flex-1 rounded-full bg-foreground/5" style={{ width: `${w * 60}%` }} />
+                        <div className="h-2.5 w-4 rounded-full bg-foreground/4" />
+                        <div className="h-2.5 w-28 rounded-full bg-foreground/4" />
                     </div>
                 ))}
             </div>
@@ -164,7 +164,7 @@ function FiadoCard({ estado }: { estado: 'em_aberto' | 'quitou' | 'nunca_usou' }
             icon: MinusCircle,
             label: 'Nunca usou fiado',
             msg: null,
-            cls: 'bg-foreground/[0.04] border-border',
+            cls: 'bg-foreground/4 border-border',
             iconCls: 'text-muted-foreground/50',
             labelCls: 'text-muted-foreground',
             msgCls: '',
@@ -203,7 +203,7 @@ function ProdutosRanking({ produtos }: { produtos: ProdutoRanking[] }) {
         <div className="space-y-1">
             {visible.map(({ produto, quantidade }) => (
                 <div key={produto} className="flex items-center gap-2">
-                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/[0.06]">
+                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/6">
                         <div
                             className="absolute inset-y-0 left-0 rounded-full bg-primary/40"
                             style={{ width: `${(quantidade / max) * 100}%` }}
@@ -231,7 +231,7 @@ function FeedbackItem({ canal, observacao, data }: { canal: string | null; obser
     const canalLabel = canal ? (CANAL_OPTIONS.find((o) => o.value === canal)?.label ?? canal) : null
 
     return (
-        <div className="rounded-xl border border-border bg-foreground/[0.02] px-3 py-2.5 space-y-1.5">
+        <div className="rounded-xl border border-border bg-foreground/2 px-3 py-2.5 space-y-1.5">
             <div className="flex items-center gap-2">
                 {canalLabel && (
                     <Badge variant={variant} className="px-1.5 py-0 text-[10px]">
@@ -243,7 +243,7 @@ function FeedbackItem({ canal, observacao, data }: { canal: string | null; obser
                 </span>
             </div>
             {observacao && (
-                <p className="text-[12px] leading-[1.4] text-foreground/80 whitespace-pre-wrap break-words">
+                <p className="text-[12px] leading-[1.4] text-foreground/80 whitespace-pre-wrap wrap-break-word">
                     {observacao}
                 </p>
             )}
@@ -277,7 +277,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                     value={canal}
                     onChange={(e) => setCanal(e.target.value as Canal)}
                     disabled={isPending}
-                    className="w-full rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
+                    className="w-full rounded-lg border border-border bg-foreground/4 px-2.5 py-1.5 text-[12px] text-foreground outline-hidden focus:border-primary/40 disabled:opacity-50"
                 >
                     {CANAL_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value} className="bg-card">
@@ -301,7 +301,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                                 'rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50',
                                 resultado === opt.value
                                     ? 'border-primary/40 bg-primary/15 text-primary'
-                                    : 'border-border bg-foreground/[0.03] text-muted-foreground hover:border-foreground/20 hover:text-foreground',
+                                    : 'border-border bg-foreground/3 text-muted-foreground hover:border-foreground/20 hover:text-foreground',
                             )}
                         >
                             {opt.label}
@@ -319,7 +319,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                     disabled={isPending}
                     placeholder="Detalhe o contato…"
                     rows={3}
-                    className="w-full resize-none rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                    className="w-full resize-none rounded-lg border border-border bg-foreground/4 px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-hidden focus:border-primary/40 disabled:opacity-50"
                 />
             </div>
 
@@ -574,8 +574,8 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                                     <SectionLabel>Feedback</SectionLabel>
                                     {interacoesLoading ? (
                                         <div className="animate-pulse space-y-2">
-                                            <div className="h-14 rounded-xl bg-foreground/[0.04]" />
-                                            <div className="h-14 rounded-xl bg-foreground/[0.04]" />
+                                            <div className="h-14 rounded-xl bg-foreground/4" />
+                                            <div className="h-14 rounded-xl bg-foreground/4" />
                                         </div>
                                     ) : feedbacks.length === 0 ? (
                                         <p className="text-[11px] text-muted-foreground/40">
@@ -604,7 +604,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                         <button
                             type="button"
                             onClick={() => setShowPontoContato(true)}
-                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-foreground/4 px-3 py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground"
                         >
                             <Phone className="h-3.5 w-3.5 shrink-0" />
                             Registrar contato
@@ -631,7 +631,7 @@ export function PerfilSideSheet({ isOpen, onClose, ...rest }: PerfilSideSheetPro
     if (!isOpen) return null
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
+        <aside className="fixed right-0 top-0 z-9999 h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <PanelContent onClose={onClose} {...rest} />
         </aside>,
         document.body,

@@ -27,7 +27,7 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                 <>
                     {/* Backdrop */}
                     <motion.div
-                        className="fixed inset-0 w-screen h-screen z-[9998] bg-black/50 backdrop-blur-sm"
+                        className="fixed inset-0 w-screen h-screen z-9998 bg-black/50 backdrop-blur-xs"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -36,7 +36,7 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
 
                     {/* Drawer panel */}
                     <motion.aside
-                        className="fixed left-0 top-0 z-[9999] flex h-full w-72 flex-col bg-card shadow-modal overflow-hidden"
+                        className="fixed left-0 top-0 z-9999 flex h-full w-72 flex-col bg-card shadow-modal overflow-hidden"
                         initial={{ x: '-100%' }}
                         animate={{ x: 0 }}
                         exit={{ x: '-100%' }}

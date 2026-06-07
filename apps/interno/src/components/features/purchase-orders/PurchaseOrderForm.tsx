@@ -160,7 +160,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                     <div className="flex flex-col">
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Fornecedor</label>
                         <select
-                            className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all cursor-pointer h-10"
+                            className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring transition-all cursor-pointer h-10"
                             value={fornecedorId}
                             onChange={(e) => setFornecedorId(e.target.value)}
                             required
@@ -209,7 +209,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                                 <div className="col-span-12 sm:col-span-5">
                                     <label className="block text-sm font-medium text-muted-foreground mb-1">Produto</label>
                                     <select
-                                        className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all placeholder:text-muted-foreground/60 appearance-none cursor-pointer hover:bg-muted h-10"
+                                        className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring transition-all placeholder:text-muted-foreground/60 appearance-none cursor-pointer hover:bg-muted h-10"
                                         value={item.product_id}
                                         onChange={(e) => handleItemChange(item.tempId, 'product_id', e.target.value)}
                                         required

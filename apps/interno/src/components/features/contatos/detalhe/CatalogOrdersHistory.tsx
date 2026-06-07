@@ -32,7 +32,7 @@ function CatalogOrderCard({ pedido, onView }: CatalogOrderCardProps) {
         <div
             onClick={() => isClickable && onView?.(pedido.vendaId!)}
             className={cn(
-                "group relative bg-foreground/5 border-l-[4px] border-l-warning-strong hover:border-l-warning-strong/70 p-4 rounded-r-xl transition-all hover:bg-foreground/10 mb-3 shadow-card border-y border-r border-border",
+                "group relative bg-foreground/5 border-l-4 border-l-warning-strong hover:border-l-warning-strong/70 p-4 rounded-r-xl transition-all hover:bg-foreground/10 mb-3 shadow-card border-y border-r border-border",
                 isClickable && "cursor-pointer"
             )}
         >

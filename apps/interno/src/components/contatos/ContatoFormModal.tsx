@@ -176,7 +176,7 @@ export function ContatoFormModal({
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Observações</label>
                             <textarea
-                                className="flex min-h-[120px] w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none"
+                                className="flex min-h-[120px] w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-hidden"
                                 {...register('observacoes')}
                             />
                         </div>

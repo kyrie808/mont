@@ -258,7 +258,7 @@ function DroppableColuna({
             className={cn(
                 'rounded-2xl border p-2.5 transition-[border-color,background,box-shadow]',
                 isOver
-                    ? 'border-primary bg-primary/[0.03] shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]'
+                    ? 'border-primary bg-primary/3 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]'
                     : 'border-border bg-muted'
             )}
         >
@@ -277,7 +277,7 @@ function DroppableColuna({
                     'rounded-full px-2 py-0.5 text-[10.5px] font-bold',
                     isOver
                         ? 'bg-primary/10 text-primary/70'
-                        : 'bg-foreground/[0.06] text-muted-foreground/70'
+                        : 'bg-foreground/6 text-muted-foreground/70'
                 )}>
                     {total}
                 </span>
@@ -697,7 +697,7 @@ export function Relacionamento() {
 
             {legendaAberta && (
                 <div
-                    className="fixed inset-0 z-overlay flex items-end bg-black/60 backdrop-blur-sm"
+                    className="fixed inset-0 z-overlay flex items-end bg-black/60 backdrop-blur-xs"
                     onClick={() => setLegendaAberta(false)}
                 >
                     <div

@@ -173,8 +173,8 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                     <div className="animate-pulse space-y-3">
                         <div className="h-2.5 w-1/3 rounded-full bg-foreground/[0.07]" />
                         <div className="flex gap-2">
-                            <div className="h-6 w-16 rounded-full bg-foreground/[0.05]" />
-                            <div className="h-6 w-20 rounded-full bg-foreground/[0.05]" />
+                            <div className="h-6 w-16 rounded-full bg-foreground/5" />
+                            <div className="h-6 w-20 rounded-full bg-foreground/5" />
                         </div>
                     </div>
                 ) : (
@@ -253,7 +253,7 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                                         }}
                                         disabled={isBusy}
                                         placeholder="Nome da tag"
-                                        className="min-w-0 flex-1 rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                                        className="min-w-0 flex-1 rounded-lg border border-border bg-foreground/4 px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-hidden focus:border-primary/40 disabled:opacity-50"
                                     />
                                     <input
                                         type="color"
@@ -261,7 +261,7 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                                         onChange={(e) => setNovaTagCor(e.target.value)}
                                         disabled={isBusy}
                                         title="Escolher cor"
-                                        className="h-[34px] w-9 cursor-pointer rounded-lg border border-border bg-foreground/[0.04] p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="h-[34px] w-9 cursor-pointer rounded-lg border border-border bg-foreground/4 p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>
                                 {criarError && (
@@ -297,7 +297,7 @@ export function TagsSideSheet({ isOpen, onClose, ...rest }: TagsSideSheetProps) 
     if (!isOpen) return null
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
+        <aside className="fixed right-0 top-0 z-9999 h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <TagsPanel onClose={onClose} {...rest} />
         </aside>,
         document.body,

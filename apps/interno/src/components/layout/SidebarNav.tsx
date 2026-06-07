@@ -37,7 +37,7 @@ export function SidebarNav() {
                         'flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5',
                         'bg-primary text-primary-foreground font-bold text-sm',
                         'shadow-card transition-transform active:scale-[0.98] hover:brightness-105',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
+                        'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
                     )}
                 >
                     <Plus className="size-4" />
@@ -69,7 +69,7 @@ export function SidebarNav() {
                                             }
                                             className={cn(
                                                 'group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
-                                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                                'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                                                 active
                                                     ? 'bg-primary/10 text-foreground'
                                                     : item.locked

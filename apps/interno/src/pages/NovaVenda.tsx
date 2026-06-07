@@ -190,7 +190,7 @@ export function NovaVenda() {
             <Header
                     title={isEditing ? `Editar Venda #${id?.slice(0, 8)}` : 'Nova Venda'}
                     showBack
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     centerTitle
                 />
 
@@ -280,7 +280,7 @@ export function NovaVenda() {
 
                         {/* Bottom Navigation Bar — fixed height, outside scroll, hidden on checkout */}
                         {currentStep > 0 && currentStep < 2 && (
-                            <div className="flex-shrink-0 border-t border-border bg-card p-4 md:hidden">
+                            <div className="shrink-0 border-t border-border bg-card p-4 md:hidden">
                                 <div className="flex gap-3 max-w-sm mx-auto">
                                     {currentStep > 0 && (
                                         <Button
@@ -296,7 +296,7 @@ export function NovaVenda() {
                                         variant="primary"
                                         onClick={() => nextStep()}
                                         disabled={(currentStep === 0 && !selectedContato) || (currentStep === 1 && cart.length === 0)}
-                                        className="flex-[2] h-12 rounded-2xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                        className="flex-2 h-12 rounded-2xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
                                     >
                                         Próximo
                                         <ChevronRight className="h-5 w-5" />

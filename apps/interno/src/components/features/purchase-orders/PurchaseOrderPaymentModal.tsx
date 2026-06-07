@@ -95,15 +95,15 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
 
     if (!isOpen) return null
 
-    const inputBase = "w-full p-2 bg-background text-foreground border border-input rounded-lg outline-none focus:ring-2 focus:ring-ring"
+    const inputBase = "w-full p-2 bg-background text-foreground border border-input rounded-lg outline-hidden focus:ring-2 focus:ring-ring"
 
     const modalContent = (
         <>
             {/* Backdrop */}
-            <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-9998 bg-black/50 backdrop-blur-xs" onClick={onClose} />
 
             {/* Panel */}
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+            <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 pointer-events-none">
                 <div className="pointer-events-auto bg-card rounded-lg w-full max-w-md shadow-elevated animate-in fade-in zoom-in duration-200">
                     <div className="flex items-center justify-between p-4 border-b border-border">
                         <div>

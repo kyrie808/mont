@@ -43,8 +43,8 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
                 </div>
 
                 <div className="w-full border-b-2 border-dashed border-border my-6 relative">
-                    <div className="absolute -left-[30px] -top-[10px] w-5 h-5 rounded-full bg-secondary dark:bg-background"></div>
-                    <div className="absolute -right-[30px] -top-[10px] w-5 h-5 rounded-full bg-secondary dark:bg-background"></div>
+                    <div className="absolute left-[-30px] top-[-10px] w-5 h-5 rounded-full bg-secondary dark:bg-background"></div>
+                    <div className="absolute right-[-30px] top-[-10px] w-5 h-5 rounded-full bg-secondary dark:bg-background"></div>
                 </div>
 
                 <div className="flex flex-col space-y-4">
@@ -109,7 +109,7 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
             </div>
 
             <div className="h-4 w-full relative overflow-hidden">
-                <svg className="absolute top-0 left-0 w-full h-4 text-card fill-current drop-shadow-sm dark:drop-shadow-xl" preserveAspectRatio="none" viewBox="0 0 100 10">
+                <svg className="absolute top-0 left-0 w-full h-4 text-card fill-current drop-shadow-xs dark:drop-shadow-xl" preserveAspectRatio="none" viewBox="0 0 100 10">
                     <polygon points="0,0 100,0 100,10 98,0 96,10 94,0 92,10 90,0 88,10 86,0 84,10 82,0 80,10 78,0 76,10 74,0 72,10 70,0 68,10 66,0 64,10 62,0 60,10 58,0 56,10 54,0 52,10 50,0 48,10 46,0 44,10 42,0 40,10 38,0 36,10 34,0 32,10 30,0 28,10 26,0 24,10 22,0 20,10 18,0 16,10 14,0 12,10 10,0 8,10 6,0 4,10 2,0 0,10"></polygon>
                 </svg>
             </div>

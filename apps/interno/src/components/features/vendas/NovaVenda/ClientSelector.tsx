@@ -108,7 +108,7 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                             placeholder="Buscar por nome, apelido ou telefone…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60"
+                            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-hidden focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60"
                             autoFocus
                         />
                     </div>

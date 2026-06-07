@@ -107,7 +107,7 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
             {/* Action Footer */}
             <div className="flex items-center gap-3 pl-3 mt-1 pt-3 border-t border-border">
                 <button
-                    className="flex-1 h-9 rounded-lg bg-foreground hover:bg-foreground/90 text-background text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex-1 h-9 rounded-lg bg-foreground hover:bg-foreground/90 text-background text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-card focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Ver Detalhes
                 </button>
@@ -115,7 +115,7 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
                 <button
                     aria-label="Abrir WhatsApp"
                     onClick={handleWhatsappClick}
-                    className="size-9 rounded-lg bg-success/10 hover:bg-success/20 text-success border border-success/20 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="size-9 rounded-lg bg-success/10 hover:bg-success/20 text-success border border-success/20 flex items-center justify-center transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     <MessageCircle className="size-4" />
                 </button>

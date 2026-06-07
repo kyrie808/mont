@@ -53,7 +53,7 @@ export function ConfiguracaoRecompensas({
                 </div>
 
                 <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground bg-muted p-2 rounded-lg">
-                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
                     <p>
                         Indicação só conta como convertida quando o indicado faz sua primeira compra.
                     </p>

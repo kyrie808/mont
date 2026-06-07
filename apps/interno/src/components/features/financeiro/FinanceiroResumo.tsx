@@ -33,7 +33,7 @@ export function FinanceiroResumo({
             />
 
             {/* Hero "Saldo em Contas" — card invertido via tokens (foreground/background) */}
-            <div className="bg-gradient-to-br from-foreground to-foreground/90 text-background rounded-3xl p-6 shadow-elevated">
+            <div className="bg-linear-to-br from-foreground to-foreground/90 text-background rounded-3xl p-6 shadow-elevated">
                 <div className="flex justify-between items-start mb-4">
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Saldo em Contas</p>

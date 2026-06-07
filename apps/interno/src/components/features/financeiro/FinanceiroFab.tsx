@@ -26,13 +26,13 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
             {/* Backdrop for FAB */}
             {isFabOpen && (
                 <div
-                    className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-[9998] transition-all duration-300"
+                    className="fixed inset-0 bg-foreground/20 backdrop-blur-xs z-9998 transition-all duration-300"
                     onClick={() => setIsFabOpen(false)}
                 />
             )}
 
             {/* Floating Action Buttons Area */}
-            <div className="fixed right-6 bottom-24 lg:bottom-8 flex flex-col items-end gap-3 z-[9999]">
+            <div className="fixed right-6 bottom-24 lg:bottom-8 flex flex-col items-end gap-3 z-9999">
                 <div className={cn(
                     "flex flex-col items-end gap-3 transition-all duration-300 origin-bottom",
                     isFabOpen ? "scale-100 opacity-100 mb-2" : "scale-0 opacity-0 h-0 pointer-events-none"
@@ -42,7 +42,7 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                         <button
                             aria-label="Registrar transferência"
                             onClick={() => { setIsTransferenciaOpen(true); setIsFabOpen(false); }}
-                            className="w-12 h-12 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="w-12 h-12 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             <ArrowRightLeft size={24} />
                         </button>
@@ -53,7 +53,7 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                         <button
                             aria-label="Registrar saída"
                             onClick={() => { setIsSaidaOpen(true); setIsFabOpen(false); }}
-                            className="w-12 h-12 bg-destructive text-destructive-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="w-12 h-12 bg-destructive text-destructive-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             <ArrowDownLeft size={24} />
                         </button>
@@ -64,7 +64,7 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                         <button
                             aria-label="Registrar entrada"
                             onClick={() => { setIsEntradaOpen(true); setIsFabOpen(false); }}
-                            className="w-12 h-12 bg-success text-success-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="w-12 h-12 bg-success text-success-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             <ArrowUpRight size={24} />
                         </button>
@@ -76,7 +76,7 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                     aria-expanded={isFabOpen}
                     onClick={() => setIsFabOpen(!isFabOpen)}
                     className={cn(
-                        "w-14 h-14 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        "w-14 h-14 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         isFabOpen && "rotate-45 opacity-90"
                     )}
                 >

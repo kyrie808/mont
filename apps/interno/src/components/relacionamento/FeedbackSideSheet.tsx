@@ -55,7 +55,7 @@ function FeedbackForm({ contatoId, onClose }: { contatoId: string; onClose: () =
                 value={canal}
                 onChange={(e) => setCanal(e.target.value as Canal)}
                 disabled={isPending}
-                className="w-full rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
+                className="w-full rounded-lg border border-border bg-foreground/4 px-2.5 py-1.5 text-[12px] text-foreground outline-hidden focus:border-primary/40 disabled:opacity-50"
             >
                 {CANAL_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value} className="bg-card">
@@ -69,7 +69,7 @@ function FeedbackForm({ contatoId, onClose }: { contatoId: string; onClose: () =
                 disabled={isPending}
                 placeholder="Escreva o feedback…"
                 rows={3}
-                className="w-full resize-none rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                className="w-full resize-none rounded-lg border border-border bg-foreground/4 px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-hidden focus:border-primary/40 disabled:opacity-50"
             />
             {mutError && (
                 <p className="text-[11px] text-destructive">{mutError.message}</p>
@@ -111,7 +111,7 @@ export function FeedbackSideSheet({ isOpen, onClose, contatoId, nomeContato, sta
     const inicial = nomeContato.trim()[0]?.toUpperCase() ?? '?'
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
+        <aside className="fixed right-0 top-0 z-9999 h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <div className="relative flex h-full flex-col overflow-hidden bg-card">
                 {/* Grain overlay */}
                 <div

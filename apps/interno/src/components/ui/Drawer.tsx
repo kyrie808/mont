@@ -15,7 +15,7 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, footer }: D
     if (!isOpen) return null
 
     const header = (
-        <div className="flex items-center gap-3 p-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-3 p-4 border-b border-border shrink-0">
             <button
                 onClick={onClose}
                 className="p-1 rounded-lg hover:bg-accent transition-colors"
@@ -33,7 +33,7 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, footer }: D
     )
 
     const footerSlot = footer ? (
-        <div className="flex-shrink-0 border-t border-border p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 border-t border-border p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             {footer}
         </div>
     ) : null
@@ -41,12 +41,12 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, footer }: D
     return createPortal(
         <>
             {/* Mobile: full-screen slide-in panel */}
-            <div className="fixed inset-0 z-[9998] md:hidden flex justify-end">
+            <div className="fixed inset-0 z-9998 md:hidden flex justify-end">
                 <div
-                    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    className="absolute inset-0 bg-black/50 backdrop-blur-xs"
                     onClick={onClose}
                 />
-                <div className="relative w-[85vw] max-w-sm bg-card h-[100dvh] shadow-2xl transform transition-transform animate-slide-in-right overflow-hidden z-[9999] flex flex-col">
+                <div className="relative w-[85vw] max-w-sm bg-card h-dvh shadow-2xl transform transition-transform animate-slide-in-right overflow-hidden z-9999 flex flex-col">
                     {header}
                     <div className="flex-1 overflow-y-auto flex flex-col">
                         {children}
@@ -55,7 +55,7 @@ export function Drawer({ isOpen, onClose, title, subtitle, children, footer }: D
                 </div>
             </div>
             {/* Desktop: fixed sidebar */}
-            <aside className="hidden md:flex fixed right-0 top-0 w-96 flex-col border-l border-border bg-card h-screen z-[9999]">
+            <aside className="hidden md:flex fixed right-0 top-0 w-96 flex-col border-l border-border bg-card h-screen z-9999">
                 {header}
                 <div className="flex-1 overflow-y-auto flex flex-col">
                     {children}

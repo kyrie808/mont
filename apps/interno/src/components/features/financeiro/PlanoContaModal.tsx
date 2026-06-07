@@ -24,7 +24,7 @@ interface PlanoContaModalProps {
     defaultType?: 'receita' | 'despesa'
 }
 
-const inputBase = "flex h-12 w-full rounded-xl border border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground/50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+const inputBase = "flex h-12 w-full rounded-xl border border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground/50 px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 
 export function PlanoContaModal({ isOpen, onClose, onSuccess, defaultType = 'receita' }: PlanoContaModalProps) {
     const toast = useToast()

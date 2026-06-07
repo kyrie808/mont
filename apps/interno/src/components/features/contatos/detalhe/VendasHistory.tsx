@@ -18,7 +18,7 @@ function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
     return (
         <div
             onClick={(e) => onView && onView(venda.id, e)}
-            className="group relative bg-foreground/5 border-l-[4px] border-l-primary hover:border-l-primary/70 p-4 rounded-r-xl transition-all hover:bg-foreground/10 mb-3 shadow-card border-y border-r border-border cursor-pointer"
+            className="group relative bg-foreground/5 border-l-4 border-l-primary hover:border-l-primary/70 p-4 rounded-r-xl transition-all hover:bg-foreground/10 mb-3 shadow-card border-y border-r border-border cursor-pointer"
         >
             <div className="flex justify-between items-start mb-2">
                 <span className="text-[10px] text-muted-foreground font-mono tracking-widest">#{venda.id.slice(0, 8).toUpperCase()}</span>

@@ -80,7 +80,7 @@ export function PedidosCompra() {
                     }
                 />
 
-                <PageContainer className="!pt-6 px-4 pb-24">
+                <PageContainer className="pt-6! px-4 pb-24">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <KpiCard
                             title="Total Pedido"

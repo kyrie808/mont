@@ -166,7 +166,7 @@ export function PaymentSidebar({
                         type="number"
                         step="0.01"
                         {...register('valor', { valueAsNumber: true })}
-                        className="w-full pl-10 pr-4 py-3 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all text-lg font-semibold"
+                        className="w-full pl-10 pr-4 py-3 bg-card border border-input rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent outline-hidden transition-all text-lg font-semibold"
                         placeholder="0,00"
                     />
                 </div>
@@ -188,7 +188,7 @@ export function PaymentSidebar({
                                 type="button"
                                 onClick={() => setValue('metodo', method.value as PagamentoFormData['metodo'])}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                    "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                                     isSelected
                                         ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
                                         : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -241,7 +241,7 @@ export function PaymentSidebar({
                         value={formatDateTimeLocal(currentData || new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T'))}
                         onChange={(e) => setValue('data', e.target.value)}
                         className={cn(
-                            "w-full px-3 py-2 bg-muted border rounded-lg text-sm outline-none transition-all",
+                            "w-full px-3 py-2 bg-muted border rounded-lg text-sm outline-hidden transition-all",
                             errors.data ? "border-destructive focus:ring-destructive/20" : "border-input focus:ring-ring"
                         )}
                     />
@@ -257,7 +257,7 @@ export function PaymentSidebar({
                         {...register('observacao')}
                         rows={2}
                         placeholder="Ex: Enviado para conta Nubank..."
-                        className="w-full px-3 py-2 bg-muted border border-input rounded-lg text-sm resize-none focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
+                        className="w-full px-3 py-2 bg-muted border border-input rounded-lg text-sm resize-none focus:ring-2 focus:ring-ring focus:border-transparent outline-hidden transition-all"
                     />
                 </div>
             </div>

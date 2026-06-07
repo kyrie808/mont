@@ -31,7 +31,7 @@ export function ConfiguracaoMensagens({
                     value={mensagemRecompra}
                     onChange={(e) => setMensagemRecompra(e.target.value)}
                     rows={4}
-                    className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                     placeholder="Olá {{nome}}! Faz {{dias}} dias..."
                 />
 
