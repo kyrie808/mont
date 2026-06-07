@@ -18,7 +18,7 @@ This file provides guidance to Claude Code when working with this repository.
 3. **Production database — discipline by risk:**
    - **Code/UI changes** (componentes, services, frontend): run directly against production. Zero DB risk — apps already point to prod via `.env.local`. No Docker, no ceremony.
    - **Schema/data changes** (tables, columns, views, RPCs, triggers, RLS, UPDATE/DELETE on real rows): NEVER ad-hoc in the Studio. **Always** (a) back up first (`supabase/scripts/dump-prod.ps1`) and (b) write the change as a versioned migration file — even when applying straight to prod. Local Docker validation is the ideal but is currently OFF by conscious decision (solo dev, 2 users). Reconsider Docker only on a real trigger: a 3rd user/employee, complex/risky schema work, or a near-miss prod incident.
-4. **Zero unauthorized visual changes** — Do NOT rewrite UI components. If scope is type changes, change types only. Never change CSS, animations, text, layout, colors without explicit authorization.
+4. **Zero unauthorized visual changes** — Do NOT rewrite UI components. If scope is type changes, change types only. Never change CSS, animations, text, layout, colors without explicit authorization. Before ANY style/color change, read **`apps/interno/DESIGN_SYSTEM.md`** (tokens semânticos, convenções e anti-padrões — não reintroduzir classes inexistentes/light-only/bordas bare).
 5. **Diagnosis first, execution second** — Analyze current state before implementing. "No frankensteins."
 6. **Checkpoint per stage** — Commit, build, report before advancing.
 7. **Credentials never in git** — `.env.local` always in `.gitignore`.
@@ -94,6 +94,7 @@ Environment variables:
 - State: Zustand 5 stores + TanStack React Query
 - Zod 4 schemas in `src/schemas/`
 - UI: custom components with CVA + clsx + tailwind-merge
+- Design system: tokens semânticos via CSS vars + Tailwind (temas light "Stitch" / dark "Tactical"). **Ver `apps/interno/DESIGN_SYSTEM.md`** + o cheat-sheet no topo de `src/index.css`. Sempre usar tokens (`bg-card`/`text-muted-foreground`/`border-border`…), nunca cores cruas (`gray`/`white`/`emerald`…). App 100% tokenizado (jun/2026)
 - PWA via `vite-plugin-pwa`
 - 3D: React Three Fiber + drei (estoque visualization)
 - ESLint 9 flat config (`eslint.config.js`)
