@@ -55,7 +55,7 @@ function FeedbackForm({ contatoId, onClose }: { contatoId: string; onClose: () =
                 value={canal}
                 onChange={(e) => setCanal(e.target.value as Canal)}
                 disabled={isPending}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
+                className="w-full rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
             >
                 {CANAL_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value} className="bg-card">
@@ -69,7 +69,7 @@ function FeedbackForm({ contatoId, onClose }: { contatoId: string; onClose: () =
                 disabled={isPending}
                 placeholder="Escreva o feedback…"
                 rows={3}
-                className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                className="w-full resize-none rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
             />
             {mutError && (
                 <p className="text-[11px] text-destructive">{mutError.message}</p>
@@ -86,7 +86,7 @@ function FeedbackForm({ contatoId, onClose }: { contatoId: string; onClose: () =
                     type="button"
                     onClick={onClose}
                     disabled={isPending}
-                    className="rounded-lg px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:opacity-40"
+                    className="rounded-lg px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                 >
                     Cancelar
                 </button>
@@ -111,7 +111,7 @@ export function FeedbackSideSheet({ isOpen, onClose, contatoId, nomeContato, sta
     const inicial = nomeContato.trim()[0]?.toUpperCase() ?? '?'
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-white/[0.07] shadow-modal">
+        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <div className="relative flex h-full flex-col overflow-hidden bg-card">
                 {/* Grain overlay */}
                 <div
@@ -121,7 +121,7 @@ export function FeedbackSideSheet({ isOpen, onClose, contatoId, nomeContato, sta
                 />
 
                 {/* Header */}
-                <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-white/[0.07] px-4 py-3.5">
+                <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-border px-4 py-3.5">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-[13px] font-bold text-primary">
                         {inicial}
                     </div>
@@ -142,14 +142,14 @@ export function FeedbackSideSheet({ isOpen, onClose, contatoId, nomeContato, sta
                         type="button"
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                         <X className="h-4 w-4" />
                     </button>
                 </div>
 
                 {/* Section label */}
-                <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+                <div className="relative z-10 shrink-0 border-b border-border px-4 py-2">
                     <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
                         Registrar feedback
                     </p>

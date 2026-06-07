@@ -106,7 +106,7 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
                 <span>ID: {card.contato_id.slice(0, 8)}</span>
             </div>
             <LinhaMotivo card={card} />
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-black/25 px-2 py-[5px]">
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-2 py-[5px]">
                 <div className="flex min-w-0 items-center gap-1.5">
                     <Phone className="h-3 w-3 shrink-0 text-primary/60" />
                     <span className="truncate text-[11px] text-muted-foreground">
@@ -136,7 +136,7 @@ function ActionBar({
 }) {
     return (
         <div
-            className="mt-2 flex flex-col items-start gap-1 border-t border-white/[0.06] pt-2"
+            className="mt-2 flex flex-col items-start gap-1 border-t border-border pt-2"
             // stopPropagation em pointerDown: impede que pressionar os botões
             // ative o drag do dnd-kit (cujos listeners ficam no div pai do card).
             onPointerDown={(e) => e.stopPropagation()}
@@ -145,7 +145,7 @@ function ActionBar({
             <button
                 type="button"
                 onClick={onTimelineClick}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
                 <History className="h-3.5 w-3.5 shrink-0" />
                 Linha do tempo
@@ -153,7 +153,7 @@ function ActionBar({
             <button
                 type="button"
                 onClick={onFeedbackClick}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
                 <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                 Feedback
@@ -161,7 +161,7 @@ function ActionBar({
             <button
                 type="button"
                 onClick={onTagsClick}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
                 <Tag className="h-3.5 w-3.5 shrink-0" />
                 Tags
@@ -169,7 +169,7 @@ function ActionBar({
             <button
                 type="button"
                 onClick={onPerfilClick}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
                 <UserRound className="h-3.5 w-3.5 shrink-0" />
                 Perfil
@@ -216,8 +216,8 @@ function SortableCard({
             className={cn(
                 'rounded-xl border p-3 touch-none transition-[box-shadow,border-color,opacity]',
                 isDragging
-                    ? 'border-dashed border-white/20 bg-transparent opacity-30 shadow-none'
-                    : 'bg-card border-white/[0.09] shadow-[0_1px_3px_rgb(0_0_0/0.22)] cursor-grab hover:border-white/[0.15] hover:shadow-[0_6px_20px_rgb(0_0_0/0.40)]'
+                    ? 'border-dashed border-border bg-transparent opacity-30 shadow-none'
+                    : 'bg-card border-border shadow-[0_1px_3px_rgb(0_0_0/0.22)] cursor-grab hover:border-foreground/20 hover:shadow-[0_6px_20px_rgb(0_0_0/0.40)]'
             )}
         >
             <div className={isDragging ? 'invisible' : undefined}>
@@ -259,13 +259,13 @@ function DroppableColuna({
                 'rounded-2xl border p-2.5 transition-[border-color,background,box-shadow]',
                 isOver
                     ? 'border-primary bg-primary/[0.03] shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]'
-                    : 'border-white/[0.07] bg-muted'
+                    : 'border-border bg-muted'
             )}
         >
             {/* Column header */}
             <div className={cn(
                 'mb-2.5 flex items-center justify-between border-b pb-2.5',
-                isOver ? 'border-primary/20' : 'border-white/[0.05]'
+                isOver ? 'border-primary/20' : 'border-border'
             )}>
                 <h2 className={cn(
                     'text-[10.5px] font-black uppercase tracking-[0.09em]',
@@ -277,7 +277,7 @@ function DroppableColuna({
                     'rounded-full px-2 py-0.5 text-[10.5px] font-bold',
                     isOver
                         ? 'bg-primary/10 text-primary/70'
-                        : 'bg-white/[0.06] text-muted-foreground/70'
+                        : 'bg-foreground/[0.06] text-muted-foreground/70'
                 )}>
                     {total}
                 </span>
@@ -528,7 +528,7 @@ export function Relacionamento() {
                         type="button"
                         aria-label="Legenda do kanban"
                         onClick={() => setLegendaAberta(true)}
-                        className="flex size-9 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                        className="flex size-9 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
                     >
                         <HelpCircle className="h-5 w-5" />
                     </button>
@@ -618,7 +618,7 @@ export function Relacionamento() {
                                                     ))}
 
                                                     {coluna.cards.length === 0 && (
-                                                        <div className="rounded-xl border border-dashed border-white/[0.07] py-7 text-center text-[11px] text-muted-foreground/60">
+                                                        <div className="rounded-xl border border-dashed border-border py-7 text-center text-[11px] text-muted-foreground/60">
                                                             Nenhum cliente
                                                         </div>
                                                     )}
@@ -634,7 +634,7 @@ export function Relacionamento() {
                                                             [coluna.status]: prev[coluna.status] + CARDS_PER_PAGE,
                                                         }))
                                                     }
-                                                    className="mt-2 w-full rounded-xl border border-white/[0.07] py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-white/[0.13] hover:bg-white/[0.04] hover:text-foreground"
+                                                    className="mt-2 w-full rounded-xl border border-border py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground"
                                                 >
                                                     Carregar mais &middot;{' '}
                                                     <span className="text-warning">+{remaining}</span>
@@ -701,7 +701,7 @@ export function Relacionamento() {
                     onClick={() => setLegendaAberta(false)}
                 >
                     <div
-                        className="max-h-[82vh] w-full overflow-y-auto rounded-t-2xl border border-white/[0.09] border-b-0 bg-card p-6"
+                        className="max-h-[82vh] w-full overflow-y-auto rounded-t-2xl border border-border border-b-0 bg-card p-6"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="mb-5 flex items-center justify-between">
@@ -710,7 +710,7 @@ export function Relacionamento() {
                                 type="button"
                                 aria-label="Fechar legenda"
                                 onClick={() => setLegendaAberta(false)}
-                                className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                                className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -735,7 +735,7 @@ export function Relacionamento() {
                                 </div>
                             </section>
 
-                            <div className="border-t border-white/[0.07]" />
+                            <div className="border-t border-border" />
 
                             <section>
                                 <h3 className="mb-2 text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/70">Termos do card</h3>

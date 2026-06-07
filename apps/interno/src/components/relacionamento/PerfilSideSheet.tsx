@@ -92,45 +92,45 @@ function SkeletonPerfil() {
     return (
         <div className="animate-pulse px-4 py-4 space-y-5">
             <div className="space-y-2">
-                <div className="h-2 w-1/4 rounded-full bg-white/[0.07]" />
-                <div className="h-3 w-2/3 rounded-full bg-white/[0.07]" />
-                <div className="h-2.5 w-1/2 rounded-full bg-white/[0.05]" />
+                <div className="h-2 w-1/4 rounded-full bg-foreground/[0.07]" />
+                <div className="h-3 w-2/3 rounded-full bg-foreground/[0.07]" />
+                <div className="h-2.5 w-1/2 rounded-full bg-foreground/[0.05]" />
                 <div className="flex gap-1.5 mt-1">
-                    <div className="h-5 w-12 rounded-full bg-white/[0.05]" />
-                    <div className="h-5 w-16 rounded-full bg-white/[0.05]" />
+                    <div className="h-5 w-12 rounded-full bg-foreground/[0.05]" />
+                    <div className="h-5 w-16 rounded-full bg-foreground/[0.05]" />
                 </div>
             </div>
             <div className="space-y-1.5">
-                <div className="h-2 w-1/5 rounded-full bg-white/[0.07]" />
+                <div className="h-2 w-1/5 rounded-full bg-foreground/[0.07]" />
                 {[0.5, 0.4, 0.6].map((w, i) => (
                     <div key={i} className="flex justify-between">
-                        <div className="h-2.5 rounded-full bg-white/[0.05]" style={{ width: `${w * 50}%` }} />
-                        <div className="h-2.5 w-1/4 rounded-full bg-white/[0.04]" />
+                        <div className="h-2.5 rounded-full bg-foreground/[0.05]" style={{ width: `${w * 50}%` }} />
+                        <div className="h-2.5 w-1/4 rounded-full bg-foreground/[0.04]" />
                     </div>
                 ))}
             </div>
             <div className="space-y-1.5">
-                <div className="h-2 w-1/4 rounded-full bg-white/[0.07]" />
+                <div className="h-2 w-1/4 rounded-full bg-foreground/[0.07]" />
                 {[0.45, 0.5, 0.35].map((w, i) => (
                     <div key={i} className="flex justify-between">
-                        <div className="h-2.5 rounded-full bg-white/[0.05]" style={{ width: `${w * 50}%` }} />
-                        <div className="h-2.5 w-1/4 rounded-full bg-white/[0.04]" />
+                        <div className="h-2.5 rounded-full bg-foreground/[0.05]" style={{ width: `${w * 50}%` }} />
+                        <div className="h-2.5 w-1/4 rounded-full bg-foreground/[0.04]" />
                     </div>
                 ))}
             </div>
-            <div className="h-14 rounded-xl bg-white/[0.04]" />
+            <div className="h-14 rounded-xl bg-foreground/[0.04]" />
             <div className="space-y-1.5">
-                <div className="h-2 w-1/4 rounded-full bg-white/[0.07]" />
-                <div className="h-2.5 w-2/3 rounded-full bg-white/[0.05]" />
-                <div className="h-2.5 w-1/3 rounded-full bg-white/[0.04]" />
+                <div className="h-2 w-1/4 rounded-full bg-foreground/[0.07]" />
+                <div className="h-2.5 w-2/3 rounded-full bg-foreground/[0.05]" />
+                <div className="h-2.5 w-1/3 rounded-full bg-foreground/[0.04]" />
             </div>
             <div className="space-y-1.5">
-                <div className="h-2 w-1/3 rounded-full bg-white/[0.07]" />
+                <div className="h-2 w-1/3 rounded-full bg-foreground/[0.07]" />
                 {[0.9, 0.6, 0.45, 0.3].map((w, i) => (
                     <div key={i} className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full bg-white/[0.05]" style={{ width: `${w * 60}%` }} />
-                        <div className="h-2.5 w-4 rounded-full bg-white/[0.04]" />
-                        <div className="h-2.5 w-28 rounded-full bg-white/[0.04]" />
+                        <div className="h-1.5 flex-1 rounded-full bg-foreground/[0.05]" style={{ width: `${w * 60}%` }} />
+                        <div className="h-2.5 w-4 rounded-full bg-foreground/[0.04]" />
+                        <div className="h-2.5 w-28 rounded-full bg-foreground/[0.04]" />
                     </div>
                 ))}
             </div>
@@ -164,7 +164,7 @@ function FiadoCard({ estado }: { estado: 'em_aberto' | 'quitou' | 'nunca_usou' }
             icon: MinusCircle,
             label: 'Nunca usou fiado',
             msg: null,
-            cls: 'bg-white/[0.04] border-white/[0.08]',
+            cls: 'bg-foreground/[0.04] border-border',
             iconCls: 'text-muted-foreground/50',
             labelCls: 'text-muted-foreground',
             msgCls: '',
@@ -203,7 +203,7 @@ function ProdutosRanking({ produtos }: { produtos: ProdutoRanking[] }) {
         <div className="space-y-1">
             {visible.map(({ produto, quantidade }) => (
                 <div key={produto} className="flex items-center gap-2">
-                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/[0.06]">
                         <div
                             className="absolute inset-y-0 left-0 rounded-full bg-primary/40"
                             style={{ width: `${(quantidade / max) * 100}%` }}
@@ -231,7 +231,7 @@ function FeedbackItem({ canal, observacao, data }: { canal: string | null; obser
     const canalLabel = canal ? (CANAL_OPTIONS.find((o) => o.value === canal)?.label ?? canal) : null
 
     return (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-1.5">
+        <div className="rounded-xl border border-border bg-foreground/[0.02] px-3 py-2.5 space-y-1.5">
             <div className="flex items-center gap-2">
                 {canalLabel && (
                     <Badge variant={variant} className="px-1.5 py-0 text-[10px]">
@@ -277,7 +277,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                     value={canal}
                     onChange={(e) => setCanal(e.target.value as Canal)}
                     disabled={isPending}
-                    className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
+                    className="w-full rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/40 disabled:opacity-50"
                 >
                     {CANAL_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value} className="bg-card">
@@ -301,7 +301,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                                 'rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50',
                                 resultado === opt.value
                                     ? 'border-primary/40 bg-primary/15 text-primary'
-                                    : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:border-white/[0.15] hover:text-foreground',
+                                    : 'border-border bg-foreground/[0.03] text-muted-foreground hover:border-foreground/20 hover:text-foreground',
                             )}
                         >
                             {opt.label}
@@ -319,7 +319,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                     disabled={isPending}
                     placeholder="Detalhe o contato…"
                     rows={3}
-                    className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                    className="w-full resize-none rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
                 />
             </div>
 
@@ -339,7 +339,7 @@ function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: 
                     type="button"
                     onClick={onClose}
                     disabled={isPending}
-                    className="rounded-lg px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground disabled:opacity-40"
+                    className="rounded-lg px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                 >
                     Cancelar
                 </button>
@@ -391,7 +391,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
             />
 
             {/* Header */}
-            <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-white/[0.07] px-4 py-3.5">
+            <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-border px-4 py-3.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-[13px] font-bold text-primary">
                     {inicial}
                 </div>
@@ -412,7 +412,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                     type="button"
                     onClick={onClose}
                     aria-label="Fechar"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                     <X className="h-4 w-4" />
                 </button>
@@ -421,7 +421,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
             {showPontoContato ? (
                 <>
                     {/* Section label */}
-                    <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+                    <div className="relative z-10 shrink-0 border-b border-border px-4 py-2">
                         <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
                             Registrar contato
                         </p>
@@ -437,7 +437,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
             ) : (
                 <>
                     {/* Section label */}
-                    <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+                    <div className="relative z-10 shrink-0 border-b border-border px-4 py-2">
                         <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
                             Perfil do cliente
                         </p>
@@ -473,7 +473,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                                             <button
                                                 type="button"
                                                 onClick={handleWhatsApp}
-                                                className="mt-1 flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-black/25 px-2 py-[5px] text-[11px] text-muted-foreground transition-colors hover:border-white/[0.12] hover:text-foreground"
+                                                className="mt-1 flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-[5px] text-[11px] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
                                             >
                                                 <Phone className="h-3 w-3 shrink-0 text-primary/60" />
                                                 {formatPhone(contato.telefone)}
@@ -574,8 +574,8 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                                     <SectionLabel>Feedback</SectionLabel>
                                     {interacoesLoading ? (
                                         <div className="animate-pulse space-y-2">
-                                            <div className="h-14 rounded-xl bg-white/[0.04]" />
-                                            <div className="h-14 rounded-xl bg-white/[0.04]" />
+                                            <div className="h-14 rounded-xl bg-foreground/[0.04]" />
+                                            <div className="h-14 rounded-xl bg-foreground/[0.04]" />
                                         </div>
                                     ) : feedbacks.length === 0 ? (
                                         <p className="text-[11px] text-muted-foreground/40">
@@ -600,11 +600,11 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                     </div>
 
                     {/* Sticky footer — registrar ponto de contato */}
-                    <div className="relative z-10 shrink-0 border-t border-white/[0.06] px-4 py-3">
+                    <div className="relative z-10 shrink-0 border-t border-border px-4 py-3">
                         <button
                             type="button"
                             onClick={() => setShowPontoContato(true)}
-                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:border-white/[0.12] hover:bg-white/[0.07] hover:text-foreground"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground"
                         >
                             <Phone className="h-3.5 w-3.5 shrink-0" />
                             Registrar contato
@@ -631,7 +631,7 @@ export function PerfilSideSheet({ isOpen, onClose, ...rest }: PerfilSideSheetPro
     if (!isOpen) return null
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-white/[0.07] shadow-modal">
+        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <PanelContent onClose={onClose} {...rest} />
         </aside>,
         document.body,

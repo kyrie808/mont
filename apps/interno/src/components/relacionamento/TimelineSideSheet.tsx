@@ -58,8 +58,8 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
 
 const TIPO_CONFIG_DEFAULT: TipoConfig = {
     icon: MessageSquare,
-    dotBg: 'bg-white/[0.05]',
-    dotBorder: 'border-white/10',
+    dotBg: 'bg-foreground/[0.05]',
+    dotBorder: 'border-border',
     iconColor: 'text-muted-foreground',
 }
 
@@ -141,13 +141,13 @@ function SkeletonTimeline() {
             {([0.75, 0.55, 0.65, 0.5] as const).map((w, i) => (
                 <div key={i} className="relative flex gap-3 pb-5">
                     <div className="flex w-7 shrink-0 flex-col items-center">
-                        <div className="h-7 w-7 rounded-full bg-white/[0.07]" />
-                        {i < 3 && <div className="mt-1 w-px flex-1 bg-white/[0.04]" />}
+                        <div className="h-7 w-7 rounded-full bg-foreground/[0.07]" />
+                        {i < 3 && <div className="mt-1 w-px flex-1 bg-foreground/[0.04]" />}
                     </div>
                     <div className="flex-1 space-y-2 pt-1">
-                        <div className="h-3 rounded-full bg-white/[0.07]" style={{ width: `${w * 100}%` }} />
-                        <div className="h-2.5 w-1/2 rounded-full bg-white/[0.05]" />
-                        <div className="h-2 w-1/3 rounded-full bg-white/[0.04]" />
+                        <div className="h-3 rounded-full bg-foreground/[0.07]" style={{ width: `${w * 100}%` }} />
+                        <div className="h-2.5 w-1/2 rounded-full bg-foreground/[0.05]" />
+                        <div className="h-2 w-1/3 rounded-full bg-foreground/[0.04]" />
                     </div>
                 </div>
             ))}
@@ -178,7 +178,7 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
                     <Icon className={cn('h-[11px] w-[11px]', config.iconColor)} />
                 </div>
                 {!isLast && (
-                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-white/[0.09] to-transparent" />
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-foreground/[0.09] to-transparent" />
                 )}
             </div>
 
@@ -234,7 +234,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual }: PanelCon
             />
 
             {/* Header */}
-            <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-white/[0.07] px-4 py-3.5">
+            <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-border px-4 py-3.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-[13px] font-bold text-primary">
                     {inicial}
                 </div>
@@ -255,14 +255,14 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual }: PanelCon
                     type="button"
                     onClick={onClose}
                     aria-label="Fechar"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                     <X className="h-4 w-4" />
                 </button>
             </div>
 
             {/* Section label */}
-            <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+            <div className="relative z-10 shrink-0 border-b border-border px-4 py-2">
                 <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
                     Histórico de interações
                 </p>
@@ -284,7 +284,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual }: PanelCon
                 )}
 
                 {!isLoading && !error && interacoes?.length === 0 && (
-                    <div className="mx-4 mt-4 rounded-xl border border-dashed border-white/[0.07] py-8 text-center">
+                    <div className="mx-4 mt-4 rounded-xl border border-dashed border-border py-8 text-center">
                         <p className="text-[12px] text-muted-foreground/60">
                             Nenhuma interação registrada
                         </p>
@@ -321,7 +321,7 @@ export function TimelineSideSheet({ isOpen, onClose, ...rest }: TimelineSideShee
     if (!isOpen) return null
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-white/[0.07] shadow-modal">
+        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <PanelContent onClose={onClose} {...rest} />
         </aside>,
         document.body,

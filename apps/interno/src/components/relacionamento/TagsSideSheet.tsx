@@ -133,7 +133,7 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
             />
 
             {/* Header */}
-            <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-white/[0.07] px-4 py-3.5">
+            <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-border px-4 py-3.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-[13px] font-bold text-primary">
                     {inicial}
                 </div>
@@ -154,14 +154,14 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                     type="button"
                     onClick={onClose}
                     aria-label="Fechar"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                     <X className="h-4 w-4" />
                 </button>
             </div>
 
             {/* Section label */}
-            <div className="relative z-10 shrink-0 border-b border-white/[0.04] px-4 py-2">
+            <div className="relative z-10 shrink-0 border-b border-border px-4 py-2">
                 <p className="text-[10.5px] font-black uppercase tracking-[0.09em] text-muted-foreground/50">
                     Tags de campanha
                 </p>
@@ -171,10 +171,10 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
             <div className="no-scrollbar relative z-10 flex-1 overflow-y-auto px-4 py-4">
                 {isLoading ? (
                     <div className="animate-pulse space-y-3">
-                        <div className="h-2.5 w-1/3 rounded-full bg-white/[0.07]" />
+                        <div className="h-2.5 w-1/3 rounded-full bg-foreground/[0.07]" />
                         <div className="flex gap-2">
-                            <div className="h-6 w-16 rounded-full bg-white/[0.05]" />
-                            <div className="h-6 w-20 rounded-full bg-white/[0.05]" />
+                            <div className="h-6 w-16 rounded-full bg-foreground/[0.05]" />
+                            <div className="h-6 w-20 rounded-full bg-foreground/[0.05]" />
                         </div>
                     </div>
                 ) : (
@@ -253,7 +253,7 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                                         }}
                                         disabled={isBusy}
                                         placeholder="Nome da tag"
-                                        className="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
+                                        className="min-w-0 flex-1 rounded-lg border border-border bg-foreground/[0.04] px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/40 disabled:opacity-50"
                                     />
                                     <input
                                         type="color"
@@ -261,7 +261,7 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                                         onChange={(e) => setNovaTagCor(e.target.value)}
                                         disabled={isBusy}
                                         title="Escolher cor"
-                                        className="h-[34px] w-9 cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.04] p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="h-[34px] w-9 cursor-pointer rounded-lg border border-border bg-foreground/[0.04] p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>
                                 {criarError && (
@@ -297,7 +297,7 @@ export function TagsSideSheet({ isOpen, onClose, ...rest }: TagsSideSheetProps) 
     if (!isOpen) return null
 
     return createPortal(
-        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-white/[0.07] shadow-modal">
+        <aside className="fixed right-0 top-0 z-[9999] h-screen w-80 animate-slide-in-right overflow-hidden border-l border-border shadow-modal">
             <TagsPanel onClose={onClose} {...rest} />
         </aside>,
         document.body,

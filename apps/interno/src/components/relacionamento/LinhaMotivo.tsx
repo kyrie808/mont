@@ -70,7 +70,7 @@ export function LinhaMotivo({ card }: { card: KanbanRow }) {
             </div>
 
             {tooltipAberto && (
-                <div className="absolute bottom-full left-0 z-tooltip mb-1.5 w-52 rounded-lg border border-white/[0.10] bg-popover px-2.5 py-2 text-[11px] leading-[1.55] text-popover-foreground shadow-modal pointer-events-none">
+                <div className="absolute bottom-full left-0 z-tooltip mb-1.5 w-52 rounded-lg border border-border bg-popover px-2.5 py-2 text-[11px] leading-[1.55] text-popover-foreground shadow-modal pointer-events-none">
                     {motivo.tooltip}
                 </div>
             )}
