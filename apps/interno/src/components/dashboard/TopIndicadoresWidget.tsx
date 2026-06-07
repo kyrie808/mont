@@ -1,7 +1,6 @@
-﻿import { Medal, Trophy } from 'lucide-react'
+﻿import { Trophy } from 'lucide-react'
 import { useTopIndicadores } from '@/hooks/useTopIndicadores'
-import { Card, CardContent } from '@/components/ui/Card'
-import { cn } from '@mont/shared'
+import { PodiumCard } from '@/components/dashboard/PodiumCard'
 import type { TopIndicador } from '@/services/dashboardService'
 
 
@@ -44,58 +43,16 @@ export function TopIndicadoresWidget({ data, loading: externalLoading }: TopIndi
 
             <div className="grid grid-cols-1 gap-3">
                 {validIndicadores.map((indicador, index) => (
-                    <TopIndicadorCard key={indicador.indicadorId} indicador={indicador} index={index} />
+                    <PodiumCard
+                        key={indicador.indicadorId}
+                        index={index}
+                        nome={indicador.nome}
+                        primaryText={`${indicador.totalIndicados} ${indicador.totalIndicados === 1 ? 'cliente indicado' : 'clientes indicados'}`}
+                        secondaryText={`${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(indicador.totalVendasIndicados)} em vendas`}
+                        secondaryAccent="text-primary"
+                    />
                 ))}
             </div>
         </div>
-    )
-}
-
-function TopIndicadorCard({ indicador, index }: { indicador: TopIndicador, index: number }) {
-    const getGradient = (ranking: number) => {
-        switch (ranking) {
-            case 1: return "bg-gradient-to-r from-yellow-300 to-yellow-500 text-yellow-900 border-yellow-400"
-            case 2: return "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-900 border-gray-400"
-            case 3: return "bg-gradient-to-r from-orange-300 to-orange-400 text-orange-900 border-orange-400"
-            default: return "bg-card text-foreground border-border"
-        }
-    }
-
-    const isTop3 = index < 3
-    const gradientClass = isTop3 ? getGradient(index + 1) : getGradient(99)
-
-    return (
-        <Card className={cn(
-            "relative overflow-hidden border transition-all hover:scale-[1.01]",
-            isTop3 ? "border-0 shadow-lg" : "shadow-sm"
-        )}>
-            <div className={cn("absolute inset-0 opacity-20", gradientClass)}></div>
-
-            <CardContent className={cn("flex items-center justify-between p-4 relative z-10", isTop3 ? "" : "bg-card/50")}>
-                <div className="flex items-center gap-4">
-                    <div className={cn(
-                        "flex items-center justify-center size-10 rounded-full font-bold text-lg shadow-inner",
-                        isTop3 ? "bg-white/30 backdrop-blur-sm text-black" : "bg-muted text-muted-foreground"
-                    )}>
-                        {index + 1}
-                    </div>
-                    <div>
-                        <h3 className={cn("font-bold text-sm", isTop3 ? "text-black dark:text-white mix-blend-hard-light" : "text-foreground")}>
-                            {indicador.nome}
-                        </h3>
-                        <div className="flex flex-col gap-0.5">
-                            <p className={cn("text-xs font-medium opacity-80", isTop3 ? "text-black dark:text-white" : "text-muted-foreground")}>
-                                {indicador.totalIndicados} {indicador.totalIndicados === 1 ? 'cliente indicado' : 'clientes indicados'}
-                            </p>
-                            <p className={cn("text-[10px] font-bold", isTop3 ? "text-black/70 dark:text-white/70" : "text-primary")}>
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(indicador.totalVendasIndicados)} em vendas
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {index === 0 && <Medal className="size-6 text-yellow-600 dark:text-yellow-400 drop-shadow-md" />}
-            </CardContent>
-        </Card >
     )
 }
