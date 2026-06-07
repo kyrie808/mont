@@ -30,10 +30,10 @@ interface PurchaseOrderPaymentModalProps {
 const PAYMENT_METHODS = [
     { value: 'pix', label: 'Pix' },
     { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'cartao_credito', label: 'Cart�o de Cr�dito' },
-    { value: 'cartao_debito', label: 'Cart�o de D�bito' },
+    { value: 'cartao_credito', label: 'Cartão de Crédito' },
+    { value: 'cartao_debito', label: 'Cartão de Débito' },
     { value: 'boleto', label: 'Boleto' },
-    { value: 'transferencia', label: 'Transfer�ncia' }
+    { value: 'transferencia', label: 'Transferência' }
 ] as const
 
 export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }: PurchaseOrderPaymentModalProps) {
@@ -124,7 +124,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
                         </div>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-600">J� Pago:</span>
+                            <span className="text-sm text-gray-600">Já Pago:</span>
                             <span className="font-medium text-emerald-600">{formatCurrency(order.amountPaid || 0)}</span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t mt-2">
@@ -150,7 +150,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    M�todo
+                                    Método
                                 </label>
                                 <select
                                     {...register('payment_method')}
@@ -206,20 +206,20 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             )}
                             {currentAmount > remainingAmount + 0.01 && (
                                 <p className="text-xs text-amber-600 mt-1">
-                                    ?? Aten��o: Valor maior que o restante.
+                                    ⚠️ Atenção: Valor maior que o restante.
                                 </p>
                             )}
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Observa��o
+                                Observação
                             </label>
                             <textarea
                                 {...register('notes')}
                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
                                 rows={2}
-                                placeholder="Ex: Confirma��o de transfer�ncia..."
+                                placeholder="Ex: Confirmação de transferência..."
                             />
                         </div>
 

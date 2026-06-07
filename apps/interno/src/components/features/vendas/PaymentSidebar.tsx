@@ -25,7 +25,7 @@ interface PaymentSidebarProps {
 const PAYMENT_METHODS = [
     { value: 'pix', label: 'Pix', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { value: 'dinheiro', label: 'Dinheiro', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { value: 'cartao', label: 'Cart�o', icon: CreditCard, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+    { value: 'cartao', label: 'Cartão', icon: CreditCard, color: 'text-violet-500', bg: 'bg-violet-500/10' },
     { value: 'fiado', label: 'Fiado', icon: CalendarIcon, color: 'text-orange-500', bg: 'bg-orange-500/10' },
 ]
 
@@ -251,7 +251,7 @@ export function PaymentSidebar({
                     )}
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Observa��o (Opcional)</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Observação (Opcional)</label>
                     <textarea
                         {...register('observacao')}
                         rows={2}
@@ -264,7 +264,7 @@ export function PaymentSidebar({
             {/* History Section */}
             {historico.length > 0 && (
                 <div className="pt-2 border-t border-border">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Hist�rico de Pagamentos</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Histórico de Pagamentos</h3>
                     <div className="space-y-2">
                         {historico.map((pag) => (
                             <div key={pag.id} className="flex items-start justify-between p-2.5 bg-muted rounded-lg border border-border">
@@ -278,7 +278,7 @@ export function PaymentSidebar({
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(new Date(pag.data), "dd 'de' MMM '�s' HH:mm", { locale: ptBR })}
+                                        {format(new Date(pag.data), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })}
                                     </p>
                                     {pag.observacao && (
                                         <p className="text-xs text-muted-foreground mt-1 italic">"{pag.observacao}"</p>
@@ -290,7 +290,7 @@ export function PaymentSidebar({
                 </div>
             )}
 
-            {/* Submit Button � sticky to bottom of scroll container */}
+            {/* Submit Button — sticky to bottom of scroll container */}
             <div className="sticky bottom-0 pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-card -mx-4 px-4 border-t border-border">
                 <Button
                     type="submit"
