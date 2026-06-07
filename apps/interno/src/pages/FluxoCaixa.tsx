@@ -60,7 +60,8 @@ export function FluxoCaixa() {
     return (
         <>
             <Header title="Financeiro" showBack centerTitle />
-            <PageContainer className="pt-0 pb-24 bg-transparent px-4">
+            <PageContainer className="pt-0 pb-24 bg-transparent px-4 lg:px-6">
+                <div className="mx-auto w-full lg:max-w-[1500px]">
 
                     {/* Hub Tabs Navigation */}
                     <div className="px-4 mt-4">
@@ -88,17 +89,23 @@ export function FluxoCaixa() {
                                 loadingContas={loadingContas}
                             />
 
-                            <ExtratoMensal 
-                                key={selectedMonth.toISOString()}
-                                extrato={extrato} 
-                                loadingExtrato={loadingExtrato} 
-                            />
-
-                            <ExtratoSaldoAcumulado 
-                                extratoDeSaldo={extratoDeSaldo} 
-                                loadingExtratoDeSaldo={loadingExtratoDeSaldo} 
-                                totalSaldoContas={totalSaldoContas}
-                            />
+                            {/* Extratos: empilhados no mobile, 2 colunas no desktop */}
+                            <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
+                                <div className="lg:col-span-7">
+                                    <ExtratoMensal
+                                        key={selectedMonth.toISOString()}
+                                        extrato={extrato}
+                                        loadingExtrato={loadingExtrato}
+                                    />
+                                </div>
+                                <div className="lg:col-span-5">
+                                    <ExtratoSaldoAcumulado
+                                        extratoDeSaldo={extratoDeSaldo}
+                                        loadingExtratoDeSaldo={loadingExtratoDeSaldo}
+                                        totalSaldoContas={totalSaldoContas}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <FinanceiroConfig 
@@ -113,6 +120,7 @@ export function FluxoCaixa() {
                     {activeHubTab === 'financeiro' && (
                         <FinanceiroFab refreshAll={refreshAll} />
                     )}
+                </div>
             </PageContainer>
         </>
     )

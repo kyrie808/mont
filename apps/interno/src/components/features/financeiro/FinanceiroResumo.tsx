@@ -32,7 +32,8 @@ export function FinanceiroResumo({
                 onMonthSelect={onMonthSelect}
             />
 
-            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-white dark:to-zinc-200 rounded-3xl p-6 shadow-xl text-white dark:text-zinc-950">
+            {/* Hero "Saldo em Contas" — card invertido via tokens (foreground/background) */}
+            <div className="bg-gradient-to-br from-foreground to-foreground/90 text-background rounded-3xl p-6 shadow-elevated">
                 <div className="flex justify-between items-start mb-4">
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Saldo em Contas</p>
@@ -40,20 +41,20 @@ export function FinanceiroResumo({
                             {loadingContas ? '...' : formatCurrency(totalSaldoContas)}
                         </h2>
                     </div>
-                    <div className="p-3 bg-white/10 dark:bg-black/5 rounded-2xl">
+                    <div className="p-3 bg-background/10 rounded-2xl">
                         <Wallet className="w-6 h-6" />
                     </div>
                 </div>
-                <div className="flex gap-4 pt-4 border-t border-white/10 dark:border-black/5">
+                <div className="flex gap-4 pt-4 border-t border-background/10">
                     <div className="flex-1">
                         <p className="text-[9px] font-black uppercase tracking-wider opacity-60">Entradas ({format(selectedMonth, 'MMM', { locale: ptBR })})</p>
-                        <p className="text-sm font-bold text-emerald-400 dark:text-emerald-600">
+                        <p className="text-sm font-bold text-success">
                             + {formatCurrency(resumo?.total_entradas || 0)}
                         </p>
                     </div>
                     <div className="flex-1">
                         <p className="text-[9px] font-black uppercase tracking-wider opacity-60">Saídas ({format(selectedMonth, 'MMM', { locale: ptBR })})</p>
-                        <p className="text-sm font-bold text-red-400 dark:text-red-600">
+                        <p className="text-sm font-bold text-destructive">
                             - {formatCurrency(resumo?.total_saidas || 0)}
                         </p>
                     </div>
@@ -63,8 +64,8 @@ export function FinanceiroResumo({
             {/* Quick KPIs Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 {[
-                    { label: 'Saldo do Mês', value: (resumo?.total_entradas || 0) - (resumo?.total_saidas || 0), icon: TrendingUp, color: 'emerald' },
-                    { label: 'A Receber', value: resumo?.total_a_receber || 0, icon: Clock, color: 'orange' },
+                    { label: 'Saldo do Mês', value: (resumo?.total_entradas || 0) - (resumo?.total_saidas || 0), icon: TrendingUp, tone: 'success' as const },
+                    { label: 'A Receber', value: resumo?.total_a_receber || 0, icon: Clock, tone: 'warning' as const },
                     {
                         label: 'Inadimplência',
                         value: (resumo?.total_faturamento || 0) > 0
@@ -72,19 +73,19 @@ export function FinanceiroResumo({
                             : 0,
                         isPercent: true,
                         icon: Filter,
-                        color: 'red'
+                        tone: 'destructive' as const,
                     },
                 ].map((kpi, idx) => (
-                    <div key={idx} className="bg-white dark:bg-zinc-900 p-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                        <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center mb-3", 
-                            kpi.color === 'emerald' ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" :
-                            kpi.color === 'orange' ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" :
-                            "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                    <div key={idx} className="bg-card p-4 rounded-3xl border border-border shadow-card">
+                        <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center mb-3",
+                            kpi.tone === 'success' ? "bg-success/15 text-success" :
+                            kpi.tone === 'warning' ? "bg-warning/15 text-warning-strong" :
+                            "bg-destructive/15 text-destructive"
                         )}>
                             <kpi.icon size={20} />
                         </div>
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-wider">{kpi.label}</p>
-                        <h3 className="text-lg font-black text-zinc-900 dark:text-white mt-1">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
+                        <h3 className="text-lg font-black text-foreground mt-1">
                             {loadingResumo ? '...' : kpi.isPercent ? `${kpi.value.toFixed(1)}%` : formatCurrency(kpi.value)}
                         </h3>
                     </div>
