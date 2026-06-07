@@ -58,6 +58,7 @@
    * ──────────────────────────────────────────────────────────────────
    */
   :root {
+    color-scheme: light;
     /* Stitch Light Theme (Default) */
     --background: 0 0% 100%;
     /* #ffffff */
@@ -117,6 +118,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     /* Tactical Dark Theme */
     --background: 156 20% 5%;
     /* ≈ #0a100d */

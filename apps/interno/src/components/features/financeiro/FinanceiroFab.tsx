@@ -40,8 +40,9 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                     <div className="flex items-center gap-3">
                         <SpeedDialLabel>Transferência</SpeedDialLabel>
                         <button
+                            aria-label="Registrar transferência"
                             onClick={() => { setIsTransferenciaOpen(true); setIsFabOpen(false); }}
-                            className="w-12 h-12 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                            className="w-12 h-12 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             <ArrowRightLeft size={24} />
                         </button>
@@ -50,8 +51,9 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                     <div className="flex items-center gap-3">
                         <SpeedDialLabel>Saída</SpeedDialLabel>
                         <button
+                            aria-label="Registrar saída"
                             onClick={() => { setIsSaidaOpen(true); setIsFabOpen(false); }}
-                            className="w-12 h-12 bg-destructive text-destructive-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                            className="w-12 h-12 bg-destructive text-destructive-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             <ArrowDownLeft size={24} />
                         </button>
@@ -60,8 +62,9 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                     <div className="flex items-center gap-3">
                         <SpeedDialLabel>Entrada</SpeedDialLabel>
                         <button
+                            aria-label="Registrar entrada"
                             onClick={() => { setIsEntradaOpen(true); setIsFabOpen(false); }}
-                            className="w-12 h-12 bg-success text-success-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                            className="w-12 h-12 bg-success text-success-foreground rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             <ArrowUpRight size={24} />
                         </button>
@@ -69,9 +72,11 @@ export function FinanceiroFab({ refreshAll }: FinanceiroFabProps) {
                 </div>
 
                 <button
+                    aria-label={isFabOpen ? 'Fechar menu de movimentação' : 'Nova movimentação financeira'}
+                    aria-expanded={isFabOpen}
                     onClick={() => setIsFabOpen(!isFabOpen)}
                     className={cn(
-                        "w-14 h-14 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all",
+                        "w-14 h-14 bg-foreground text-background rounded-full shadow-elevated flex items-center justify-center hover:scale-110 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         isFabOpen && "rotate-45 opacity-90"
                     )}
                 >
