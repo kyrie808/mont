@@ -105,7 +105,7 @@ export function Vendas() {
     return (
         <>
             <Header title="Vendas" showMenu centerTitle onMenuClick={openDrawer} />
-                <PageContainer className="pt-0 pb-24 bg-transparent px-4">
+                <PageContainer className="pt-0 pb-24 bg-transparent px-4 lg:px-6 mx-auto w-full lg:max-w-[1500px]">
                     <VendasFilters
                         searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         statusFilter={statusFilter} setStatusFilter={setStatusFilter}

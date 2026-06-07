@@ -36,11 +36,11 @@ export function VendasFilters({
     return (
         <div className="mb-6 space-y-4">
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder="Buscar por cliente ou ID..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border-gray-200 dark:border-border dark:bg-muted/50 focus:border-primary-500 focus:ring-primary-500 shadow-sm transition-colors"
+                    placeholder="Buscar por cliente ou ID…"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring shadow-card transition-colors"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -49,7 +49,7 @@ export function VendasFilters({
             <div className="space-y-3 pb-2">
                 {/* Delivery Filters */}
                 <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <Truck className="h-4 w-4" />
                     </div>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1 w-full min-w-0 pr-4 -mr-4">
@@ -86,7 +86,7 @@ export function VendasFilters({
 
                 {/* Payment Filters */}
                 <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-success/10 text-success">
                         <DollarSign className="h-4 w-4" />
                     </div>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1 w-full min-w-0 pr-4 -mr-4">

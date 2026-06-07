@@ -27,7 +27,7 @@ export function VendasList({
     if (vendas.length === 0) {
         return (
             <EmptyState
-                icon={<ShoppingCart className="h-12 w-12 text-gray-400" />}
+                icon={<ShoppingCart className="h-12 w-12 text-muted-foreground" />}
                 title="Nenhuma venda encontrada"
                 description="Tente ajustar os filtros ou crie uma nova venda."
                 action={
