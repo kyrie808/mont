@@ -32,8 +32,8 @@ export function ConfiguracaoLocalizacao({
                         <MapPin className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Locais de Partida</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Pontos iniciais para rotas</p>
+                        <h3 className="font-semibold text-foreground">Locais de Partida</h3>
+                        <p className="text-sm text-muted-foreground">Pontos iniciais para rotas</p>
                     </div>
                 </div>
 
@@ -46,9 +46,9 @@ export function ConfiguracaoLocalizacao({
                                         <MapPin className="h-5 w-5 text-primary" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-900 dark:text-gray-100">{local.nome}</h4>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{local.endereco}</p>
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        <h4 className="font-bold text-foreground">{local.nome}</h4>
+                                        <p className="text-sm text-muted-foreground mt-0.5">{local.endereco}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">
                                             {local.lat.toFixed(4)}, {local.lng.toFixed(4)}
                                         </p>
                                     </div>
@@ -57,7 +57,7 @@ export function ConfiguracaoLocalizacao({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleRemoveLocal(local.id)}
-                                    className="text-red-500 hover:text-red-700 dark:hover:text-red-400 -mr-2 -mt-1"
+                                    className="text-destructive hover:text-destructive/80 -mr-2 -mt-1"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>

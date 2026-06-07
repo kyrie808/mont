@@ -18,13 +18,13 @@ export function ConfiguracaoRecompensas({
                         <DollarSign className="h-5 w-5 text-success" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Recompensa por Indicação</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Valor por indicação convertida</p>
+                        <h3 className="font-semibold text-foreground">Recompensa por Indicação</h3>
+                        <p className="text-sm text-muted-foreground">Valor por indicação convertida</p>
                     </div>
                 </div>
 
                 <div className="flex items-stretch gap-1">
-                    <span className="text-gray-500 dark:text-gray-400 self-center">R$</span>
+                    <span className="text-muted-foreground self-center">R$</span>
                     <Button
                         variant="outline"
                         size="sm"
@@ -49,10 +49,10 @@ export function ConfiguracaoRecompensas({
                     >
                         +
                     </Button>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 self-center ml-1">por cliente</span>
+                    <span className="text-sm text-muted-foreground self-center ml-1">por cliente</span>
                 </div>
 
-                <div className="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400 bg-muted p-2 rounded-lg">
+                <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground bg-muted p-2 rounded-lg">
                     <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <p>
                         Indicação só conta como convertida quando o indicado faz sua primeira compra.

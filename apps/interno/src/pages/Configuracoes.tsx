@@ -195,7 +195,7 @@ export function Configuracoes() {
                     {loading && <PageSkeleton rows={5} showHeader showCards />}
 
                     {!loading && (
-                        <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 text-gray-900 dark:text-gray-100">
+                        <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 text-foreground">
                             <ConfiguracaoRelacionamento
                                 limiarReativacao={limiarReativacao}
                                 setLimiarReativacao={setLimiarReativacao}

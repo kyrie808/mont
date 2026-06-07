@@ -18,13 +18,13 @@ export function ConfiguracaoRelacionamento({
                         <RefreshCw className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Relacionamento</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Regras do kanban pós-venda</p>
+                        <h3 className="font-semibold text-foreground">Relacionamento</h3>
+                        <p className="text-sm text-muted-foreground">Regras do kanban pós-venda</p>
                     </div>
                 </div>
 
                 <div>
-                    <label htmlFor="limiar-reativacao" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="limiar-reativacao" className="block text-sm font-medium text-foreground mb-1">
                         Prazo para reativar cliente novo (dias sem 2ª compra)
                     </label>
                     <div className="flex items-stretch gap-1">
@@ -53,7 +53,7 @@ export function ConfiguracaoRelacionamento({
                         >
                             +
                         </Button>
-                        <span className="text-sm text-gray-500 dark:text-gray-400 self-center ml-1">dias</span>
+                        <span className="text-sm text-muted-foreground self-center ml-1">dias</span>
                     </div>
                     <p className="mt-1.5 text-xs text-muted-foreground">
                         Dentro do prazo: cliente com 1 compra fica em Recompra (balde cheio, ainda consumindo). Após o prazo sem 2ª compra: migra para Reativação.
