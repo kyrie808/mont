@@ -47,7 +47,7 @@ export function Header({
                 {showMenu && !showBack && (
                     <button
                         aria-label="Abrir menu"
-                        className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors -ml-2 text-foreground"
+                        className="lg:hidden flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors -ml-2 text-foreground"
                         onClick={onMenuClick}
                     >
                         <Menu className="h-6 w-6" />

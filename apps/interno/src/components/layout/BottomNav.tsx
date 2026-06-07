@@ -9,7 +9,7 @@ export function BottomNav() {
     const isActive = (path: string) => location.pathname === path
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
             <div className="flex items-end justify-between px-2 pb-2 h-16">
 
                 {/* Dashboard */}

@@ -1,87 +1,15 @@
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { LucideIcon } from 'lucide-react'
-import {
-    X,
-    LayoutDashboard,
-    Users,
-    ShoppingCart,
-    Truck,
-    Trophy,
-    RefreshCw,
-    Package,
-    Snowflake,
-    ClipboardList,
-    FileText,
-    Wallet,
-    CreditCard,
-    Receipt,
-    Settings,
-    Plus,
-    BookMarked,
-    Lock,
-    BarChart3,
-} from 'lucide-react'
+import { X, Lock } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useToast } from '../ui/Toast'
+import { NAV_GROUPS } from './navConfig'
 
 interface NavigationDrawerProps {
     isOpen: boolean
     onClose: () => void
 }
-
-interface NavItem {
-    label: string
-    path: string
-    icon: LucideIcon
-    locked?: boolean
-}
-
-interface NavGroup {
-    label: string
-    items: NavItem[]
-}
-
-const NAV_GROUPS: NavGroup[] = [
-    {
-        label: 'Operações',
-        items: [
-            { label: 'Início',      path: '/',             icon: LayoutDashboard },
-            { label: 'Clientes',    path: '/contatos',     icon: Users           },
-            { label: 'Nova Venda',  path: '/nova-venda',   icon: Plus            },
-            { label: 'Vendas',      path: '/vendas',       icon: ShoppingCart    },
-            { label: 'Entregas',    path: '/entregas',     icon: Truck,          locked: true },
-        ],
-    },
-    {
-        label: 'Gestão',
-        items: [
-            { label: 'Ranking',            path: '/ranking',          icon: Trophy        },
-            { label: 'Relatórios',         path: '/relatorios',       icon: BarChart3     },
-            { label: 'Relacionamento',     path: '/relacionamento',   icon: RefreshCw },
-            { label: 'Estoque',            path: '/estoque',          icon: Snowflake     },
-            { label: 'Produtos',           path: '/produtos',         icon: Package       },
-            { label: 'Pedidos de Compra',  path: '/pedidos-compra',   icon: ClipboardList },
-        ],
-    },
-    {
-        label: 'Financeiro',
-        items: [
-            { label: 'Fluxo de Caixa',     path: '/fluxo-caixa',        icon: Wallet      },
-            { label: 'Contas a Receber',   path: '/contas-a-receber',   icon: CreditCard, locked: true },
-            { label: 'Contas a Pagar',     path: '/contas-a-pagar',     icon: Receipt,    locked: true },
-            { label: 'Relatório Fábrica',  path: '/relatorio-fabrica',  icon: FileText,   locked: true },
-            { label: 'Plano de Contas',    path: '/plano-de-contas',    icon: BookMarked, locked: true },
-        ],
-    },
-    {
-        label: 'Sistema',
-        items: [
-            { label: 'Configurações', path: '/configuracoes', icon: Settings },
-        ],
-    },
-]
 
 export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
     const navigate = useNavigate()
