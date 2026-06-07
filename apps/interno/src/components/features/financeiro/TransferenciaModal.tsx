@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -28,6 +28,8 @@ interface TransferenciaModalProps {
     onClose: () => void
     onSuccess?: () => void
 }
+
+const inputBase = "flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function TransferenciaModal({ isOpen, onClose, onSuccess }: TransferenciaModalProps) {
     const toast = useToast()
@@ -88,19 +90,19 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
             title="Transferência entre Contas"
             size="md"
         >
-            {/* Styled Header Overwrite (Visual Rule) */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-violet-600" />
+            {/* Faixa neutra (transferência não é entrada nem saída) */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-foreground" />
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-2">
-                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-3 p-4 bg-muted rounded-xl border border-border mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-foreground/10 text-foreground flex items-center justify-center shrink-0">
                         <ArrowRightLeft size={24} />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">
+                        <h4 className="font-bold text-foreground">
                             Transferência Interna
                         </h4>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                             Movimente saldo entre seus caixas/contas
                         </p>
                     </div>
@@ -108,7 +110,7 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
 
                 {/* Valor Field with Mask */}
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                         Valor da Transferência (R$)
                     </label>
                     <div className="relative">
@@ -119,28 +121,28 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
                             onChange={handleValorChange}
                             placeholder="R$ 0,00"
                             className={cn(
-                                "flex h-14 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-2xl font-black text-slate-900 ring-offset-white placeholder:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                                errors.valor && "border-red-500 focus-visible:ring-red-500"
+                                inputBase, "h-14 px-4 py-2 text-2xl font-black",
+                                errors.valor && "border-destructive focus-visible:ring-destructive"
                             )}
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <Wallet className="w-5 h-5 text-slate-300" />
+                            <Wallet className="w-5 h-5 text-muted-foreground/50" />
                         </div>
                     </div>
-                    {errors.valor && <p className="mt-1 text-xs text-red-500 px-1">{errors.valor.message}</p>}
+                    {errors.valor && <p className="mt-1 text-xs text-destructive px-1">{errors.valor.message}</p>}
                 </div>
 
                 <div className="space-y-4">
                     {/* Conta Origem Field */}
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                             Conta de Origem (Sai de)
                         </label>
                         <select
                             {...register('conta_id')}
                             className={cn(
-                                "flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 appearance-none",
-                                errors.conta_id && "border-red-500"
+                                inputBase, "h-12 px-3 py-2 text-sm appearance-none",
+                                errors.conta_id && "border-destructive"
                             )}
                         >
                             <option value="">Selecione...</option>
@@ -148,23 +150,23 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
                                 <option key={conta.id} value={conta.id}>{conta.nome}</option>
                             ))}
                         </select>
-                        {errors.conta_id && <p className="mt-1 text-xs text-red-500 px-1">{errors.conta_id.message}</p>}
+                        {errors.conta_id && <p className="mt-1 text-xs text-destructive px-1">{errors.conta_id.message}</p>}
                     </div>
 
                     <div className="flex justify-center -my-2 opacity-50">
-                        <ArrowRightLeft className="rotate-90 text-slate-400" size={16} />
+                        <ArrowRightLeft className="rotate-90 text-muted-foreground" size={16} />
                     </div>
 
                     {/* Conta Destino Field */}
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                             Conta de Destino (Entra em)
                         </label>
                         <select
                             {...register('conta_destino_id')}
                             className={cn(
-                                "flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 appearance-none",
-                                errors.conta_destino_id && "border-red-500"
+                                inputBase, "h-12 px-3 py-2 text-sm appearance-none",
+                                errors.conta_destino_id && "border-destructive"
                             )}
                         >
                             <option value="">Selecione...</option>
@@ -172,13 +174,13 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
                                 <option key={conta.id} value={conta.id}>{conta.nome}</option>
                             ))}
                         </select>
-                        {errors.conta_destino_id && <p className="mt-1 text-xs text-red-500 px-1">{errors.conta_destino_id.message}</p>}
+                        {errors.conta_destino_id && <p className="mt-1 text-xs text-destructive px-1">{errors.conta_destino_id.message}</p>}
                     </div>
                 </div>
 
                 {/* Data Field */}
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                         Data da Transferência
                     </label>
                     <div className="relative">
@@ -186,42 +188,42 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
                             type="date"
                             {...register('data')}
                             className={cn(
-                                "flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
-                                errors.data && "border-red-500"
+                                inputBase, "h-12 px-3 py-2 text-sm",
+                                errors.data && "border-destructive"
                             )}
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <CalendarIcon className="w-4 h-4 text-slate-400" />
+                            <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                         </div>
                     </div>
-                    {errors.data && <p className="mt-1 text-xs text-red-500 px-1">{errors.data.message}</p>}
+                    {errors.data && <p className="mt-1 text-xs text-destructive px-1">{errors.data.message}</p>}
                 </div>
 
                 {/* Descrição Field */}
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                         Descrição (Opcional)
                     </label>
                     <div className="relative">
                         <textarea
                             {...register('descricao')}
-                            className="flex min-h-[60px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 resize-none"
+                            className={cn(inputBase, "min-h-[60px] px-3 py-2 pl-9 text-sm resize-none")}
                             placeholder="Notas sobre a transferência..."
                         />
                         <div className="absolute left-3 top-3 pointer-events-none">
-                            <Info className="w-4 h-4 text-slate-400" />
+                            <Info className="w-4 h-4 text-muted-foreground" />
                         </div>
                     </div>
                 </div>
 
                 <ModalActions>
-                    <Button type="button" variant="ghost" onClick={onClose} className="text-slate-500">
+                    <Button type="button" variant="ghost" onClick={onClose} className="text-muted-foreground">
                         Cancelar
                     </Button>
                     <Button
                         type="submit"
                         isLoading={isSubmitting}
-                        className="bg-violet-600 hover:bg-violet-700 px-8 font-bold"
+                        className="bg-foreground hover:bg-foreground/90 text-background px-8 font-bold"
                     >
                         Realizar Transferência
                     </Button>

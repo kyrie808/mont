@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,6 +27,8 @@ interface LancamentoModalProps {
     onClose: () => void
     onSuccess?: () => void
 }
+
+const inputBase = "flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function LancamentoModal({ type, isOpen, onClose, onSuccess }: LancamentoModalProps) {
     const toast = useToast()
@@ -98,25 +100,25 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
             title={isEntrada ? 'Novo Recebimento' : 'Novo Pagamento'}
             size="md"
         >
-            {/* Styled Header Overwrite (Visual Rule) */}
+            {/* Faixa de cor por tipo */}
             <div className={cn(
                 "absolute top-0 left-0 right-0 h-1.5",
-                isEntrada ? "bg-emerald-500" : "bg-red-500"
+                isEntrada ? "bg-success" : "bg-destructive"
             )} />
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-2">
-                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+                <div className="flex items-center gap-3 p-4 bg-muted rounded-xl border border-border mb-2">
                     <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-                        isEntrada ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"
+                        isEntrada ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
                     )}>
                         {isEntrada ? <ArrowUpRight size={24} /> : <ArrowDownLeft size={24} />}
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">
+                        <h4 className="font-bold text-foreground">
                             {isEntrada ? 'Entrada Manual' : 'Saída Manual'}
                         </h4>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                             Preencha os dados do lançamento abaixo
                         </p>
                     </div>
@@ -124,7 +126,7 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
 
                 {/* Valor Field with Mask */}
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                         Valor (R$)
                     </label>
                     <div className="relative">
@@ -135,21 +137,21 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
                             onChange={handleValorChange}
                             placeholder="R$ 0,00"
                             className={cn(
-                                "flex h-14 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-2xl font-black text-slate-900 ring-offset-white placeholder:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                                errors.valor && "border-red-500 focus-visible:ring-red-500"
+                                inputBase, "h-14 px-4 py-2 text-2xl font-black",
+                                errors.valor && "border-destructive focus-visible:ring-destructive"
                             )}
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <Wallet className="w-5 h-5 text-slate-300" />
+                            <Wallet className="w-5 h-5 text-muted-foreground/50" />
                         </div>
                     </div>
-                    {errors.valor && <p className="mt-1 text-xs text-red-500 px-1">{errors.valor.message}</p>}
+                    {errors.valor && <p className="mt-1 text-xs text-destructive px-1">{errors.valor.message}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     {/* Data Field */}
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                             Data
                         </label>
                         <div className="relative">
@@ -157,27 +159,27 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
                                 type="date"
                                 {...register('data')}
                                 className={cn(
-                                    "flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
-                                    errors.data && "border-red-500 px-1"
+                                    inputBase, "h-12 px-3 py-2 text-sm",
+                                    errors.data && "border-destructive px-1"
                                 )}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                <CalendarIcon className="w-4 h-4 text-slate-400" />
+                                <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                             </div>
                         </div>
-                        {errors.data && <p className="mt-1 text-xs text-red-500 px-1">{errors.data.message}</p>}
+                        {errors.data && <p className="mt-1 text-xs text-destructive px-1">{errors.data.message}</p>}
                     </div>
 
                     {/* Conta Field */}
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                             Conta
                         </label>
                         <select
                             {...register('conta_id')}
                             className={cn(
-                                "flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 appearance-none",
-                                errors.conta_id && "border-red-500"
+                                inputBase, "h-12 px-3 py-2 text-sm appearance-none",
+                                errors.conta_id && "border-destructive"
                             )}
                         >
                             <option value="">Selecione...</option>
@@ -185,21 +187,21 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
                                 <option key={conta.id} value={conta.id}>{conta.nome}</option>
                             ))}
                         </select>
-                        {errors.conta_id && <p className="mt-1 text-xs text-red-500 px-1">{errors.conta_id.message}</p>}
+                        {errors.conta_id && <p className="mt-1 text-xs text-destructive px-1">{errors.conta_id.message}</p>}
                     </div>
                 </div>
 
                 {/* Categoria Field */}
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                         Categoria
                     </label>
                     <div className="relative">
                         <select
                             {...register('plano_conta_id')}
                             className={cn(
-                                "flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 appearance-none",
-                                errors.plano_conta_id && "border-red-500"
+                                inputBase, "h-12 px-3 py-2 pl-9 text-sm appearance-none",
+                                errors.plano_conta_id && "border-destructive"
                             )}
                         >
                             <option value="">Selecione uma categoria...</option>
@@ -208,39 +210,41 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
                             ))}
                         </select>
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <Tag className="w-4 h-4 text-slate-400" />
+                            <Tag className="w-4 h-4 text-muted-foreground" />
                         </div>
                     </div>
-                    {errors.plano_conta_id && <p className="mt-1 text-xs text-red-500 px-1">{errors.plano_conta_id.message}</p>}
+                    {errors.plano_conta_id && <p className="mt-1 text-xs text-destructive px-1">{errors.plano_conta_id.message}</p>}
                 </div>
 
                 {/* Descrição Field */}
                 <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
                         Descrição (Opcional)
                     </label>
                     <div className="relative">
                         <textarea
                             {...register('descricao')}
-                            className="flex min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 resize-none"
+                            className={cn(inputBase, "min-h-[80px] px-3 py-2 pl-9 text-sm resize-none")}
                             placeholder="Adicione detalhes sobre este lançamento..."
                         />
                         <div className="absolute left-3 top-3 pointer-events-none">
-                            <Info className="w-4 h-4 text-slate-400" />
+                            <Info className="w-4 h-4 text-muted-foreground" />
                         </div>
                     </div>
                 </div>
 
                 <ModalActions>
-                    <Button type="button" variant="ghost" onClick={onClose} className="text-slate-500">
+                    <Button type="button" variant="ghost" onClick={onClose} className="text-muted-foreground">
                         Cancelar
                     </Button>
                     <Button
                         type="submit"
                         isLoading={isSubmitting}
                         className={cn(
-                            "px-8 font-bold",
-                            isEntrada ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"
+                            "px-8 font-bold text-success-foreground",
+                            isEntrada
+                                ? "bg-success hover:bg-success/90 text-success-foreground"
+                                : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                         )}
                     >
                         {isEntrada ? 'Registrar Entrada' : 'Registrar Saída'}

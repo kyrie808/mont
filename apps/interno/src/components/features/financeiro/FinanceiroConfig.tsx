@@ -42,8 +42,8 @@ export function FinanceiroConfig({
                         className={cn(
                             "flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all whitespace-nowrap",
                             activeSettingsTab === tab.id
-                                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-lg shadow-zinc-900/10"
-                                : "bg-white dark:bg-zinc-900 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
+                                ? "bg-foreground text-background border-foreground shadow-card"
+                                : "bg-card text-muted-foreground border-border hover:border-foreground/30"
                         )}
                     >
                         <tab.icon className="w-4 h-4" />
@@ -55,34 +55,34 @@ export function FinanceiroConfig({
             {activeSettingsTab === 'contas' ? (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Minhas Contas</h2>
+                        <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Minhas Contas</h2>
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-[10px] font-black uppercase"
+                            className="h-8 rounded-xl bg-card border-border text-[10px] font-black uppercase"
                             onClick={() => setIsContaModalOpen(true)}
                         >
                             <Plus className="w-3 h-3 mr-1" /> Nova Conta
                         </Button>
                     </div>
 
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 lg:grid-cols-2">
                         {loadingContas ? (
-                            <div className="p-8 text-center text-zinc-400 animate-pulse uppercase font-black text-xs">Carregando contas...</div>
+                            <div className="p-8 text-center text-muted-foreground animate-pulse uppercase font-black text-xs">Carregando contas...</div>
                         ) : contas.map(conta => (
-                            <div key={conta.id} className="bg-white dark:bg-zinc-900 p-5 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+                            <div key={conta.id} className="bg-card p-5 rounded-[2rem] border border-border shadow-card flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                    <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center text-muted-foreground border border-border">
                                         <Building2 className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-black text-zinc-900 dark:text-white leading-tight">{conta.nome}</h3>
-                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{conta.banco}</p>
+                                        <h3 className="text-sm font-black text-foreground leading-tight">{conta.nome}</h3>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{conta.banco}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-base font-black text-zinc-900 dark:text-white">{formatCurrency(conta.saldo_atual ?? 0)}</p>
-                                    <span className="text-[9px] font-black text-emerald-600 uppercase">Ativo</span>
+                                    <p className="text-base font-black text-foreground">{formatCurrency(conta.saldo_atual ?? 0)}</p>
+                                    <span className="text-[9px] font-black text-success uppercase">Ativo</span>
                                 </div>
                             </div>
                         ))}
@@ -91,35 +91,35 @@ export function FinanceiroConfig({
             ) : (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Categorias</h2>
+                        <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Categorias</h2>
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-[10px] font-black uppercase"
+                            className="h-8 rounded-xl bg-card border-border text-[10px] font-black uppercase"
                             onClick={() => setIsPlanoModalOpen(true)}
                         >
                             <Plus className="w-3 h-3 mr-1" /> Nova Categoria
                         </Button>
                     </div>
 
-                    <div className="grid gap-3">
+                    <div className="grid gap-3 lg:grid-cols-2">
                         {loadingPlano ? (
-                            <div className="p-8 text-center text-zinc-400 animate-pulse uppercase font-black text-xs">Sincronizando categorias...</div>
+                            <div className="p-8 text-center text-muted-foreground animate-pulse uppercase font-black text-xs">Sincronizando categorias...</div>
                         ) : planoContas.map(item => (
-                            <div key={item.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+                            <div key={item.id} className="bg-card p-4 rounded-2xl border border-border shadow-card flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className={cn(
                                         "w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg",
-                                        item.tipo === 'receita' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                                        item.tipo === 'receita' ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
                                     )}>
                                         <FileText className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-black text-zinc-900 dark:text-white leading-tight">{item.nome}</h4>
-                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{item.tipo}</span>
+                                        <h4 className="text-sm font-black text-foreground leading-tight">{item.nome}</h4>
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{item.tipo}</span>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-zinc-300" />
+                                <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                             </div>
                         ))}
                     </div>
