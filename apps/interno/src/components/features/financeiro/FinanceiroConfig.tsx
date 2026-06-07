@@ -33,7 +33,7 @@ export function FinanceiroConfig({
             {/* Settings Sub-tabs */}
             <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
                 {[
-                    { id: 'contas', label: 'Contas Bancárias', icon: Building2 },
+                    { id: 'contas', label: 'Contas BancÃ¡rias', icon: Building2 },
                     { id: 'categorias', label: 'Plano de Contas', icon: LayoutGrid },
                 ].map((tab) => (
                     <button
