@@ -135,7 +135,7 @@ export function Contatos() {
                 <PageContainer className="relative z-10 space-y-6 pt-0 pb-24 bg-transparent px-4">
 
                     {/* Story Filters Carousel */}
-                    <section className="bg-white dark:bg-card rounded-2xl p-4 shadow-sm border border-border/50">
+                    <section className="bg-card rounded-2xl p-4 shadow-card border border-border/50">
                         <ContactStoryFilter
                             items={storyItems}
                             activeId={activeStory}
@@ -174,7 +174,7 @@ export function Contatos() {
 
                     {/* Error State */}
                     {error && (
-                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+                        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive">
                             {error}
                         </div>
                     )}
