@@ -64,7 +64,7 @@ export function CatalogoPendentes() {
   if (error) {
     return (
       <div className="p-4 text-center">
-        <p className="text-red-500">{(error as Error).message || 'Erro ao carregar pendências'}</p>
+        <p className="text-destructive">{(error as Error).message || 'Erro ao carregar pendências'}</p>
         <Button onClick={() => window.location.reload()} className="mt-4">Recarregar</Button>
       </div>
     )
@@ -79,8 +79,8 @@ export function CatalogoPendentes() {
           <Card className="p-8 text-center flex flex-col items-center justify-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-success" />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tudo em dia!</h3>
-              <p className="text-sm text-gray-500">Não há pedidos pendentes de vinculação.</p>
+              <h3 className="text-lg font-semibold text-foreground">Tudo em dia!</h3>
+              <p className="text-sm text-muted-foreground">Não há pedidos pendentes de vinculação.</p>
             </div>
           </Card>
         ) : (
@@ -88,17 +88,17 @@ export function CatalogoPendentes() {
             <Card key={pedido.id} className="p-4 space-y-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                  <h3 className="font-bold text-lg text-foreground">
                     Pedido #{pedido.cat_pedidos.numero_pedido}
                   </h3>
-                  <p className="text-sm text-gray-500">{pedido.cat_pedidos.nome_cliente}</p>
-                  <p className="font-mono text-xs text-gray-400">{pedido.cat_pedidos.telefone_cliente}</p>
+                  <p className="text-sm text-muted-foreground">{pedido.cat_pedidos.nome_cliente}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{pedido.cat_pedidos.telefone_cliente}</p>
                 </div>
                 <Badge variant="warning">Aguardando Vínculo</Badge>
               </div>
 
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
-                <p className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
+              <div className="bg-destructive/10 p-3 rounded-xl border border-destructive/30">
+                <p className="text-xs text-destructive font-medium flex items-center gap-2">
                   <AlertCircle className="w-3.5 h-3.5" />
                   {pedido.motivo_falha}
                 </p>
@@ -133,12 +133,12 @@ export function CatalogoPendentes() {
         title="Vincular Pedido ao Contato"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Selecione o contato correto para vincular ao pedido de <strong>{selectedPedido?.cat_pedidos?.nome_cliente}</strong>.
           </p>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome ou telefone..."
               className="pl-9"
@@ -150,11 +150,11 @@ export function CatalogoPendentes() {
           <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
             {loadingContatos ? (
               <div className="py-8 text-center">
-                <Loader2 className="w-6 h-6 animate-spin mx-auto text-violet-600" />
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
               </div>
             ) : filteredContatos?.length === 0 ? (
               <div className="py-8 text-center space-y-3">
-                <p className="text-sm text-gray-500">Nenhum contato encontrado.</p>
+                <p className="text-sm text-muted-foreground">Nenhum contato encontrado.</p>
                 <Button variant="outline" size="sm" onClick={() => navigate('/contatos')}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Criar Novo Contato
@@ -169,8 +169,8 @@ export function CatalogoPendentes() {
                   className="w-full p-3 text-left rounded-lg border border-border hover:bg-muted transition-colors flex justify-between items-center group"
                 >
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{contato.nome}</p>
-                    <p className="text-xs text-gray-500">{contato.telefone}</p>
+                    <p className="font-medium text-foreground">{contato.nome}</p>
+                    <p className="text-xs text-muted-foreground">{contato.telefone}</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <Badge variant="success" className="cursor-pointer">Selecionar</Badge>
@@ -180,7 +180,7 @@ export function CatalogoPendentes() {
             )}
           </div>
 
-          <div className="pt-4 border-t dark:border-gray-800 flex gap-3">
+          <div className="pt-4 border-t border-border flex gap-3">
             <Button
               variant="outline"
               className="flex-1"
