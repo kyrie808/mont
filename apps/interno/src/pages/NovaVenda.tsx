@@ -230,7 +230,7 @@ export function NovaVenda() {
                         {/* Step 1: Produtos */}
                         {currentStep === 1 && (
                             <div className="flex-1 flex flex-col min-w-0 animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-card flex items-center justify-between">
+                                <div className="p-4 border-b border-border bg-card flex items-center justify-between">
                                     <h2 className="text-lg font-bold flex items-center gap-2">
                                         <ShoppingBag className="h-5 w-5 text-primary" />
                                         Adicionar Produtos
@@ -259,7 +259,7 @@ export function NovaVenda() {
                                         <CheckCircle className="h-5 w-5 text-primary" />
                                         Finalizar Venda
                                     </h2>
-                                    <div className="bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                                    <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden">
                                         <CheckoutSidebar
                                             onBack={prevStep}
                                             onConfirm={handleConfirmSale}
@@ -280,7 +280,7 @@ export function NovaVenda() {
 
                         {/* Bottom Navigation Bar — fixed height, outside scroll, hidden on checkout */}
                         {currentStep > 0 && currentStep < 2 && (
-                            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-card p-4 md:hidden">
+                            <div className="flex-shrink-0 border-t border-border bg-card p-4 md:hidden">
                                 <div className="flex gap-3 max-w-sm mx-auto">
                                     {currentStep > 0 && (
                                         <Button
@@ -307,7 +307,7 @@ export function NovaVenda() {
                     </main>
 
                     {/* Desktop Sidebar (Optional, maybe just a summary in steps 0/1) */}
-                    <aside className="hidden lg:flex w-96 flex-col border-l border-gray-200 dark:border-gray-700 bg-card h-full overflow-y-auto">
+                    <aside className="hidden lg:flex w-96 flex-col border-l border-border bg-card h-full overflow-y-auto">
                         <CartSidebar
                             items={cart}
                             total={cartTotal}

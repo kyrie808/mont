@@ -1,4 +1,4 @@
-﻿import { Search, User, Plus } from 'lucide-react'
+import { Search, User, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Button, Badge, Modal, Input, ModalActions } from '../../../ui'
 import { useContatos } from '../../../../hooks/useContatos'
@@ -66,14 +66,14 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
 
     if (selectedContato) {
         return (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+            <div className="bg-card p-4 rounded-xl border border-border shadow-card flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary-600" />
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{selectedContato.nome}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatPhone(selectedContato.telefone)}</p>
+                        <p className="font-medium text-foreground">{selectedContato.nome}</p>
+                        <p className="text-sm text-muted-foreground">{formatPhone(selectedContato.telefone)}</p>
                     </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => onSelect(null)}>
@@ -87,10 +87,10 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
         <>
             <div
                 onClick={() => setIsOpen(true)}
-                className="bg-white dark:bg-gray-800 p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary-500 cursor-pointer transition-colors flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 group"
+                className="bg-card p-4 rounded-xl border-2 border-dashed border-border hover:border-primary cursor-pointer transition-colors flex items-center justify-center gap-2 text-muted-foreground group"
             >
-                <User className="h-5 w-5 group-hover:text-primary-500" />
-                <span className="group-hover:text-primary-500 font-medium">Selecionar Cliente</span>
+                <User className="h-5 w-5 group-hover:text-primary" />
+                <span className="group-hover:text-primary font-medium">Selecionar Cliente</span>
             </div>
 
             {/* Selection Modal */}
@@ -102,13 +102,13 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
             >
                 <div className="space-y-4">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Buscar por nome, apelido ou telefone..."
+                            placeholder="Buscar por nome, apelido ou telefone…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60"
                             autoFocus
                         />
                     </div>
@@ -117,7 +117,7 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                         {/* Quick Add Button in List */}
                         <button
                             onClick={() => setShowQuickAdd(true)}
-                            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-primary-500 hover:text-primary-500 transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
                         >
                             <Plus className="h-5 w-5" />
                             <span>Cadastrar Novo</span>
@@ -130,11 +130,11 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                                     onSelect(contato)
                                     setIsOpen(false)
                                 }}
-                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-left hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors flex items-center justify-between group"
+                                className="w-full px-4 py-3 bg-muted/50 rounded-lg text-left hover:bg-primary/10 transition-colors flex items-center justify-between group"
                             >
                                 <div>
-                                    <p className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-400">{contato.nome}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatPhone(contato.telefone)}</p>
+                                    <p className="font-medium text-foreground group-hover:text-primary">{contato.nome}</p>
+                                    <p className="text-sm text-muted-foreground">{formatPhone(contato.telefone)}</p>
                                 </div>
                                 <Badge variant={contato.status === 'cliente' ? 'success' : 'warning'}>
                                     {contato.status === 'cliente' ? 'Cliente' : 'Lead'}
