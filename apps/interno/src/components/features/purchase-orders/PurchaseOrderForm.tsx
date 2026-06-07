@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Trash2, Save } from 'lucide-react'
 import { Modal } from '../../ui/Modal'
 import { Button } from '../../ui/Button'
@@ -158,9 +158,9 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                         required
                     />
                     <div className="flex flex-col">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Fornecedor</label>
                         <select
-                            className="w-full bg-white border border-gray-300 rounded-lg py-2 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all cursor-pointer h-10"
+                            className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all cursor-pointer h-10"
                             value={fornecedorId}
                             onChange={(e) => setFornecedorId(e.target.value)}
                             required
@@ -185,8 +185,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
 
                 {/* Items Repeater */}
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-                        <h3 className="text-lg font-medium text-gray-900">Itens do Pedido</h3>
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                        <h3 className="text-lg font-medium text-foreground">Itens do Pedido</h3>
                         <Button type="button" variant="secondary" size="sm" onClick={handleAddItem}>
                             <Plus className="w-4 h-4 mr-2" />
                             Adicionar Item
@@ -194,22 +194,22 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                     </div>
 
                     {items.length === 0 && (
-                        <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-2">
-                            <div className="bg-gray-100 p-3 rounded-full mb-2">
-                                <Plus className="w-6 h-6 text-gray-400" />
+                        <div className="text-center py-12 text-muted-foreground bg-muted rounded-lg border border-dashed border-input flex flex-col items-center justify-center gap-2">
+                            <div className="bg-background p-3 rounded-full mb-2">
+                                <Plus className="w-6 h-6 text-muted-foreground" />
                             </div>
                             <p>Seu pedido está vazio</p>
-                            <p className="text-sm text-gray-500">Adicione itens acima para começar</p>
+                            <p className="text-sm text-muted-foreground">Adicione itens acima para começar</p>
                         </div>
                     )}
 
                     <div className="space-y-3">
                         {items.map((item) => (
-                            <div key={item.tempId} className="grid grid-cols-12 gap-3 items-end bg-gray-50 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+                            <div key={item.tempId} className="grid grid-cols-12 gap-3 items-end bg-muted p-3 rounded-lg border border-border hover:border-border transition-colors">
                                 <div className="col-span-12 sm:col-span-5">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Produto</label>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-1">Produto</label>
                                     <select
-                                        className="w-full bg-white border border-gray-300 rounded-lg py-2 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all placeholder-zinc-500 appearance-none cursor-pointer hover:bg-gray-50 h-10"
+                                        className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all placeholder:text-muted-foreground/60 appearance-none cursor-pointer hover:bg-muted h-10"
                                         value={item.product_id}
                                         onChange={(e) => handleItemChange(item.tempId, 'product_id', e.target.value)}
                                         required
@@ -244,8 +244,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                                     />
                                 </div>
                                 <div className="col-span-3 sm:col-span-2 flex flex-col justify-end h-full pb-1">
-                                    <div className="text-xs text-gray-500 mb-1">Total</div>
-                                    <div className="text-emerald-600 font-bold text-sm h-9 flex items-center">
+                                    <div className="text-xs text-muted-foreground mb-1">Total</div>
+                                    <div className="text-foreground font-bold text-sm h-9 flex items-center">
                                         {formatCurrency(item.quantity * item.unit_cost)}
                                     </div>
                                 </div>
@@ -255,7 +255,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleRemoveItem(item.tempId)}
-                                        className="text-red-500 hover:text-red-600 hover:bg-red-50 h-9 w-9 p-0"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
@@ -266,7 +266,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                 </div>
 
                 {/* Footer / Totals */}
-                <div className="flex flex-col sm:flex-row justify-between items-end sm:items-end border-t border-gray-200 pt-6 gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-end sm:items-end border-t border-border pt-6 gap-4">
                     <div className="w-full sm:w-auto flex-1 max-w-[250px]">
                         <div className="relative">
                             <Input
@@ -276,12 +276,12 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                                 min="0"
                                 value={amountPaid}
                                 onChange={(e) => setAmountPaid(Number(e.target.value))}
-                                className="pr-12 bg-gray-100/50 cursor-not-allowed text-gray-500"
+                                className="pr-12 bg-muted/50 cursor-not-allowed text-muted-foreground"
                                 disabled
                                 title="O valor pago é calculado automaticamente com base nos pagamentos registrados."
                             />
                             {totalAmount > 0 && (
-                                <div className="absolute right-0 top-0 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-bl-lg">
+                                <div className="absolute right-0 top-0 text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-bl-lg">
                                     {((amountPaid / totalAmount) * 100).toFixed(0)}%
                                 </div>
                             )}
@@ -290,8 +290,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
 
                     <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
                         <div className="flex flex-col items-end">
-                            <span className="text-sm text-gray-500">Total do Pedido</span>
-                            <span className="text-2xl font-bold text-emerald-600">
+                            <span className="text-sm text-muted-foreground">Total do Pedido</span>
+                            <span className="text-2xl font-bold text-foreground">
                                 {formatCurrency(totalAmount)}
                             </span>
                         </div>

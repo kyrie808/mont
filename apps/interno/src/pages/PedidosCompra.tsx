@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Plus, TrendingUp, DollarSign, Wallet, Settings, PackageCheck, Trash2 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -74,8 +74,8 @@ export function PedidosCompra() {
                     centerTitle
                     rightAction={
                         <div className="flex gap-2">
-                            <button onClick={() => setIsNicknamesOpen(true)} className="p-2 rounded-full"><Settings /></button>
-                            <button onClick={handleCreateNew} className="p-2 rounded-full text-semantic-green"><Plus /></button>
+                            <button onClick={() => setIsNicknamesOpen(true)} aria-label="Configurar apelidos de produtos" className="p-2 rounded-full"><Settings /></button>
+                            <button onClick={handleCreateNew} aria-label="Novo pedido de compra" className="p-2 rounded-full text-primary"><Plus /></button>
                         </div>
                     }
                 />
@@ -87,7 +87,7 @@ export function PedidosCompra() {
                             value={formatCurrency(kpis.totalPedido)}
                             icon={DollarSign}
                             progress={100}
-                            progressColor="bg-blue-500"
+                            progressColor="bg-primary"
                             trend="Total Bruto"
                             trendColor="primary"
                         />
@@ -98,7 +98,7 @@ export function PedidosCompra() {
                             progress={kpis.totalPedido > 0
                                 ? Math.round((kpis.totalAberto / kpis.totalPedido) * 100)
                                 : 0}
-                            progressColor="bg-yellow-500"
+                            progressColor="bg-warning"
                             trend={`${kpis.totalPedido > 0
                                 ? Math.round((kpis.totalAberto / kpis.totalPedido) * 100)
                                 : 0}% Pendente`}
@@ -111,7 +111,7 @@ export function PedidosCompra() {
                             progress={kpis.totalPedido > 0
                                 ? Math.round((kpis.totalPago / kpis.totalPedido) * 100)
                                 : 0}
-                            progressColor="bg-emerald-500"
+                            progressColor="bg-success"
                             trend={`${kpis.totalPedido > 0
                                 ? Math.round((kpis.totalPago / kpis.totalPedido) * 100)
                                 : 0}% Quitado`}
@@ -134,7 +134,7 @@ export function PedidosCompra() {
                                             className="flex items-center justify-between px-4 py-3 bg-muted cursor-pointer hover:bg-muted transition-colors"
                                         >
                                             <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(order.orderDate)}</span>
+                                                <span className="text-xs text-muted-foreground">{formatDate(order.orderDate)}</span>
                                                 <span className="font-semibold text-sm">
                                                     {orderWithItems.fornecedor?.nome || 'Fornecedor não informado'}
                                                 </span>
@@ -162,7 +162,7 @@ export function PedidosCompra() {
                                                 </thead>
                                                 <tbody>
                                                     {orderWithItems.items.map((item) => (
-                                                        <tr key={item.id} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
+                                                        <tr key={item.id} className="border-b border-border last:border-0">
                                                             <td className="px-4 py-2">{item.product?.nome || item.productId}</td>
                                                             <td className="px-4 py-2 text-center">{item.quantity}</td>
                                                             <td className="px-4 py-2 text-right">{formatCurrency(item.unitCost)}</td>
@@ -176,18 +176,18 @@ export function PedidosCompra() {
                                         {/* Histórico de Pagamentos */}
                                         {orderWithItems.payments && orderWithItems.payments.length > 0 && (
                                             <div className="px-4 py-3 border-t border-border bg-muted">
-                                                <h4 className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">
+                                                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
                                                     Pagamentos registrados
                                                 </h4>
                                                 <div className="space-y-1">
                                                     {orderWithItems.payments.map((payment) => (
-                                                        <div key={payment.id} className="flex flex-wrap items-center justify-between text-xs py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                                                            <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                                                        <div key={payment.id} className="flex flex-wrap items-center justify-between text-xs py-1.5 border-b border-border last:border-0">
+                                                            <div className="flex items-center gap-3 text-muted-foreground">
                                                                 <span>{formatDate(payment.payment_date || payment.created_at)}</span>
                                                                 <span className="capitalize">{payment.payment_method?.replace('_', ' ')}</span>
                                                             </div>
                                                             <div className="flex items-center gap-3">
-                                                                <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                                <span className="font-medium text-foreground">
                                                                     {formatCurrency(payment.amount)}
                                                                 </span>
                                                                 <button
@@ -195,7 +195,7 @@ export function PedidosCompra() {
                                                                         e.stopPropagation()
                                                                         setPaymentToDelete(payment.id)
                                                                     }}
-                                                                    className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors"
+                                                                    className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors"
                                                                     title="Excluir pagamento"
                                                                 >
                                                                     <Trash2 size={14} />
@@ -210,9 +210,9 @@ export function PedidosCompra() {
                                         {/* Ações (Recebimento / Pagamento) */}
                                         {(order.status === 'pending' || order.paymentStatus !== 'paid') && (
                                             <div className="px-4 py-3 border-t border-border">
-                                                <div className="mb-3 text-xs text-gray-500 dark:text-gray-400 text-left">
+                                                <div className="mb-3 text-xs text-muted-foreground text-left">
                                                     Valor do pedido {orderWithItems.fornecedor?.nome || 'não informado'}:{' '}
-                                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                                    <span className="font-medium text-foreground">
                                                         {formatCurrency(order.totalAmount)}
                                                     </span>{' '}
                                                     = ({order.totalAmount > 0 ? Math.round((order.amountPaid / order.totalAmount) * 100) : 0}% pago)

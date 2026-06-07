@@ -84,35 +84,35 @@ export function ProductNicknamesModal({ isOpen, onClose }: ProductNicknamesModal
         >
             <div className="space-y-4 max-h-[70vh] flex flex-col">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <input
                         type="text"
                         placeholder="Buscar produto..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                        className="w-full pl-9 pr-4 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent outline-none"
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto border border-gray-100 rounded-lg">
+                <div className="flex-1 overflow-y-auto border border-border rounded-lg">
                     {loadingProdutos ? (
                         <div className="flex justify-center py-8">
                             <Spinner />
                         </div>
                     ) : (
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0">
+                            <thead className="bg-muted text-muted-foreground font-medium border-b border-border sticky top-0">
                                 <tr>
                                     <th className="px-4 py-3">Produto</th>
                                     <th className="px-4 py-3 w-32">Apelido (Sigla)</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-border">
                                 {filteredProducts.map(product => (
-                                    <tr key={product.id} className="hover:bg-gray-50">
+                                    <tr key={product.id} className="hover:bg-muted">
                                         <td className="px-4 py-2">
-                                            <div className="font-medium text-gray-900">{product.nome}</div>
-                                            <div className="text-xs text-gray-500">{product.unidade}</div>
+                                            <div className="font-medium text-foreground">{product.nome}</div>
+                                            <div className="text-xs text-muted-foreground">{product.unidade}</div>
                                         </td>
                                         <td className="px-4 py-2">
                                             <Input
@@ -127,7 +127,7 @@ export function ProductNicknamesModal({ isOpen, onClose }: ProductNicknamesModal
                                 ))}
                                 {filteredProducts.length === 0 && (
                                     <tr>
-                                        <td colSpan={2} className="text-center py-8 text-gray-500">
+                                        <td colSpan={2} className="text-center py-8 text-muted-foreground">
                                             Nenhum produto encontrado
                                         </td>
                                     </tr>
@@ -137,7 +137,7 @@ export function ProductNicknamesModal({ isOpen, onClose }: ProductNicknamesModal
                     )}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                <div className="flex justify-end gap-3 pt-2 border-t border-border">
                     <Button variant="ghost" onClick={onClose} disabled={saving}>
                         Cancelar
                     </Button>

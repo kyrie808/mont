@@ -95,6 +95,8 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
 
     if (!isOpen) return null
 
+    const inputBase = "w-full p-2 bg-background text-foreground border border-input rounded-lg outline-none focus:ring-2 focus:ring-ring"
+
     const modalContent = (
         <>
             {/* Backdrop */}
@@ -102,59 +104,59 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
 
             {/* Panel */}
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
-                <div className="pointer-events-auto bg-white rounded-lg w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-200">
-                    <div className="flex items-center justify-between p-4 border-b">
+                <div className="pointer-events-auto bg-card rounded-lg w-full max-w-md shadow-elevated animate-in fade-in zoom-in duration-200">
+                    <div className="flex items-center justify-between p-4 border-b border-border">
                         <div>
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <DollarSign className="w-5 h-5 text-violet-600" />
+                            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-primary" />
                                 Registrar Pagamento
                             </h2>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-muted-foreground">
                                 Pedido #{order.id.slice(0, 8)}
                             </p>
                         </div>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={onClose} aria-label="Fechar" className="text-muted-foreground hover:text-foreground">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
-                    <div className="p-4 bg-gray-50 border-b">
+                    <div className="p-4 bg-muted border-b border-border">
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-600">Total do Pedido:</span>
-                            <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                            <span className="text-sm text-muted-foreground">Total do Pedido:</span>
+                            <span className="font-medium text-foreground tabular-nums">{formatCurrency(order.totalAmount)}</span>
                         </div>
                         <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-600">Já Pago:</span>
-                            <span className="font-medium text-emerald-600">{formatCurrency(order.amountPaid || 0)}</span>
+                            <span className="text-sm text-muted-foreground">Já Pago:</span>
+                            <span className="font-medium text-success tabular-nums">{formatCurrency(order.amountPaid || 0)}</span>
                         </div>
-                        <div className="flex justify-between items-center pt-2 border-t mt-2">
-                            <span className="text-sm font-bold text-gray-900">Restante:</span>
-                            <span className="font-bold text-violet-600">{formatCurrency(remainingAmount)}</span>
+                        <div className="flex justify-between items-center pt-2 border-t border-border mt-2">
+                            <span className="text-sm font-bold text-foreground">Restante:</span>
+                            <span className="font-bold text-primary tabular-nums">{formatCurrency(remainingAmount)}</span>
                         </div>
                     </div>
 
                     <form onSubmit={handleSubmit(handleConfirm)} className="p-4 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
                                     Data
                                 </label>
                                 <input
                                     type="date"
                                     {...register('payment_date')}
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
+                                    className={inputBase}
                                 />
                                 {errors.payment_date && (
-                                    <span className="text-xs text-red-500">{errors.payment_date.message}</span>
+                                    <span className="text-xs text-destructive">{errors.payment_date.message}</span>
                                 )}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
                                     Método
                                 </label>
                                 <select
                                     {...register('payment_method')}
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
+                                    className={inputBase}
                                 >
                                     {PAYMENT_METHODS.map(method => (
                                         <option key={method.value} value={method.value}>
@@ -163,18 +165,18 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                                     ))}
                                 </select>
                                 {errors.payment_method && (
-                                    <span className="text-xs text-red-500">{errors.payment_method.message}</span>
+                                    <span className="text-xs text-destructive">{errors.payment_method.message}</span>
                                 )}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">
                                 Conta de Origem
                             </label>
                             <select
                                 {...register('conta_id')}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
+                                className={inputBase}
                             >
                                 <option value="">Selecione uma conta...</option>
                                 {contas.map(ct => (
@@ -184,42 +186,42 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                                 ))}
                             </select>
                             {errors.conta_id && (
-                                <span className="text-xs text-red-500">{errors.conta_id.message}</span>
+                                <span className="text-xs text-destructive">{errors.conta_id.message}</span>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">
                                 Valor Pago (R$)
                             </label>
                             <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-gray-500">R$</span>
+                                <span className="absolute left-3 top-2.5 text-muted-foreground">R$</span>
                                 <input
                                     type="number"
                                     step="0.01"
                                     {...register('amount', { valueAsNumber: true })}
-                                    className="w-full pl-8 p-2 border rounded-lg focus:ring-2 focus:ring-violet-500 font-medium text-lg"
+                                    className={`${inputBase} pl-8 font-medium text-lg tabular-nums`}
                                 />
                             </div>
                             {errors.amount && (
-                                <span className="text-xs text-red-500">{errors.amount.message}</span>
+                                <span className="text-xs text-destructive">{errors.amount.message}</span>
                             )}
                             {currentAmount > remainingAmount + 0.01 && (
-                                <p className="text-xs text-amber-600 mt-1">
+                                <p className="text-xs text-warning-strong mt-1">
                                     ⚠️ Atenção: Valor maior que o restante.
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">
                                 Observação
                             </label>
                             <textarea
                                 {...register('notes')}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-violet-500"
+                                className={inputBase}
                                 rows={2}
-                                placeholder="Ex: Confirmação de transferência..."
+                                placeholder="Ex: Confirmação de transferência…"
                             />
                         </div>
 
@@ -227,14 +229,14 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                className="px-4 py-2 text-muted-foreground hover:bg-muted rounded-lg"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 flex items-center gap-2"
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
                             >
                                 <DollarSign className="w-4 h-4" />
                                 {isSubmitting ? 'Salvando...' : 'Confirmar Pagamento'}
