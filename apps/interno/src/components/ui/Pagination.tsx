@@ -1,4 +1,4 @@
-﻿import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@mont/shared'
 
 interface PaginationProps {
@@ -31,15 +31,15 @@ export function Pagination({
                 className={cn(
                     'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     canGoPrev
-                        ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10'
-                        : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                        ? 'text-foreground hover:bg-muted'
+                        : 'text-muted-foreground/40 cursor-not-allowed'
                 )}
             >
                 <ChevronLeft className="h-4 w-4" />
                 Anterior
             </button>
 
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-mono tabular-nums">
+            <span className="text-sm text-muted-foreground font-mono tabular-nums">
                 {currentPage} / {totalPages}
             </span>
 
@@ -49,8 +49,8 @@ export function Pagination({
                 className={cn(
                     'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     canGoNext
-                        ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10'
-                        : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                        ? 'text-foreground hover:bg-muted'
+                        : 'text-muted-foreground/40 cursor-not-allowed'
                 )}
             >
                 Próxima

@@ -30,10 +30,10 @@ export function ConfirmDialog({
             <div className="flex items-start gap-3">
                 {variant === 'danger' && (
                     <div className="flex-shrink-0 mt-0.5">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
                     </div>
                 )}
-                <p className="text-sm text-gray-600 dark:text-gray-300">{message}</p>
+                <p className="text-sm text-muted-foreground">{message}</p>
             </div>
             <ModalActions>
                 <Button variant="secondary" onClick={onCancel} disabled={isLoading}>

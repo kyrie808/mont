@@ -71,7 +71,7 @@ export function StoryFilter({ items, activeId, onSelect, size = 'md' }: StoryFil
 
                                     <item.icon className={`
                                         ${icon} z-10 relative transition-colors
-                                        ${isActive ? 'text-primary-foreground' : 'text-zinc-700 dark:text-white'}
+                                        ${isActive ? 'text-primary-foreground' : 'text-foreground'}
                                     `} strokeWidth={1.5} />
                                 </div>
 

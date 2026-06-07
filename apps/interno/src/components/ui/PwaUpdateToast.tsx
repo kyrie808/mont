@@ -36,7 +36,7 @@ export function PwaUpdateToast() {
                 </div>
                 <button
                     onClick={close}
-                    className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                    className="text-muted-foreground hover:text-foreground"
                 >
                     <X className="w-4 h-4" />
                 </button>

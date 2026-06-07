@@ -1,4 +1,4 @@
-﻿import { createPortal } from 'react-dom'
+import { createPortal } from 'react-dom'
 import { create } from 'zustand'
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { cn } from '@mont/shared'
@@ -67,10 +67,10 @@ const icons = {
 }
 
 const styles = {
-    success: 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
-    error: 'border-red-500/20 text-red-600 dark:text-red-400',
+    success: 'border-success/20 text-success',
+    error: 'border-destructive/20 text-destructive',
     info: 'border-blue-500/20 text-blue-600 dark:text-blue-400',
-    warning: 'border-amber-500/20 text-amber-600 dark:text-amber-400',
+    warning: 'border-warning/20 text-warning',
 }
 
 function ToastItem({ toast }: { toast: Toast }) {
@@ -80,17 +80,17 @@ function ToastItem({ toast }: { toast: Toast }) {
     return (
         <div
             className={cn(
-                "pointer-events-auto flex items-center gap-3 py-2.5 px-4 pr-3 rounded-full border shadow-xl bg-white dark:bg-gray-800 animate-in slide-in-from-top-full duration-300",
+                "pointer-events-auto flex items-center gap-3 py-2.5 px-4 pr-3 rounded-full border shadow-xl bg-card animate-in slide-in-from-top-full duration-300",
                 styles[toast.type]
             )}
         >
             <Icon className="h-4 w-4 flex-shrink-0" />
-            <p className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
+            <p className="flex-1 text-sm font-medium text-foreground whitespace-nowrap">
                 {toast.message}
             </p>
             <button
                 onClick={() => removeToast(toast.id)}
-                className="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-1 text-gray-400 hover:text-gray-600"
+                className="p-0.5 rounded-full hover:bg-muted transition-colors ml-1 text-muted-foreground hover:text-foreground"
             >
                 <X className="h-3.5 w-3.5" />
             </button>

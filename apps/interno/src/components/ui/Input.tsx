@@ -1,4 +1,4 @@
-﻿import * as React from "react"
+import * as React from "react"
 import { cn } from '@mont/shared'
 
 export interface InputProps
@@ -19,7 +19,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 {label && (
                     <label
                         htmlFor={inputId}
-                        className="block text-sm font-medium text-gray-700 mb-1"
+                        className="block text-sm font-medium text-foreground mb-1"
                     >
                         {label}
                         {required && <span className="ml-1 text-destructive" aria-hidden="true">*</span>}

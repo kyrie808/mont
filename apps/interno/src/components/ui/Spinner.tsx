@@ -14,7 +14,7 @@ const sizeClasses = {
 export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
     return (
         <Loader2
-            className={`animate-spin text-primary-500 ${sizeClasses[size]} ${className}`}
+            className={`animate-spin text-primary ${sizeClasses[size]} ${className}`}
         />
     )
 }
@@ -27,7 +27,7 @@ export function LoadingScreen({ message = 'Carregando...' }: LoadingScreenProps)
     return (
         <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
             <Spinner size="lg" />
-            <p className="text-gray-500 text-sm">{message}</p>
+            <p className="text-muted-foreground text-sm">{message}</p>
         </div>
     )
 }
