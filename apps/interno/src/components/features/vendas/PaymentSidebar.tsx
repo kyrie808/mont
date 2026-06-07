@@ -82,9 +82,12 @@ export function PaymentSidebar({
                 setIsLoadingContas(true)
                 setContasError(null)
                 const data = await cashFlowService.getContas()
-                setContas(data)
-                if (data.length > 0) {
-                    setValue('conta_id', data[0].id, { shouldValidate: true })
+                // Só contas ativas no dropdown de pagamento — contas inativas/de teste
+                // não devem receber atribuição de venda (mesma regra do PurchaseOrderPaymentModal).
+                const ativas = data.filter((c) => c.ativo !== false)
+                setContas(ativas)
+                if (ativas.length > 0) {
+                    setValue('conta_id', ativas[0].id, { shouldValidate: true })
                 }
             } catch (err) {
                 console.error('[PaymentSidebar] fetchContas failed:', err)
