@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { MapPin, Fingerprint, ChevronDown, Phone, Mail, Copy } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useToast } from '../../../../components/ui/Toast'
@@ -9,26 +9,26 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
     const [isAddressExpanded, setIsAddressExpanded] = useState(false)
 
     return (
-        <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+        <div className="flex flex-col bg-card border border-border rounded-xl shadow-card overflow-hidden transition-all duration-300">
             {/* Header (Clickable) */}
             <div
                 onClick={() => setIsAddressExpanded(!isAddressExpanded)}
-                className="flex items-center gap-4 p-5 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                className="flex items-center gap-4 p-5 cursor-pointer hover:bg-muted transition-colors"
             >
-                <div className={cn("flex items-center justify-center h-10 w-10 rounded-full bg-violet-500/10 text-violet-500 transition-transform duration-300", isAddressExpanded && "rotate-180 bg-violet-500 text-white")}>
+                <div className={cn("flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary transition-transform duration-300", isAddressExpanded && "rotate-180 bg-primary text-primary-foreground")}>
                     <Fingerprint className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                         Informação de Contato
                     </p>
                     {!isAddressExpanded && (
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-0.5 animate-fade-in">
+                        <p className="text-sm font-semibold text-foreground mt-0.5 animate-fade-in">
                             {[contato.endereco, contato.bairro].filter(Boolean).join(', ') || 'Sem endereço'}
                         </p>
                     )}
                 </div>
-                <ChevronDown className={cn("h-5 w-5 text-gray-400 transition-transform duration-300", isAddressExpanded && "rotate-180")} />
+                <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-300", isAddressExpanded && "rotate-180")} />
             </div>
 
             {/* Expanded Content */}
@@ -38,7 +38,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
             )}>
                 <div className="overflow-hidden">
                     <div className="px-5 pb-5 pt-0 space-y-4">
-                        {/* Map Preview (Tactical Style) */}
+                        {/* Map Preview (estilo tático — fundo escuro decorativo, mantido de propósito) */}
                         <div className="relative w-full h-48 bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-inner group">
                             {/* Tactical Overlay */}
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')] opacity-20 pointer-events-none z-10" />
@@ -59,14 +59,14 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                             {/* Center Pin */}
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                                 <div className="relative">
-                                    <div className="absolute -inset-4 bg-violet-500/30 rounded-full animate-ping" />
-                                    <MapPin className="h-8 w-8 text-violet-500 drop-shadow-[0_0_10px_rgba(139,92,246,0.5)] fill-violet-950" />
+                                    <div className="absolute -inset-4 bg-primary/30 rounded-full animate-ping" />
+                                    <MapPin className="h-8 w-8 text-primary fill-primary/40 drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
                                 </div>
                             </div>
 
                             {/* Lat/Long Badge */}
                             <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
-                                <span className="text-[10px] font-mono text-violet-300">
+                                <span className="text-[10px] font-mono text-primary">
                                     LAT: -23.5505 // LONG: -46.6333
                                 </span>
                             </div>
@@ -75,18 +75,18 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                         {/* Contact Actions */}
                         <div className="grid gap-3">
                             {/* Address Row */}
-                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 group/addr">
+                            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border group/addr">
                                 <div className="flex items-center gap-3">
                                     <div>
-                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Localização</p>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Localização</p>
                                         {[contato.endereco, contato.bairro].filter(Boolean).length > 0 ? (
                                             <p className="text-sm font-mono text-foreground tracking-wider line-clamp-1">
                                                 {[contato.endereco, contato.bairro].filter(Boolean).join(', ')}
                                             </p>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <p className="text-sm font-mono text-gray-400 italic">endereço não cadastrado</p>
-                                                <span className="flex h-1.5 w-1.5 rounded-full bg-orange-500/50" />
+                                                <p className="text-sm font-mono text-muted-foreground italic">endereço não cadastrado</p>
+                                                <span className="flex h-1.5 w-1.5 rounded-full bg-warning-strong/60" />
                                             </div>
                                         )}
                                     </div>
@@ -99,7 +99,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                                                 const fullAddress = [contato.endereco, contato.bairro, 'São Paulo'].filter(Boolean).join(', ');
                                                 window.open(`https://www.google.com/maps/search/?api=1&query=${fullAddress}`, '_blank');
                                             }}
-                                            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                            className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                                             title="Abrir no Maps"
                                         >
                                             <MapPin className="h-4 w-4" />
@@ -110,7 +110,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                                                 navigator.clipboard.writeText([contato.endereco, contato.bairro].filter(Boolean).join(', '));
                                                 toast.success('Endereço copiado!');
                                             }}
-                                            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                            className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                                             title="Copiar Endereço"
                                         >
                                             <Copy className="h-4 w-4" />
@@ -120,19 +120,19 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                             </div>
 
                             {/* Phone Row */}
-                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 group/phone">
+                            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border group/phone">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-violet-500/10 rounded-full text-violet-500">
+                                    <div className="p-2 bg-primary/10 rounded-full text-primary">
                                         <Phone className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Mobile Uplink</p>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Mobile Uplink</p>
                                         {contato.telefone ? (
                                             <p className="text-sm font-mono text-foreground tracking-wider">{contato.telefone}</p>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <p className="text-sm font-mono text-gray-400 italic">sem telefone</p>
-                                                <span className="flex h-1.5 w-1.5 rounded-full bg-orange-500/50" />
+                                                <p className="text-sm font-mono text-muted-foreground italic">sem telefone</p>
+                                                <span className="flex h-1.5 w-1.5 rounded-full bg-warning-strong/60" />
                                             </div>
                                         )}
                                     </div>
@@ -143,7 +143,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                                             navigator.clipboard.writeText(contato.telefone);
                                             toast.success('Telefone copiado!');
                                         }}
-                                        className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors opacity-0 group-hover/phone:opacity-100"
+                                        className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/phone:opacity-100"
                                     >
                                         <Copy className="h-4 w-4" />
                                     </button>
@@ -151,19 +151,19 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                             </div>
 
                             {/* Email Row */}
-                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 group/email">
+                            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border group/email">
                                 <div className="flex items-center gap-3">
-                                    <div className={cn("p-2 rounded-full", contato.email ? "bg-violet-500/10 text-violet-500" : "bg-gray-500/10 text-gray-400")}>
+                                    <div className={cn("p-2 rounded-full", contato.email ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                                         <Mail className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Secure Comms</p>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Secure Comms</p>
                                         {contato.email ? (
                                             <p className="text-sm font-mono text-foreground tracking-wider">{contato.email}</p>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <p className="text-sm font-mono text-gray-400 italic">não possui email cadastrado</p>
-                                                <span className="flex h-1.5 w-1.5 rounded-full bg-orange-500/50" />
+                                                <p className="text-sm font-mono text-muted-foreground italic">não possui email cadastrado</p>
+                                                <span className="flex h-1.5 w-1.5 rounded-full bg-warning-strong/60" />
                                             </div>
                                         )}
                                     </div>
@@ -174,7 +174,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                                             navigator.clipboard.writeText(contato.email || '');
                                             toast.success('Email copiado!');
                                         }}
-                                        className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors opacity-0 group-hover/email:opacity-100"
+                                        className="p-2 hover:bg-foreground/10 rounded-lg text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/email:opacity-100"
                                     >
                                         <Copy className="h-4 w-4" />
                                     </button>

@@ -19,12 +19,12 @@ export function ClienteNome({ contato, className = '' }: ClienteNomeProps) {
 
     return (
         <div className={className}>
-            <span className="font-semibold text-gray-900">{contato.nome}</span>
+            <span className="font-semibold text-foreground">{contato.nome}</span>
             {hasIndicador && (
                 <div onClick={(e) => e.stopPropagation()}>
                     <Link
                         to={`/contatos/${contato.indicador?.id}`}
-                        className="inline-flex items-center gap-1 text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded hover:bg-violet-200 transition-colors mt-0.5"
+                        className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded hover:bg-primary/20 transition-colors mt-0.5"
                     >
                         <LinkIcon className="h-3 w-3" />
                         Indicado por: {contato.indicador?.nome}

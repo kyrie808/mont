@@ -19,10 +19,10 @@ export function ContatoDeleteModal({ isOpen, onClose, onConfirm, isDeleting, con
             size="sm"
         >
             <div className="space-y-4">
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                     Tem certeza que deseja excluir <strong>{contato.nome}</strong>?
                     <br />
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                         Esta ação removerá todo o histórico e não pode ser desfeita.
                     </span>
                 </p>

@@ -1,4 +1,4 @@
-﻿import { User, Store, Calendar, MessageCircle, Phone } from 'lucide-react'
+import { User, Store, Calendar, MessageCircle, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { formatRelativeDate } from '@mont/shared'
 import type { DomainContato } from '../../types/domain'
@@ -28,23 +28,21 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
         window.open(`https://wa.me/55${phone}`, '_blank')
     }
 
-
-
-    // Status Colors/Styles
+    // Status Colors/Styles (via tokens semânticos)
     const statusConfig = {
         cliente: {
-            badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20",
-            dot: "bg-emerald-500",
+            badge: "bg-success/10 text-success border-success/20",
+            dot: "bg-success",
             label: "Cliente"
         },
         lead: {
-            badge: "bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400 border-orange-200 dark:border-orange-500/20",
-            dot: "bg-orange-500",
+            badge: "bg-warning/10 text-warning-strong border-warning/20",
+            dot: "bg-warning-strong",
             label: "Lead"
         },
         inativo: {
-            badge: "bg-zinc-100 text-zinc-700 dark:bg-zinc-500/10 dark:text-zinc-400 border-zinc-200 dark:border-zinc-500/20",
-            dot: "bg-zinc-500",
+            badge: "bg-muted text-muted-foreground border-border",
+            dot: "bg-muted-foreground",
             label: "Inativo"
         }
     }
@@ -56,7 +54,7 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
     return (
         <div
             onClick={handleClick}
-            className="group relative flex flex-col gap-4 p-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 hover:bg-gray-50 dark:hover:bg-zinc-800/80 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+            className="group relative flex flex-col gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted transition-all duration-200 cursor-pointer shadow-card hover:shadow-elevated"
         >
             {/* Left Accent Border (Status Color) */}
             <div className={cn("absolute left-0 top-4 bottom-4 w-1 rounded-r-full opacity-80", currentStatus.dot)} />
@@ -65,14 +63,14 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
             <div className="flex items-start justify-between pl-3">
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 line-clamp-1">
+                        <h3 className="text-base font-bold text-foreground line-clamp-1">
                             {contato.nome}
                             {contato.apelido && <span className="text-muted-foreground font-medium text-sm ml-2">● ({contato.apelido})</span>}
                         </h3>
                     </div>
 
                     {/* Phone Number */}
-                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Phone className="size-3.5" />
                         <span className="text-sm font-medium">{contato.telefone}</span>
                     </div>
@@ -90,33 +88,34 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
             {/* Main Details Badges (Human/Date/Type) */}
             <div className="flex items-center gap-2 pl-3 flex-wrap">
                 {/* Person Type Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                    <TipoIcon className="size-3.5 text-slate-600 dark:text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border">
+                    <TipoIcon className="size-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
                         {contato.tipo}
                     </span>
                 </div>
 
                 {/* Date Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                    <Calendar className="size-3.5 text-slate-600 dark:text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border">
+                    <Calendar className="size-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
                         {relativeDate.toUpperCase()}
                     </span>
                 </div>
             </div>
 
             {/* Action Footer */}
-            <div className="flex items-center gap-3 pl-3 mt-1 pt-3 border-t border-gray-100 dark:border-zinc-800">
+            <div className="flex items-center gap-3 pl-3 mt-1 pt-3 border-t border-border">
                 <button
-                    className="flex-1 h-9 rounded-lg bg-gray-900 dark:bg-zinc-700 hover:bg-gray-800 dark:hover:bg-zinc-600 text-white text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-sm"
+                    className="flex-1 h-9 rounded-lg bg-foreground hover:bg-foreground/90 text-background text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     Ver Detalhes
                 </button>
 
                 <button
+                    aria-label="Abrir WhatsApp"
                     onClick={handleWhatsappClick}
-                    className="size-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center transition-colors"
+                    className="size-9 rounded-lg bg-success/10 hover:bg-success/20 text-success border border-success/20 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     <MessageCircle className="size-4" />
                 </button>

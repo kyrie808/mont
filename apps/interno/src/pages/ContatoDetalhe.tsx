@@ -33,7 +33,7 @@ export function ContatoDetalhe() {
     const [isDeleting, setIsDeleting] = useState(false)
 
     if (loading) return <PageSkeleton rows={4} showHeader showCards={false} />
-    if (error || !contato) return <> <Header title="Erro" showBack /><PageContainer><div className="text-red-500">Contato não encontrado</div></PageContainer> </>
+    if (error || !contato) return <> <Header title="Erro" showBack /><PageContainer><div className="text-destructive">Contato não encontrado</div></PageContainer> </>
 
     // Cálculo de nível para passar pro Hero
     const vendasValidas = vendasRaw.filter(v => v.status !== 'cancelada')
@@ -61,20 +61,20 @@ export function ContatoDetalhe() {
                     onEdit={() => setIsEditModalOpen(true)}
                 />
 
-                <PageContainer className="relative z-10 pt-4 px-4 space-y-6 bg-transparent pb-4">
+                <PageContainer className="relative z-10 pt-4 px-4 lg:px-6 space-y-6 bg-transparent pb-4 mx-auto w-full lg:max-w-5xl">
                     
                     <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
                         <ContatoIntel contato={contato} />
 
                         {/* Notes Section */}
                         {contato.observacoes && (
-                            <div className="flex items-start gap-4 p-5 bg-card border border-border rounded-xl shadow-sm">
+                            <div className="flex items-start gap-4 p-5 bg-card border border-border rounded-xl shadow-card">
                                 <Award className="h-6 w-6 text-semantic-yellow shrink-0 mt-0.5" />
                                 <div className="flex-1">
-                                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">
                                         Observações
                                     </p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                                         {contato.observacoes}
                                     </p>
                                 </div>
@@ -95,7 +95,7 @@ export function ContatoDetalhe() {
                     <div className="pt-4 pb-0">
                         <Button
                             variant="ghost"
-                            className="w-full text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                            className="w-full text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                             onClick={() => setIsDeleteModalOpen(true)}
                         >
                             <Trash2 className="h-4 w-4 mr-2" /> Excluir Contato
