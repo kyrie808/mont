@@ -94,7 +94,7 @@ Environment variables:
 - State: Zustand 5 stores + TanStack React Query
 - Zod 4 schemas in `src/schemas/`
 - UI: custom components with CVA + clsx + tailwind-merge
-- Design system: tokens semânticos via CSS vars + Tailwind (temas light "Stitch" / dark "Tactical"). **Ver `apps/interno/DESIGN_SYSTEM.md`** + o cheat-sheet no topo de `src/index.css`. Sempre usar tokens (`bg-card`/`text-muted-foreground`/`border-border`…), nunca cores cruas (`gray`/`white`/`emerald`…). App 100% tokenizado (jun/2026)
+- Design system: tokens semânticos via CSS vars + **Tailwind v4** (migrado jun/2026: codemod + `@config '../tailwind.config.js'` como bridge + plugin `@tailwindcss/vite`). Temas light "Stitch" / dark "Tactical". **Ver `apps/interno/DESIGN_SYSTEM.md`** + o cheat-sheet no topo de `src/index.css`. Sempre usar tokens (`bg-card`/`text-muted-foreground`/`border-border`…), nunca cores cruas (`gray`/`white`/`emerald`…). Todos os módulos da campanha de coesão estão tokenizados (jun/2026); Produtos/Estoque ficaram de fora. (`apps/catalogo` segue em Tailwind v3 — build independente.)
 - PWA via `vite-plugin-pwa`
 - 3D: React Three Fiber + drei (estoque visualization)
 - ESLint 9 flat config (`eslint.config.js`)

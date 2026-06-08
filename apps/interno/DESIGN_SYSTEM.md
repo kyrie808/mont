@@ -203,9 +203,18 @@ Tudo que usa `primary`/`ring`/`success` (que casa com primary) acompanha. Mesma 
 
 ---
 
-## 11. Próximo passo: Tailwind v3 → v4
+## 11. Tailwind v4 (migrado jun/2026)
 
-A tokenização foi feita **de propósito antes** da migração v4. As utilities (`bg-card`, `text-muted-foreground`…) são **idênticas** em v3 e v4 — só a **definição** dos tokens (as CSS vars + o mapeamento) muda de sintaxe, num lugar só (`index.css` + config → `@theme`). Ou seja: o diff do v4 vira "portar tokens", não "consertar 500 cores". Depois do v4 vem a adoção da lib de UI (Watermelon own-the-code + ReUI como suplemento).
+O `apps/interno` roda em **Tailwind v4**. A tokenização foi feita **de propósito antes** da migração — as utilities (`bg-card`, `text-muted-foreground`…) são **idênticas** em v3 e v4, então o diff do v4 virou "portar build/config", não "consertar 500 cores".
+
+**Como ficou (abordagem real):**
+- `src/index.css` começa com `@import 'tailwindcss';` seguido de `@config '../tailwind.config.js';` — o **JS config é mantido como bridge** (tokens continuam definidos lá, mapeando as CSS vars HSL via `hsl(var(--x) / <alpha-value>)`). Não migramos para `@theme inline`.
+- Build via plugin **`@tailwindcss/vite`** (1º plugin no `vite.config.ts`); `postcss.config.js` foi **deletado** e `autoprefixer` removido (v4 já faz prefixing).
+- Shim de compat no `@layer base` para a borda default (v4 mudou de cinza → `currentColor`): `border-color: var(--color-gray-200, currentcolor)`.
+- Utilities customizadas viraram `@utility` (`no-scrollbar`, `animate-slide-in-right`).
+- `apps/catalogo` **segue em Tailwind v3** (build independente, sem risco) — não confundir.
+
+**Próximo passo:** adoção da lib de UI **own-the-code** (Watermelon base/blocks + ReUI suplemento: data grid, stepper). Modelo: o componente é copiado pro repo e re-estilizado nos nossos tokens; primitivos compartilhados (Button, Tabs, Modal…) são atualizados **in-place** (mesma API e tokens) — nunca um set paralelo. Piloto: página Fluxo de Caixa. Ver a receita de conversão na §12 (a escrever quando o piloto fechar).
 
 ---
 

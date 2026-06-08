@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-// ── CSS variable helpers (Tailwind v3 HSL channels → full colors) ──────────────
+// ── CSS variable helpers (Tailwind HSL channels → full colors) ──────────────
 export const C_CARD      = 'hsl(var(--card))'
 export const C_BORDER    = 'hsl(var(--border))'
 export const C_MUTED     = 'hsl(var(--muted))'
