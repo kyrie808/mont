@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { type ReactNode } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
+import { cn } from '@mont/shared'
 
 interface ModalProps {
     isOpen: boolean
@@ -11,16 +12,18 @@ interface ModalProps {
     showCloseButton?: boolean
 }
 
+// max-width por tamanho. O gutter mobile (1rem de cada lado) vem do
+// `w-[calc(100%-2rem)]` no Content — não de `mx-4` (que não casa com centralização fixed).
 const sizeClasses = {
-    sm: 'max-w-sm mx-4',
-    md: 'max-w-md mx-4',
-    lg: 'max-w-lg mx-4',
-    xl: 'max-w-xl mx-4',
-    '2xl': 'max-w-2xl mx-4',
-    '3xl': 'max-w-3xl mx-4',
-    '4xl': 'max-w-4xl mx-4',
-    '5xl': 'max-w-5xl mx-4',
-    full: 'max-w-full mx-4',
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    full: 'max-w-full',
 }
 
 export function Modal({
@@ -31,62 +34,35 @@ export function Modal({
     size = 'md',
     showCloseButton = true,
 }: ModalProps) {
-    // Close on Escape key
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
-                onClose()
-            }
-        }
-
-        document.addEventListener('keydown', handleEscape)
-        return () => document.removeEventListener('keydown', handleEscape)
-    }, [isOpen, onClose])
-
-    // Prevent body scroll when modal is open
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
-        }
-        return () => {
-            document.body.style.overflow = ''
-        }
-    }, [isOpen])
-
-    if (!isOpen) return null
-
-    const modalContent = (
-        <>
-            {/* Backdrop — own fixed layer */}
-            <div
-                className="fixed inset-0 z-9998 bg-black/50 backdrop-blur-xs"
-                onClick={onClose}
-            />
-
-            {/* Centering wrapper — pointer-events-none so backdrop click-through works */}
-            <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 pointer-events-none">
-                {/* Panel — pointer-events-auto to capture own interactions */}
-                <div
-                    className={`
-                        pointer-events-auto bg-card border border-border/50 rounded-xl shadow-2xl w-full
-                        ${sizeClasses[size]}
-                        max-h-[85vh] overflow-y-auto
-                        animate-in fade-in zoom-in-95 duration-300
-                    `}
+    // Radix cuida de: focus-trap, aria-modal, retorno de foco, scroll-lock do body,
+    // ESC e clique no overlay → todos resultam em onOpenChange(false) → onClose().
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-9998 bg-black/50 backdrop-blur-xs" />
+                <Dialog.Content
+                    // sem Description: opta por não exigir aria-describedby (evita warning do Radix)
+                    aria-describedby={undefined}
+                    className={cn(
+                        'fixed left-1/2 top-1/2 z-9999 -translate-x-1/2 -translate-y-1/2',
+                        'w-[calc(100%-2rem)] bg-card border border-border/50 rounded-xl shadow-2xl',
+                        sizeClasses[size],
+                        'max-h-[85vh] overflow-y-auto',
+                        'animate-in fade-in zoom-in-95 duration-300',
+                    )}
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-border">
-                        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+                        <Dialog.Title className="text-lg font-semibold text-foreground">{title}</Dialog.Title>
                         {showCloseButton && (
-                            <button
-                                aria-label="Fechar"
-                                onClick={onClose}
-                                className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
+                            <Dialog.Close asChild>
+                                <button
+                                    aria-label="Fechar"
+                                    className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </Dialog.Close>
                         )}
                     </div>
 
@@ -94,12 +70,10 @@ export function Modal({
                     <div className="p-4">
                         {children}
                     </div>
-                </div>
-            </div>
-        </>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     )
-
-    return createPortal(modalContent, document.body)
 }
 
 interface ModalActionsProps {
