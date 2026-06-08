@@ -2,7 +2,7 @@
 export { Button } from './Button'
 export { Input } from './Input'
 export { Select } from './Select'
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './Card'
+export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent } from './Card'
 export { Modal, ModalActions } from './Modal'
 export { ConfirmDialog } from './ConfirmDialog'
 export { Pagination, paginateArray } from './Pagination'
