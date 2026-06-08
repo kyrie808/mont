@@ -39,7 +39,7 @@ function TabsList({ children, className }: TabsListProps) {
     <div
       role="tablist"
       className={cn(
-        'flex w-full rounded-2xl bg-muted p-1 gap-1',
+        'flex w-full items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground',
         className
       )}
     >
@@ -61,10 +61,11 @@ function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       aria-selected={isActive}
       onClick={() => ctx.onValueChange(value)}
       className={cn(
-        'flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3',
-        'text-xs font-black uppercase tracking-wider transition-all',
+        'inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2',
+        'text-sm font-medium whitespace-nowrap transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isActive
-          ? 'bg-card text-foreground shadow-card'
+          ? 'bg-background text-foreground shadow-sm border border-transparent dark:border-input'
           : 'text-muted-foreground hover:text-foreground',
         className
       )}
