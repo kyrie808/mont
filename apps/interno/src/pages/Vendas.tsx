@@ -114,6 +114,7 @@ export function Vendas() {
                     />
                     <VendasList
                         vendas={paginateArray(filteredVendas, currentPage, PAGE_SIZE)}
+                        allVendas={filteredVendas}
                         filteredCount={filteredVendas.length}
                         currentPage={currentPage} pageSize={PAGE_SIZE}
                         onPageChange={setCurrentPage}

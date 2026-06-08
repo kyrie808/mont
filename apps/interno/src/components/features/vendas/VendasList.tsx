@@ -1,12 +1,14 @@
 import { ShoppingCart } from 'lucide-react'
 import { EmptyState, Button, Pagination } from '../../../components/ui'
 import { VendaCard } from './VendaCard'
+import { VendasDataGrid } from './VendasDataGrid'
 import { useNavigate } from 'react-router-dom'
 
 import type { DomainVenda } from '../../../types/domain'
 
 interface VendasListProps {
     vendas: DomainVenda[]
+    allVendas: DomainVenda[]
     filteredCount: number
     currentPage: number
     pageSize: number
@@ -16,6 +18,7 @@ interface VendasListProps {
 
 export function VendasList({
     vendas,
+    allVendas,
     filteredCount,
     currentPage,
     pageSize,
@@ -41,22 +44,27 @@ export function VendasList({
 
     return (
         <>
-            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+            {/* MOBILE (<lg): lista de cards — intocada (mobile sagrado) */}
+            <div className="space-y-4 lg:hidden">
                 {vendas.map((venda) => (
-                    <VendaCard 
-                        key={venda.id} 
-                        venda={venda} 
-                        onDeleteClick={onDeleteClick} 
+                    <VendaCard
+                        key={venda.id}
+                        venda={venda}
+                        onDeleteClick={onDeleteClick}
                     />
                 ))}
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={filteredCount}
+                    pageSize={pageSize}
+                    onPageChange={onPageChange}
+                />
             </div>
 
-            <Pagination
-                currentPage={currentPage}
-                totalItems={filteredCount}
-                pageSize={pageSize}
-                onPageChange={onPageChange}
-            />
+            {/* DESKTOP (≥lg): data grid denso — sort + paginação próprios sobre o conjunto filtrado inteiro */}
+            <div className="hidden lg:block">
+                <VendasDataGrid vendas={allVendas} onDeleteClick={onDeleteClick} />
+            </div>
         </>
     )
 }
