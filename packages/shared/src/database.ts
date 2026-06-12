@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_users: {
@@ -1054,6 +1079,87 @@ export type Database = {
         }
         Relationships: []
       }
+      produto_componentes: {
+        Row: {
+          combo_id: string
+          componente_id: string
+          criado_em: string
+          id: string
+          quantidade: number
+        }
+        Insert: {
+          combo_id: string
+          componente_id: string
+          criado_em?: string
+          id?: string
+          quantidade?: number
+        }
+        Update: {
+          combo_id?: string
+          componente_id?: string
+          criado_em?: string
+          id?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_componentes_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_giro_estoque"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_margem_por_sku"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_componente_id_fkey"
+            columns: ["componente_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_componente_id_fkey"
+            columns: ["componente_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_giro_estoque"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_componente_id_fkey"
+            columns: ["componente_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_margem_por_sku"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "produto_componentes_componente_id_fkey"
+            columns: ["componente_id"]
+            isOneToOne: false
+            referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           apelido: string | null
@@ -1065,6 +1171,7 @@ export type Database = {
           custo: number
           descricao: string | null
           destaque: boolean | null
+          eh_combo: boolean
           estoque_atual: number | null
           estoque_minimo: number | null
           id: string
@@ -1088,6 +1195,7 @@ export type Database = {
           custo: number
           descricao?: string | null
           destaque?: boolean | null
+          eh_combo?: boolean
           estoque_atual?: number | null
           estoque_minimo?: number | null
           id?: string
@@ -1111,6 +1219,7 @@ export type Database = {
           custo?: number
           descricao?: string | null
           destaque?: boolean | null
+          eh_combo?: boolean
           estoque_atual?: number | null
           estoque_minimo?: number | null
           id?: string
@@ -2203,6 +2312,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],

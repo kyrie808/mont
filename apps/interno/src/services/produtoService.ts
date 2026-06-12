@@ -11,7 +11,7 @@ export class ProdutoService {
     async getAll(includeInactive: boolean = false): Promise<DomainProduto[]> {
         let query = supabase
             .from('produtos')
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo')
             .order('nome')
 
         if (!includeInactive) {
@@ -40,7 +40,7 @@ export class ProdutoService {
     async getById(id: string): Promise<DomainProduto | null> {
         const { data, error } = await supabase
             .from('produtos')
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
             .eq('id', id)
             .single()
 
@@ -69,7 +69,7 @@ export class ProdutoService {
         const { data: created, error } = await supabase
             .from('produtos')
             .insert(dbInsert)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
             .single()
 
         if (error) {
@@ -97,7 +97,7 @@ export class ProdutoService {
             .from('produtos')
             .update(dbUpdate)
             .eq('id', id)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
             .single()
 
         if (error) {
@@ -113,7 +113,7 @@ export class ProdutoService {
             .from('produtos')
             .update({ estoque_atual: quantidade })
             .eq('id', id)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
             .single()
 
         if (error) {
