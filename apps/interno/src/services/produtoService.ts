@@ -63,7 +63,17 @@ export class ProdutoService {
             apelido: data.apelido || null,
             subtitulo: data.subtitulo || null,
             estoque_minimo: data.estoqueMinimo || 0,
-            ativo: true
+            ativo: data.ativo ?? true,
+            categoria: data.categoria || null,
+            preco_ancoragem: data.precoAncoragem ?? data.preco_ancoragem ?? null,
+            // Apresentação no catálogo (consolidado no interno)
+            descricao: data.descricao ?? null,
+            peso_kg: data.pesoKg ?? null,
+            destaque: data.destaque ?? false,
+            slug: data.slug || null,
+            instrucoes_preparo: data.instrucoesPreparo ?? null,
+            visivel_catalogo: data.visivelCatalogo ?? true,
+            eh_combo: data.ehCombo ?? false
         }
 
         const { data: created, error } = await supabase
@@ -92,6 +102,16 @@ export class ProdutoService {
         if (data.estoqueMinimo !== undefined) dbUpdate.estoque_minimo = data.estoqueMinimo
         if (data.ativo !== undefined) dbUpdate.ativo = data.ativo
         if (data.preco_ancoragem !== undefined) dbUpdate.preco_ancoragem = data.preco_ancoragem
+        if (data.precoAncoragem !== undefined) dbUpdate.preco_ancoragem = data.precoAncoragem
+        if (data.categoria !== undefined) dbUpdate.categoria = data.categoria
+        // Apresentação no catálogo (consolidado no interno)
+        if (data.descricao !== undefined) dbUpdate.descricao = data.descricao
+        if (data.pesoKg !== undefined) dbUpdate.peso_kg = data.pesoKg
+        if (data.destaque !== undefined) dbUpdate.destaque = data.destaque
+        if (data.slug !== undefined) dbUpdate.slug = data.slug
+        if (data.instrucoesPreparo !== undefined) dbUpdate.instrucoes_preparo = data.instrucoesPreparo
+        if (data.visivelCatalogo !== undefined) dbUpdate.visivel_catalogo = data.visivelCatalogo
+        if (data.ehCombo !== undefined) dbUpdate.eh_combo = data.ehCombo
 
         const { data: updated, error } = await supabase
             .from('produtos')

@@ -59,6 +59,12 @@ export function Produtos() {
     const [newUnidade, setNewUnidade] = useState('kg')
     const [newEstoqueMinimo, setNewEstoqueMinimo] = useState('10')
     const [newCategoria, setNewCategoria] = useState('')
+    const [newDescricao, setNewDescricao] = useState('')
+    const [newPesoKg, setNewPesoKg] = useState('')
+    const [newSlug, setNewSlug] = useState('')
+    const [newInstrucoesPreparo, setNewInstrucoesPreparo] = useState('')
+    const [newDestaque, setNewDestaque] = useState(false)
+    const [newVisivelCatalogo, setNewVisivelCatalogo] = useState(true)
     const [isCreating, setIsCreating] = useState(false)
 
     // Form states for edit
@@ -75,6 +81,12 @@ export function Produtos() {
     const [editCategoria, setEditCategoria] = useState('')
     const [editUnidade, setEditUnidade] = useState('un')
     const [editPrecoAncoragem, setEditPrecoAncoragem] = useState('')
+    const [editDescricao, setEditDescricao] = useState('')
+    const [editPesoKg, setEditPesoKg] = useState('')
+    const [editSlug, setEditSlug] = useState('')
+    const [editInstrucoesPreparo, setEditInstrucoesPreparo] = useState('')
+    const [editDestaque, setEditDestaque] = useState(false)
+    const [editVisivelCatalogo, setEditVisivelCatalogo] = useState(true)
     const [isUpdating, setIsUpdating] = useState(false)
 
     // Stats
@@ -100,6 +112,12 @@ export function Produtos() {
         setEditImagemUrl(produto.imagemUrl || null)
         setEditUnidade(produto.unidade || 'un')
         setEditPrecoAncoragem(produto.precoAncoragem?.toString() || '')
+        setEditDescricao(produto.descricao || '')
+        setEditPesoKg(produto.pesoKg != null ? String(produto.pesoKg) : '')
+        setEditSlug(produto.slug || '')
+        setEditInstrucoesPreparo(produto.instrucoesPreparo || '')
+        setEditDestaque(produto.destaque ?? false)
+        setEditVisivelCatalogo(produto.visivelCatalogo ?? true)
     }
 
     const handleCloseEdit = () => {
@@ -116,6 +134,12 @@ export function Produtos() {
         setNewUnidade('kg')
         setNewEstoqueMinimo('10')
         setNewCategoria('')
+        setNewDescricao('')
+        setNewPesoKg('')
+        setNewSlug('')
+        setNewInstrucoesPreparo('')
+        setNewDestaque(false)
+        setNewVisivelCatalogo(true)
         setIsCreateModalOpen(true)
     }
 
@@ -151,6 +175,12 @@ export function Produtos() {
             estoqueMinimo: parseInt(newEstoqueMinimo) || 10,
             ativo: true,
             categoria: newCategoria,
+            descricao: newDescricao.trim() || null,
+            pesoKg: newPesoKg ? parseFloat(newPesoKg) : null,
+            slug: newSlug.trim() || null,
+            instrucoesPreparo: newInstrucoesPreparo.trim() || null,
+            destaque: newDestaque,
+            visivelCatalogo: newVisivelCatalogo,
         } as CreateProduto
 
         try {
@@ -190,6 +220,12 @@ export function Produtos() {
             categoria: editCategoria,
             unidade: editUnidade,
             preco_ancoragem: editPrecoAncoragem ? parseFloat(editPrecoAncoragem) : null,
+            descricao: editDescricao.trim() || null,
+            pesoKg: editPesoKg ? parseFloat(editPesoKg) : null,
+            slug: editSlug.trim() || null,
+            instrucoesPreparo: editInstrucoesPreparo.trim() || null,
+            destaque: editDestaque,
+            visivelCatalogo: editVisivelCatalogo,
         } as UpdateProduto
 
         try {
@@ -428,6 +464,68 @@ export function Produtos() {
                                 ]}
                             />
 
+                            {/* Apresentação no catálogo — fonte única no interno */}
+                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Apresentação no catálogo</p>
+                                <div>
+                                    <label htmlFor="new-descricao" className="block text-sm font-medium mb-1">Descrição</label>
+                                    <textarea
+                                        id="new-descricao"
+                                        rows={3}
+                                        value={newDescricao}
+                                        onChange={(e) => setNewDescricao(e.target.value)}
+                                        placeholder="Descrição que aparece na página do produto"
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input
+                                        label="Peso (kg)"
+                                        type="number"
+                                        value={newPesoKg}
+                                        onChange={(e) => setNewPesoKg(e.target.value)}
+                                        placeholder="Ex: 1"
+                                    />
+                                    <Input
+                                        label="Slug (URL)"
+                                        value={newSlug}
+                                        onChange={(e) => setNewSlug(e.target.value)}
+                                        placeholder="ex: pao-queijo-1kg"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="new-instrucoes" className="block text-sm font-medium mb-1">Instruções de preparo</label>
+                                    <textarea
+                                        id="new-instrucoes"
+                                        rows={3}
+                                        value={newInstrucoesPreparo}
+                                        onChange={(e) => setNewInstrucoesPreparo(e.target.value)}
+                                        placeholder="Uma instrução por linha"
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Select
+                                        label="Visível no catálogo"
+                                        value={newVisivelCatalogo ? 'true' : 'false'}
+                                        onChange={(e) => setNewVisivelCatalogo(e.target.value === 'true')}
+                                        options={[
+                                            { label: 'Sim', value: 'true' },
+                                            { label: 'Não', value: 'false' },
+                                        ]}
+                                    />
+                                    <Select
+                                        label="Destaque"
+                                        value={newDestaque ? 'true' : 'false'}
+                                        onChange={(e) => setNewDestaque(e.target.value === 'true')}
+                                        options={[
+                                            { label: 'Sim', value: 'true' },
+                                            { label: 'Não', value: 'false' },
+                                        ]}
+                                    />
+                                </div>
+                            </div>
+
                             <ModalActions>
                                 <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
                                     Cancelar
@@ -555,6 +653,68 @@ export function Produtos() {
                                     { value: 'combo', label: 'Combo' }
                                 ]}
                             />
+
+                            {/* Apresentação no catálogo — fonte única no interno */}
+                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Apresentação no catálogo</p>
+                                <div>
+                                    <label htmlFor="edit-descricao" className="block text-sm font-medium mb-1">Descrição</label>
+                                    <textarea
+                                        id="edit-descricao"
+                                        rows={3}
+                                        value={editDescricao}
+                                        onChange={(e) => setEditDescricao(e.target.value)}
+                                        placeholder="Descrição que aparece na página do produto"
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input
+                                        label="Peso (kg)"
+                                        type="number"
+                                        value={editPesoKg}
+                                        onChange={(e) => setEditPesoKg(e.target.value)}
+                                        placeholder="Ex: 1"
+                                    />
+                                    <Input
+                                        label="Slug (URL)"
+                                        value={editSlug}
+                                        onChange={(e) => setEditSlug(e.target.value)}
+                                        placeholder="ex: pao-queijo-1kg"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-instrucoes" className="block text-sm font-medium mb-1">Instruções de preparo</label>
+                                    <textarea
+                                        id="edit-instrucoes"
+                                        rows={3}
+                                        value={editInstrucoesPreparo}
+                                        onChange={(e) => setEditInstrucoesPreparo(e.target.value)}
+                                        placeholder="Uma instrução por linha"
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Select
+                                        label="Visível no catálogo"
+                                        value={editVisivelCatalogo ? 'true' : 'false'}
+                                        onChange={(e) => setEditVisivelCatalogo(e.target.value === 'true')}
+                                        options={[
+                                            { label: 'Sim', value: 'true' },
+                                            { label: 'Não', value: 'false' },
+                                        ]}
+                                    />
+                                    <Select
+                                        label="Destaque"
+                                        value={editDestaque ? 'true' : 'false'}
+                                        onChange={(e) => setEditDestaque(e.target.value === 'true')}
+                                        options={[
+                                            { label: 'Sim', value: 'true' },
+                                            { label: 'Não', value: 'false' },
+                                        ]}
+                                    />
+                                </div>
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-1">

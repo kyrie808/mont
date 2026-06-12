@@ -65,6 +65,15 @@ export interface DomainProduto {
     imagemUrl?: string
     categoria?: string | null
     subtitulo?: string | null
+    // Apresentação no catálogo (consolidado no interno — fonte única)
+    descricao?: string | null
+    pesoKg?: number | null
+    destaque?: boolean
+    slug?: string | null
+    instrucoesPreparo?: string | null
+    visivelCatalogo?: boolean
+    // Kit/combo (composição em produto_componentes)
+    ehCombo?: boolean
 }
 
 export interface DomainItemVenda {

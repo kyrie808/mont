@@ -132,7 +132,15 @@ export const toDomainProduto = (dbProduto: ProdutoRowWithImages): DomainProduto 
             ? Number(dbProduto.preco_ancoragem)
             : null,
         categoria: dbProduto.categoria || null,
-        imagemUrl: dbProduto.sis_imagens_produto?.url
+        imagemUrl: dbProduto.sis_imagens_produto?.url,
+        // Apresentação no catálogo (fonte única = interno)
+        descricao: dbProduto.descricao ?? null,
+        pesoKg: dbProduto.peso_kg != null ? Number(dbProduto.peso_kg) : null,
+        destaque: dbProduto.destaque ?? false,
+        slug: dbProduto.slug ?? null,
+        instrucoesPreparo: dbProduto.instrucoes_preparo ?? null,
+        visivelCatalogo: dbProduto.visivel_catalogo ?? true,
+        ehCombo: dbProduto.eh_combo ?? false
     }
 }
 
