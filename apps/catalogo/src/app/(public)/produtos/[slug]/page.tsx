@@ -61,6 +61,35 @@ async function getRelatedProducts(category: string, currentId: string): Promise<
     }
 }
 
+interface ComponenteRow {
+    quantidade: number | null
+    componente: { nome: string } | { nome: string }[] | null
+}
+
+// Composição do kit/combo (produto_componentes tem leitura pública via RLS).
+async function getComboComponentes(productId: string): Promise<{ quantidade: number; nome: string }[]> {
+    try {
+        const supabase = await createClient()
+        const { data, error } = await supabase
+            .from('produto_componentes')
+            .select('quantidade, componente:produtos!produto_componentes_componente_id_fkey(nome)')
+            .eq('combo_id', productId)
+            .order('criado_em')
+
+        if (error || !data) return []
+
+        return (data as ComponenteRow[])
+            .map((row) => {
+                const comp = Array.isArray(row.componente) ? row.componente[0] : row.componente
+                return { quantidade: Number(row.quantidade ?? 0), nome: comp?.nome ?? '' }
+            })
+            .filter((c) => c.nome)
+    } catch (error) {
+        console.error('Erro ao buscar componentes do combo:', error)
+        return []
+    }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
     const product = await getProduct(slug)
@@ -86,6 +115,8 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
     }
 
     const relatedProducts = await getRelatedProducts(product.categoria ?? '', product.id!)
+    const componentes = await getComboComponentes(product.id!)
+    const isCombo = componentes.length > 0
 
     const analyticsEvent = {
         event: 'view_item',
@@ -139,8 +170,13 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
                                     {product.nome}
                                 </h1>
 
-                                <div className="mb-4">
+                                <div className="mb-4 flex items-center gap-2">
                                     {product.categoria && <Badge variant={product.categoria as any} />}
+                                    {isCombo && (
+                                        <span className="inline-flex items-center rounded-full bg-mont-gold/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-mont-gold">
+                                            Combo
+                                        </span>
+                                    )}
                                 </div>
 
                                 <p className="text-mont-gray text-lg mb-6">
@@ -157,6 +193,22 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
                                         {formatCurrency(product.preco ?? 0)}
                                     </div>
                                 </div>
+
+                                {isCombo && (
+                                    <div className="bg-mont-surface p-6 rounded-lg mb-8">
+                                        <h3 className="font-display text-xl text-mont-espresso mb-3">
+                                            🧺 O combo contém
+                                        </h3>
+                                        <ul className="text-mont-gray space-y-2">
+                                            {componentes.map((c, i) => (
+                                                <li key={i} className="flex items-center gap-2">
+                                                    <span className="font-bold text-mont-espresso">{c.quantidade}×</span>
+                                                    <span>{c.nome}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
 
                                 {product.descricao && (
                                     <div className="mb-8">

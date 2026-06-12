@@ -8,8 +8,8 @@ import type { AdminProduct } from '@/types/product'
 
 interface ProductCardProps {
     product: AdminProduct
-    onToggleActive: (id: string, currentStatus: boolean) => Promise<void>
-    onEdit: (product: AdminProduct) => void
+    onToggleActive?: (id: string, currentStatus: boolean) => Promise<void>
+    onEdit?: (product: AdminProduct) => void
 }
 
 export default function ProductCard({ product, onToggleActive, onEdit }: ProductCardProps) {
@@ -17,6 +17,7 @@ export default function ProductCard({ product, onToggleActive, onEdit }: Product
 
     const handleToggle = async (e: React.MouseEvent) => {
         e.stopPropagation()
+        if (!onToggleActive) return
         setLoading(true)
         await onToggleActive(product.id, product.visivel_catalogo)
         setLoading(false)
@@ -24,8 +25,8 @@ export default function ProductCard({ product, onToggleActive, onEdit }: Product
 
     return (
         <div
-            onClick={() => onEdit(product)}
-            className={`bg-white rounded-lg p-4 border shadow-sm cursor-pointer transition-all active:scale-[0.98] ${!product.ativo ? 'opacity-60 grayscale bg-gray-50' : 'border-gray-100'
+            onClick={() => onEdit?.(product)}
+            className={`bg-white rounded-lg p-4 border shadow-sm transition-all ${onEdit ? 'cursor-pointer active:scale-[0.98]' : ''} ${!product.ativo ? 'opacity-60 grayscale bg-gray-50' : 'border-gray-100'
                 }`}
         >
             <div className="flex justify-between items-start">
@@ -67,29 +68,41 @@ export default function ProductCard({ product, onToggleActive, onEdit }: Product
                             ★
                         </span>
                     )}
-                    <button
-                        onClick={handleToggle}
-                        disabled={loading}
-                        className={`p-2 rounded-full transition-colors relative flex-shrink-0 ${product.visivel_catalogo
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                            }`}
-                    >
-                        {loading ? (
-                            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        ) : product.visivel_catalogo ? (
-                            <CheckCircle size={20} />
-                        ) : (
-                            <Archive size={20} />
-                        )}
-                    </button>
+                    {onToggleActive ? (
+                        <button
+                            onClick={handleToggle}
+                            disabled={loading}
+                            className={`p-2 rounded-full transition-colors relative flex-shrink-0 ${product.visivel_catalogo
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                }`}
+                        >
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : product.visivel_catalogo ? (
+                                <CheckCircle size={20} />
+                            ) : (
+                                <Archive size={20} />
+                            )}
+                        </button>
+                    ) : (
+                        <span
+                            className={`p-2 rounded-full relative flex-shrink-0 ${product.visivel_catalogo
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-200 text-gray-500'
+                                }`}
+                            title={product.visivel_catalogo ? 'Visível no catálogo' : 'Oculto no catálogo'}
+                        >
+                            {product.visivel_catalogo ? <CheckCircle size={20} /> : <Archive size={20} />}
+                        </span>
+                    )}
                 </div>
             </div>
 
             <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-1">
                     <Edit2 size={12} />
-                    <span>Toque para editar</span>
+                    <span>{onEdit ? 'Toque para editar' : 'Somente leitura · edição no Sistema Interno'}</span>
                 </div>
                 {/* Estoque status logic could go here if available */}
             </div>

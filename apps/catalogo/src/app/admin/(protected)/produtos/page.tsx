@@ -1,20 +1,14 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Info } from 'lucide-react'
 import ProductCard from '@/components/admin/ProductCard'
-import ProductEditForm from '@/components/admin/ProductEditForm'
 import type { AdminProduct } from '@/types/product'
-import { useToast } from '@/hooks/useToast'
-import ToastContainer from '@/components/ui/ToastContainer'
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<AdminProduct[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null)
-    const { toasts, showToast } = useToast()
 
     useEffect(() => {
         fetchProducts()
@@ -34,75 +28,29 @@ export default function AdminProductsPage() {
         }
     }
 
-    const handleToggleActive = async (id: string, currentStatus: boolean) => {
-        // Optimistic update
-        setProducts(products.map(p =>
-            p.id === id ? { ...p, visivel_catalogo: !currentStatus } : p
-        ))
-
-        try {
-            const res = await fetch(`/api/admin/produtos/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ visivel_catalogo: !currentStatus })
-            })
-
-            if (!res.ok) {
-                // Revert on failure
-                setProducts(products.map(p =>
-                    p.id === id ? { ...p, visivel_catalogo: currentStatus } : p
-                ))
-                showToast('Erro ao atualizar status')
-            }
-        } catch (error) {
-            console.error(error)
-            // Revert on failure
-            setProducts(products.map(p =>
-                p.id === id ? { ...p, visivel_catalogo: currentStatus } : p
-            ))
-            showToast('Erro de conexão')
-        }
-    }
-
-    const handleUpdateProduct = async (id: string, data: Partial<AdminProduct>) => {
-        try {
-            console.log('[PATCH] payload:', JSON.stringify(data))
-            const res = await fetch(`/api/admin/produtos/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-
-            if (res.ok) {
-                const updated = await res.json()
-                setProducts(products.map(p => p.id === id ? updated : p))
-                setEditingProduct(null)
-            } else {
-                const errBody = await res.json().catch(() => null)
-                console.error('[PATCH] error response:', res.status, errBody)
-                showToast('Erro ao salvar alterações')
-            }
-        } catch (error) {
-            console.error(error)
-            showToast('Erro ao salvar alterações')
-        }
-    }
-
     const filteredProducts = products.filter(p =>
         p.nome.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     return (
         <div className="space-y-6 pb-20">
-            <ToastContainer toasts={toasts} />
             <div className="flex flex-col gap-4 sticky top-0 bg-mont-cream z-10 pt-2 pb-4">
                 <div>
                     <h2 className="text-2xl font-serif font-bold text-mont-espresso">
                         Produtos
                     </h2>
                     <p className="text-mont-gray text-sm">
-                        Gerencie visibilidade e detalhes do catálogo.
+                        Visão somente leitura do catálogo.
                     </p>
+                </div>
+
+                {/* Fronteira: o produto é editado no Sistema Interno Mont */}
+                <div className="flex items-start gap-2 rounded-lg border border-mont-gold/30 bg-mont-gold/10 px-4 py-3 text-sm text-mont-espresso">
+                    <Info size={18} className="mt-0.5 flex-shrink-0 text-mont-gold" />
+                    <span>
+                        A edição de produtos (preço, custo, apresentação, visibilidade e kits/combos)
+                        agora é feita no <strong>Sistema Interno Mont</strong>. Esta tela é somente leitura.
+                    </span>
                 </div>
 
                 <div className="relative">
@@ -125,8 +73,6 @@ export default function AdminProductsPage() {
                         <ProductCard
                             key={product.id}
                             product={product}
-                            onToggleActive={handleToggleActive}
-                            onEdit={setEditingProduct}
                         />
                     ))}
                     {filteredProducts.length === 0 && (
@@ -135,20 +81,6 @@ export default function AdminProductsPage() {
                         </div>
                     )}
                 </div>
-            )}
-
-            {editingProduct && (
-                <ProductEditForm
-                    product={editingProduct}
-                    onClose={() => setEditingProduct(null)}
-                    onSave={handleUpdateProduct}
-                    showToast={showToast}
-                    onImageDeleted={(id) => {
-                        setProducts(products.map(p =>
-                            p.id === id ? { ...p, sis_imagens_produto: [] } : p
-                        ))
-                    }}
-                />
             )}
         </div>
     )
