@@ -147,34 +147,18 @@ export class ProdutoService {
 
     /* IMAGENS */
     async uploadImage(file: File, oldImageUrl?: string | null): Promise<string> {
-        // Deleta arquivo antigo do bucket se existir
-        if (oldImageUrl) {
-            const oldFileName = oldImageUrl.split('/').pop()
-            if (oldFileName) {
-                await supabase.storage.from('products').remove([oldFileName])
-            }
-        }
+        // Upload via Edge Function (service_role): o Storage rejeita o JWT do interno
+        // (descompasso de chave JWT entre serviços), então a function sobe com service_role
+        // e valida admin via is_admin. Remoção do arquivo antigo também acontece na function.
+        const form = new FormData()
+        form.append('file', file)
+        if (oldImageUrl) form.append('old_url', oldImageUrl)
 
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+        const { data, error } = await supabase.functions.invoke('upload-product-image', { body: form })
+        if (error) throw error
+        if (!data?.url) throw new Error(data?.error || 'Falha no upload da imagem')
 
-        const { error: uploadError } = await supabase.storage
-            .from('products')
-            .upload(fileName, file, {
-                cacheControl: '3600',
-                upsert: true
-            })
-
-        if (uploadError) {
-            console.error('DEBUG: Erro no upload:', uploadError)
-            throw uploadError
-        }
-
-        const { data } = supabase.storage
-            .from('products')
-            .getPublicUrl(fileName)
-
-        return data.publicUrl
+        return data.url as string
     }
 
     /* COMBOS — composição (produto_componentes). Nomes/preços dos componentes
