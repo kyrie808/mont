@@ -65,6 +65,8 @@ export function Produtos() {
     const [newInstrucoesPreparo, setNewInstrucoesPreparo] = useState('')
     const [newDestaque, setNewDestaque] = useState(false)
     const [newVisivelCatalogo, setNewVisivelCatalogo] = useState(true)
+    const [newEhCombo, setNewEhCombo] = useState(false)
+    const [newComponentes, setNewComponentes] = useState<{ componenteId: string; quantidade: number }[]>([])
     const [isCreating, setIsCreating] = useState(false)
 
     // Form states for edit
@@ -87,7 +89,13 @@ export function Produtos() {
     const [editInstrucoesPreparo, setEditInstrucoesPreparo] = useState('')
     const [editDestaque, setEditDestaque] = useState(false)
     const [editVisivelCatalogo, setEditVisivelCatalogo] = useState(true)
+    const [editEhCombo, setEditEhCombo] = useState(false)
+    const [editComponentes, setEditComponentes] = useState<{ componenteId: string; quantidade: number }[]>([])
     const [isUpdating, setIsUpdating] = useState(false)
+
+    // Picker de componentes (compartilhado — um modal aberto por vez)
+    const [pickComponenteId, setPickComponenteId] = useState('')
+    const [pickQuantidade, setPickQuantidade] = useState('1')
 
     // Stats
     const produtosAtivos = produtos.filter(p => p.ativo).length
@@ -118,6 +126,19 @@ export function Produtos() {
         setEditInstrucoesPreparo(produto.instrucoesPreparo || '')
         setEditDestaque(produto.destaque ?? false)
         setEditVisivelCatalogo(produto.visivelCatalogo ?? true)
+        setEditEhCombo(produto.ehCombo ?? false)
+        setPickComponenteId('')
+        setPickQuantidade('1')
+        // Carrega a composição existente (se for combo)
+        setEditComponentes([])
+        if (produto.ehCombo) {
+            produtoService.getComponentes(produto.id)
+                .then(comps => setEditComponentes(comps.map(c => ({ componenteId: c.componenteId, quantidade: c.quantidade }))))
+                .catch(err => {
+                    console.error('Erro ao carregar componentes do combo:', err)
+                    toast.error('Não foi possível carregar os componentes do combo')
+                })
+        }
     }
 
     const handleCloseEdit = () => {
@@ -140,6 +161,10 @@ export function Produtos() {
         setNewInstrucoesPreparo('')
         setNewDestaque(false)
         setNewVisivelCatalogo(true)
+        setNewEhCombo(false)
+        setNewComponentes([])
+        setPickComponenteId('')
+        setPickQuantidade('1')
         setIsCreateModalOpen(true)
     }
 
@@ -181,10 +206,20 @@ export function Produtos() {
             instrucoesPreparo: newInstrucoesPreparo.trim() || null,
             destaque: newDestaque,
             visivelCatalogo: newVisivelCatalogo,
+            ehCombo: newEhCombo,
         } as CreateProduto
 
+        if (newEhCombo && newComponentes.length === 0) {
+            toast.error('Um combo precisa de pelo menos um componente')
+            setIsCreating(false)
+            return
+        }
+
         try {
-            await createProduto(data)
+            const criado = await createProduto(data)
+            if (newEhCombo) {
+                await produtoService.replaceComponentes(criado.id, newComponentes)
+            }
             toast.success('Produto criado!')
             setIsCreateModalOpen(false)
         } catch (e: unknown) {
@@ -226,10 +261,19 @@ export function Produtos() {
             instrucoesPreparo: editInstrucoesPreparo.trim() || null,
             destaque: editDestaque,
             visivelCatalogo: editVisivelCatalogo,
+            ehCombo: editEhCombo,
         } as UpdateProduto
+
+        if (editEhCombo && editComponentes.length === 0) {
+            toast.error('Um combo precisa de pelo menos um componente')
+            setIsUpdating(false)
+            return
+        }
 
         try {
             await updateProduto(editingProduto.id, data)
+            // Sincroniza a composição: lista quando combo, vazio (limpa) quando não-combo
+            await produtoService.replaceComponentes(editingProduto.id, editEhCombo ? editComponentes : [])
             toast.success('Produto atualizado!')
             handleCloseEdit()
         } catch (e: unknown) {
@@ -266,6 +310,45 @@ export function Produtos() {
     const calcularMargem = (preco: number, custo: number): number => {
         if (preco === 0) return 0
         return ((preco - custo) / preco) * 100
+    }
+
+    // --- Combo: helpers do picker de componentes ---
+    const produtoNome = (id: string) => produtos.find(p => p.id === id)?.nome ?? id
+
+    const getComponenteOptions = (excludeId?: string) => [
+        { value: '', label: 'Selecione um produto...' },
+        ...produtos
+            .filter(p => !p.ehCombo && p.id !== excludeId)
+            .map(p => ({ value: p.id, label: p.nome }))
+    ]
+
+    const addComponente = (mode: 'create' | 'edit') => {
+        if (!pickComponenteId) {
+            toast.error('Selecione um produto componente')
+            return
+        }
+        const quantidade = parseFloat(pickQuantidade)
+        if (isNaN(quantidade) || quantidade <= 0) {
+            toast.error('Quantidade deve ser maior que zero')
+            return
+        }
+        const list = mode === 'create' ? newComponentes : editComponentes
+        const setList = mode === 'create' ? setNewComponentes : setEditComponentes
+        if (list.some(c => c.componenteId === pickComponenteId)) {
+            toast.error('Esse produto já está no combo')
+            return
+        }
+        setList([...list, { componenteId: pickComponenteId, quantidade }])
+        setPickComponenteId('')
+        setPickQuantidade('1')
+    }
+
+    const removeComponente = (mode: 'create' | 'edit', componenteId: string) => {
+        if (mode === 'create') {
+            setNewComponentes(prev => prev.filter(c => c.componenteId !== componenteId))
+        } else {
+            setEditComponentes(prev => prev.filter(c => c.componenteId !== componenteId))
+        }
     }
 
     const editMargem = calcularMargem(parseFloat(editPreco) || 0, parseFloat(editCusto) || 0)
@@ -460,6 +543,8 @@ export function Produtos() {
                                     { value: '', label: 'Selecione...' },
                                     { value: 'congelado', label: 'Congelado' },
                                     { value: 'refrigerado', label: 'Refrigerado' },
+                                    { value: 'cervejas', label: 'Cervejas' },
+                                    { value: 'refrigerantes', label: 'Refrigerantes' },
                                     { value: 'combo', label: 'Combo' }
                                 ]}
                             />
@@ -524,6 +609,62 @@ export function Produtos() {
                                         ]}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Kit / Combo */}
+                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+                                <Select
+                                    label="É um kit/combo?"
+                                    value={newEhCombo ? 'true' : 'false'}
+                                    onChange={(e) => setNewEhCombo(e.target.value === 'true')}
+                                    options={[
+                                        { label: 'Não — produto simples', value: 'false' },
+                                        { label: 'Sim — combo de vários produtos', value: 'true' },
+                                    ]}
+                                />
+                                {newEhCombo && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-gray-500">Vendido como uma unidade ao preço acima. Liste os produtos que compõem o kit.</p>
+                                        <div className="flex gap-2 items-end">
+                                            <div className="flex-1">
+                                                <Select
+                                                    label="Componente"
+                                                    value={pickComponenteId}
+                                                    onChange={(e) => setPickComponenteId(e.target.value)}
+                                                    options={getComponenteOptions()}
+                                                />
+                                            </div>
+                                            <div className="w-20">
+                                                <Input
+                                                    label="Qtd"
+                                                    type="number"
+                                                    value={pickQuantidade}
+                                                    onChange={(e) => setPickQuantidade(e.target.value)}
+                                                />
+                                            </div>
+                                            <Button variant="secondary" type="button" onClick={() => addComponente('create')}>
+                                                Adicionar
+                                            </Button>
+                                        </div>
+                                        {newComponentes.length > 0 && (
+                                            <ul className="space-y-1">
+                                                {newComponentes.map((c) => (
+                                                    <li key={c.componenteId} className="flex items-center justify-between bg-gray-50 dark:bg-white/5 rounded px-3 py-2 text-sm">
+                                                        <span>{produtoNome(c.componenteId)} × {c.quantidade}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeComponente('create', c.componenteId)}
+                                                            className="text-red-500 hover:text-red-600"
+                                                            aria-label="Remover componente"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <ModalActions>
@@ -650,6 +791,8 @@ export function Produtos() {
                                     { value: '', label: 'Selecione...' },
                                     { value: 'congelado', label: 'Congelado' },
                                     { value: 'refrigerado', label: 'Refrigerado' },
+                                    { value: 'cervejas', label: 'Cervejas' },
+                                    { value: 'refrigerantes', label: 'Refrigerantes' },
                                     { value: 'combo', label: 'Combo' }
                                 ]}
                             />
@@ -714,6 +857,62 @@ export function Produtos() {
                                         ]}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Kit / Combo */}
+                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+                                <Select
+                                    label="É um kit/combo?"
+                                    value={editEhCombo ? 'true' : 'false'}
+                                    onChange={(e) => setEditEhCombo(e.target.value === 'true')}
+                                    options={[
+                                        { label: 'Não — produto simples', value: 'false' },
+                                        { label: 'Sim — combo de vários produtos', value: 'true' },
+                                    ]}
+                                />
+                                {editEhCombo && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-gray-500">Vendido como uma unidade ao preço acima. Liste os produtos que compõem o kit.</p>
+                                        <div className="flex gap-2 items-end">
+                                            <div className="flex-1">
+                                                <Select
+                                                    label="Componente"
+                                                    value={pickComponenteId}
+                                                    onChange={(e) => setPickComponenteId(e.target.value)}
+                                                    options={getComponenteOptions(editingProduto?.id)}
+                                                />
+                                            </div>
+                                            <div className="w-20">
+                                                <Input
+                                                    label="Qtd"
+                                                    type="number"
+                                                    value={pickQuantidade}
+                                                    onChange={(e) => setPickQuantidade(e.target.value)}
+                                                />
+                                            </div>
+                                            <Button variant="secondary" type="button" onClick={() => addComponente('edit')}>
+                                                Adicionar
+                                            </Button>
+                                        </div>
+                                        {editComponentes.length > 0 && (
+                                            <ul className="space-y-1">
+                                                {editComponentes.map((c) => (
+                                                    <li key={c.componenteId} className="flex items-center justify-between bg-gray-50 dark:bg-white/5 rounded px-3 py-2 text-sm">
+                                                        <span>{produtoNome(c.componenteId)} × {c.quantidade}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeComponente('edit', c.componenteId)}
+                                                            className="text-red-500 hover:text-red-600"
+                                                            aria-label="Remover componente"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <div>

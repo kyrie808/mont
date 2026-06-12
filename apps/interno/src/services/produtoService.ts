@@ -1,9 +1,10 @@
 import { supabase } from '../lib/supabase'
 import type {
     ProdutoInsert,
-    ProdutoUpdate
+    ProdutoUpdate,
+    Insert
 } from '@mont/shared'
-import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
+import type { DomainProduto, CreateProduto, UpdateProduto, DomainProdutoComponente } from '../types/domain'
 import { toDomainProduto } from './mappers'
 
 export class ProdutoService {
@@ -174,6 +175,48 @@ export class ProdutoService {
             .getPublicUrl(fileName)
 
         return data.publicUrl
+    }
+
+    /* COMBOS — composição (produto_componentes). Nomes/preços dos componentes
+       são resolvidos na UI a partir da lista de produtos já carregada. */
+    async getComponentes(comboId: string): Promise<DomainProdutoComponente[]> {
+        const { data, error } = await supabase
+            .from('produto_componentes')
+            .select('id, combo_id, componente_id, quantidade')
+            .eq('combo_id', comboId)
+            .order('criado_em')
+
+        if (error) throw error
+
+        return (data || []).map((row) => ({
+            id: row.id,
+            comboId: row.combo_id,
+            componenteId: row.componente_id,
+            quantidade: Number(row.quantidade || 0)
+        }))
+    }
+
+    // Substitui toda a composição do combo (delete + insert). Idempotente o bastante
+    // para o cadastro: limpar (itens vazio) desfaz o combo.
+    async replaceComponentes(comboId: string, itens: { componenteId: string; quantidade: number }[]): Promise<void> {
+        const { error: delError } = await supabase
+            .from('produto_componentes')
+            .delete()
+            .eq('combo_id', comboId)
+        if (delError) throw delError
+
+        if (itens.length === 0) return
+
+        const rows: Insert<'produto_componentes'>[] = itens.map((i) => ({
+            combo_id: comboId,
+            componente_id: i.componenteId,
+            quantidade: i.quantidade
+        }))
+
+        const { error: insError } = await supabase
+            .from('produto_componentes')
+            .insert(rows)
+        if (insError) throw insError
     }
 
     async addImageReference(produtoId: string, url: string): Promise<void> {

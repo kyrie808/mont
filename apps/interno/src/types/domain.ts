@@ -85,6 +85,15 @@ export interface DomainItemVenda {
     subtotal: number
 }
 
+// Composição de um combo/kit (linha de produto_componentes)
+export interface DomainProdutoComponente {
+    id: string
+    comboId: string
+    componenteId: string
+    quantidade: number
+    componente?: DomainProduto
+}
+
 export interface DomainPagamento {
     id: string
     vendaId: string
