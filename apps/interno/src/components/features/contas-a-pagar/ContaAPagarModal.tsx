@@ -101,17 +101,17 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
             await onSave(data)
             toast.success(
                 isParcelado
-                    ? `${totalParcelas} obrigações criadas com sucesso!`
-                    : 'Obrigação criada com sucesso!',
+                    ? `${totalParcelas} despesas criadas com sucesso!`
+                    : 'Despesa criada com sucesso!',
             )
             onClose()
         } catch {
-            toast.error('Erro ao criar obrigação')
+            toast.error('Erro ao criar despesa')
         }
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Nova Obrigação" size="md">
+        <Modal isOpen={isOpen} onClose={onClose} title="Nova Despesa" size="md">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
@@ -181,7 +181,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                 {isParcelado && parcelas.length > 0 && (
                     <div className="rounded-xl border border-border bg-muted/50 p-4 space-y-2">
                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                            Serão criadas {totalParcelas} obrigações:
+                            Serão criadas {totalParcelas} despesas:
                         </p>
                         <div className="space-y-1.5 max-h-48 overflow-y-auto">
                             {parcelas.map(p => (
@@ -217,7 +217,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                         Cancelar
                     </Button>
                     <Button type="submit" isLoading={isSubmitting}>
-                        {isParcelado ? `Criar ${totalParcelas} Parcelas` : 'Criar Obrigação'}
+                        {isParcelado ? `Criar ${totalParcelas} Parcelas` : 'Criar Despesa'}
                     </Button>
                 </ModalActions>
             </form>

@@ -9,6 +9,12 @@ export interface ContaAPagarWithCategoria extends ContaAPagarRow {
     plano_de_contas: { nome: string } | null
 }
 
+/** Conta a pagar + status derivado (vencido) e dias de atraso — calculado na página, consumido pelo card mobile e pelo Data Grid desktop. */
+export interface ContaAPagarEnriched extends ContaAPagarWithCategoria {
+    displayStatus: string
+    diasAtraso: number
+}
+
 export const contasAPagarService = {
     async getContasAPagar(): Promise<ContaAPagarWithCategoria[]> {
         const { data, error } = await supabase

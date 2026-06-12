@@ -17,14 +17,14 @@ type PagamentoRow = Database['public']['Tables']['pagamentos_conta_a_pagar']['Ro
 const PAYMENT_METHODS = [
     { value: 'pix', label: 'Pix' },
     { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'transferencia', label: 'Transferência' },
+    { value: 'transferencia', label: 'TransferÃªncia' },
 ] as const
 
 const schema = z.object({
     valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
-    data_pagamento: z.string().min(1, 'Data é obrigatória'),
+    data_pagamento: z.string().min(1, 'Data Ã© obrigatÃ³ria'),
     conta_id: z.string().min(1, 'Selecione uma conta'),
-    metodo_pagamento: z.string().min(1, 'Selecione um método'),
+    metodo_pagamento: z.string().min(1, 'Selecione um mÃ©todo'),
     observacao: z.string().optional(),
 })
 
@@ -134,7 +134,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                         <p className="font-bold text-foreground">{conta.credor}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Descrição</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">DescriÃ§Ã£o</p>
                         <p className="text-sm text-foreground">{conta.descricao}</p>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                         <p className="font-bold text-foreground">{formatCurrency(conta.valor_total)}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Já Pago</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">JÃ¡ Pago</p>
                         <p className="font-bold text-success">{formatCurrency(conta.valor_pago)}</p>
                     </div>
                     <div>
@@ -207,7 +207,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                         error={errors.conta_id?.message}
                     />
                     <Select
-                        label="Método"
+                        label="MÃ©todo"
                         {...register('metodo_pagamento')}
                         options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label }))}
                         error={errors.metodo_pagamento?.message}
@@ -215,7 +215,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 </div>
 
                 <Input
-                    label="Observação"
+                    label="ObservaÃ§Ã£o"
                     placeholder="Opcional"
                     {...register('observacao')}
                 />
@@ -249,8 +249,8 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
                     <p className="text-xs text-primary font-medium">
                         {contaCredorId
-                            ? 'Este pagamento debitará a conta de origem e creditará a conta do credor (transferência).'
-                            : 'Este pagamento será registrado automaticamente no Fluxo de Caixa como saída na conta selecionada.'
+                            ? 'Este pagamento debitarÃ¡ a conta de origem e creditarÃ¡ a conta do credor (transferÃªncia).'
+                            : 'Este pagamento serÃ¡ registrado automaticamente no Fluxo de Caixa como saÃ­da na conta selecionada.'
                         }
                     </p>
                 </div>
@@ -265,7 +265,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 </ModalActions>
             </form>
 
-            {/* Histórico de pagamentos */}
+            {/* HistÃ³rico de pagamentos */}
             {pagamentos.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-border">
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
@@ -285,7 +285,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
                 </div>
             )}
             {loadingPagamentos && (
-                <p className="text-xs text-muted-foreground text-center py-2">Carregando histórico...</p>
+                <p className="text-xs text-muted-foreground text-center py-2">Carregando histÃ³rico...</p>
             )}
         </Modal>
     )

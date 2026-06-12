@@ -55,12 +55,12 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border",
-                                            item.tipo === 'receita' ? "bg-success/10 text-success border-success/20" :
-                                                item.tipo === 'despesa' ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                            item.tipo === 'entrada' ? "bg-success/10 text-success border-success/20" :
+                                                item.tipo === 'saida' ? "bg-destructive/10 text-destructive border-destructive/20" :
                                                     "bg-muted text-muted-foreground border-border"
                                         )}>
-                                            {item.tipo === 'receita' ? <ArrowUpRight className="w-6 h-6" /> :
-                                                item.tipo === 'despesa' ? <ArrowDownLeft className="w-6 h-6" /> :
+                                            {item.tipo === 'entrada' ? <ArrowUpRight className="w-6 h-6" /> :
+                                                item.tipo === 'saida' ? <ArrowDownLeft className="w-6 h-6" /> :
                                                     <ArrowRightLeft className="w-6 h-6" />}
                                         </div>
                                         <div>
@@ -79,11 +79,11 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                                     <div className="text-right">
                                         <p className={cn(
                                             "text-base font-black tracking-tight",
-                                            item.tipo === 'receita' ? "text-success" :
-                                                item.tipo === 'despesa' ? "text-destructive" :
+                                            item.tipo === 'entrada' ? "text-success" :
+                                                item.tipo === 'saida' ? "text-destructive" :
                                                     "text-foreground"
                                         )}>
-                                            {item.tipo === 'despesa' ? '- ' : item.tipo === 'receita' ? '+ ' : ''}{formatCurrency(item.valor || 0)}
+                                            {item.tipo === 'saida' ? '- ' : item.tipo === 'entrada' ? '+ ' : ''}{formatCurrency(item.valor || 0)}
                                         </p>
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.origem}</span>
                                     </div>

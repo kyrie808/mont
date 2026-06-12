@@ -14,6 +14,8 @@ interface FinanceiroResumoProps {
     totalSaldoContas: number
     loadingResumo: boolean
     loadingContas: boolean
+    /** Desktop já tem o MonthPicker na top bar → permite ocultá-lo aqui. Default true (mobile intocado). */
+    showMonthPicker?: boolean
 }
 
 export function FinanceiroResumo({
@@ -23,14 +25,17 @@ export function FinanceiroResumo({
     resumo,
     totalSaldoContas,
     loadingResumo,
-    loadingContas
+    loadingContas,
+    showMonthPicker = true
 }: FinanceiroResumoProps) {
     return (
         <div className="flex flex-col gap-4">
-            <MonthPicker
-                selectedMonth={selectedMonthStr}
-                onMonthSelect={onMonthSelect}
-            />
+            {showMonthPicker && (
+                <MonthPicker
+                    selectedMonth={selectedMonthStr}
+                    onMonthSelect={onMonthSelect}
+                />
+            )}
 
             {/* Hero "Saldo em Contas" — card invertido via tokens (foreground/background) */}
             <div className="bg-linear-to-br from-foreground to-foreground/90 text-background rounded-3xl p-6 shadow-elevated">

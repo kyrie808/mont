@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Header } from '../components/layout/Header'
-import { DollarSign, Settings } from 'lucide-react'
+import { DollarSign, Building2 } from 'lucide-react'
 import { useFluxoCaixa } from '../hooks/useFluxoCaixa'
 import { useExtrato } from '../hooks/useExtrato'
 import { useExtratoDeSaldo } from '../hooks/useExtratoDeSaldo'
@@ -15,6 +15,8 @@ import { ExtratoMensal } from '../components/features/financeiro/ExtratoMensal'
 import { ExtratoSaldoAcumulado } from '../components/features/financeiro/ExtratoSaldoAcumulado'
 import { FinanceiroConfig } from '../components/features/financeiro/FinanceiroConfig'
 import { FinanceiroFab } from '../components/features/financeiro/FinanceiroFab'
+import { FinanceiroDashboardDesktop } from '../components/features/financeiro/FinanceiroDashboardDesktop'
+import { useLancamentoModals } from '../components/features/financeiro/useLancamentoModals'
 
 type HubTab = 'financeiro' | 'configuracoes'
 
@@ -57,6 +59,9 @@ export function FluxoCaixa() {
         return contas.reduce((acc, c) => acc + (c.saldo_atual || 0), 0)
     }, [contas])
 
+    // Modais compartilhados (Entrada/Saída/Transferência) — um só conjunto p/ mobile (FAB) + desktop (botões inline)
+    const { openEntrada, openSaida, openTransferencia, modals } = useLancamentoModals(refreshAll)
+
     return (
         <>
             <Header title="Financeiro" showBack centerTitle />
@@ -71,34 +76,33 @@ export function FluxoCaixa() {
                                     <DollarSign className="w-4 h-4" /> Fluxo de Caixa
                                 </TabsTrigger>
                                 <TabsTrigger value="configuracoes">
-                                    <Settings className="w-4 h-4" /> Configurações
+                                    <Building2 className="w-4 h-4" /> Contas & Categorias
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
 
                     {activeHubTab === 'financeiro' ? (
-                        <div className="px-4 py-6 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <FinanceiroResumo
-                                selectedMonth={selectedMonth}
-                                selectedMonthStr={selectedMonthStr}
-                                onMonthSelect={handleMonthSelect}
-                                resumo={resumo ?? null}
-                                totalSaldoContas={totalSaldoContas}
-                                loadingResumo={loadingResumo}
-                                loadingContas={loadingContas}
-                            />
+                        <>
+                            {/* MOBILE (<lg): layout atual — intocado (mobile sagrado) */}
+                            <div className="lg:hidden px-4 py-6 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <FinanceiroResumo
+                                    selectedMonth={selectedMonth}
+                                    selectedMonthStr={selectedMonthStr}
+                                    onMonthSelect={handleMonthSelect}
+                                    resumo={resumo ?? null}
+                                    totalSaldoContas={totalSaldoContas}
+                                    loadingResumo={loadingResumo}
+                                    loadingContas={loadingContas}
+                                />
 
-                            {/* Extratos: empilhados no mobile, 2 colunas no desktop */}
-                            <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
-                                <div className="lg:col-span-7">
+                                {/* Extratos empilhados no mobile */}
+                                <div className="space-y-8">
                                     <ExtratoMensal
                                         key={selectedMonth.toISOString()}
                                         extrato={extrato}
                                         loadingExtrato={loadingExtrato}
                                     />
-                                </div>
-                                <div className="lg:col-span-5">
                                     <ExtratoSaldoAcumulado
                                         extratoDeSaldo={extratoDeSaldo}
                                         loadingExtratoDeSaldo={loadingExtratoDeSaldo}
@@ -106,7 +110,27 @@ export function FluxoCaixa() {
                                     />
                                 </div>
                             </div>
-                        </div>
+
+                            {/* DESKTOP (≥lg): dashboard denso lib-powered */}
+                            <div className="hidden lg:block">
+                                <FinanceiroDashboardDesktop
+                                    resumo={resumo ?? null}
+                                    extrato={extrato}
+                                    extratoDeSaldo={extratoDeSaldo}
+                                    totalSaldoContas={totalSaldoContas}
+                                    selectedMonth={selectedMonth}
+                                    selectedMonthStr={selectedMonthStr}
+                                    onMonthSelect={handleMonthSelect}
+                                    loadingResumo={loadingResumo}
+                                    loadingContas={loadingContas}
+                                    loadingExtrato={loadingExtrato}
+                                    loadingExtratoDeSaldo={loadingExtratoDeSaldo}
+                                    onEntrada={openEntrada}
+                                    onSaida={openSaida}
+                                    onTransferencia={openTransferencia}
+                                />
+                            </div>
+                        </>
                     ) : (
                         <FinanceiroConfig 
                             contas={contas}
@@ -118,7 +142,14 @@ export function FluxoCaixa() {
                     )}
 
                     {activeHubTab === 'financeiro' && (
-                        <FinanceiroFab refreshAll={refreshAll} />
+                        <>
+                            <FinanceiroFab
+                                onEntrada={openEntrada}
+                                onSaida={openSaida}
+                                onTransferencia={openTransferencia}
+                            />
+                            {modals}
+                        </>
                     )}
                 </div>
             </PageContainer>
