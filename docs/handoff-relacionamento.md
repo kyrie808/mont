@@ -318,8 +318,7 @@ Todos os itens A–D commitados e aplicados em prod. RPC a-receber COUNT(DISTINC
 
 | Prioridade | Item | Estado |
 |-----------|------|--------|
-| 🔜 Próxima | Migração planilha → tags | pendente (destravada) |
-| 🔜 Depois | IA de sugestão de mensagem | planejado / não-iniciado |
+/ 🔜 Depois | IA de sugestão de mensagem | planejado / não-iniciado |
 | ⏸ Adiado | F·op — cadastro opex (fluxo-caixa) | última prioridade |
 | ⏸ Sem pressa | Estoque / categorias / lotes / validade | parqueado |
 | ⏸ Sem pressa | @mont/ui, migração migrations, archive repos | roadmap técnico |
@@ -340,6 +339,7 @@ Todos os itens A–D commitados e aplicados em prod. RPC a-receber COUNT(DISTINC
 - [x] F·1: A+B+C+D commitados em prod (03/06)
 - [x] F·op: encanamento verificado — `saida/manual` passa no desp_op; UI parqueada; ADIADO por decisão do diretor
 - [x] Fix "Indicado por" (ContatoFormModal + contatoService.getById + mappers) — 04/06
-- [ ] *(track futuro)* Migração planilha → tags (diagnóstico → import com OK explícito)
+- [x] *(track futuro)* Migração planilha → tags (diagnóstico → import com OK explícito)
 - [ ] *(track futuro)* IA de sugestão de mensagem (criar skill `mont-brand-voice` → Edge Function → front)
 - [ ] *(track separado, sem pressa)* estoque/categorias/lotes → validade no produto → teto de validade
+/res

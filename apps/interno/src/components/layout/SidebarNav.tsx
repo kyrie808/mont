@@ -1,7 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Lock } from 'lucide-react'
+import { Plus, Lock, LogOut } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useToast } from '../ui/Toast'
+import { useAuth } from '@/hooks/useAuth'
 import { NAV_GROUPS, NOVA_VENDA_PATH } from './navConfig'
 
 /**
@@ -12,6 +13,7 @@ export function SidebarNav() {
     const navigate = useNavigate()
     const location = useLocation()
     const toast = useToast()
+    const { user, signOut } = useAuth()
 
     const isActive = (path: string) =>
         path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
@@ -95,6 +97,26 @@ export function SidebarNav() {
                     )
                 })}
             </nav>
+
+            {/* Rodapé: usuário logado + sair */}
+            <div className="shrink-0 border-t border-border p-3">
+                {user?.email && (
+                    <p className="px-3 pb-2 text-xs text-muted-foreground truncate" title={user.email}>
+                        {user.email}
+                    </p>
+                )}
+                <button
+                    onClick={() => void signOut()}
+                    className={cn(
+                        'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                        'text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
+                        'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                    )}
+                >
+                    <LogOut className="size-[18px] shrink-0" />
+                    <span className="flex-1 text-left">Sair</span>
+                </button>
+            </div>
         </aside>
     )
 }

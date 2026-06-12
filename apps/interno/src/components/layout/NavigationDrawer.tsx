@@ -1,9 +1,10 @@
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Lock } from 'lucide-react'
+import { X, Lock, LogOut } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useToast } from '../ui/Toast'
+import { useAuth } from '@/hooks/useAuth'
 import { NAV_GROUPS } from './navConfig'
 
 interface NavigationDrawerProps {
@@ -15,10 +16,16 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
     const navigate = useNavigate()
     const location = useLocation()
     const toast = useToast()
+    const { user, signOut } = useAuth()
 
     const handleNavigate = (path: string) => {
         navigate(path)
         onClose()
+    }
+
+    const handleLogout = async () => {
+        onClose()
+        await signOut()
     }
 
     const drawerContent = (
@@ -93,6 +100,25 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                                 </div>
                             ))}
                         </nav>
+
+                        {/* Rodapé: usuário logado + sair */}
+                        <div className="shrink-0 border-t border-border p-3">
+                            {user?.email && (
+                                <p className="px-3 pb-2 text-xs text-muted-foreground truncate" title={user.email}>
+                                    {user.email}
+                                </p>
+                            )}
+                            <button
+                                onClick={handleLogout}
+                                className={cn(
+                                    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                                    'text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
+                                )}
+                            >
+                                <LogOut className="h-4 w-4 shrink-0" />
+                                <span className="flex-1 text-left">Sair</span>
+                            </button>
+                        </div>
                     </motion.aside>
                 </>
             )}
