@@ -114,8 +114,10 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
         notFound()
     }
 
-    const relatedProducts = await getRelatedProducts(product.categoria ?? '', product.id!)
-    const componentes = await getComboComponentes(product.id!)
+    const [relatedProducts, componentes] = await Promise.all([
+        getRelatedProducts(product.categoria ?? '', product.id!),
+        getComboComponentes(product.id!),
+    ])
     const isCombo = componentes.length > 0
 
     const analyticsEvent = {

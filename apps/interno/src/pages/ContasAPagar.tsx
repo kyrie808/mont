@@ -66,12 +66,18 @@ export function ContasAPagar() {
 
     const filtered = useMemo(() => {
         const monthIndex = MONTHS_MAP[selectedMonth]
-        const year = now.getFullYear()
+        const year = new Date().getFullYear()
 
-        let result = enrichedContas.filter(c => {
-            const d = parseISO(c.data_vencimento)
-            return d.getMonth() === monthIndex && d.getFullYear() === year
-        })
+        let result = enrichedContas
+        // "Vencidas" mostra TODAS as vencidas (qualquer mês/ano) — senão contas vencidas
+        // de meses/anos anteriores ficariam invisíveis e impagáveis. Os demais filtros
+        // respeitam o mês selecionado (visão mensal do ano corrente).
+        if (filter !== 'vencidas') {
+            result = result.filter(c => {
+                const d = parseISO(c.data_vencimento)
+                return d.getMonth() === monthIndex && d.getFullYear() === year
+            })
+        }
 
         if (searchTerm) {
             const term = searchTerm.toLowerCase()

@@ -1,11 +1,22 @@
 import { supabase } from '../lib/supabase'
 import type {
     ProdutoInsert,
-    ProdutoUpdate,
-    Insert
+    ProdutoUpdate
 } from '@mont/shared'
 import type { DomainProduto, CreateProduto, UpdateProduto, DomainProdutoComponente } from '../types/domain'
 import { toDomainProduto } from './mappers'
+
+/** Sanitiza um slug pra URL-safe (o catálogo resolve produto por slug). null se vazio. */
+function slugify(value: string | null | undefined): string | null {
+    if (!value) return null
+    const out = value
+        .normalize('NFD')
+        .replace(/[^\x00-\x7f]/g, '') // remove acentos/combining marks (não-ASCII)
+        .toLowerCase().trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    return out || null
+}
 
 export class ProdutoService {
     /* CRUD */
@@ -69,9 +80,9 @@ export class ProdutoService {
             preco_ancoragem: data.precoAncoragem ?? data.preco_ancoragem ?? null,
             // Apresentação no catálogo (consolidado no interno)
             descricao: data.descricao ?? null,
-            peso_kg: data.pesoKg ?? null,
+            peso_kg: data.pesoKg != null && data.pesoKg >= 0 ? data.pesoKg : null,
             destaque: data.destaque ?? false,
-            slug: data.slug || null,
+            slug: slugify(data.slug),
             instrucoes_preparo: data.instrucoesPreparo ?? null,
             visivel_catalogo: data.visivelCatalogo ?? true,
             eh_combo: data.ehCombo ?? false
@@ -107,9 +118,9 @@ export class ProdutoService {
         if (data.categoria !== undefined) dbUpdate.categoria = data.categoria
         // Apresentação no catálogo (consolidado no interno)
         if (data.descricao !== undefined) dbUpdate.descricao = data.descricao
-        if (data.pesoKg !== undefined) dbUpdate.peso_kg = data.pesoKg
+        if (data.pesoKg !== undefined) dbUpdate.peso_kg = data.pesoKg != null && data.pesoKg >= 0 ? data.pesoKg : null
         if (data.destaque !== undefined) dbUpdate.destaque = data.destaque
-        if (data.slug !== undefined) dbUpdate.slug = data.slug
+        if (data.slug !== undefined) dbUpdate.slug = slugify(data.slug)
         if (data.instrucoesPreparo !== undefined) dbUpdate.instrucoes_preparo = data.instrucoesPreparo
         if (data.visivelCatalogo !== undefined) dbUpdate.visivel_catalogo = data.visivelCatalogo
         if (data.ehCombo !== undefined) dbUpdate.eh_combo = data.ehCombo
@@ -180,27 +191,15 @@ export class ProdutoService {
         }))
     }
 
-    // Substitui toda a composição do combo (delete + insert). Idempotente o bastante
-    // para o cadastro: limpar (itens vazio) desfaz o combo.
+    // Substitui toda a composição do combo de forma ATÔMICA (RPC: delete+insert numa
+    // transação). Itens vazio = limpa (desfaz o combo). Evita o estado "combo vazio"
+    // que o delete+insert client-side deixava se o insert falhasse após o delete.
     async replaceComponentes(comboId: string, itens: { componenteId: string; quantidade: number }[]): Promise<void> {
-        const { error: delError } = await supabase
-            .from('produto_componentes')
-            .delete()
-            .eq('combo_id', comboId)
-        if (delError) throw delError
-
-        if (itens.length === 0) return
-
-        const rows: Insert<'produto_componentes'>[] = itens.map((i) => ({
-            combo_id: comboId,
-            componente_id: i.componenteId,
-            quantidade: i.quantidade
-        }))
-
-        const { error: insError } = await supabase
-            .from('produto_componentes')
-            .insert(rows)
-        if (insError) throw insError
+        const { error } = await supabase.rpc('replace_combo_componentes', {
+            p_combo_id: comboId,
+            p_itens: itens.map((i) => ({ componenteId: i.componenteId, quantidade: i.quantidade })),
+        })
+        if (error) throw error
     }
 
     async addImageReference(produtoId: string, url: string): Promise<void> {

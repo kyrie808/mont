@@ -2162,6 +2162,10 @@ export type Database = {
         }
         Returns: string
       }
+      replace_combo_componentes: {
+        Args: { p_combo_id: string; p_itens: Json }
+        Returns: undefined
+      }
       rpc_perfil_extras: { Args: { p_contato_id: string }; Returns: Json }
       rpc_total_a_receber_dashboard: { Args: never; Returns: Json }
       update_purchase_order_with_items: {
