@@ -105,6 +105,10 @@ export function Produtos() {
         return atual <= minimo && p.ativo
     }).length
 
+    // Custo de um combo = soma do custo dos componentes × quantidade (não digitado).
+    const custoComponentes = (comps: { componenteId: string; quantidade: number }[]) =>
+        comps.reduce((sum, c) => sum + (produtos.find(p => p.id === c.componenteId)?.custo ?? 0) * c.quantidade, 0)
+
     // Open edit modal
     const handleOpenEdit = (produto: DomainProduto) => {
         setEditingProduto(produto)
@@ -175,14 +179,15 @@ export function Produtos() {
         }
 
         const preco = parseFloat(newPreco)
-        const custo = parseFloat(newCusto)
+        // Combo: custo derivado dos componentes; produto simples: custo digitado.
+        const custo = newEhCombo ? custoComponentes(newComponentes) : parseFloat(newCusto)
 
         if (isNaN(preco) || preco <= 0) {
             toast.error('Preço deve ser maior que zero')
             return
         }
 
-        if (isNaN(custo) || custo <= 0) {
+        if (!newEhCombo && (isNaN(custo) || custo <= 0)) {
             toast.error('Custo deve ser maior que zero')
             return
         }
@@ -234,7 +239,8 @@ export function Produtos() {
         if (!editingProduto) return
 
         const preco = parseFloat(editPreco)
-        const custo = parseFloat(editCusto)
+        // Combo: custo derivado dos componentes; produto simples: custo digitado.
+        const custo = editEhCombo ? custoComponentes(editComponentes) : parseFloat(editCusto)
 
         if (isNaN(preco) || preco <= 0) {
             toast.error('Preço deve ser maior que zero')
@@ -351,8 +357,11 @@ export function Produtos() {
         }
     }
 
-    const editMargem = calcularMargem(parseFloat(editPreco) || 0, parseFloat(editCusto) || 0)
-    const newMargem = calcularMargem(parseFloat(newPreco) || 0, parseFloat(newCusto) || 0)
+    const newCustoEfetivo = newEhCombo ? custoComponentes(newComponentes) : (parseFloat(newCusto) || 0)
+    const editCustoEfetivo = editEhCombo ? custoComponentes(editComponentes) : (parseFloat(editCusto) || 0)
+
+    const editMargem = calcularMargem(parseFloat(editPreco) || 0, editCustoEfetivo)
+    const newMargem = calcularMargem(parseFloat(newPreco) || 0, newCustoEfetivo)
 
     return (
         <>
@@ -510,10 +519,11 @@ export function Produtos() {
                                     placeholder="0.00"
                                 />
                                 <Input
-                                    label="Custo"
-                                    type="number"
-                                    value={newCusto}
+                                    label={newEhCombo ? "Custo (soma dos componentes)" : "Custo"}
+                                    type={newEhCombo ? "text" : "number"}
+                                    value={newEhCombo ? formatCurrency(newCustoEfetivo) : newCusto}
                                     onChange={(e) => setNewCusto(e.target.value)}
+                                    disabled={newEhCombo}
                                     placeholder="0.00"
                                 />
                             </div>
@@ -749,10 +759,11 @@ export function Produtos() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
-                                    label="Custo"
-                                    type="number"
-                                    value={editCusto}
+                                    label={editEhCombo ? "Custo (soma dos componentes)" : "Custo"}
+                                    type={editEhCombo ? "text" : "number"}
+                                    value={editEhCombo ? formatCurrency(editCustoEfetivo) : editCusto}
                                     onChange={(e) => setEditCusto(e.target.value)}
+                                    disabled={editEhCombo}
                                 />
                             </div>
 
