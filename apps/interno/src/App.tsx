@@ -21,7 +21,7 @@ const Entregas = ParkedRoute
 const FluxoCaixa = lazy(() => import('./pages/FluxoCaixa').then(m => ({ default: m.FluxoCaixa })))
 const ContasReceber = ParkedRoute
 const ContasAPagar = lazy(() => import('./pages/ContasAPagar').then(m => ({ default: m.ContasAPagar })))
-const Estoque = ParkedRoute
+const Estoque = lazy(() => import('./pages/Estoque').then(m => ({ default: m.Estoque })))
 
 const Configuracoes = lazy(() => import('./pages/Configuracoes').then(m => ({ default: m.Configuracoes })))
 const Produtos = lazy(() => import('./pages/Produtos').then(m => ({ default: m.Produtos })))
