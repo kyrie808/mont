@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { calcularFreteParaCep } from '@/lib/frete'
 
 // Validação do payload — preços NÃO vêm do cliente
 const orderSchema = z.object({
@@ -82,9 +83,15 @@ export async function POST(request: Request) {
         const subtotal = itemsComPreco.reduce(
             (acc, i) => acc + i.total, 0
         )
-        // Server-side: força o frete correto — ignora valor enviado pelo cliente
-        // Entrega SBC = grátis; retirada = sem frete
-        const frete = 0
+        // Frete autoritativo no servidor — ignora valor enviado pelo cliente.
+        // Entrega: calcula por distância (CEP→coordenada→faixas). Retirada: 0.
+        // Indisponível (sem coordenada / fora do alcance / sem config) → 0 e "a combinar"
+        // pelo WhatsApp; o pedido NÃO é bloqueado.
+        let frete = 0
+        if (validatedData.delivery_method === 'entrega' && validatedData.customer_cep) {
+            const resultadoFrete = await calcularFreteParaCep(validatedData.customer_cep)
+            if (resultadoFrete.disponivel) frete = resultadoFrete.frete
+        }
         const total = subtotal + frete
 
         // Inserir pedido + itens via RPC (transação atômica)

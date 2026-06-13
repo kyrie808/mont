@@ -11,7 +11,6 @@ import { Button } from '@/components/ui'
 import { formatCurrency, formatPhone, unformatPhone } from '@/lib/utils/format'
 import { generateWhatsAppMessage, generateWhatsAppUrl } from '@/lib/whatsapp/checkout'
 import { useCep } from '@/hooks/useCep'
-import { DELIVERY_CONFIG } from '@/lib/constants/delivery'
 import Link from 'next/link'
 import CartItemList from './_components/CartItemList'
 import CheckoutForm from './_components/CheckoutForm'
@@ -55,7 +54,17 @@ export default function CarrinhoPage() {
     const deliveryMethod = watch('delivery_method')
     const cepValue = watch('cep')
     const subtotal = getTotalPrice()
-    const deliveryFee = deliveryMethod === 'entrega' ? DELIVERY_CONFIG.SBC_FEE : 0
+
+    const [freteInfo, setFreteInfo] = useState<{
+        loading: boolean
+        disponivel: boolean
+        frete: number
+        distanciaKm: number | null
+    }>({ loading: false, disponivel: false, frete: 0, distanciaKm: null })
+
+    const cepDigits = (cepValue || '').replace(/\D/g, '')
+    const cepPreenchido = cepDigits.length === 8
+    const deliveryFee = deliveryMethod === 'entrega' && freteInfo.disponivel ? freteInfo.frete : 0
     const total = subtotal + deliveryFee
 
     // Dispara busca ao completar 8 dígitos — mesmo padrão do ContatoFormModal.tsx
@@ -72,6 +81,35 @@ export default function CarrinhoPage() {
             })
         }
     }, [cepValue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Preview do frete: entrega + CEP completo → calcula no servidor (distância)
+    useEffect(() => {
+        if (deliveryMethod !== 'entrega' || !cepPreenchido) {
+            setFreteInfo({ loading: false, disponivel: false, frete: 0, distanciaKm: null })
+            return
+        }
+        let cancelled = false
+        setFreteInfo((f) => ({ ...f, loading: true }))
+        fetch('/api/frete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cep: cepDigits }),
+        })
+            .then((r) => r.json())
+            .then((data) => {
+                if (cancelled) return
+                setFreteInfo({
+                    loading: false,
+                    disponivel: !!data.disponivel,
+                    frete: typeof data.frete === 'number' ? data.frete : 0,
+                    distanciaKm: typeof data.distanciaKm === 'number' ? data.distanciaKm : null,
+                })
+            })
+            .catch(() => {
+                if (!cancelled) setFreteInfo({ loading: false, disponivel: false, frete: 0, distanciaKm: null })
+            })
+        return () => { cancelled = true }
+    }, [deliveryMethod, cepPreenchido, cepDigits])
 
     const onSubmit = async (data: CheckoutFormData) => {
         if (isSubmitting) return
@@ -161,12 +199,14 @@ export default function CarrinhoPage() {
             }, eventId)
 
             // Gera mensagem WhatsApp (usa customer_address montado)
+            const freteACombinar = data.delivery_method === 'entrega' && !freteInfo.disponivel
             const message = generateWhatsAppMessage(
                 { ...data, customer_address: customer_address || '' },
                 items,
                 subtotal,
                 deliveryFee,
-                total
+                total,
+                freteACombinar
             )
 
             const whatsappUrl = generateWhatsAppUrl(message)
@@ -269,6 +309,10 @@ export default function CarrinhoPage() {
                             subtotal={subtotal}
                             deliveryFee={deliveryFee}
                             total={total}
+                            freteDisponivel={freteInfo.disponivel}
+                            freteLoading={freteInfo.loading}
+                            cepPreenchido={cepPreenchido}
+                            distanciaKm={freteInfo.distanciaKm}
                         />
                     </div>
                 </div>

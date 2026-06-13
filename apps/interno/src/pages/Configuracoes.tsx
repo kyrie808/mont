@@ -19,6 +19,7 @@ import { ConfiguracaoRecompensas } from '../components/features/configuracoes/Co
 import { ConfiguracaoMensagens } from '../components/features/configuracoes/ConfiguracaoMensagens'
 import { ConfiguracaoLocalizacao } from '../components/features/configuracoes/ConfiguracaoLocalizacao'
 import { ConfiguracaoLinks } from '../components/features/configuracoes/ConfiguracaoLinks'
+import { ConfiguracaoFrete } from '../components/features/configuracoes/ConfiguracaoFrete'
 
 interface LocalPartida {
     id: string
@@ -223,6 +224,8 @@ export function Configuracoes() {
                             />
 
                             <ConfiguracaoLinks />
+
+                            <ConfiguracaoFrete />
 
                             <div className="flex gap-3 lg:col-span-2">
                                 <Button

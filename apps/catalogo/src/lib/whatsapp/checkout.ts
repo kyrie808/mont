@@ -24,7 +24,8 @@ export function generateWhatsAppMessage(
     items: CartItem[],
     subtotal: number,
     deliveryFee: number,
-    total: number
+    total: number,
+    freteACombinar: boolean = false
 ): string {
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
@@ -61,11 +62,15 @@ export function generateWhatsAppMessage(
     message += `*Subtotal:* ${formatCurrency(subtotal)}\n`
 
     if (formData.delivery_method === 'entrega') {
-        message += '*Valor do frete:* a conferir\n'
+        message += freteACombinar
+            ? '*Valor do frete:* a combinar\n'
+            : `*Valor do frete:* ${formatCurrency(deliveryFee)}\n`
     }
 
     message += formData.delivery_method === 'entrega'
-        ? `*Total:* ${formatCurrency(subtotal)} + frete\n`
+        ? (freteACombinar
+            ? `*Total:* ${formatCurrency(subtotal)} + frete\n`
+            : `*Total:* ${formatCurrency(total)}\n`)
         : `*Total:* ${formatCurrency(total)}\n`
     message += `*Pagamento:* ${paymentMethodLabels[formData.payment_method]}\n`
 

@@ -1,5 +1,5 @@
 export const DELIVERY_CONFIG = {
-  SBC_FEE: 0,
+  // Rótulo da opção de entrega no checkout. O valor do frete é calculado por distância
+  // (server-side, via configuracoes.frete_config) — ver src/lib/frete/.
   SBC_LABEL: 'Entrega',
-  DELIVERY_NOTE: '📍 São Bernardo do Campo: frete grátis · Outras regiões: o frete será informado via WhatsApp após o pedido',
 } as const

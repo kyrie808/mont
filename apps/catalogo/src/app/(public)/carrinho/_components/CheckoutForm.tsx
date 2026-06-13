@@ -27,6 +27,10 @@ interface CheckoutFormProps {
     subtotal: number
     deliveryFee: number
     total: number
+    freteDisponivel: boolean
+    freteLoading: boolean
+    cepPreenchido: boolean
+    distanciaKm?: number | null
 }
 
 export default function CheckoutForm({
@@ -41,6 +45,10 @@ export default function CheckoutForm({
     subtotal,
     deliveryFee,
     total,
+    freteDisponivel,
+    freteLoading,
+    cepPreenchido,
+    distanciaKm,
 }: CheckoutFormProps) {
     const { register, handleSubmit, formState: { errors }, watch } = form
     const deliveryMethod = watch('delivery_method')
@@ -210,7 +218,13 @@ export default function CheckoutForm({
                         </div>
 
                         <p className="mt-3 text-sm text-[#5C3D2E]">
-                            O frete será informado via WhatsApp após o pedido
+                            {freteLoading
+                                ? 'Calculando o frete pelo seu CEP...'
+                                : !cepPreenchido
+                                    ? 'Informe o CEP para calcular o frete.'
+                                    : freteDisponivel
+                                        ? '✅ Frete calculado automaticamente pelo seu CEP.'
+                                        : 'O frete da sua região será combinado pelo WhatsApp após o pedido.'}
                         </p>
                     </div>
                 )}
@@ -239,6 +253,10 @@ export default function CheckoutForm({
                     frete={deliveryFee}
                     total={total}
                     deliveryMethod={deliveryMethod}
+                    freteDisponivel={freteDisponivel}
+                    freteLoading={freteLoading}
+                    cepPreenchido={cepPreenchido}
+                    distanciaKm={distanciaKm}
                     formatCurrency={formatCurrency}
                 />
 
