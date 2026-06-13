@@ -392,6 +392,7 @@ export type Database = {
       contas_a_pagar: {
         Row: {
           atualizado_em: string | null
+          competencia: string | null
           created_at: string | null
           created_by: string | null
           credor: string
@@ -403,6 +404,7 @@ export type Database = {
           observacao: string | null
           parcela_atual: number | null
           plano_conta_id: string
+          recorrente_id: string | null
           referencia: string | null
           saldo_devedor: number | null
           status: string
@@ -414,6 +416,7 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string | null
+          competencia?: string | null
           created_at?: string | null
           created_by?: string | null
           credor: string
@@ -425,6 +428,7 @@ export type Database = {
           observacao?: string | null
           parcela_atual?: number | null
           plano_conta_id: string
+          recorrente_id?: string | null
           referencia?: string | null
           saldo_devedor?: number | null
           status?: string
@@ -436,6 +440,7 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string | null
+          competencia?: string | null
           created_at?: string | null
           created_by?: string | null
           credor?: string
@@ -447,6 +452,7 @@ export type Database = {
           observacao?: string | null
           parcela_atual?: number | null
           plano_conta_id?: string
+          recorrente_id?: string | null
           referencia?: string | null
           saldo_devedor?: number | null
           status?: string
@@ -462,6 +468,13 @@ export type Database = {
             columns: ["plano_conta_id"]
             isOneToOne: false
             referencedRelation: "plano_de_contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_a_pagar_recorrente_id_fkey"
+            columns: ["recorrente_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_recorrentes"
             referencedColumns: ["id"]
           },
         ]
@@ -674,6 +687,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "origens"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      despesas_recorrentes: {
+        Row: {
+          ativa: boolean
+          atualizado_em: string | null
+          created_at: string | null
+          created_by: string | null
+          credor: string
+          criado_em: string | null
+          descricao: string
+          dia_vencimento: number
+          id: string
+          plano_conta_id: string
+          updated_at: string | null
+          updated_by: string | null
+          valor: number
+        }
+        Insert: {
+          ativa?: boolean
+          atualizado_em?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credor: string
+          criado_em?: string | null
+          descricao: string
+          dia_vencimento: number
+          id?: string
+          plano_conta_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+          valor: number
+        }
+        Update: {
+          ativa?: boolean
+          atualizado_em?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credor?: string
+          criado_em?: string | null
+          descricao?: string
+          dia_vencimento?: number
+          id?: string
+          plano_conta_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despesas_recorrentes_plano_conta_id_fkey"
+            columns: ["plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "plano_de_contas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2091,6 +2160,14 @@ export type Database = {
         Args: { p_produto_id: string }
         Returns: undefined
       }
+      fn_ajusta_estoque_item: {
+        Args: {
+          p_delta_sinal: number
+          p_produto_id: string
+          p_quantidade: number
+        }
+        Returns: undefined
+      }
       fn_capitalize_name: { Args: { nome: string }; Returns: string }
       fn_count_words: { Args: { texto: string }; Returns: number }
       fn_mover_card_relacionamento: {
@@ -2100,6 +2177,10 @@ export type Database = {
           p_observacao?: string
         }
         Returns: undefined
+      }
+      gerar_despesas_recorrentes: {
+        Args: { p_competencia: string }
+        Returns: number
       }
       get_areceber_breakdown: {
         Args: never

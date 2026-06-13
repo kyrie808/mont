@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
     Search,
     Filter,
@@ -9,14 +9,17 @@ import {
     DollarSign,
     CalendarDays,
     Trash2,
+    Repeat,
 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { Button, Badge, EmptyState, ConfirmDialog } from '../components/ui'
 import { useToast } from '../components/ui/Toast'
-import { ContaAPagarModal } from '../components/features/contas-a-pagar/ContaAPagarModal'
+import { ContaAPagarModal, type ContaAPagarFormData } from '../components/features/contas-a-pagar/ContaAPagarModal'
 import { PagamentoContaAPagarModal } from '../components/features/contas-a-pagar/PagamentoContaAPagarModal'
 import { ContasAPagarDataGrid } from '../components/features/contas-a-pagar/ContasAPagarDataGrid'
 import { useContasAPagar } from '../hooks/useContasAPagar'
+import { useDespesasRecorrentes } from '../hooks/useDespesasRecorrentes'
+import type { DespesaRecorrenteWithCategoria } from '../services/despesasRecorrentesService'
 import { formatCurrency, formatDate } from '@mont/shared'
 import { cn } from '@mont/shared'
 import { MonthPicker } from '../components/dashboard/MonthPicker'
@@ -33,13 +36,24 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'warning' | 'defaul
 }
 
 export function ContasAPagar() {
-    const { contasAPagar, loading, createContaAPagar, criarObrigacaoParcelada, deleteContaAPagar, isDeleting, registrarPagamento } = useContasAPagar()
+    const { contasAPagar, loading, createContaAPagar, criarObrigacaoParcelada, deleteContaAPagar, isDeleting, registrarPagamento, refetch } = useContasAPagar()
+    const { recorrentes, createRecorrente, updateRecorrente, deleteRecorrente, gerarDoMes } = useDespesasRecorrentes()
     const toast = useToast()
     const [filter, setFilter] = useState<StatusFilter>('todos')
     const [searchTerm, setSearchTerm] = useState('')
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [paymentTarget, setPaymentTarget] = useState<ContaAPagarEnriched | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<ContaAPagarEnriched | null>(null)
+    const [recorrenteDeleteTarget, setRecorrenteDeleteTarget] = useState<DespesaRecorrenteWithCategoria | null>(null)
+
+    // Materializa (idempotente) as ocorrências do mês CORRENTE no load — sem cron.
+    // Rodar 2× não duplica (unique recorrente_id+competencia no banco).
+    useEffect(() => {
+        const now = new Date()
+        const competencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+        gerarDoMes(competencia).then((n) => { if (n > 0) refetch() }).catch(() => { /* silencioso */ })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const MONTHS_MAP: Record<string, number> = {
         'Jan': 0, 'Fev': 1, 'Mar': 2, 'Abr': 3, 'Mai': 4, 'Jun': 5,
@@ -96,16 +110,26 @@ export function ContasAPagar() {
         return result
     }, [enrichedContas, filter, searchTerm, selectedMonth])
 
-    const handleCreate = async (data: {
-        descricao: string
-        credor: string
-        valor_total: number
-        data_vencimento: string
-        plano_conta_id: string
-        total_parcelas?: number
-        referencia?: string
-        observacao?: string
-    }) => {
+    const handleCreate = async (data: ContaAPagarFormData) => {
+        // Despesa FIXA: cria o template recorrente e já materializa o mês corrente.
+        if (data.recorrente && data.dia_vencimento != null) {
+            await createRecorrente({
+                descricao: data.descricao,
+                credor: data.credor,
+                valor: data.valor_total,
+                plano_conta_id: data.plano_conta_id,
+                dia_vencimento: data.dia_vencimento,
+                ativa: true,
+            })
+            const now = new Date()
+            const competencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+            await gerarDoMes(competencia)
+            refetch()
+            return
+        }
+
+        // Despesa avulsa / parcelada (comportamento original).
+        const data_vencimento = data.data_vencimento ?? ''
         const totalParcelas = data.total_parcelas ?? 1
 
         if (totalParcelas > 1) {
@@ -113,7 +137,7 @@ export function ContasAPagar() {
                 descricao: data.descricao,
                 credor: data.credor,
                 valor_total: data.valor_total,
-                data_vencimento: data.data_vencimento,
+                data_vencimento,
                 plano_conta_id: data.plano_conta_id,
                 total_parcelas: totalParcelas,
                 referencia: data.referencia,
@@ -124,13 +148,32 @@ export function ContasAPagar() {
                 descricao: data.descricao,
                 credor: data.credor,
                 valor_total: data.valor_total,
-                data_vencimento: data.data_vencimento,
+                data_vencimento,
                 plano_conta_id: data.plano_conta_id,
                 parcela_atual: 1,
                 total_parcelas: 1,
                 referencia: data.referencia || null,
                 observacao: data.observacao || null,
             })
+        }
+    }
+
+    const handleDeleteRecorrente = async () => {
+        if (!recorrenteDeleteTarget) return
+        try {
+            await deleteRecorrente(recorrenteDeleteTarget.id)
+            toast.success('Despesa fixa removida — não será mais gerada.')
+        } catch {
+            toast.error('Erro ao remover despesa fixa')
+        }
+        setRecorrenteDeleteTarget(null)
+    }
+
+    const toggleRecorrenteAtiva = async (r: DespesaRecorrenteWithCategoria) => {
+        try {
+            await updateRecorrente({ id: r.id, patch: { ativa: !r.ativa } })
+        } catch {
+            toast.error('Erro ao atualizar despesa fixa')
         }
     }
 
@@ -170,6 +213,62 @@ export function ContasAPagar() {
 
             <main className="max-w-5xl lg:max-w-[1500px] mx-auto p-4 pb-24 space-y-6">
                 <MonthPicker selectedMonth={selectedMonth} onMonthSelect={setSelectedMonth} />
+
+                {/* Despesas Fixas (recorrentes) — templates que geram uma conta todo mês */}
+                {recorrentes.length > 0 && (
+                    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Repeat className="w-4 h-4 text-primary" />
+                            <h2 className="text-sm font-bold text-foreground">Despesas Fixas (todo mês)</h2>
+                        </div>
+                        <div className="space-y-2">
+                            {recorrentes.map((r) => (
+                                <div
+                                    key={r.id}
+                                    className={cn(
+                                        "flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 transition-opacity",
+                                        !r.ativa && "opacity-50"
+                                    )}
+                                >
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-foreground truncate">{r.descricao}</p>
+                                        <p className="text-xs text-muted-foreground truncate">
+                                            {r.credor} · vence dia {r.dia_vencimento}
+                                            {r.plano_de_contas?.nome ? ` · ${r.plano_de_contas.nome}` : ''}
+                                            {!r.ativa ? ' · pausada' : ''}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <span className="font-bold text-foreground tabular-nums">{formatCurrency(r.valor)}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleRecorrenteAtiva(r)}
+                                            aria-pressed={r.ativa}
+                                            title={r.ativa ? 'Pausar (parar de gerar)' : 'Reativar'}
+                                            className={cn(
+                                                "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                                                r.ativa ? "bg-primary" : "bg-muted"
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                "inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform",
+                                                r.ativa ? "translate-x-5" : "translate-x-0.5"
+                                            )} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRecorrenteDeleteTarget(r)}
+                                            className="flex items-center justify-center size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
+                                            aria-label={`Excluir despesa fixa ${r.descricao}`}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Search & Filters */}
                 <div className="space-y-4">
@@ -404,6 +503,16 @@ export function ContasAPagar() {
                 isLoading={isDeleting}
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteTarget(null)}
+            />
+
+            <ConfirmDialog
+                open={!!recorrenteDeleteTarget}
+                title="Excluir Despesa Fixa"
+                message="Remove o modelo recorrente: para de gerar nos próximos meses. As despesas já geradas continuam intactas."
+                confirmLabel="Excluir"
+                variant="danger"
+                onConfirm={handleDeleteRecorrente}
+                onCancel={() => setRecorrenteDeleteTarget(null)}
             />
         </>
     )

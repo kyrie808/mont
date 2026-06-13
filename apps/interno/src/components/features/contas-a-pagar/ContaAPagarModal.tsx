@@ -2,24 +2,36 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Repeat } from 'lucide-react'
 import { Modal, ModalActions, Button, Input, Select } from '../../ui'
 import { usePlanoDeContas } from '../../../hooks/usePlanoDeContas'
 import { useToast } from '../../ui/Toast'
-import { formatCurrency } from '@mont/shared'
+import { formatCurrency, cn } from '@mont/shared'
 import { addMonths, format, parseISO } from 'date-fns'
 
 const schema = z.object({
     descricao: z.string().min(1, 'Descrição é obrigatória'),
     credor: z.string().min(1, 'Credor é obrigatório'),
     valor_total: z.number().min(0.01, 'Valor deve ser maior que zero'),
-    data_vencimento: z.string().min(1, 'Data de vencimento é obrigatória'),
     plano_conta_id: z.string().min(1, 'Categoria é obrigatória'),
+    recorrente: z.boolean(),
+    data_vencimento: z.string().optional(),
+    dia_vencimento: z.number().min(1, 'Dia entre 1 e 31').max(31, 'Dia entre 1 e 31').optional(),
     total_parcelas: z.number().min(1).max(60),
     referencia: z.string().optional(),
     observacao: z.string().optional(),
+}).superRefine((val, ctx) => {
+    if (val.recorrente) {
+        if (val.dia_vencimento == null || Number.isNaN(val.dia_vencimento)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dia_vencimento'], message: 'Informe o dia do vencimento' })
+        }
+    } else if (!val.data_vencimento) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['data_vencimento'], message: 'Data de vencimento é obrigatória' })
+    }
 })
 
-type FormData = z.infer<typeof schema>
+export type ContaAPagarFormData = z.infer<typeof schema>
+type FormData = ContaAPagarFormData
 
 interface ParcelaPreview {
     numero: number
@@ -67,6 +79,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
         handleSubmit,
         reset,
         watch,
+        setValue,
         formState: { errors, isSubmitting },
     } = useForm<FormData>({
         resolver: zodResolver(schema),
@@ -74,8 +87,10 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
             descricao: '',
             credor: '',
             valor_total: 0,
-            data_vencimento: '',
             plano_conta_id: '',
+            recorrente: false,
+            data_vencimento: '',
+            dia_vencimento: 5,
             total_parcelas: 1,
             referencia: '',
             observacao: '',
@@ -89,10 +104,11 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
     const valorTotal = watch('valor_total')
     const totalParcelas = watch('total_parcelas')
     const dataVencimento = watch('data_vencimento')
-    const isParcelado = totalParcelas > 1
+    const recorrente = watch('recorrente')
+    const isParcelado = !recorrente && totalParcelas > 1
 
     const parcelas = useMemo(
-        () => isParcelado ? gerarPreviewParcelas(valorTotal, totalParcelas, dataVencimento) : [],
+        () => isParcelado ? gerarPreviewParcelas(valorTotal, totalParcelas, dataVencimento ?? '') : [],
         [valorTotal, totalParcelas, dataVencimento, isParcelado],
     )
 
@@ -100,9 +116,11 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
         try {
             await onSave(data)
             toast.success(
-                isParcelado
-                    ? `${totalParcelas} despesas criadas com sucesso!`
-                    : 'Despesa criada com sucesso!',
+                data.recorrente
+                    ? 'Despesa fixa criada — vai se repetir todo mês!'
+                    : isParcelado
+                        ? `${totalParcelas} despesas criadas com sucesso!`
+                        : 'Despesa criada com sucesso!',
             )
             onClose()
         } catch {
@@ -137,13 +155,46 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                     error={errors.descricao?.message}
                 />
 
+                {/* Toggle: despesa fixa recorrente */}
+                <button
+                    type="button"
+                    onClick={() => setValue('recorrente', !recorrente, { shouldValidate: true })}
+                    className={cn(
+                        "w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all",
+                        recorrente ? "border-primary bg-primary/5" : "border-border bg-card hover:border-foreground/30"
+                    )}
+                    aria-pressed={recorrente}
+                >
+                    <span className="flex items-center gap-2 min-w-0">
+                        <Repeat className={cn("w-4 h-4 shrink-0", recorrente ? "text-primary" : "text-muted-foreground")} />
+                        <span className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold text-foreground">Repetir todo mês (fixa)</span>
+                            <span className="text-xs text-muted-foreground truncate">Ex: assinatura, aluguel — gerada automaticamente todo mês</span>
+                        </span>
+                    </span>
+                    <span className={cn("relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors", recorrente ? "bg-primary" : "bg-muted")}>
+                        <span className={cn("inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform", recorrente ? "translate-x-5" : "translate-x-0.5")} />
+                    </span>
+                </button>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input
-                        label="Data de Vencimento"
-                        type="date"
-                        {...register('data_vencimento')}
-                        error={errors.data_vencimento?.message}
-                    />
+                    {recorrente ? (
+                        <Input
+                            label="Dia do vencimento"
+                            type="number"
+                            min="1"
+                            max="31"
+                            {...register('dia_vencimento', { valueAsNumber: true })}
+                            error={errors.dia_vencimento?.message}
+                        />
+                    ) : (
+                        <Input
+                            label="Data de Vencimento"
+                            type="date"
+                            {...register('data_vencimento')}
+                            error={errors.data_vencimento?.message}
+                        />
+                    )}
                     <Select
                         label="Categoria"
                         {...register('plano_conta_id')}
@@ -156,20 +207,22 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <Input
-                        label="Parcelas"
-                        type="number"
-                        min="1"
-                        max="60"
-                        {...register('total_parcelas', { valueAsNumber: true })}
-                    />
-                    <Input
-                        label="Referência"
-                        placeholder="Opcional"
-                        {...register('referencia')}
-                    />
-                </div>
+                {!recorrente && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label="Parcelas"
+                            type="number"
+                            min="1"
+                            max="60"
+                            {...register('total_parcelas', { valueAsNumber: true })}
+                        />
+                        <Input
+                            label="Referência"
+                            placeholder="Opcional"
+                            {...register('referencia')}
+                        />
+                    </div>
+                )}
 
                 <Input
                     label="Observação"
@@ -217,7 +270,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                         Cancelar
                     </Button>
                     <Button type="submit" isLoading={isSubmitting}>
-                        {isParcelado ? `Criar ${totalParcelas} Parcelas` : 'Criar Despesa'}
+                        {recorrente ? 'Criar Despesa Fixa' : isParcelado ? `Criar ${totalParcelas} Parcelas` : 'Criar Despesa'}
                     </Button>
                 </ModalActions>
             </form>
