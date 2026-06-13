@@ -33,10 +33,14 @@ export class ProdutoService {
         const { data, error } = await query
         if (error) throw error
 
-        // Buscar imagens separadamente
-        const { data: imagens } = await supabase
-            .from('sis_imagens_produto')
-            .select('produto_id, url')
+        // Buscar imagens só dos produtos retornados (evita varrer a tabela inteira)
+        const ids = (data || []).map((p) => p.id)
+        const { data: imagens } = ids.length
+            ? await supabase
+                .from('sis_imagens_produto')
+                .select('produto_id, url')
+                .in('produto_id', ids)
+            : { data: [] as { produto_id: string | null; url: string }[] }
 
         // Merge manual
         const imagensMap = new Map(imagens?.map((i) => [i.produto_id!, i.url]) ?? [])

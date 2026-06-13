@@ -94,7 +94,9 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
         columns,
         state: { sorting },
         onSortingChange: setSorting,
-        getRowId: (i) => i.id ?? `${i.data}-${i.descricao}-${i.valor}`,
+        // id da view pode repetir entre origens (e ser null) → prefixa origem e cai no
+        // índice quando não há id, garantindo unicidade estável da linha.
+        getRowId: (i, index) => (i.id ? `${i.origem ?? 'x'}:${i.id}` : `row-${index}`),
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
