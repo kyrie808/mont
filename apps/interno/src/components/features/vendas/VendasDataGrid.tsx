@@ -13,13 +13,12 @@ import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-gr
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
+import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
 import { formatDate, formatCurrency, cn } from '@mont/shared'
 import { FORMA_PAGAMENTO_LABELS } from '@/constants'
 import { getVendaBadgeStatus } from '@/utils/vendaBadge'
 import type { DomainVenda } from '@/types/domain'
-
-const badgeBase = 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
 
 function EntregaBadge({ status }: { status: DomainVenda['status'] }) {
     if (status === 'entregue') return <span className={cn(badgeBase, 'bg-success/10 text-success border-success/20')}>Entregue</span>

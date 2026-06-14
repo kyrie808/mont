@@ -12,11 +12,10 @@ import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-gr
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
+import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
 import { formatCurrency, formatDate, cn } from '@mont/shared'
 import type { ContaAPagarEnriched } from '@/services/contasAPagarService'
-
-const badgeBase = 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
 
 function StatusBadge({ status, diasAtraso }: { status: string; diasAtraso: number }) {
     const atraso = diasAtraso > 0 ? ` (${diasAtraso}d)` : ''

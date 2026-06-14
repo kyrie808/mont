@@ -12,11 +12,10 @@ import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-gr
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
+import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
 import { cn } from '@mont/shared'
 import type { DomainProduto } from '@/types/domain'
-
-const badgeBase = 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
 
 export type EstoqueStatus = 'negativo' | 'zerado' | 'baixo' | 'ok'
 

@@ -11,11 +11,10 @@ import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-gr
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
+import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { formatCurrency, cn } from '@mont/shared'
 import { format } from 'date-fns'
 import type { ExtratoItem } from '@mont/shared'
-
-const badgeBase = 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
 
 // A view_extrato_mensal usa tipo ∈ {entrada, saida, transferencia} (NÃO receita/despesa).
 function TipoBadge({ tipo }: { tipo: ExtratoItem['tipo'] }) {
