@@ -53,7 +53,14 @@ export function ConfiguracaoFrete() {
     const handleSave = async () => {
         setSaving(true)
         try {
-            const ordered: FreteConfig = { ...config, faixas: [...config.faixas].sort((a, b) => a.ateKm - b.ateKm) }
+            // Grava SÓ os valores do modo ativo — a config nunca carrega os dois modelos
+            // juntos (sem fallback de um pro outro).
+            const faixas: FreteFaixa[] = [...config.faixas]
+                .sort((a, b) => a.ateKm - b.ateKm)
+                .map(f => config.modo === 'valor_fixo'
+                    ? { ateKm: f.ateKm, valorFixo: f.valorFixo ?? 0 }
+                    : { ateKm: f.ateKm, valorPorKm: f.valorPorKm ?? 0 })
+            const ordered: FreteConfig = { ...config, faixas }
             const { error } = await supabase.from('configuracoes')
                 .upsert({ chave: 'frete_config', valor: ordered as unknown as Json }, { onConflict: 'chave' })
             if (error) throw error
