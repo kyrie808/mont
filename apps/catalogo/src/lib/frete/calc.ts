@@ -1,18 +1,5 @@
 import type { FreteConfig } from './types'
 
-const RAIO_TERRA_KM = 6371
-const rad = (deg: number) => (deg * Math.PI) / 180
-
-/** Distância em km entre dois pontos (haversine). */
-export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-    const dLat = rad(b.lat - a.lat)
-    const dLng = rad(b.lng - a.lng)
-    const lat1 = rad(a.lat)
-    const lat2 = rad(b.lat)
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
-    return 2 * RAIO_TERRA_KM * Math.asin(Math.min(1, Math.sqrt(h)))
-}
-
 /**
  * Frete pela distância, conforme o modo da config. Retorna null quando a distância
  * passa da última faixa (→ "a combinar").

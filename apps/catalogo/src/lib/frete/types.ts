@@ -24,5 +24,5 @@ export interface FreteResultado {
     frete: number
     /** Distância origem→destino em km (null quando não foi possível geocodificar). */
     distanciaKm: number | null
-    motivo: 'ok' | 'sem_config' | 'sem_coordenada' | 'fora_alcance'
+    motivo: 'ok' | 'sem_config' | 'sem_coordenada' | 'sem_rota' | 'fora_alcance'
 }
