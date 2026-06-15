@@ -94,6 +94,7 @@ export default function RootLayout({
   ].join('');
 
   function mountPreloader() {
+    if (removed) return;
     document.body.appendChild(el);
     var pc = document.getElementById('mont-particles');
     for (var i = 0; i < 45; i++) {
