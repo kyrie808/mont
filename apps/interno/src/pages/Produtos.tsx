@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card, PageSkeleton, Modal, ModalActions, Button, Input, Select, Badge } from '../components/ui'
+import { Card, PageSkeleton, Modal, ModalActions, Button } from '../components/ui'
 import { KpiCard } from '../components/dashboard/KpiCard'
 import { cn } from '@mont/shared'
 import { useProdutos } from '../hooks/useProdutos'
@@ -17,6 +17,7 @@ import { useToast } from '../components/ui/Toast'
 import { formatCurrency } from '@mont/shared'
 import { produtoService } from '../services/produtoService'
 import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
+import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFields'
 
 
 export function Produtos() {
@@ -466,216 +467,34 @@ export function Produtos() {
                         size="lg"
                     >
                         <div className="space-y-4">
-                            <Input
-                                label="Nome do Produto"
-                                value={newNome}
-                                onChange={(e) => setNewNome(e.target.value)}
-                                placeholder="Ex: Pão de Queijo 1kg"
-                                required
+                            <ProdutoFormFields
+                                mode="create"
+                                values={{
+                                    nome: newNome, codigo: newCodigo, apelido: newApelido, subtitulo: newSubtitulo,
+                                    preco: newPreco, custo: newCusto, precoAncoragem: '',
+                                    estoqueMinimo: newEstoqueMinimo, ativo: true, categoria: newCategoria,
+                                    descricao: newDescricao, pesoKg: newPesoKg, slug: newSlug,
+                                    instrucoesPreparo: newInstrucoesPreparo, destaque: newDestaque,
+                                    visivelCatalogo: newVisivelCatalogo, ehCombo: newEhCombo,
+                                }}
+                                setters={{
+                                    setNome: setNewNome, setCodigo: setNewCodigo, setApelido: setNewApelido,
+                                    setSubtitulo: setNewSubtitulo, setPreco: setNewPreco, setCusto: setNewCusto,
+                                    setPrecoAncoragem: () => {}, setEstoqueMinimo: setNewEstoqueMinimo,
+                                    setAtivo: () => {}, setCategoria: setNewCategoria, setDescricao: setNewDescricao,
+                                    setPesoKg: setNewPesoKg, setSlug: setNewSlug, setInstrucoesPreparo: setNewInstrucoesPreparo,
+                                    setDestaque: setNewDestaque, setVisivelCatalogo: setNewVisivelCatalogo, setEhCombo: setNewEhCombo,
+                                }}
+                                custoEfetivo={newCustoEfetivo}
+                                margem={newMargem}
+                                showMargem={parseFloat(newPreco) > 0}
+                                componentes={newComponentes}
+                                componenteOptions={getComponenteOptions()}
+                                pick={{ componenteId: pickComponenteId, setComponenteId: setPickComponenteId, quantidade: pickQuantidade, setQuantidade: setPickQuantidade }}
+                                onAddComponente={() => addComponente('create')}
+                                onRemoveComponente={(id) => removeComponente('create', id)}
+                                produtoNome={produtoNome}
                             />
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Código"
-                                    value={newCodigo}
-                                    onChange={(e) => setNewCodigo(e.target.value)}
-                                    placeholder="Ex: PQ001"
-                                    required
-                                />
-                                <Input
-                                    label="Apelido"
-                                    value={newApelido}
-                                    onChange={(e) => setNewApelido(e.target.value)}
-                                    placeholder="Nome curto"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="new-subtitulo" className="block text-sm font-medium mb-1">Variação / Subtítulo</label>
-                                <input
-                                    id="new-subtitulo"
-                                    type="text"
-                                    list="variacoes-sugestoes"
-                                    placeholder="Ex: 75gr por unidade, 1 balde, combo"
-                                    value={newSubtitulo}
-                                    onChange={(e) => setNewSubtitulo(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                                />
-                                <datalist id="variacoes-sugestoes">
-                                    <option value="25gr por unidade" />
-                                    <option value="50gr por unidade" />
-                                    <option value="75gr por unidade" />
-                                    <option value="100gr por unidade" />
-                                    <option value="1 baldinho" />
-                                    <option value="1 balde" />
-                                    <option value="combo" />
-                                </datalist>
-                                <p className="text-xs text-gray-400 mt-1">Aparece abaixo do nome do produto no catálogo</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Preço de Venda"
-                                    type="number"
-                                    value={newPreco}
-                                    onChange={(e) => setNewPreco(e.target.value)}
-                                    placeholder="0.00"
-                                />
-                                <Input
-                                    label={newEhCombo ? "Custo (soma dos componentes)" : "Custo"}
-                                    type={newEhCombo ? "text" : "number"}
-                                    value={newEhCombo ? formatCurrency(newCustoEfetivo) : newCusto}
-                                    onChange={(e) => setNewCusto(e.target.value)}
-                                    disabled={newEhCombo}
-                                    placeholder="0.00"
-                                />
-                            </div>
-
-                            {/* Margem Preview */}
-                            {(parseFloat(newPreco) > 0) && (
-                                <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-lg flex justify-between items-center transition-all animate-in fade-in slide-in-from-left-2">
-                                    <span className="text-sm text-gray-500">Margem Estimada</span>
-                                    <Badge variant={newMargem > 30 ? 'success' : newMargem > 15 ? 'warning' : 'destructive'}>
-                                        {newMargem.toFixed(1)}%
-                                    </Badge>
-                                </div>
-                            )}
-
-                            <Input
-                                label="Estoque Mínimo"
-                                type="number"
-                                value={newEstoqueMinimo}
-                                onChange={(e) => setNewEstoqueMinimo(e.target.value)}
-                            />
-
-                            <Select
-                                label="Categoria"
-                                value={newCategoria}
-                                onChange={e => setNewCategoria(e.target.value)}
-                                options={[
-                                    { value: '', label: 'Selecione...' },
-                                    { value: 'congelado', label: 'Congelado' },
-                                    { value: 'refrigerado', label: 'Refrigerado' },
-                                    { value: 'cervejas', label: 'Cervejas' },
-                                    { value: 'refrigerantes', label: 'Refrigerantes' },
-                                    { value: 'combo', label: 'Combo' }
-                                ]}
-                            />
-
-                            {/* Apresentação no catálogo — fonte única no interno */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
-                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Apresentação no catálogo</p>
-                                <div>
-                                    <label htmlFor="new-descricao" className="block text-sm font-medium mb-1">Descrição</label>
-                                    <textarea
-                                        id="new-descricao"
-                                        rows={3}
-                                        value={newDescricao}
-                                        onChange={(e) => setNewDescricao(e.target.value)}
-                                        placeholder="Descrição que aparece na página do produto"
-                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        label="Peso (kg)"
-                                        type="number"
-                                        value={newPesoKg}
-                                        onChange={(e) => setNewPesoKg(e.target.value)}
-                                        placeholder="Ex: 1"
-                                    />
-                                    <Input
-                                        label="Slug (URL)"
-                                        value={newSlug}
-                                        onChange={(e) => setNewSlug(e.target.value)}
-                                        placeholder="ex: pao-queijo-1kg"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="new-instrucoes" className="block text-sm font-medium mb-1">Instruções de preparo</label>
-                                    <textarea
-                                        id="new-instrucoes"
-                                        rows={3}
-                                        value={newInstrucoesPreparo}
-                                        onChange={(e) => setNewInstrucoesPreparo(e.target.value)}
-                                        placeholder="Uma instrução por linha"
-                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Select
-                                        label="Visível no catálogo"
-                                        value={newVisivelCatalogo ? 'true' : 'false'}
-                                        onChange={(e) => setNewVisivelCatalogo(e.target.value === 'true')}
-                                        options={[
-                                            { label: 'Sim', value: 'true' },
-                                            { label: 'Não', value: 'false' },
-                                        ]}
-                                    />
-                                    <Select
-                                        label="Destaque"
-                                        value={newDestaque ? 'true' : 'false'}
-                                        onChange={(e) => setNewDestaque(e.target.value === 'true')}
-                                        options={[
-                                            { label: 'Sim', value: 'true' },
-                                            { label: 'Não', value: 'false' },
-                                        ]}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Kit / Combo */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
-                                <Select
-                                    label="É um kit/combo?"
-                                    value={newEhCombo ? 'true' : 'false'}
-                                    onChange={(e) => setNewEhCombo(e.target.value === 'true')}
-                                    options={[
-                                        { label: 'Não — produto simples', value: 'false' },
-                                        { label: 'Sim — combo de vários produtos', value: 'true' },
-                                    ]}
-                                />
-                                {newEhCombo && (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-gray-500">Vendido como uma unidade ao preço acima. Liste os produtos que compõem o kit.</p>
-                                        <div className="flex gap-2 items-end">
-                                            <div className="flex-1">
-                                                <Select
-                                                    label="Componente"
-                                                    value={pickComponenteId}
-                                                    onChange={(e) => setPickComponenteId(e.target.value)}
-                                                    options={getComponenteOptions()}
-                                                />
-                                            </div>
-                                            <div className="w-20">
-                                                <Input
-                                                    label="Qtd"
-                                                    type="number"
-                                                    value={pickQuantidade}
-                                                    onChange={(e) => setPickQuantidade(e.target.value)}
-                                                />
-                                            </div>
-                                            <Button variant="secondary" type="button" onClick={() => addComponente('create')}>
-                                                Adicionar
-                                            </Button>
-                                        </div>
-                                        {newComponentes.length > 0 && (
-                                            <ul className="space-y-1">
-                                                {newComponentes.map((c) => (
-                                                    <li key={c.componenteId} className="flex items-center justify-between bg-gray-50 dark:bg-white/5 rounded px-3 py-2 text-sm">
-                                                        <span>{produtoNome(c.componenteId)} × {c.quantidade}</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeComponente('create', c.componenteId)}
-                                                            className="text-red-500 hover:text-red-600"
-                                                            aria-label="Remover componente"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
 
                             <ModalActions>
                                 <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
@@ -701,269 +520,74 @@ export function Produtos() {
                         size="lg"
                     >
                         <div className="space-y-4">
-                            <Input
-                                label="Nome do Produto"
-                                value={editNome}
-                                onChange={(e) => setEditNome(e.target.value)}
-                                required
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Código"
-                                    value={editCodigo}
-                                    onChange={(e) => setEditCodigo(e.target.value)}
-                                    required
-                                />
-                                <Input
-                                    label="Apelido"
-                                    value={editApelido}
-                                    onChange={(e) => setEditApelido(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="edit-subtitulo" className="block text-sm font-medium mb-1">Variação / Subtítulo</label>
-                                <input
-                                    id="edit-subtitulo"
-                                    type="text"
-                                    list="variacoes-sugestoes-edit"
-                                    placeholder="Ex: 75gr por unidade, 1 balde, combo"
-                                    value={editSubtitulo}
-                                    onChange={(e) => setEditSubtitulo(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                                />
-                                <datalist id="variacoes-sugestoes-edit">
-                                    <option value="25gr por unidade" />
-                                    <option value="50gr por unidade" />
-                                    <option value="75gr por unidade" />
-                                    <option value="100gr por unidade" />
-                                    <option value="1 baldinho" />
-                                    <option value="1 balde" />
-                                    <option value="combo" />
-                                </datalist>
-                                <p className="text-xs text-gray-400 mt-1">Aparece abaixo do nome do produto no catálogo</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Preço de Venda"
-                                    type="number"
-                                    value={editPreco}
-                                    onChange={(e) => setEditPreco(e.target.value)}
-                                />
-                                <Input
-                                    label="Preço de Ancoragem (riscado)"
-                                    type="number"
-                                    value={editPrecoAncoragem}
-                                    onChange={(e) => setEditPrecoAncoragem(e.target.value)}
-                                    placeholder="Opcional"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label={editEhCombo ? "Custo (soma dos componentes)" : "Custo"}
-                                    type={editEhCombo ? "text" : "number"}
-                                    value={editEhCombo ? formatCurrency(editCustoEfetivo) : editCusto}
-                                    onChange={(e) => setEditCusto(e.target.value)}
-                                    disabled={editEhCombo}
-                                />
-                            </div>
-
-                            {/* Margem Preview */}
-                            <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-lg flex justify-between items-center">
-                                <span className="text-sm text-gray-500">Margem Estimada</span>
-                                <Badge variant={editMargem > 30 ? 'success' : editMargem > 15 ? 'warning' : 'destructive'}>
-                                    {editMargem.toFixed(1)}%
-                                </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    label="Estoque Mínimo"
-                                    type="number"
-                                    value={editEstoqueMinimo}
-                                    onChange={(e) => setEditEstoqueMinimo(e.target.value)}
-                                />
-                                <Select
-                                    label="Status"
-                                    value={editAtivo ? 'true' : 'false'}
-                                    onChange={(e) => setEditAtivo(e.target.value === 'true')}
-                                    options={[
-                                        { label: 'Ativo', value: 'true' },
-                                        { label: 'Inativo', value: 'false' },
-                                    ]}
-                                />
-                            </div>
-
-
-                            <Select
-                                label="Categoria"
-                                value={editCategoria}
-                                onChange={e => setEditCategoria(e.target.value)}
-                                options={[
-                                    { value: '', label: 'Selecione...' },
-                                    { value: 'congelado', label: 'Congelado' },
-                                    { value: 'refrigerado', label: 'Refrigerado' },
-                                    { value: 'cervejas', label: 'Cervejas' },
-                                    { value: 'refrigerantes', label: 'Refrigerantes' },
-                                    { value: 'combo', label: 'Combo' }
-                                ]}
-                            />
-
-                            {/* Apresentação no catálogo — fonte única no interno */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
-                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Apresentação no catálogo</p>
-                                <div>
-                                    <label htmlFor="edit-descricao" className="block text-sm font-medium mb-1">Descrição</label>
-                                    <textarea
-                                        id="edit-descricao"
-                                        rows={3}
-                                        value={editDescricao}
-                                        onChange={(e) => setEditDescricao(e.target.value)}
-                                        placeholder="Descrição que aparece na página do produto"
-                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        label="Peso (kg)"
-                                        type="number"
-                                        value={editPesoKg}
-                                        onChange={(e) => setEditPesoKg(e.target.value)}
-                                        placeholder="Ex: 1"
-                                    />
-                                    <Input
-                                        label="Slug (URL)"
-                                        value={editSlug}
-                                        onChange={(e) => setEditSlug(e.target.value)}
-                                        placeholder="ex: pao-queijo-1kg"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="edit-instrucoes" className="block text-sm font-medium mb-1">Instruções de preparo</label>
-                                    <textarea
-                                        id="edit-instrucoes"
-                                        rows={3}
-                                        value={editInstrucoesPreparo}
-                                        onChange={(e) => setEditInstrucoesPreparo(e.target.value)}
-                                        placeholder="Uma instrução por linha"
-                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Select
-                                        label="Visível no catálogo"
-                                        value={editVisivelCatalogo ? 'true' : 'false'}
-                                        onChange={(e) => setEditVisivelCatalogo(e.target.value === 'true')}
-                                        options={[
-                                            { label: 'Sim', value: 'true' },
-                                            { label: 'Não', value: 'false' },
-                                        ]}
-                                    />
-                                    <Select
-                                        label="Destaque"
-                                        value={editDestaque ? 'true' : 'false'}
-                                        onChange={(e) => setEditDestaque(e.target.value === 'true')}
-                                        options={[
-                                            { label: 'Sim', value: 'true' },
-                                            { label: 'Não', value: 'false' },
-                                        ]}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Kit / Combo */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
-                                <Select
-                                    label="É um kit/combo?"
-                                    value={editEhCombo ? 'true' : 'false'}
-                                    onChange={(e) => setEditEhCombo(e.target.value === 'true')}
-                                    options={[
-                                        { label: 'Não — produto simples', value: 'false' },
-                                        { label: 'Sim — combo de vários produtos', value: 'true' },
-                                    ]}
-                                />
-                                {editEhCombo && (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-gray-500">Vendido como uma unidade ao preço acima. Liste os produtos que compõem o kit.</p>
-                                        <div className="flex gap-2 items-end">
-                                            <div className="flex-1">
-                                                <Select
-                                                    label="Componente"
-                                                    value={pickComponenteId}
-                                                    onChange={(e) => setPickComponenteId(e.target.value)}
-                                                    options={getComponenteOptions(editingProduto?.id)}
-                                                />
+                            <ProdutoFormFields
+                                mode="edit"
+                                values={{
+                                    nome: editNome, codigo: editCodigo, apelido: editApelido, subtitulo: editSubtitulo,
+                                    preco: editPreco, custo: editCusto, precoAncoragem: editPrecoAncoragem,
+                                    estoqueMinimo: editEstoqueMinimo, ativo: editAtivo, categoria: editCategoria,
+                                    descricao: editDescricao, pesoKg: editPesoKg, slug: editSlug,
+                                    instrucoesPreparo: editInstrucoesPreparo, destaque: editDestaque,
+                                    visivelCatalogo: editVisivelCatalogo, ehCombo: editEhCombo,
+                                }}
+                                setters={{
+                                    setNome: setEditNome, setCodigo: setEditCodigo, setApelido: setEditApelido,
+                                    setSubtitulo: setEditSubtitulo, setPreco: setEditPreco, setCusto: setEditCusto,
+                                    setPrecoAncoragem: setEditPrecoAncoragem, setEstoqueMinimo: setEditEstoqueMinimo,
+                                    setAtivo: setEditAtivo, setCategoria: setEditCategoria, setDescricao: setEditDescricao,
+                                    setPesoKg: setEditPesoKg, setSlug: setEditSlug, setInstrucoesPreparo: setEditInstrucoesPreparo,
+                                    setDestaque: setEditDestaque, setVisivelCatalogo: setEditVisivelCatalogo, setEhCombo: setEditEhCombo,
+                                }}
+                                custoEfetivo={editCustoEfetivo}
+                                margem={editMargem}
+                                showMargem
+                                componentes={editComponentes}
+                                componenteOptions={getComponenteOptions(editingProduto?.id)}
+                                pick={{ componenteId: pickComponenteId, setComponenteId: setPickComponenteId, quantidade: pickQuantidade, setQuantidade: setPickQuantidade }}
+                                onAddComponente={() => addComponente('edit')}
+                                onRemoveComponente={(id) => removeComponente('edit', id)}
+                                produtoNome={produtoNome}
+                                imageSlot={
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">
+                                            Imagem do Produto
+                                        </label>
+                                        {editImagemUrl && (
+                                            <div className="relative inline-block">
+                                                <img src={editImagemUrl}
+                                                    className="w-20 h-20 object-cover rounded-lg mb-2" alt="Imagem do produto" />
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!confirm('Remover imagem do produto?')) return
+                                                        try {
+                                                            await produtoService.deleteImage(editingProduto!.id, editImagemUrl)
+                                                            setEditImagemUrl(null)
+                                                            toast.success('Imagem removida com sucesso')
+                                                        } catch (err: unknown) {
+                                                            console.error('Erro ao excluir:', err)
+                                                            toast.error('Erro ao excluir produto')
+                                                        }
+                                                    }}
+                                                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md"
+                                                    title="Remover imagem"
+                                                    aria-label="Remover imagem"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
                                             </div>
-                                            <div className="w-20">
-                                                <Input
-                                                    label="Qtd"
-                                                    type="number"
-                                                    value={pickQuantidade}
-                                                    onChange={(e) => setPickQuantidade(e.target.value)}
-                                                />
-                                            </div>
-                                            <Button variant="secondary" type="button" onClick={() => addComponente('edit')}>
-                                                Adicionar
-                                            </Button>
-                                        </div>
-                                        {editComponentes.length > 0 && (
-                                            <ul className="space-y-1">
-                                                {editComponentes.map((c) => (
-                                                    <li key={c.componenteId} className="flex items-center justify-between bg-gray-50 dark:bg-white/5 rounded px-3 py-2 text-sm">
-                                                        <span>{produtoNome(c.componenteId)} × {c.quantidade}</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeComponente('edit', c.componenteId)}
-                                                            className="text-red-500 hover:text-red-600"
-                                                            aria-label="Remover componente"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                            </ul>
                                         )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={e => e.target.files?.[0] &&
+                                                handleImageUpload(e.target.files[0])}
+                                            disabled={uploadingImage}
+                                            className="text-sm"
+                                        />
+                                        {uploadingImage && <p className="text-xs mt-1">Enviando...</p>}
                                     </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1">
-                                    Imagem do Produto
-                                </label>
-                                {editImagemUrl && (
-                                    <div className="relative inline-block">
-                                        <img src={editImagemUrl}
-                                            className="w-20 h-20 object-cover rounded-lg mb-2" alt="Imagem do produto" />
-                                        <button
-                                            onClick={async () => {
-                                                if (!confirm('Remover imagem do produto?')) return
-                                                try {
-                                                    await produtoService.deleteImage(editingProduto!.id, editImagemUrl)
-                                                    setEditImagemUrl(null)
-                                                    toast.success('Imagem removida com sucesso')
-                                                } catch (err: unknown) {
-                                                    console.error('Erro ao excluir:', err)
-                                                    toast.error('Erro ao excluir produto')
-                                                }
-                                            }}
-                                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md"
-                                            title="Remover imagem"
-                                            aria-label="Remover imagem"
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    </div>
-                                )}
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={e => e.target.files?.[0] &&
-                                        handleImageUpload(e.target.files[0])}
-                                    disabled={uploadingImage}
-                                    className="text-sm"
-                                />
-                                {uploadingImage && <p className="text-xs mt-1">Enviando...</p>}
-                            </div>
+                                }
+                            />
 
                             <ModalActions>
                                 <Button variant="ghost" onClick={handleCloseEdit}>
