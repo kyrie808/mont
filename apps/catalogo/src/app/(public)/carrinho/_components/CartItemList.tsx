@@ -41,8 +41,8 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
                         )}
                     </div>
 
-                    <div className="flex-1">
-                        <h3 className="font-medium text-mont-espresso mb-1">
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-mont-espresso mb-1 break-words">
                             {item.product.nome}
                         </h3>
                         <p className="text-mont-gray text-sm mb-2">
@@ -77,7 +77,7 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
                         </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0 whitespace-nowrap">
                         <p className="font-medium text-mont-espresso">
                             {formatCurrency((item.product.preco ?? 0) * item.quantity)}
                         </p>
