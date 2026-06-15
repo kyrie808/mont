@@ -5,21 +5,23 @@ import { supabase } from '../../../lib/supabase'
 import { useToast } from '../../ui/Toast'
 import type { Json } from '@mont/shared'
 
-interface FreteFaixa { ateKm: number; valorPorKm: number }
+interface FreteFaixa { ateKm: number; valorPorKm?: number; valorFixo?: number }
 interface FreteConfig {
-    modo: 'progressivo' | 'taxa_faixa'
+    modo: 'progressivo' | 'taxa_faixa' | 'valor_fixo'
     origem: { lat: number; lng: number; label?: string; cep?: string }
     faixas: FreteFaixa[]
     foraDoAlcance: 'a_combinar'
 }
 
 const DEFAULT_CONFIG: FreteConfig = {
-    modo: 'progressivo',
+    modo: 'valor_fixo',
     origem: { lat: -23.7205964, lng: -46.524444, label: 'Cozinha — Montanhão/SBC', cep: '09784-410' },
     faixas: [
-        { ateKm: 4, valorPorKm: 2 },
-        { ateKm: 8, valorPorKm: 4 },
-        { ateKm: 12, valorPorKm: 6.5 },
+        { ateKm: 3, valorFixo: 5 },
+        { ateKm: 5, valorFixo: 9 },
+        { ateKm: 8, valorFixo: 14 },
+        { ateKm: 10, valorFixo: 18 },
+        { ateKm: 15, valorFixo: 25 },
     ],
     foraDoAlcance: 'a_combinar',
 }
@@ -45,7 +47,7 @@ export function ConfiguracaoFrete() {
 
     const updateFaixa = (i: number, patch: Partial<FreteFaixa>) =>
         setConfig(c => ({ ...c, faixas: c.faixas.map((f, idx) => idx === i ? { ...f, ...patch } : f) }))
-    const addFaixa = () => setConfig(c => ({ ...c, faixas: [...c.faixas, { ateKm: 0, valorPorKm: 0 }] }))
+    const addFaixa = () => setConfig(c => ({ ...c, faixas: [...c.faixas, c.modo === 'valor_fixo' ? { ateKm: 0, valorFixo: 0 } : { ateKm: 0, valorPorKm: 0 }] }))
     const removeFaixa = (i: number) => setConfig(c => ({ ...c, faixas: c.faixas.filter((_, idx) => idx !== i) }))
 
     const handleSave = async () => {
@@ -73,7 +75,7 @@ export function ConfiguracaoFrete() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-foreground">Frete por distância</h3>
-                        <p className="text-sm text-muted-foreground">Faixas de km e valor por km — usado no catálogo (modo progressivo)</p>
+                        <p className="text-sm text-muted-foreground">Faixas por distância de rota — frete fixo por faixa ou por km, usado no catálogo</p>
                     </div>
                 </div>
 
@@ -105,6 +107,32 @@ export function ConfiguracaoFrete() {
                             )}
                         </div>
 
+                        {/* Modelo de cobrança */}
+                        <div className="space-y-2">
+                            <span className="text-sm font-bold text-foreground">Modelo de cobrança</span>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={config.modo === 'valor_fixo' ? 'primary' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setConfig(c => ({ ...c, modo: 'valor_fixo' }))}
+                                >
+                                    Valor fixo
+                                </Button>
+                                <Button
+                                    variant={config.modo !== 'valor_fixo' ? 'primary' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setConfig(c => ({ ...c, modo: 'progressivo' }))}
+                                >
+                                    Por km
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {config.modo === 'valor_fixo'
+                                    ? 'Cada faixa cobra um valor fechado (ex.: até 3 km = R$ 5).'
+                                    : 'Cada trecho de km é cobrado pela taxa da sua faixa (progressivo).'}
+                            </p>
+                        </div>
+
                         {/* Faixas */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -122,13 +150,23 @@ export function ConfiguracaoFrete() {
                                         value={f.ateKm}
                                         onChange={e => updateFaixa(i, { ateKm: num(e.target.value) })}
                                     />
-                                    <Input
-                                        label="R$ / km"
-                                        type="number"
-                                        step="0.01"
-                                        value={f.valorPorKm}
-                                        onChange={e => updateFaixa(i, { valorPorKm: num(e.target.value) })}
-                                    />
+                                    {config.modo === 'valor_fixo' ? (
+                                        <Input
+                                            label="R$ (fixo)"
+                                            type="number"
+                                            step="0.01"
+                                            value={f.valorFixo ?? 0}
+                                            onChange={e => updateFaixa(i, { valorFixo: num(e.target.value) })}
+                                        />
+                                    ) : (
+                                        <Input
+                                            label="R$ / km"
+                                            type="number"
+                                            step="0.01"
+                                            value={f.valorPorKm ?? 0}
+                                            onChange={e => updateFaixa(i, { valorPorKm: num(e.target.value) })}
+                                        />
+                                    )}
                                     <button
                                         type="button"
                                         onClick={() => removeFaixa(i)}

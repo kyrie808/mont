@@ -4,13 +4,15 @@
 export interface FreteFaixa {
     /** Limite superior da faixa, em km (inclusive). */
     ateKm: number
-    /** Valor cobrado por km dentro desta faixa (reais). */
-    valorPorKm: number
+    /** Valor por km dentro da faixa (reais) — modos 'progressivo'/'taxa_faixa'. */
+    valorPorKm?: number
+    /** Valor fixo/fechado da faixa (reais) — modo 'valor_fixo'. */
+    valorFixo?: number
 }
 
 export interface FreteConfig {
-    /** progressivo = cada trecho cobra a taxa da sua faixa; taxa_faixa = distância × taxa da faixa final. */
-    modo: 'progressivo' | 'taxa_faixa'
+    /** progressivo = soma trecho×R$/km; taxa_faixa = dist×R$/km da faixa; valor_fixo = R$ fechado por faixa. */
+    modo: 'progressivo' | 'taxa_faixa' | 'valor_fixo'
     origem: { lat: number; lng: number; label?: string; cep?: string }
     faixas: FreteFaixa[]
     /** Comportamento além da última faixa. */
