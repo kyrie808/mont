@@ -1,17 +1,14 @@
-// CEP → coordenadas (server-side). 100% gratuito, sem chave/conta/cartão e funcionando do
-// IP do Vercel: Nominatim (OpenStreetMap) + ViaCEP. A AwesomeAPI tinha a melhor precisão,
-// mas bloqueia o IP de datacenter do Vercel; Google/Mapbox exigem cartão. Estratégia em
-// camadas (mais precisa → mais grossa), degradando pra null (→ frete "a combinar"):
-//   1) Nominatim por CEP (postalcode) — preciso onde o OSM tem o CEP.
-//   2) ViaCEP (bairro) → Nominatim — cobre o ABC com precisão de bairro (~1–3 km).
-//   3) ViaCEP (cidade) → Nominatim — último recurso, precisão de cidade.
-// NÃO usar BrasilAPI v2 (coordinates vazio) nem street-level no Nominatim (ruas homônimas
-// retornam local errado).
+// CEP → coordenadas (server-side), preciso a nível de RUA, gratuito (sem chave/cartão) e
+// funcionando do IP do Vercel: ViaCEP (rua, qualquer IP) + Nominatim (OSM). A AwesomeAPI
+// tem o coord exato mas bloqueia o IP de datacenter do Vercel. Estratégia:
+//   1) Nominatim pelo ENDEREÇO completo do ViaCEP (rua + bairro + cidade + UF). O bairro é
+//      ESSENCIAL: sem ele o OSM casa rua homônima a km de distância. Preciso (~0,3 km).
+//   2) Nominatim por CEP (postalcode) — preciso onde o OSM tem o CEP.
+//   senão → null = "a combinar". SEM centroide de bairro: era impreciso (~2 km) e
+//   superfaturava CEPs perto da origem (cobrava faixa errada). Melhor "a combinar".
 
 type Coord = { lat: number; lng: number }
-
-const DAY = 60 * 60 * 24 // CEP→coordenada é estável; cache de 24h em cada fonte.
-// Nominatim exige User-Agent identificável; sem isso a OSM responde 403.
+const DAY = 60 * 60 * 24 // CEP→coordenada é estável; cache de 24h.
 const NOMINATIM_UA = 'MontDistribuidora/1.0 (+https://www.montdistribuidora.com.br)'
 
 function parse(lat: unknown, lon: unknown): Coord | null {
@@ -37,11 +34,9 @@ async function nominatim(params: string): Promise<Coord | null> {
 
 async function viaCep(
     cep: string,
-): Promise<{ bairro?: string; localidade?: string; uf?: string } | null> {
+): Promise<{ logradouro?: string; bairro?: string; localidade?: string; uf?: string } | null> {
     try {
-        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
-            next: { revalidate: DAY },
-        })
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { next: { revalidate: DAY } })
         if (!res.ok) return null
         const data = await res.json()
         return data?.erro ? null : data
@@ -55,20 +50,16 @@ export async function geocodeCep(cep: string): Promise<Coord | null> {
     if (clean.length !== 8) return null
     const formatado = `${clean.slice(0, 5)}-${clean.slice(5)}`
 
-    // 1) Nominatim por CEP (mais preciso).
-    const porCep = await nominatim(`postalcode=${formatado}`)
-    if (porCep) return porCep
-
-    // 2/3) ViaCEP → Nominatim por bairro e, em último caso, por cidade.
+    // 1) Endereço completo (rua) via ViaCEP → Nominatim. Exige bairro pra desambiguar
+    //    ruas homônimas (sem ele o OSM casa a rua errada, a km de distância).
     const addr = await viaCep(clean)
-    if (!addr?.localidade || !addr?.uf) return null
-
-    if (addr.bairro) {
-        const porBairro = await nominatim(
-            `q=${encodeURIComponent(`${addr.bairro}, ${addr.localidade}, ${addr.uf}, Brasil`)}`,
-        )
-        if (porBairro) return porBairro
+    if (addr?.logradouro && addr.bairro && addr.localidade && addr.uf) {
+        const q = `${addr.logradouro}, ${addr.bairro}, ${addr.localidade}, ${addr.uf}`
+        const porRua = await nominatim(`q=${encodeURIComponent(q)}`)
+        if (porRua) return porRua
     }
 
-    return nominatim(`q=${encodeURIComponent(`${addr.localidade}, ${addr.uf}, Brasil`)}`)
+    // 2) CEP (postalcode) — preciso onde o OSM tem o CEP.
+    return nominatim(`postalcode=${formatado}`)
+    // senão null = "a combinar" (nunca centroide de bairro).
 }
