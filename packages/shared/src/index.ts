@@ -52,4 +52,8 @@ export type {
     ProdutoUpdate,
     ItemVendaInsert,
     ProdutoCatalogo,
+    SeloVariant,
+    Secao,
+    SecaoInsert,
+    SecaoUpdate,
 } from './types'

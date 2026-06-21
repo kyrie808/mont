@@ -38,3 +38,12 @@ export type ProdutoUpdate = Update<'produtos'>
 export type ItemVendaInsert = Insert<'itens_venda'>
 
 export type ProdutoCatalogo = View<'vw_catalogo_produtos'>
+
+// Selo (badge) do card do catálogo — curado manualmente no interno (campo produtos.selo).
+// NÃO é métrica de vendas; `destaque` continua sendo só "aparece no carrossel".
+export type SeloVariant = 'mais_vendido' | 'oferta' | 'queridinho'
+
+// Seções da vitrine do catálogo (curadoria gerenciada no interno)
+export type Secao = Table<'cat_secoes'>
+export type SecaoInsert = Insert<'cat_secoes'>
+export type SecaoUpdate = Update<'cat_secoes'>

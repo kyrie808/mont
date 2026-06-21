@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_users: {
@@ -322,6 +297,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cat_secoes: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       configuracoes: {
         Row: {
@@ -1234,6 +1239,7 @@ export type Database = {
           apelido: string | null
           ativo: boolean
           atualizado_em: string
+          beneficios: string | null
           categoria: string | null
           codigo: string
           criado_em: string
@@ -1246,10 +1252,13 @@ export type Database = {
           id: string
           instrucoes_preparo: string | null
           nome: string
+          ordem_vitrine: number
           peso_kg: number | null
           preco: number
           preco_ancoragem: number | null
-          slug: string | null
+          secao_id: string | null
+          selo: string | null
+          slug: string
           subtitulo: string | null
           unidade: string
           visivel_catalogo: boolean
@@ -1258,6 +1267,7 @@ export type Database = {
           apelido?: string | null
           ativo?: boolean
           atualizado_em?: string
+          beneficios?: string | null
           categoria?: string | null
           codigo: string
           criado_em?: string
@@ -1270,10 +1280,13 @@ export type Database = {
           id?: string
           instrucoes_preparo?: string | null
           nome: string
+          ordem_vitrine?: number
           peso_kg?: number | null
           preco: number
           preco_ancoragem?: number | null
-          slug?: string | null
+          secao_id?: string | null
+          selo?: string | null
+          slug: string
           subtitulo?: string | null
           unidade?: string
           visivel_catalogo?: boolean
@@ -1282,6 +1295,7 @@ export type Database = {
           apelido?: string | null
           ativo?: boolean
           atualizado_em?: string
+          beneficios?: string | null
           categoria?: string | null
           codigo?: string
           criado_em?: string
@@ -1294,15 +1308,26 @@ export type Database = {
           id?: string
           instrucoes_preparo?: string | null
           nome?: string
+          ordem_vitrine?: number
           peso_kg?: number | null
           preco?: number
           preco_ancoragem?: number | null
-          slug?: string | null
+          secao_id?: string | null
+          selo?: string | null
+          slug?: string
           subtitulo?: string | null
           unidade?: string
           visivel_catalogo?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "produtos_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "cat_secoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_order_items: {
         Row: {
@@ -2036,6 +2061,7 @@ export type Database = {
       }
       vw_catalogo_produtos: {
         Row: {
+          beneficios: string | null
           categoria: string | null
           codigo: string | null
           descricao: string | null
@@ -2046,9 +2072,12 @@ export type Database = {
           imagens: Json | null
           instrucoes_preparo: string | null
           nome: string | null
+          ordem_vitrine: number | null
           preco: number | null
           preco_ancoragem: number | null
           preco_formatado: string | null
+          secao_id: string | null
+          selo: string | null
           slug: string | null
           status_estoque: string | null
           subtitulo: string | null
@@ -2056,6 +2085,7 @@ export type Database = {
           visivel_catalogo: boolean | null
         }
         Insert: {
+          beneficios?: string | null
           categoria?: string | null
           codigo?: string | null
           descricao?: string | null
@@ -2066,9 +2096,12 @@ export type Database = {
           imagens?: never
           instrucoes_preparo?: string | null
           nome?: string | null
+          ordem_vitrine?: number | null
           preco?: number | null
           preco_ancoragem?: number | null
           preco_formatado?: never
+          secao_id?: string | null
+          selo?: string | null
           slug?: string | null
           status_estoque?: never
           subtitulo?: string | null
@@ -2076,6 +2109,7 @@ export type Database = {
           visivel_catalogo?: boolean | null
         }
         Update: {
+          beneficios?: string | null
           categoria?: string | null
           codigo?: string | null
           descricao?: string | null
@@ -2086,16 +2120,27 @@ export type Database = {
           imagens?: never
           instrucoes_preparo?: string | null
           nome?: string | null
+          ordem_vitrine?: number | null
           preco?: number | null
           preco_ancoragem?: number | null
           preco_formatado?: never
+          secao_id?: string | null
+          selo?: string | null
           slug?: string | null
           status_estoque?: never
           subtitulo?: string | null
           url_imagem_principal?: never
           visivel_catalogo?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "produtos_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "cat_secoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_marketing_pedidos: {
         Row: {
@@ -2178,6 +2223,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_slugify: { Args: { p: string }; Returns: string }
       gerar_despesas_recorrentes: {
         Args: { p_competencia: string }
         Returns: number
@@ -2196,6 +2242,13 @@ export type Database = {
         }[]
       }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      produtos_comprados_juntos: {
+        Args: { p_limit?: number; p_produto_id: string }
+        Returns: {
+          produto_id: string
+          score: number
+        }[]
+      }
       receive_purchase_order: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -2243,6 +2296,11 @@ export type Database = {
         }
         Returns: string
       }
+      reorder_produtos_vitrine: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
+      reorder_secoes: { Args: { p_ids: string[] }; Returns: undefined }
       replace_combo_componentes: {
         Args: { p_combo_id: string; p_itens: Json }
         Returns: undefined
@@ -2397,9 +2455,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
