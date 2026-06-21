@@ -7,7 +7,8 @@ import {
     ClipboardList,
     Unlink,
     DollarSign,
-    CalendarClock
+    CalendarClock,
+    LayoutList
 } from 'lucide-react'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Header } from '../components/layout/Header'
@@ -47,6 +48,14 @@ export function Menu() {
             iconColor: 'text-violet-600 dark:text-violet-400',
             iconBg: 'bg-violet-500/10',
             href: '/produtos',
+            visible: true
+        },
+        {
+            title: 'Catálogo',
+            icon: LayoutList,
+            iconColor: 'text-primary',
+            iconBg: 'bg-primary/10',
+            href: '/catalogo',
             visible: true
         },
         {

@@ -69,11 +69,17 @@ export interface DomainProduto {
     descricao?: string | null
     pesoKg?: number | null
     destaque?: boolean
+    // Selo (badge) do card do catálogo: 'mais_vendido' | 'oferta' | 'queridinho' | null.
+    // Desacoplado de `destaque` (que é só "aparece no carrossel").
+    selo?: string | null
     slug?: string | null
     instrucoesPreparo?: string | null
+    beneficios?: string | null
     visivelCatalogo?: boolean
     // Kit/combo (composição em produto_componentes)
     ehCombo?: boolean
+    // Seção da vitrine (aba do catálogo) — FK cat_secoes
+    secaoId?: string | null
 }
 
 export interface DomainItemVenda {

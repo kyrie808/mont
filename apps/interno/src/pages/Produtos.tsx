@@ -18,6 +18,7 @@ import { formatCurrency } from '@mont/shared'
 import { produtoService } from '../services/produtoService'
 import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
 import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFields'
+import { useSecoes } from '../hooks/useSecoes'
 
 
 export function Produtos() {
@@ -25,6 +26,8 @@ export function Produtos() {
     const toast = useToast()
     const [searchParams, setSearchParams] = useSearchParams()
     const { produtos, loading, createProduto, updateProduto } = useProdutos(true)
+    const { secoes } = useSecoes()
+    const secaoOptions = secoes.map((s) => ({ value: s.id, label: s.nome }))
 
     // Filters
     const filterBaixoEstoque = searchParams.get('filtro') === 'baixo_estoque'
@@ -64,9 +67,12 @@ export function Produtos() {
     const [newPesoKg, setNewPesoKg] = useState('')
     const [newSlug, setNewSlug] = useState('')
     const [newInstrucoesPreparo, setNewInstrucoesPreparo] = useState('')
+    const [newBeneficios, setNewBeneficios] = useState('')
     const [newDestaque, setNewDestaque] = useState(false)
+    const [newSelo, setNewSelo] = useState('')
     const [newVisivelCatalogo, setNewVisivelCatalogo] = useState(true)
     const [newEhCombo, setNewEhCombo] = useState(false)
+    const [newSecaoId, setNewSecaoId] = useState('')
     const [newComponentes, setNewComponentes] = useState<{ componenteId: string; quantidade: number }[]>([])
     const [isCreating, setIsCreating] = useState(false)
 
@@ -88,9 +94,12 @@ export function Produtos() {
     const [editPesoKg, setEditPesoKg] = useState('')
     const [editSlug, setEditSlug] = useState('')
     const [editInstrucoesPreparo, setEditInstrucoesPreparo] = useState('')
+    const [editBeneficios, setEditBeneficios] = useState('')
     const [editDestaque, setEditDestaque] = useState(false)
+    const [editSelo, setEditSelo] = useState('')
     const [editVisivelCatalogo, setEditVisivelCatalogo] = useState(true)
     const [editEhCombo, setEditEhCombo] = useState(false)
+    const [editSecaoId, setEditSecaoId] = useState('')
     const [editComponentes, setEditComponentes] = useState<{ componenteId: string; quantidade: number }[]>([])
     const [isUpdating, setIsUpdating] = useState(false)
 
@@ -129,9 +138,12 @@ export function Produtos() {
         setEditPesoKg(produto.pesoKg != null ? String(produto.pesoKg) : '')
         setEditSlug(produto.slug || '')
         setEditInstrucoesPreparo(produto.instrucoesPreparo || '')
+        setEditBeneficios(produto.beneficios || '')
         setEditDestaque(produto.destaque ?? false)
+        setEditSelo(produto.selo ?? '')
         setEditVisivelCatalogo(produto.visivelCatalogo ?? true)
         setEditEhCombo(produto.ehCombo ?? false)
+        setEditSecaoId(produto.secaoId ?? '')
         setPickComponenteId('')
         setPickQuantidade('1')
         // Carrega a composição existente (se for combo)
@@ -164,9 +176,12 @@ export function Produtos() {
         setNewPesoKg('')
         setNewSlug('')
         setNewInstrucoesPreparo('')
+        setNewBeneficios('')
         setNewDestaque(false)
+        setNewSelo('')
         setNewVisivelCatalogo(true)
         setNewEhCombo(false)
+        setNewSecaoId('')
         setNewComponentes([])
         setPickComponenteId('')
         setPickQuantidade('1')
@@ -210,9 +225,12 @@ export function Produtos() {
             pesoKg: newPesoKg ? parseFloat(newPesoKg) : null,
             slug: newSlug.trim() || null,
             instrucoesPreparo: newInstrucoesPreparo.trim() || null,
+            beneficios: newBeneficios.trim() || null,
             destaque: newDestaque,
+            selo: newSelo || null,
             visivelCatalogo: newVisivelCatalogo,
             ehCombo: newEhCombo,
+            secaoId: newSecaoId || null,
         } as CreateProduto
 
         if (newEhCombo && newComponentes.length === 0) {
@@ -266,9 +284,12 @@ export function Produtos() {
             pesoKg: editPesoKg ? parseFloat(editPesoKg) : null,
             slug: editSlug.trim() || null,
             instrucoesPreparo: editInstrucoesPreparo.trim() || null,
+            beneficios: editBeneficios.trim() || null,
             destaque: editDestaque,
+            selo: editSelo || null,
             visivelCatalogo: editVisivelCatalogo,
             ehCombo: editEhCombo,
+            secaoId: editSecaoId || null,
         } as UpdateProduto
 
         if (editEhCombo && editComponentes.length === 0) {
@@ -474,8 +495,9 @@ export function Produtos() {
                                     preco: newPreco, custo: newCusto, precoAncoragem: '',
                                     estoqueMinimo: newEstoqueMinimo, ativo: true, categoria: newCategoria,
                                     descricao: newDescricao, pesoKg: newPesoKg, slug: newSlug,
-                                    instrucoesPreparo: newInstrucoesPreparo, destaque: newDestaque,
+                                    instrucoesPreparo: newInstrucoesPreparo, destaque: newDestaque, selo: newSelo,
                                     visivelCatalogo: newVisivelCatalogo, ehCombo: newEhCombo,
+                                    secaoId: newSecaoId, beneficios: newBeneficios,
                                 }}
                                 setters={{
                                     setNome: setNewNome, setCodigo: setNewCodigo, setApelido: setNewApelido,
@@ -483,13 +505,15 @@ export function Produtos() {
                                     setPrecoAncoragem: () => {}, setEstoqueMinimo: setNewEstoqueMinimo,
                                     setAtivo: () => {}, setCategoria: setNewCategoria, setDescricao: setNewDescricao,
                                     setPesoKg: setNewPesoKg, setSlug: setNewSlug, setInstrucoesPreparo: setNewInstrucoesPreparo,
-                                    setDestaque: setNewDestaque, setVisivelCatalogo: setNewVisivelCatalogo, setEhCombo: setNewEhCombo,
+                                    setDestaque: setNewDestaque, setSelo: setNewSelo, setVisivelCatalogo: setNewVisivelCatalogo, setEhCombo: setNewEhCombo,
+                                    setSecaoId: setNewSecaoId, setBeneficios: setNewBeneficios,
                                 }}
                                 custoEfetivo={newCustoEfetivo}
                                 margem={newMargem}
                                 showMargem={parseFloat(newPreco) > 0}
                                 componentes={newComponentes}
                                 componenteOptions={getComponenteOptions()}
+                                secaoOptions={secaoOptions}
                                 pick={{ componenteId: pickComponenteId, setComponenteId: setPickComponenteId, quantidade: pickQuantidade, setQuantidade: setPickQuantidade }}
                                 onAddComponente={() => addComponente('create')}
                                 onRemoveComponente={(id) => removeComponente('create', id)}
@@ -527,8 +551,9 @@ export function Produtos() {
                                     preco: editPreco, custo: editCusto, precoAncoragem: editPrecoAncoragem,
                                     estoqueMinimo: editEstoqueMinimo, ativo: editAtivo, categoria: editCategoria,
                                     descricao: editDescricao, pesoKg: editPesoKg, slug: editSlug,
-                                    instrucoesPreparo: editInstrucoesPreparo, destaque: editDestaque,
+                                    instrucoesPreparo: editInstrucoesPreparo, destaque: editDestaque, selo: editSelo,
                                     visivelCatalogo: editVisivelCatalogo, ehCombo: editEhCombo,
+                                    secaoId: editSecaoId, beneficios: editBeneficios,
                                 }}
                                 setters={{
                                     setNome: setEditNome, setCodigo: setEditCodigo, setApelido: setEditApelido,
@@ -536,13 +561,15 @@ export function Produtos() {
                                     setPrecoAncoragem: setEditPrecoAncoragem, setEstoqueMinimo: setEditEstoqueMinimo,
                                     setAtivo: setEditAtivo, setCategoria: setEditCategoria, setDescricao: setEditDescricao,
                                     setPesoKg: setEditPesoKg, setSlug: setEditSlug, setInstrucoesPreparo: setEditInstrucoesPreparo,
-                                    setDestaque: setEditDestaque, setVisivelCatalogo: setEditVisivelCatalogo, setEhCombo: setEditEhCombo,
+                                    setDestaque: setEditDestaque, setSelo: setEditSelo, setVisivelCatalogo: setEditVisivelCatalogo, setEhCombo: setEditEhCombo,
+                                    setSecaoId: setEditSecaoId, setBeneficios: setEditBeneficios,
                                 }}
                                 custoEfetivo={editCustoEfetivo}
                                 margem={editMargem}
                                 showMargem
                                 componentes={editComponentes}
                                 componenteOptions={getComponenteOptions(editingProduto?.id)}
+                                secaoOptions={secaoOptions}
                                 pick={{ componenteId: pickComponenteId, setComponenteId: setPickComponenteId, quantidade: pickQuantidade, setQuantidade: setPickQuantidade }}
                                 onAddComponente={() => addComponente('edit')}
                                 onRemoveComponente={(id) => removeComponente('edit', id)}

@@ -25,6 +25,7 @@ const Estoque = lazy(() => import('./pages/Estoque').then(m => ({ default: m.Est
 
 const Configuracoes = lazy(() => import('./pages/Configuracoes').then(m => ({ default: m.Configuracoes })))
 const Produtos = lazy(() => import('./pages/Produtos').then(m => ({ default: m.Produtos })))
+const Catalogo = lazy(() => import('./pages/Catalogo').then(m => ({ default: m.Catalogo })))
 const PedidosCompra = lazy(() => import('./pages/PedidosCompra').then(m => ({ default: m.PedidosCompra })))
 const Menu = lazy(() => import('./pages/Menu').then(m => ({ default: m.Menu })))
 const CatalogoPendentes = lazy(() => import('./pages/CatalogoPendentes').then(m => ({ default: m.CatalogoPendentes })))
@@ -60,6 +61,7 @@ function App() {
               <Route path="/relacionamento" element={<Relacionamento />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/produtos" element={<Produtos />} />
+              <Route path="/catalogo" element={<Catalogo />} />
               <Route path="/relatorio-fabrica" element={<RelatorioFabrica />} />
               <Route path="/estoque" element={<Estoque />} />
               <Route path="/entregas" element={<Entregas />} />

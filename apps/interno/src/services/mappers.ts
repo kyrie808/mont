@@ -137,10 +137,13 @@ export const toDomainProduto = (dbProduto: ProdutoRowWithImages): DomainProduto 
         descricao: dbProduto.descricao ?? null,
         pesoKg: dbProduto.peso_kg != null ? Number(dbProduto.peso_kg) : null,
         destaque: dbProduto.destaque ?? false,
+        selo: dbProduto.selo ?? null,
         slug: dbProduto.slug ?? null,
         instrucoesPreparo: dbProduto.instrucoes_preparo ?? null,
+        beneficios: dbProduto.beneficios ?? null,
         visivelCatalogo: dbProduto.visivel_catalogo ?? true,
-        ehCombo: dbProduto.eh_combo ?? false
+        ehCombo: dbProduto.eh_combo ?? false,
+        secaoId: dbProduto.secao_id ?? null
     }
 }
 

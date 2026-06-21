@@ -23,7 +23,7 @@ export class ProdutoService {
     async getAll(includeInactive: boolean = false): Promise<DomainProduto[]> {
         let query = supabase
             .from('produtos')
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios')
             .order('nome')
 
         if (!includeInactive) {
@@ -56,7 +56,7 @@ export class ProdutoService {
     async getById(id: string): Promise<DomainProduto | null> {
         const { data, error } = await supabase
             .from('produtos')
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
             .eq('id', id)
             .single()
 
@@ -86,16 +86,20 @@ export class ProdutoService {
             descricao: data.descricao ?? null,
             peso_kg: data.pesoKg != null && data.pesoKg >= 0 ? data.pesoKg : null,
             destaque: data.destaque ?? false,
-            slug: slugify(data.slug),
+            selo: data.selo ?? null,
+            // Slug NOT NULL no catálogo: deriva do nome quando em branco ('' → trigger gera).
+            slug: slugify(data.slug || data.nome) || '',
             instrucoes_preparo: data.instrucoesPreparo ?? null,
             visivel_catalogo: data.visivelCatalogo ?? true,
-            eh_combo: data.ehCombo ?? false
+            eh_combo: data.ehCombo ?? false,
+            secao_id: data.secaoId ?? null,
+            beneficios: data.beneficios ?? null
         }
 
         const { data: created, error } = await supabase
             .from('produtos')
             .insert(dbInsert)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
             .single()
 
         if (error) {
@@ -124,16 +128,20 @@ export class ProdutoService {
         if (data.descricao !== undefined) dbUpdate.descricao = data.descricao
         if (data.pesoKg !== undefined) dbUpdate.peso_kg = data.pesoKg != null && data.pesoKg >= 0 ? data.pesoKg : null
         if (data.destaque !== undefined) dbUpdate.destaque = data.destaque
-        if (data.slug !== undefined) dbUpdate.slug = slugify(data.slug)
+        if (data.selo !== undefined) dbUpdate.selo = data.selo
+        // Slug em branco volta a derivar do nome (nunca nulo no catálogo).
+        if (data.slug !== undefined) dbUpdate.slug = slugify(data.slug || data.nome) || ''
         if (data.instrucoesPreparo !== undefined) dbUpdate.instrucoes_preparo = data.instrucoesPreparo
         if (data.visivelCatalogo !== undefined) dbUpdate.visivel_catalogo = data.visivelCatalogo
         if (data.ehCombo !== undefined) dbUpdate.eh_combo = data.ehCombo
+        if (data.secaoId !== undefined) dbUpdate.secao_id = data.secaoId
+        if (data.beneficios !== undefined) dbUpdate.beneficios = data.beneficios
 
         const { data: updated, error } = await supabase
             .from('produtos')
             .update(dbUpdate)
             .eq('id', id)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
             .single()
 
         if (error) {
@@ -149,7 +157,7 @@ export class ProdutoService {
             .from('produtos')
             .update({ estoque_atual: quantidade })
             .eq('id', id)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
             .single()
 
         if (error) {
