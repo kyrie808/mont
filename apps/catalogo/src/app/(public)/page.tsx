@@ -50,7 +50,7 @@ export default async function HomePage() {
                 <div className="flex justify-center py-12">
                     <Link
                         href="/produtos"
-                        className="inline-flex items-center gap-2 bg-mont-espresso text-mont-cream font-body font-medium px-8 py-4 rounded-full hover:bg-mont-gold hover:text-mont-espresso transition-all duration-300 text-lg"
+                        className="inline-flex items-center gap-2 bg-foreground text-background font-bold px-8 py-4 rounded-full hover:bg-primary hover:text-foreground transition-all duration-300 text-lg"
                     >
                         Ver todos os produtos
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -226,18 +226,18 @@ export default function CarrinhoPage() {
         return (
             <>
                 <Navbar />
-                <main className="min-h-screen bg-mont-cream py-20">
+                <main className="min-h-screen bg-background py-20">
                     <div className="container mx-auto px-4">
                         <div className="max-w-2xl mx-auto text-center py-20">
-                            <svg className="w-24 h-24 mx-auto mb-6 text-mont-gray/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-24 h-24 mx-auto mb-6 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                             </svg>
 
-                            <h1 className="font-display text-4xl text-mont-espresso mb-4">
+                            <h1 className="font-display font-extrabold text-4xl text-foreground mb-4">
                                 Seu carrinho está vazio
                             </h1>
 
-                            <p className="text-mont-gray text-lg mb-8">
+                            <p className="text-muted-foreground text-lg mb-8">
                                 Adicione produtos ao carrinho para continuar
                             </p>
 
@@ -273,9 +273,9 @@ export default function CarrinhoPage() {
             <ClientTracker eventData={beginCheckoutEvent} />
             <Navbar />
 
-            <main className="min-h-screen bg-mont-cream py-20">
+            <main className="min-h-screen bg-background py-20">
                 <div className="container mx-auto px-4">
-                    <h1 className="font-display text-4xl md:text-5xl text-mont-espresso mb-12 text-center">
+                    <h1 className="font-display font-extrabold text-4xl md:text-5xl text-foreground mb-12 text-center">
                         Finalizar Pedido
                     </h1>
 

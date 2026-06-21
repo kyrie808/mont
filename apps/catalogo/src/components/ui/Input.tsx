@@ -16,7 +16,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                 {label && (
                     <label
                         htmlFor={inputId}
-                        className="block text-sm font-medium text-mont-espresso mb-2 font-body"
+                        className="block text-sm font-medium text-foreground mb-2 font-body"
                     >
                         {label}
                     </label>
@@ -26,27 +26,27 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                     ref={ref}
                     id={inputId}
                     className={cn(
-                        'w-full px-4 py-3 rounded-lg border-2 font-body text-mont-espresso bg-mont-white',
+                        'w-full px-4 py-3 rounded-lg border-2 font-body text-foreground bg-card',
                         'transition-all duration-200',
-                        'placeholder:text-mont-warm-gray',
-                        'focus:outline-none focus:ring-2 focus:ring-mont-gold focus:border-transparent',
-                        'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-mont-surface',
+                        'placeholder:text-muted-foreground',
+                        'focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
+                        'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted',
                         error
-                            ? 'border-mont-danger focus:ring-mont-danger'
-                            : 'border-mont-line hover:border-mont-warm-gray',
+                            ? 'border-destructive focus:ring-destructive'
+                            : 'border-border hover:border-border-strong',
                         className
                     )}
                     {...props}
                 />
 
                 {error && (
-                    <p className="mt-2 text-sm text-mont-danger font-body">
+                    <p className="mt-2 text-sm text-destructive font-body">
                         {error}
                     </p>
                 )}
 
                 {helperText && !error && (
-                    <p className="mt-2 text-sm text-mont-warm-gray font-body">
+                    <p className="mt-2 text-sm text-muted-foreground font-body">
                         {helperText}
                     </p>
                 )}

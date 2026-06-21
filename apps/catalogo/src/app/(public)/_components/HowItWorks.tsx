@@ -70,10 +70,10 @@ export default function HowItWorks() {
         >
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
-                    <h2 className="font-display text-4xl md:text-5xl text-mont-espresso mb-4">
+                    <h2 className="font-display font-extrabold text-4xl md:text-5xl text-foreground mb-4">
                         {TITLE}
                     </h2>
-                    <p className="text-mont-gray text-lg max-w-2xl mx-auto">
+                    <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                         {SUBTITLE}
                     </p>
                 </div>
@@ -85,21 +85,21 @@ export default function HowItWorks() {
                     {steps.map((step) => (
                         <div
                             key={step.number}
-                            className="step-card bg-mont-white p-8 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                            className="step-card bg-card p-8 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                         >
-                            <div className="text-mont-gold mb-4">
+                            <div className="text-primary mb-4">
                                 {step.icon}
                             </div>
 
-                            <div className="text-mont-gold/30 font-mono text-sm mb-2">
+                            <div className="text-primary/30 font-mono text-sm mb-2">
                                 {step.number}
                             </div>
 
-                            <h3 className="font-display text-2xl text-mont-espresso mb-3">
+                            <h3 className="font-display font-bold text-2xl text-foreground mb-3">
                                 {step.title}
                             </h3>
 
-                            <p className="text-mont-gray">
+                            <p className="text-muted-foreground">
                                 {step.description}
                             </p>
                         </div>

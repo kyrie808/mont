@@ -34,19 +34,19 @@ export default function AdminProductsPage() {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="flex flex-col gap-4 sticky top-0 bg-mont-cream z-10 pt-2 pb-4">
+            <div className="flex flex-col gap-4 sticky top-0 bg-background z-10 pt-2 pb-4">
                 <div>
-                    <h2 className="text-2xl font-serif font-bold text-mont-espresso">
+                    <h2 className="text-2xl font-serif font-bold text-foreground">
                         Produtos
                     </h2>
-                    <p className="text-mont-gray text-sm">
+                    <p className="text-muted-foreground text-sm">
                         Visão somente leitura do catálogo.
                     </p>
                 </div>
 
                 {/* Fronteira: o produto é editado no Sistema Interno Mont */}
-                <div className="flex items-start gap-2 rounded-lg border border-mont-gold/30 bg-mont-gold/10 px-4 py-3 text-sm text-mont-espresso">
-                    <Info size={18} className="mt-0.5 flex-shrink-0 text-mont-gold" />
+                <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                    <Info size={18} className="mt-0.5 flex-shrink-0 text-primary" />
                     <span>
                         A edição de produtos (preço, custo, apresentação, visibilidade e kits/combos)
                         agora é feita no <strong>Sistema Interno Mont</strong>. Esta tela é somente leitura.
@@ -60,7 +60,7 @@ export default function AdminProductsPage() {
                         placeholder="Buscar produto..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-mont-gold"
+                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                 </div>
             </div>

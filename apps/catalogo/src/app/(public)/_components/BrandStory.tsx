@@ -27,11 +27,11 @@ export default function BrandStory() {
 
             <div className="container mx-auto px-4 relative z-10">
                 <div className="max-w-3xl mx-auto text-center">
-                    <h2 className="font-display text-4xl md:text-5xl text-mont-espresso mb-6">
+                    <h2 className="font-display font-extrabold text-4xl md:text-5xl text-foreground mb-6">
                         {TITLE}
                     </h2>
 
-                    <div className="prose prose-lg mx-auto text-mont-gray">
+                    <div className="prose prose-lg mx-auto text-muted-foreground">
                         <p ref={p1Ref} className="mb-4 whitespace-pre-line">
                             {P1}
                         </p>

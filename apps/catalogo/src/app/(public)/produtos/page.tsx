@@ -1,80 +1,59 @@
 import { Navbar, Footer } from '@/components/catalog'
-import { createClient } from '@/lib/supabase/server'
-import type { ProdutoCatalogo } from '@mont/shared'
-import ProductCatalog from './_components/ProductCatalog'
-import FeaturedProduct from './_components/FeaturedProduct'
-import StoreBanner from './_components/StoreBanner'
+import ClientTracker from '@/components/analytics/ClientTracker'
+import { getVitrineData } from './_data'
+import { FeaturedCarousel } from './_components/FeaturedCarousel'
+import { VitrineTabs } from './_components/VitrineTabs'
 import IngredientsSection from './_components/IngredientsSection'
 import BenefitsCarousel from './_components/BenefitsCarousel'
 import TrustBar from './_components/TrustBar'
-import ClientTracker from '@/components/analytics/ClientTracker'
 
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-async function getAllProducts(): Promise<ProdutoCatalogo[]> {
-    try {
-        const supabase = await createClient()
-
-        const { data, error } = await supabase
-            .from('vw_catalogo_produtos')
-            .select('*')
-            .eq('visivel_catalogo', true)
-            .order('nome', { ascending: true })
-
-        if (error || !data || data.length === 0) {
-            return []
-        }
-
-        return data as ProdutoCatalogo[]
-
-    } catch (error) {
-        console.error('Erro ao buscar produtos:', error)
-        return []
-    }
-}
-
 export const metadata = {
-    title: 'Produtos | Mont Massas',
-    description: 'Conhe\u00E7a nossa linha completa de produtos artesanais.',
+    title: 'Produtos | Mont Distribuidora',
+    description: 'Conheça nossa linha completa de pães de queijo e combos artesanais.',
 }
 
 export default async function ProdutosPage() {
-    const products = await getAllProducts()
-
-    const featuredProduct = products.find(p => p.destaque);
+    const { destaques, abas, produtos, componentesByProduto } = await getVitrineData()
 
     const analyticsEvent = {
         event: 'view_item_list',
         ecommerce: {
             item_list_id: 'catalogo_completo',
             item_list_name: 'Catálogo de Produtos',
-            items: products.map((p, index) => ({
+            items: produtos.map((p, index) => ({
                 item_id: p.id ?? '',
                 item_name: p.nome ?? '',
                 price: p.preco ?? 0,
                 quantity: 1,
-                index: index + 1
-            }))
-        }
-    } as const;
+                index: index + 1,
+            })),
+        },
+    } as const
 
     return (
         <>
             <ClientTracker eventData={analyticsEvent} />
             <Navbar />
 
-            <main className="min-h-screen bg-mont-cream pt-20 pb-20">
-                <StoreBanner />
+            <main className="min-h-screen bg-background pb-24 pt-28">
+                <div className="mx-auto max-w-[1400px] px-4 md:px-8">
+                    <h1 className="mb-6 text-3xl font-extrabold text-foreground md:text-4xl">
+                        Nossos produtos
+                    </h1>
 
-                <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 mt-8 md:mt-10">
-                    {featuredProduct && (
-                        <FeaturedProduct product={featuredProduct} />
+                    {produtos.length === 0 ? (
+                        <p className="py-20 text-center text-muted-foreground">Nenhum produto encontrado.</p>
+                    ) : (
+                        <>
+                            <FeaturedCarousel destaques={destaques} componentesByProduto={componentesByProduto} />
+                            <VitrineTabs abas={abas} produtos={produtos} />
+                        </>
                     )}
-
-                    <ProductCatalog products={products.filter(p => !featuredProduct || p.id !== featuredProduct.id)} />
                 </div>
 
+                {/* Conteúdo de marca / conversão */}
                 <div className="mt-12">
                     <IngredientsSection />
                 </div>

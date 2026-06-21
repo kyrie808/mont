@@ -105,14 +105,14 @@ export default function IngredientsSection() {
         >
             {/* Header Content */}
             <div ref={headerRef} className="flex flex-col items-center mb-10">
-                <h2 className="font-display text-2xl md:text-3xl text-mont-cream text-center mb-2">
+                <h2 className="font-display font-extrabold text-2xl md:text-3xl text-background text-center mb-2">
                     {headline}
                 </h2>
 
                 {/* Gold Separator */}
-                <div className="w-12 h-px bg-mont-gold mb-10" />
+                <div className="w-12 h-px bg-primary mb-10" />
 
-                <p className="text-sm md:text-base text-mont-cream/60 text-center max-w-sm mx-auto leading-relaxed">
+                <p className="text-sm md:text-base text-background/60 text-center max-w-sm mx-auto leading-relaxed">
                     {subtitle}
                 </p>
             </div>
@@ -146,10 +146,10 @@ export default function IngredientsSection() {
                             </div>
 
                             <div className="flex flex-col">
-                                <h3 className="font-display text-base text-mont-cream">
+                                <h3 className="font-display font-bold text-base text-background">
                                     {ingredient.title}
                                 </h3>
-                                <p className="text-xs text-mont-cream/60 mt-1 leading-relaxed">
+                                <p className="text-xs text-background/60 mt-1 leading-relaxed">
                                     {ingredient.description}
                                 </p>
                             </div>
@@ -163,8 +163,8 @@ export default function IngredientsSection() {
                 ref={footerRef}
                 className="max-w-md mx-auto mt-10"
             >
-                <div className="border-t border-mont-cream/10 mb-8" />
-                <p className="font-display text-base md:text-lg text-mont-cream/80 text-center leading-relaxed">
+                <div className="border-t border-background/10 mb-8" />
+                <p className="font-display text-base md:text-lg text-background/80 text-center leading-relaxed">
                     {footerText}
                 </p>
             </div>

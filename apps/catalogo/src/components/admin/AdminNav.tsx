@@ -38,8 +38,8 @@ export default function AdminNav() {
                         key={item.path}
                         href={item.path}
                         className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors w-full ${isActive(item.path)
-                                ? 'text-mont-gold bg-mont-gold/5'
-                                : 'text-gray-400 hover:text-mont-espresso'
+                                ? 'text-primary bg-primary/5'
+                                : 'text-gray-400 hover:text-foreground'
                             }`}
                     >
                         <item.icon

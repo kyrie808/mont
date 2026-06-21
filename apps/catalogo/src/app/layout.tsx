@@ -1,4 +1,4 @@
-import { Playfair_Display, DM_Sans, JetBrains_Mono } from 'next/font/google'
+import { Playfair_Display, DM_Sans, JetBrains_Mono, Nunito } from 'next/font/google'
 import './globals.css'
 import type { Metadata } from 'next'
 import PreloaderDismiss from '@/components/PreloaderDismiss'
@@ -21,6 +21,15 @@ const jetbrains = JetBrains_Mono({
     display: 'swap',
 })
 
+// Nunito = fonte do tema copa. Carregada no root e exposta no <html> como --font-nunito;
+// o tema (globals.css) escolhe entre Playfair/DM Sans (padrão) e Nunito (copa).
+const nunito = Nunito({
+    subsets: ['latin'],
+    variable: '--font-nunito',
+    display: 'swap',
+    weight: ['400', '500', '600', '700', '800', '900'],
+})
+
 export const metadata: Metadata = {
     title: 'Mont Distribuidora | Pão de Queijo Artesanal',
     description: 'Massas naturais congeladas e refrigeradas direto pra sua casa. Pão de queijo artesanal feito com alma na região do ABC paulista.',
@@ -40,8 +49,9 @@ export default function RootLayout({
 }: {
     children: React.ReactNode
 }) {
+    // tema-copa = tema festivo ativo no site inteiro. Fim da Copa: remover `tema-copa` → volta ao tema padrão (:root).
     return (
-        <html lang="pt-BR" className={`${playfair.variable} ${dmSans.variable} ${jetbrains.variable} bg-[#3D2B22]`}>
+        <html lang="pt-BR" className={`${playfair.variable} ${dmSans.variable} ${jetbrains.variable} ${nunito.variable} tema-copa bg-[#3D2B22]`}>
             <head>
                 <meta name="facebook-domain-verification" content="xalko0heebua28ly121mks89yy1t1z" />
                 <script
@@ -156,7 +166,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                     }}
                 />
             </head>
-            <body className="font-body bg-mont-cream text-mont-espresso antialiased min-h-screen">
+            <body className="font-body bg-background text-foreground antialiased min-h-screen">
                 <noscript>
                     <iframe
                         src={`https://www.googletagmanager.com/ns.html?id=${process.env.NEXT_PUBLIC_GTM_ID || 'GTM-W6CXZC3R'}`}

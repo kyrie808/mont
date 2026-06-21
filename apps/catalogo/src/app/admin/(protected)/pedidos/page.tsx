@@ -138,12 +138,12 @@ export default function AdminOrdersPage() {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="sticky top-0 bg-mont-cream z-10 pt-2 pb-4 space-y-4">
+            <div className="sticky top-0 bg-background z-10 pt-2 pb-4 space-y-4">
                 <div>
-                    <h2 className="text-2xl font-serif font-bold text-mont-espresso">
+                    <h2 className="text-2xl font-serif font-bold text-foreground">
                         Pedidos
                     </h2>
-                    <p className="text-mont-gray text-sm">
+                    <p className="text-muted-foreground text-sm">
                         Acompanhe e gerencie os pedidos recebidos.
                     </p>
                 </div>
@@ -154,7 +154,7 @@ export default function AdminOrdersPage() {
                             key={status}
                             onClick={() => setStatusFilter(status)}
                             className={`px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap transition-colors ${statusFilter === status
-                                ? 'bg-mont-espresso text-mont-gold'
+                                ? 'bg-foreground text-primary'
                                 : 'bg-white text-gray-500 border border-gray-200'
                                 }`}
                         >
@@ -170,9 +170,9 @@ export default function AdminOrdersPage() {
             {confirmDelete && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <h3 className="text-xl font-serif font-bold text-mont-espresso mb-2">Excluir Pedido</h3>
+                        <h3 className="text-xl font-serif font-bold text-foreground mb-2">Excluir Pedido</h3>
                         <p className="text-gray-600 text-sm mb-6">
-                            Tem certeza que deseja excluir o pedido <span className="font-bold text-mont-espresso">#{confirmDelete.numero}</span>?
+                            Tem certeza que deseja excluir o pedido <span className="font-bold text-foreground">#{confirmDelete.numero}</span>?
                             Esta ação não pode ser desfeita.
                         </p>
                         <div className="flex gap-3">

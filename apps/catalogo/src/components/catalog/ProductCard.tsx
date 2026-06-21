@@ -82,6 +82,10 @@ export function ProductCard({
             preco_formatado: null,
             status_estoque: null,
             visivel_catalogo: true,
+            secao_id: null,
+            ordem_vitrine: null,
+            beneficios: null,
+            selo: null,
         }
         addItem(produto, 1)
     }
@@ -94,7 +98,7 @@ export function ProductCard({
             <div
                 ref={cardRef}
                 className={cn(
-                    'group relative bg-mont-cream rounded-2xl overflow-hidden shadow-sm cursor-pointer transition-all duration-300',
+                    'group relative bg-background rounded-2xl overflow-hidden shadow-sm cursor-pointer transition-all duration-300',
                     className
                 )}
             >
@@ -121,7 +125,7 @@ export function ProductCard({
                             })()}
                         </>
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-mont-surface text-mont-warm-gray">
+                        <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
                             <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path
                                     strokeLinecap="round"
@@ -140,19 +144,19 @@ export function ProductCard({
 
                     {/* Featured Badge */}
                     {is_featured && (
-                        <div className="absolute top-2 right-2 bg-mont-gold text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                        <div className="absolute top-2 right-2 bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                             Mais Vendido
                         </div>
                     )}
                 </div>
 
                 {/* Info Block */}
-                <div className="p-3 bg-mont-cream min-h-[88px]">
-                    <h3 className="font-display text-sm text-mont-espresso line-clamp-2 leading-snug">
+                <div className="p-3 bg-background min-h-[88px]">
+                    <h3 className="font-display text-sm text-foreground line-clamp-2 leading-snug">
                         {name}
                     </h3>
                     {subtitle && (
-                        <p className="text-[10px] text-mont-espresso/50 mt-0.5">
+                        <p className="text-[10px] text-foreground/50 mt-0.5">
                             {subtitle}
                         </p>
                     )}
@@ -161,7 +165,7 @@ export function ProductCard({
                             R$ {anchor_price.toFixed(2).replace('.', ',')}
                         </span>
                     )}
-                    <p className="font-bold text-base text-mont-gold mt-1">
+                    <p className="font-bold text-base text-primary mt-1">
                         {formattedPrice}
                     </p>
                 </div>
@@ -170,7 +174,7 @@ export function ProductCard({
                 <button
                     ref={buttonRef}
                     onClick={handleAddToCart}
-                    className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-mont-espresso text-mont-cream flex items-center justify-center text-lg font-bold transition-transform hover:scale-110 active:scale-95 z-10"
+                    className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-lg font-bold transition-transform hover:scale-110 active:scale-95 z-10"
                     aria-label="Adicionar ao carrinho"
                 >
                     +

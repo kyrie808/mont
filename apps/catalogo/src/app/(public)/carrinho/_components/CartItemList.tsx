@@ -14,16 +14,16 @@ interface CartItemListProps {
 export default function CartItemList({ items, onIncrease, onDecrease, onRemove, formatCurrency }: CartItemListProps) {
     return (
         <div className="lg:col-span-2 space-y-4">
-            <h2 className="font-display text-2xl text-mont-espresso mb-4">
+            <h2 className="font-display font-bold text-2xl text-foreground mb-4">
                 Seus Itens
             </h2>
 
             {items.map((item) => (
                 <div
                     key={item.product.id!}
-                    className="bg-mont-white p-4 rounded-lg shadow-sm flex gap-4"
+                    className="bg-card p-4 rounded-lg shadow-sm flex gap-4"
                 >
-                    <div className="relative w-20 h-20 bg-mont-surface rounded flex-shrink-0 overflow-hidden">
+                    <div className="relative w-20 h-20 bg-muted rounded flex-shrink-0 overflow-hidden">
                         {item.product.url_imagem_principal ? (
                             <Image
                                 src={item.product.url_imagem_principal}
@@ -34,7 +34,7 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                                <svg className="w-8 h-8 text-mont-gray/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="w-8 h-8 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                             </div>
@@ -42,35 +42,35 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
                     </div>
 
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-mont-espresso mb-1 break-words">
+                        <h3 className="font-medium text-foreground mb-1 break-words">
                             {item.product.nome}
                         </h3>
-                        <p className="text-mont-gray text-sm mb-2">
+                        <p className="text-muted-foreground text-sm mb-2">
                             {formatCurrency(item.product.preco ?? 0)} cada
                         </p>
 
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => onDecrease(item.product.id!)}
-                                className="w-8 h-8 bg-mont-surface rounded flex items-center justify-center text-mont-espresso hover:bg-mont-gray/10"
+                                className="w-8 h-8 bg-muted rounded flex items-center justify-center text-foreground hover:bg-muted-foreground/10"
                             >
                                 −
                             </button>
 
-                            <span className="w-16 text-center bg-mont-surface rounded py-1 text-mont-espresso">
+                            <span className="w-16 text-center bg-muted rounded py-1 text-foreground">
                                 {item.quantity}
                             </span>
 
                             <button
                                 onClick={() => onIncrease(item.product.id!)}
-                                className="w-8 h-8 bg-mont-surface rounded flex items-center justify-center text-mont-espresso hover:bg-mont-gray/10"
+                                className="w-8 h-8 bg-muted rounded flex items-center justify-center text-foreground hover:bg-muted-foreground/10"
                             >
                                 +
                             </button>
 
                             <button
                                 onClick={() => onRemove(item.product.id!)}
-                                className="ml-auto text-mont-gray hover:text-red-600 transition-colors"
+                                className="ml-auto text-muted-foreground hover:text-red-600 transition-colors"
                             >
                                 Remover
                             </button>
@@ -78,7 +78,7 @@ export default function CartItemList({ items, onIncrease, onDecrease, onRemove, 
                     </div>
 
                     <div className="text-right flex-shrink-0 whitespace-nowrap">
-                        <p className="font-medium text-mont-espresso">
+                        <p className="font-medium text-foreground">
                             {formatCurrency((item.product.preco ?? 0) * item.quantity)}
                         </p>
                     </div>

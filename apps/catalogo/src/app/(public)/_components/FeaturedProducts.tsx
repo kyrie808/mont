@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ProductCard } from '@/components/catalog'
+import { ProdutoCard } from '../produtos/_components/ProdutoCard'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import type { ProdutoCatalogo } from '@mont/shared'
@@ -58,7 +58,7 @@ export default function FeaturedProducts({ products }: FeaturedProductsProps) {
     return (
         <section
             ref={sectionRef}
-            className="pt-8 pb-20 md:pt-12 md:pb-32 bg-mont-cream relative z-10"
+            className="pt-8 pb-20 md:pt-12 md:pb-32 bg-background relative z-10"
             id="destaques"
             style={{
                 // PRESERVADO: Posicionamento e perspectiva
@@ -78,10 +78,10 @@ export default function FeaturedProducts({ products }: FeaturedProductsProps) {
                 <div className="container mx-auto px-4">
                     <div className="text-center mb-12">
                         {/* ALTERAÇÃO: Novos textos com Unicode encoding */}
-                        <h2 className="font-display text-4xl md:text-5xl text-mont-espresso mb-4">
+                        <h2 className="font-display font-extrabold text-4xl md:text-5xl text-foreground mb-4">
                             {SECTION_TITLE}
                         </h2>
-                        <p className="text-mont-gray text-lg max-w-2xl mx-auto">
+                        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                             {SECTION_SUBTITLE}
                         </p>
                     </div>
@@ -89,28 +89,12 @@ export default function FeaturedProducts({ products }: FeaturedProductsProps) {
                     <div className="max-w-[1400px] mx-auto">
                         <div
                             ref={gridRef}
-                            /* ALTERAÇÃO: grid-cols-2 no mobile, 4 colunas em lg+ para bento grid 50/50 */
-                            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+                            /* Grade uniforme — mesma da /produtos (VitrineTabs) */
+                            className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
                         >
-                            {products.map((product, index) => (
-                                <div
-                                    key={product.id}
-                                    /* PRESERVADO: Lógica de destaque do primeiro card (md:col-span-2) */
-                                    className={`product-card ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''
-                                        }`}
-                                >
-                                    <ProductCard
-                                        id={product.id!}
-                                        name={product.nome!}
-                                        slug={product.slug!}
-                                        category={product.categoria as 'congelado' | 'refrigerado' | 'combo'}
-                                        subtitle={product.subtitulo}
-                                        price={product.preco ?? 0}
-                                        anchor_price={product.preco_ancoragem}
-                                        image_url={product.url_imagem_principal}
-                                        is_featured={index === 0}
-                                        index={index}
-                                    />
+                            {products.map((product) => (
+                                <div key={product.id} className="product-card">
+                                    <ProdutoCard product={product} />
                                 </div>
                             ))}
                         </div>

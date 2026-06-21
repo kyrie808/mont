@@ -128,7 +128,7 @@ export default function FinalCTA() {
             <div className="relative z-30 container mx-auto px-4 text-center">
                 <h2
                     ref={titleRef}
-                    className="font-display text-4xl md:text-6xl text-mont-cream mb-6 leading-tight"
+                    className="font-display font-extrabold text-4xl md:text-6xl text-background mb-6 leading-tight"
                 >
                     <span className="block overflow-hidden">
                         <span className="word inline-block">Seu</span>{' '}
@@ -138,7 +138,7 @@ export default function FinalCTA() {
                     </span>
                 </h2>
 
-                <p className="text-mont-cream/90 text-lg md:text-xl max-w-2xl mx-auto mb-10 hero-content-fade">
+                <p className="text-background/90 text-lg md:text-xl max-w-2xl mx-auto mb-10 hero-content-fade">
                     {SUBTITLE}
                 </p>
 
@@ -167,7 +167,7 @@ export default function FinalCTA() {
                     </a>
 
                     <Link href="/produtos">
-                        <Button variant="secondary" size="lg" className="bg-transparent border-2 border-mont-cream text-mont-cream hover:bg-mont-cream hover:text-mont-brown-deep">
+                        <Button variant="secondary" size="lg" className="bg-transparent border-2 border-background text-background hover:bg-background hover:text-[#3D2B22]">
                             {CTA_SECONDARY}
                         </Button>
                     </Link>

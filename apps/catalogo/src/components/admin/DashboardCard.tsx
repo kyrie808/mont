@@ -20,26 +20,26 @@ export default function DashboardCard({
 
     const colorStyles = {
         default: 'border-gray-200 bg-white',
-        gold: 'border-mont-gold/30 bg-yellow-50',
+        gold: 'border-primary/30 bg-yellow-50',
         danger: 'border-red-200 bg-red-50'
     }
 
     const iconColors = {
-        default: 'text-mont-espresso',
-        gold: 'text-mont-gold',
+        default: 'text-foreground',
+        gold: 'text-primary',
         danger: 'text-red-500'
     }
 
     return (
         <div className={`rounded-xl border p-4 shadow-sm ${colorStyles[color]}`}>
             <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-mont-gray uppercase tracking-wider">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                     {title}
                 </span>
                 <Icon className={`${iconColors[color]}`} size={20} />
             </div>
             <div className="flex flex-col">
-                <span className="text-2xl font-mono font-bold text-mont-espresso">
+                <span className="text-2xl font-mono font-bold text-foreground">
                     {value}
                 </span>
                 {description && (

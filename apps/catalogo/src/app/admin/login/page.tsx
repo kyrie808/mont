@@ -44,19 +44,19 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-mont-cream flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-8 border border-mont-gold/20">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-8 border border-primary/20">
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-24 h-24 relative mb-4">
                         {/* Placeholder for Logo if needed, otherwise just text for now or verify if logo exists */}
-                        <div className="w-full h-full bg-mont-espresso rounded-full flex items-center justify-center text-mont-gold text-2xl font-serif font-bold border-2 border-mont-gold">
+                        <div className="w-full h-full bg-foreground rounded-full flex items-center justify-center text-primary text-2xl font-serif font-bold border-2 border-primary">
                             M
                         </div>
                     </div>
-                    <h1 className="text-3xl font-serif text-mont-espresso font-bold text-center">
+                    <h1 className="text-3xl font-serif text-foreground font-bold text-center">
                         Mont Distribuidora
                     </h1>
-                    <p className="text-mont-gray mt-2 text-sm uppercase tracking-wide">
+                    <p className="text-muted-foreground mt-2 text-sm uppercase tracking-wide">
                         Acesso Restrito
                     </p>
                 </div>
@@ -65,7 +65,7 @@ export default function LoginPage() {
                     <div>
                         <label
                             htmlFor="email"
-                            className="block text-sm font-medium text-mont-espresso mb-1"
+                            className="block text-sm font-medium text-foreground mb-1"
                         >
                             Email
                         </label>
@@ -75,7 +75,7 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="w-full px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-mont-gold focus:border-transparent transition-colors"
+                            className="w-full px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
                             placeholder="admin@montdistribuidora.com"
                         />
                     </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
                     <div>
                         <label
                             htmlFor="password"
-                            className="block text-sm font-medium text-mont-espresso mb-1"
+                            className="block text-sm font-medium text-foreground mb-1"
                         >
                             Senha
                         </label>
@@ -93,7 +93,7 @@ export default function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="w-full px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-mont-gold focus:border-transparent transition-colors"
+                            className="w-full px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
                             placeholder="••••••••"
                         />
                     </div>
@@ -107,7 +107,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-mont-gold text-mont-espresso font-bold py-3 px-4 rounded-md hover:bg-yellow-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mont-gold disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide text-sm"
+                        className="w-full bg-primary text-foreground font-bold py-3 px-4 rounded-md hover:bg-yellow-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide text-sm"
                     >
                         {loading ? 'Entrando...' : 'Entrar'}
                     </button>

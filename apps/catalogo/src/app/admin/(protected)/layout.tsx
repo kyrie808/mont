@@ -44,7 +44,7 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="min-h-screen bg-mont-cream font-sans pb-20 md:pb-0">
+        <div className="min-h-screen bg-background font-sans pb-20 md:pb-0">
             <AdminHeader userEmail={user.email} />
             <main className="container mx-auto px-4 py-6 max-w-4xl">
                 {children}

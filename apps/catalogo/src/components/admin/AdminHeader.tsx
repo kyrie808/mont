@@ -23,14 +23,14 @@ export default function AdminHeader({ userEmail }: AdminHeaderProps) {
     }
 
     return (
-        <header className="bg-mont-espresso text-mont-cream py-4 px-4 shadow-md sticky top-0 z-50">
+        <header className="bg-foreground text-background py-4 px-4 shadow-md sticky top-0 z-50">
             <div className="container mx-auto max-w-4xl flex justify-between items-center">
                 <div>
-                    <h1 className="font-serif font-bold text-xl text-mont-gold">
+                    <h1 className="font-serif font-bold text-xl text-primary">
                         Mont Admin
                     </h1>
                     {userEmail && (
-                        <p className="text-xs text-mont-cream/70 truncate max-w-[200px]">
+                        <p className="text-xs text-background/70 truncate max-w-[200px]">
                             {userEmail}
                         </p>
                     )}
@@ -38,7 +38,7 @@ export default function AdminHeader({ userEmail }: AdminHeaderProps) {
 
                 <button
                     onClick={handleLogout}
-                    className="text-mont-cream/80 hover:text-mont-gold transition-colors p-2"
+                    className="text-background/80 hover:text-primary transition-colors p-2"
                     aria-label="Sair"
                 >
                     <LogOut size={20} />

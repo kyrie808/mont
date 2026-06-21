@@ -45,8 +45,8 @@ export default function BenefitsCarousel() {
     ]
 
     return (
-        <section className="bg-mont-cream py-12 md:py-14">
-            <h2 className="font-display text-xl md:text-2xl text-mont-espresso px-6 mb-6">
+        <section className="bg-background py-12 md:py-14">
+            <h2 className="font-display font-bold text-xl md:text-2xl text-foreground px-6 mb-6">
                 {sectionTitle}
             </h2>
 
@@ -95,7 +95,7 @@ export default function BenefitsCarousel() {
                             />
                         </div>
                         <div>
-                            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '16px', marginBottom: '4px' }}>
+                            <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>
                                 {benefit.title}
                             </h3>
                             <p style={{ fontSize: '13px', opacity: 0.6, lineHeight: 1.5 }}>

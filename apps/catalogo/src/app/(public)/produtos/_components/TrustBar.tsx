@@ -17,34 +17,34 @@ const TRUCK_DESC = 'Entrega na sua regi\u00E3o';
 
 export default function TrustBar() {
     return (
-        <div className="w-full border-t border-mont-espresso/10 py-8 px-6 bg-transparent">
+        <div className="w-full border-t border-foreground/10 py-8 px-6 bg-transparent">
             <div className="flex flex-wrap justify-around items-center gap-6">
                 {/* Item 1: Avalia\u00E7\u00E3o */}
                 <div className="flex flex-col items-center text-center gap-1">
-                    <span className="font-display text-2xl text-mont-espresso font-normal">
+                    <span className="font-display text-2xl text-foreground font-semibold">
                         {RATING_EMOJI} {RATING_VALUE}
                     </span>
-                    <span className="text-xs text-mont-espresso/50 max-w-[100px] text-center">
+                    <span className="text-xs text-foreground/50 max-w-[100px] text-center">
                         {RATING_DESC}
                     </span>
                 </div>
 
                 {/* Item 2: Canastra */}
                 <div className="flex flex-col items-center text-center gap-1">
-                    <span className="font-display text-2xl text-mont-espresso font-normal">
+                    <span className="font-display text-2xl text-foreground font-semibold">
                         {CHEESE_EMOJI} {CHEESE_VALUE}
                     </span>
-                    <span className="text-xs text-mont-espresso/50 max-w-[100px] text-center">
+                    <span className="text-xs text-foreground/50 max-w-[100px] text-center">
                         {CHEESE_DESC}
                     </span>
                 </div>
 
                 {/* Item 3: ABC */}
                 <div className="flex flex-col items-center text-center gap-1">
-                    <span className="font-display text-2xl text-mont-espresso font-normal">
+                    <span className="font-display text-2xl text-foreground font-semibold">
                         {TRUCK_EMOJI} {TRUCK_VALUE}
                     </span>
-                    <span className="text-xs text-mont-espresso/50 max-w-[100px] text-center">
+                    <span className="text-xs text-foreground/50 max-w-[100px] text-center">
                         {TRUCK_DESC}
                     </span>
                 </div>

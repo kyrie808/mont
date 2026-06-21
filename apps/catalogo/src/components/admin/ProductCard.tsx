@@ -46,17 +46,17 @@ export default function ProductCard({ product, onToggleActive, onEdit }: Product
                     )}
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-serif font-bold text-mont-espresso text-lg leading-tight">
+                            <h3 className="font-serif font-bold text-foreground text-lg leading-tight">
                                 {product.nome}
                             </h3>
                             {product.categoria && (
-                                <span className="text-[10px] bg-mont-cream px-1.5 py-0.5 rounded text-mont-espresso/70 uppercase font-bold tracking-wider">
+                                <span className="text-[10px] bg-background px-1.5 py-0.5 rounded text-foreground/70 uppercase font-bold tracking-wider">
                                     {product.categoria}
                                 </span>
                             )}
                         </div>
 
-                        <div className="font-mono text-mont-gold font-bold">
+                        <div className="font-mono text-primary font-bold">
                             R$ {Number(product.preco).toFixed(2).replace('.', ',')}
                         </div>
                     </div>
@@ -64,7 +64,7 @@ export default function ProductCard({ product, onToggleActive, onEdit }: Product
 
                 <div className="flex items-center gap-3 ml-3">
                     {product.destaque && (
-                        <span className="text-mont-gold text-lg leading-none" title="Destaque no catálogo">
+                        <span className="text-primary text-lg leading-none" title="Destaque no catálogo">
                             ★
                         </span>
                     )}

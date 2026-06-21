@@ -65,7 +65,7 @@ export default function OrderCard({
     }
 
     return (
-        <div className={`bg-white rounded-lg border transition-all ${expanded ? 'shadow-md border-mont-gold/50' : 'shadow-sm border-gray-200'}`}>
+        <div className={`bg-white rounded-lg border transition-all ${expanded ? 'shadow-md border-primary/50' : 'shadow-sm border-gray-200'}`}>
 
             {/* Header Summary */}
             <div
@@ -74,7 +74,7 @@ export default function OrderCard({
             >
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-mont-espresso">
+                        <span className="font-mono font-bold text-foreground">
                             #{order.numero_pedido}
                         </span>
                         <StatusBadge status={order.status} />
@@ -99,7 +99,7 @@ export default function OrderCard({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-lg text-mont-gold">
+                        <span className="font-mono font-bold text-lg text-primary">
                             {formatCurrency(order.total)}
                         </span>
                         {expanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
@@ -127,7 +127,7 @@ export default function OrderCard({
                                 onClick={() => onStatusChange(order.id, order.status === 'entregue' ? 'pendente' : 'entregue')}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${order.status === 'entregue'
                                     ? "bg-white text-red-600 border border-red-200 hover:bg-red-50"
-                                    : "bg-mont-espresso text-white hover:bg-black"
+                                    : "bg-foreground text-white hover:bg-black"
                                     }`}
                             >
                                 {order.status === 'entregue' ? 'Desmarcar Entregue' : 'Marcar como Entregue'}
@@ -139,7 +139,7 @@ export default function OrderCard({
                             onClick={() => onPaymentStatusChange(order.id, order.status_pagamento === 'pago' ? 'pendente' : 'pago')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${order.status_pagamento === 'pago'
                                 ? "bg-white text-red-600 border border-red-200 hover:bg-red-50"
-                                : "bg-mont-gold text-white hover:bg-mont-espresso"
+                                : "bg-primary text-white hover:bg-foreground"
                                 }`}
                         >
                             {order.status_pagamento === 'pago' ? 'Desmarcar Pago' : 'Marcar como Pago'}
@@ -166,7 +166,7 @@ export default function OrderCard({
                         {items?.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-gray-100 last:border-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-mont-espresso bg-white w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-xs">
+                                    <span className="font-bold text-foreground bg-white w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-xs">
                                         {item.quantidade}x
                                     </span>
                                     <span className="text-gray-700 line-clamp-1">

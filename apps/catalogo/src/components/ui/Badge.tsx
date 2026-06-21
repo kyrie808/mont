@@ -11,7 +11,7 @@ const Badge = ({ className, variant = 'congelado', children, ...props }: BadgePr
         refrigerado: 'bg-green-50 text-green-700 border-green-200',
         resfriado: 'bg-green-50 text-green-700 border-green-200',
         combo: 'bg-orange-50 text-orange-700 border-orange-200',
-        destaque: 'bg-mont-gold/10 text-mont-gold border-mont-gold/30'
+        destaque: 'bg-primary/10 text-primary border-primary/30'
     }
 
     const labels = {

@@ -93,7 +93,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                 className={cn(
                     'fixed top-0 left-0 right-0 z-50 transition-all duration-300 w-full',
                     isScrolled
-                        ? 'bg-mont-cream/95 backdrop-blur-md shadow-sm'
+                        ? 'bg-background/95 backdrop-blur-md shadow-sm'
                         : 'bg-transparent'
                 )}
             >
@@ -102,7 +102,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                         {/* Logo */}
                         <Link
                             href="/"
-                            className="font-display text-2xl sm:text-3xl font-bold text-mont-espresso hover:text-mont-gold transition-colors relative z-50"
+                            className="font-display text-2xl sm:text-3xl font-bold text-nav-fg hover:text-primary transition-colors relative z-50"
                             onClick={closeMobileMenu}
                         >
                             Mont
@@ -112,13 +112,13 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                         <div className="hidden md:flex items-center gap-8">
                             <Link
                                 href="/produtos"
-                                className="font-body text-mont-espresso hover:text-mont-gold transition-colors"
+                                className="font-body text-nav-fg hover:text-primary transition-colors"
                             >
                                 Produtos
                             </Link>
                             <Link
                                 href="/sobre"
-                                className="font-body text-mont-espresso hover:text-mont-gold transition-colors"
+                                className="font-body text-nav-fg hover:text-primary transition-colors"
                             >
                                 Sobre
                             </Link>
@@ -126,7 +126,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                                 href={whatsappUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-body text-mont-espresso hover:text-mont-gold transition-colors"
+                                className="font-body text-nav-fg hover:text-primary transition-colors"
                                 onClick={() => {
                                     const eventId = crypto.randomUUID()
                                     pushEvent({ event: 'whatsapp_click', click_location: 'header_desktop', event_id: eventId })
@@ -147,7 +147,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                                 onClick={closeMobileMenu}
                             >
                                 <svg
-                                    className="w-6 h-6 text-mont-espresso group-hover:text-mont-gold transition-colors"
+                                    className="w-6 h-6 text-nav-fg group-hover:text-primary transition-colors"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -161,7 +161,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                                 </svg>
 
                                 {count > 0 && (
-                                    <span className="absolute top-0 right-0 bg-mont-gold text-mont-espresso text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center transform translate-x-1/4 -translate-y-1/4">
+                                    <span className="absolute top-0 right-0 bg-primary text-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center transform translate-x-1/4 -translate-y-1/4">
                                         {count > 9 ? '9+' : count}
                                     </span>
                                 )}
@@ -169,7 +169,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
 
                             {/* Mobile Hamburger Button */}
                             <button
-                                className="md:hidden p-2 text-mont-espresso focus:outline-none z-50"
+                                className="md:hidden p-2 text-nav-fg focus:outline-none z-50"
                                 onClick={toggleMobileMenu}
                                 aria-label="Menu"
                             >
@@ -195,19 +195,19 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
             {/* Mobile Menu Drawer */}
             <div
                 ref={mobileMenuRef}
-                className="fixed top-0 right-0 bottom-0 w-[80%] max-w-sm bg-[#3D2B22] z-40 transform translate-x-full shadow-2xl flex flex-col pt-24 px-8"
+                className="fixed top-0 right-0 bottom-0 w-[80%] max-w-sm bg-menu-bg z-40 transform translate-x-full shadow-2xl flex flex-col pt-24 px-8"
             >
                 <div className="flex flex-col gap-8">
                     <Link
                         href="/produtos"
-                        className="font-display text-3xl text-mont-cream hover:text-mont-orange transition-colors border-b border-mont-cream/10 pb-4"
+                        className="font-display font-extrabold text-3xl text-background hover:text-accent-light transition-colors border-b border-background/15 pb-4"
                         onClick={closeMobileMenu}
                     >
                         Produtos
                     </Link>
                     <Link
                         href="/sobre"
-                        className="font-display text-3xl text-mont-cream hover:text-mont-orange transition-colors border-b border-mont-cream/10 pb-4"
+                        className="font-display font-extrabold text-3xl text-background hover:text-accent-light transition-colors border-b border-background/15 pb-4"
                         onClick={closeMobileMenu}
                     >
                         Sobre
@@ -216,7 +216,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                         href={whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-display text-3xl text-[#E8601C] hover:text-mont-orange-dark transition-colors pb-4 flex items-center gap-2"
+                        className="font-display font-extrabold text-3xl text-accent-light hover:text-background transition-colors pb-4 flex items-center gap-2"
                         onClick={() => {
                             const eventId = crypto.randomUUID()
                             pushEvent({ event: 'whatsapp_click', click_location: 'header_mobile', event_id: eventId })
@@ -229,7 +229,7 @@ export function Navbar({ cartItemCount: initialCount = 0 }: NavbarProps) {
                     </a>
                 </div>
 
-                <div className="mt-auto mb-10 text-mont-cream/30 text-center text-sm">
+                <div className="mt-auto mb-10 text-background/45 text-center text-sm">
                     © 2024 Mont Distribuidora
                 </div>
             </div>

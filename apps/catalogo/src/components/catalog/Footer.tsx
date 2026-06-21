@@ -9,13 +9,13 @@ export function Footer() {
     const whatsappMessage = encodeURIComponent('Olá! Vim pelo site e gostaria de saber mais sobre os produtos.')
 
     return (
-        <footer className="bg-mont-espresso text-mont-cream">
+        <footer className="bg-footer-bg text-background">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Brand */}
                     <div>
                         <h3 className="font-display text-2xl font-bold mb-4">Mont Distribuidora</h3>
-                        <p className="text-mont-warm-gray font-body text-sm">
+                        <p className="text-background/70 font-body text-sm">
                             Pão de queijo artesanal feito com alma. Massas naturais congeladas e refrigeradas direto pra sua casa.
                         </p>
                     </div>
@@ -23,13 +23,13 @@ export function Footer() {
                     {/* Contact */}
                     <div>
                         <h4 className="font-body font-semibold mb-4">Contato</h4>
-                        <ul className="space-y-2 text-sm text-mont-warm-gray font-body">
+                        <ul className="space-y-2 text-sm text-background/70 font-body">
                             <li>
                                 <a
                                     href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="hover:text-mont-gold transition-colors flex items-center gap-2"
+                                    className="hover:text-accent-light transition-colors flex items-center gap-2"
                                     onClick={() => {
                                         const eventId = crypto.randomUUID()
                                         pushEvent({ event: 'whatsapp_click', click_location: 'footer', event_id: eventId })
@@ -50,19 +50,19 @@ export function Footer() {
                     {/* Quick Links */}
                     <div>
                         <h4 className="font-body font-semibold mb-4">Links Rápidos</h4>
-                        <ul className="space-y-2 text-sm text-mont-warm-gray font-body">
+                        <ul className="space-y-2 text-sm text-background/70 font-body">
                             <li>
-                                <Link href="/produtos" className="hover:text-mont-gold transition-colors">
+                                <Link href="/produtos" className="hover:text-accent-light transition-colors">
                                     Produtos
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/sobre" className="hover:text-mont-gold transition-colors">
+                                <Link href="/sobre" className="hover:text-accent-light transition-colors">
                                     Sobre Nós
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/carrinho" className="hover:text-mont-gold transition-colors">
+                                <Link href="/carrinho" className="hover:text-accent-light transition-colors">
                                     Carrinho
                                 </Link>
                             </li>
@@ -71,7 +71,7 @@ export function Footer() {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="mt-8 pt-8 border-t border-mont-warm-gray/20 text-center text-sm text-mont-warm-gray font-body">
+                <div className="mt-8 pt-8 border-t border-background/15 text-center text-sm text-background/70 font-body">
                     <p>© {new Date().getFullYear()} Mont Distribuidora. Todos os direitos reservados.</p>
                 </div>
             </div>

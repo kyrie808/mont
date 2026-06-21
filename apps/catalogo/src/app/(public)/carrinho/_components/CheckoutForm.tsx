@@ -55,8 +55,8 @@ export default function CheckoutForm({
 
     return (
         <div className="space-y-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="bg-mont-white p-6 rounded-lg shadow-sm space-y-4">
-                <h2 className="font-display text-2xl text-mont-espresso mb-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="bg-card p-6 rounded-lg shadow-sm space-y-4">
+                <h2 className="font-display font-bold text-2xl text-foreground mb-4">
                     Dados de Entrega
                 </h2>
 
@@ -78,7 +78,7 @@ export default function CheckoutForm({
                 />
 
                 <div>
-                    <label className="block text-mont-gray text-sm mb-2">
+                    <label className="block text-muted-foreground text-sm mb-2">
                         Método de entrega
                     </label>
                     <div className="space-y-2">
@@ -87,9 +87,9 @@ export default function CheckoutForm({
                                 type="radio"
                                 value="entrega"
                                 {...register('delivery_method')}
-                                className="text-mont-gold"
+                                className="text-primary"
                             />
-                            <span className="text-mont-espresso">
+                            <span className="text-foreground">
                                 {DELIVERY_CONFIG.SBC_LABEL}
                             </span>
                         </label>
@@ -99,9 +99,9 @@ export default function CheckoutForm({
                                 type="radio"
                                 value="retirada"
                                 {...register('delivery_method')}
-                                className="text-mont-gold"
+                                className="text-primary"
                             />
-                            <span className="text-mont-espresso">
+                            <span className="text-foreground">
                                 Retirada no local
                             </span>
                         </label>
@@ -109,7 +109,7 @@ export default function CheckoutForm({
                 </div>
 
                 <div>
-                    <label className="block text-mont-gray text-sm mb-2">
+                    <label className="block text-muted-foreground text-sm mb-2">
                         Forma de pagamento
                     </label>
                     <div className="space-y-2">
@@ -122,9 +122,9 @@ export default function CheckoutForm({
                                     type="radio"
                                     value={option.id}
                                     {...register('payment_method')}
-                                    className="text-mont-gold"
+                                    className="text-primary"
                                 />
-                                <span className="text-mont-espresso">
+                                <span className="text-foreground">
                                     {option.label}
                                 </span>
                             </label>
@@ -148,7 +148,7 @@ export default function CheckoutForm({
                             />
                             {loadingCep && (
                                 <div className="absolute right-3 top-[42px]">
-                                    <Loader2 className="h-4 w-4 animate-spin text-mont-gold" />
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
                                 </div>
                             )}
                         </div>
@@ -158,7 +158,7 @@ export default function CheckoutForm({
                             label="Logradouro"
                             readOnly
                             {...register('logradouro')}
-                            className="bg-mont-surface cursor-not-allowed opacity-75"
+                            className="bg-muted cursor-not-allowed opacity-75"
                             placeholder="Preenchido automaticamente"
                         />
 
@@ -182,7 +182,7 @@ export default function CheckoutForm({
                             label="Bairro"
                             readOnly
                             {...register('bairro')}
-                            className="bg-mont-surface cursor-not-allowed opacity-75"
+                            className="bg-muted cursor-not-allowed opacity-75"
                             placeholder="Preenchido automaticamente"
                         />
 
@@ -192,32 +192,32 @@ export default function CheckoutForm({
                                 label="Cidade"
                                 readOnly
                                 {...register('cidade')}
-                                className="bg-mont-surface cursor-not-allowed opacity-75"
+                                className="bg-muted cursor-not-allowed opacity-75"
                                 placeholder="Preenchida automaticamente"
                             />
                             <Input
                                 label="UF"
                                 readOnly
                                 {...register('uf')}
-                                className="bg-mont-surface cursor-not-allowed opacity-75 text-center"
+                                className="bg-muted cursor-not-allowed opacity-75 text-center"
                                 placeholder="—"
                             />
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm text-mont-warm-gray mt-1">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <span>Problemas com seu endereço?</span>
                             <a
                                 href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=Olá, estou com dificuldade para preencher meu endereço no catálogo Mont.`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-mont-gold underline hover:text-mont-espresso transition-colors"
+                                className="text-primary underline hover:text-foreground transition-colors"
                                 onClick={() => pushEvent({ event: 'whatsapp_support_click', issue: 'cep_support' })}
                             >
                                 Fale com o suporte
                             </a>
                         </div>
 
-                        <p className="mt-3 text-sm text-[#5C3D2E]">
+                        <p className="mt-3 text-sm text-muted-foreground">
                             {freteLoading
                                 ? 'Calculando o frete pelo seu CEP...'
                                 : !cepPreenchido
@@ -236,13 +236,13 @@ export default function CheckoutForm({
                 />
 
                 <div>
-                    <label className="block text-mont-gray text-sm mb-2">
+                    <label className="block text-muted-foreground text-sm mb-2">
                         Observações (opcional)
                     </label>
                     <textarea
                         {...register('notes')}
                         rows={3}
-                        className="w-full px-4 py-2 border border-mont-surface rounded-lg focus:outline-none focus:ring-2 focus:ring-mont-gold"
+                        className="w-full px-4 py-2 border border-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="Alguma observação sobre o pedido?"
                     />
                 </div>

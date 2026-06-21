@@ -52,10 +52,10 @@ export default async function AdminDashboard() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-serif font-bold text-mont-espresso">
+                <h2 className="text-2xl font-serif font-bold text-foreground">
                     Visão Geral
                 </h2>
-                <p className="text-mont-gray text-sm">
+                <p className="text-muted-foreground text-sm">
                     Resumo de hoje, {new Date().toLocaleDateString("pt-BR")}
                 </p>
             </div>
@@ -95,7 +95,7 @@ export default async function AdminDashboard() {
 
             {/* Quick Action */}
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm text-center">
-                <h3 className="font-serif font-bold text-lg text-mont-espresso mb-2">
+                <h3 className="font-serif font-bold text-lg text-foreground mb-2">
                     Gestão Rápida
                 </h3>
                 <p className="text-gray-500 text-sm mb-4">
@@ -104,13 +104,13 @@ export default async function AdminDashboard() {
                 <div className="grid grid-cols-1 gap-3">
                     <Link
                         href="/admin/pedidos"
-                        className="w-full bg-mont-espresso text-mont-cream font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors"
+                        className="w-full bg-foreground text-background font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors"
                     >
                         Ver Pedidos
                     </Link>
                     <Link
                         href="/admin/produtos"
-                        className="w-full bg-white border border-mont-espresso text-mont-espresso font-bold py-3 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full bg-white border border-foreground text-foreground font-bold py-3 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         Gerenciar Produtos
                     </Link>

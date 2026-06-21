@@ -3,28 +3,80 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * ──────────────────────────────────────────────────────────────────
+   *  TOKENS DO CATÁLOGO — independentes do sistema interno.
+   *  Mapeados pela FUNÇÃO, em HSL channels (técnica shadcn). Use as
+   *  classes de token (bg-primary / text-foreground / border-border…)
+   *  em vez de hex cru. Trocar um valor abaixo re-tematiza o catálogo.
+   *
+   *  CHAVE DE TEMA GLOBAL (classe no <html>, em app/layout.tsx):
+   *  :root      = TEMA PADRÃO (creme/marrom/dourado/laranja + Playfair/DM Sans). Cores da home.
+   *  .tema-copa = TEMA COPA (verde/âmbar + Nunito), festivo. Ativo no <html> durante a Copa.
+   *  Trocar de tema = (des)aplicar `tema-copa` no <html>. UMA declaração flipa o catálogo
+   *  INTEIRO — cores, FONTES (--font-heading/--font-text) e o chrome (nav/menu/footer).
+   *  Nenhum componente deve hardcodar cor/fonte específica de tema: tudo vive aqui.
+   *  (mont-* segue no tailwind.config só para a hero GSAP intocável.)
+   * ──────────────────────────────────────────────────────────────────
+   */
   :root {
-    /* Cores Mont Premium */
-    --mont-cream: #FAF7F2;
-    --mont-espresso: #2C1810;
-    --mont-gold: #C8963E;
-    --mont-gold-light: #E8C876;
-    --mont-warm-gray: #8B7E74;
-    --mont-line: #E5DDD4;
-    --mont-surface: #F5F0E8;
-    --mont-white: #FFFDF9;
-    --mont-success: #5B8C5A;
-    --mont-warning: #D4A039;
-    --mont-danger: #C44536;
+    --background: 38 44% 96%;          /* #FAF7F2 cream */
+    --foreground: 17 47% 12%;          /* #2C1810 espresso */
+    --card: 40 100% 99%;               /* #FFFDF9 white */
+    --muted: 37 39% 94%;               /* #F5F0E8 surface */
+    --muted-foreground: 26 9% 50%;     /* #8B7E74 gray/warm-gray */
+    --primary: 38 56% 51%;             /* #C8963E gold (marca) */
+    --primary-foreground: 38 44% 96%;  /* #FAF7F2 cream (texto no gold) */
+    --accent: 20 82% 51%;              /* #E8601C orange */
+    --accent-light: 43 71% 69%;        /* #E8C876 gold-light */
+    --accent-strong: 13 77% 44%;       /* #C43E1A orange-dark */
+    --border: 32 25% 86%;              /* #E5DDD4 line */
+    --border-strong: 26 9% 50%;        /* #8B7E74 warm-gray */
+    --destructive: 6 57% 49%;          /* #C44536 danger */
+    --ring: 38 56% 51%;                /* #C8963E gold */
     --mont-overlay: rgba(44, 24, 16, 0.6);
+
+    /* Fontes (resolvem as next/font vars do <html>) */
+    --font-heading: var(--font-playfair);  /* títulos: serif elegante */
+    --font-text: var(--font-dm-sans);      /* corpo */
+
+    /* Chrome (nav/menu/footer) — superfícies art-directed, por tema */
+    --nav-fg: 38 56% 51%;              /* dourado (links/ícones da navbar) */
+    --menu-bg: 20 28% 19%;             /* #3D2B22 marrom (drawer mobile) */
+    --footer-bg: 17 47% 12%;           /* #2C1810 espresso (footer) */
+  }
+
+  .tema-copa {
+    --background: 38 44% 96%;          /* #FAF7F2 creme */
+    --card: 0 0% 100%;                 /* #FFFFFF */
+    --muted: 38 30% 93%;               /* #F2EEE7 superfícies suaves */
+    --foreground: 0 0% 16%;            /* #2A2A2A texto principal */
+    --muted-foreground: 0 0% 42%;      /* #6B6B6B texto secundário */
+    --primary: 135 59% 41%;            /* #2BA84A verde marca */
+    --primary-foreground: 0 0% 100%;   /* #FFFFFF */
+    --accent: 33 80% 51%;              /* #E68A1C âmbar CTA */
+    --accent-light: 37 94% 61%;        /* #F9B23E topo do gradiente */
+    --accent-strong: 29 83% 42%;       /* #C56A12 pressed / outline text */
+    --border: 37 26% 87%;              /* #E6DFD4 */
+    --border-strong: 35 22% 80%;       /* #D8CFC2 */
+    --ring: 135 59% 41%;               /* #2BA84A foco */
+
+    /* Fontes — Nunito (rounded) em tudo no copa */
+    --font-heading: var(--font-nunito);
+    --font-text: var(--font-nunito);
+
+    /* Chrome copa: nav âmbar, drawer + footer verde (mesmo estilo) */
+    --nav-fg: 33 80% 51%;              /* #E68A1C âmbar */
+    --menu-bg: 142 67% 18%;            /* #0F4D26 verde profundo */
+    --footer-bg: 142 67% 18%;          /* #0F4D26 verde (igual ao drawer no copa) */
   }
 
   * {
-    @apply border-mont-line;
+    @apply border-border;
   }
 
   body {
-    @apply bg-mont-cream text-mont-espresso;
+    @apply bg-background text-foreground;
     overflow-x: hidden;
     width: 100%;
     height: 100%;

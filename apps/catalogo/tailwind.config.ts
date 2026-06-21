@@ -7,6 +7,30 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
+                // Tokens semânticos do catálogo (/lab) — resolvem CSS vars de .lab-theme.
+                // Independentes do mont-* (produção). Ver globals.css.
+                background: 'hsl(var(--background) / <alpha-value>)',
+                card: 'hsl(var(--card) / <alpha-value>)',
+                muted: 'hsl(var(--muted) / <alpha-value>)',
+                foreground: 'hsl(var(--foreground) / <alpha-value>)',
+                'muted-foreground': 'hsl(var(--muted-foreground) / <alpha-value>)',
+                primary: {
+                    DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+                    foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+                },
+                accent: {
+                    DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+                    light: 'hsl(var(--accent-light) / <alpha-value>)',
+                    strong: 'hsl(var(--accent-strong) / <alpha-value>)',
+                },
+                border: 'hsl(var(--border) / <alpha-value>)',
+                'border-strong': 'hsl(var(--border-strong) / <alpha-value>)',
+                destructive: 'hsl(var(--destructive) / <alpha-value>)',
+                ring: 'hsl(var(--ring) / <alpha-value>)',
+                // Chrome (nav/menu/footer) — superfícies art-directed por tema.
+                'nav-fg': 'hsl(var(--nav-fg) / <alpha-value>)',
+                'menu-bg': 'hsl(var(--menu-bg) / <alpha-value>)',
+                'footer-bg': 'hsl(var(--footer-bg) / <alpha-value>)',
                 mont: {
                     cream: '#FAF7F2',
                     espresso: '#2C1810',
@@ -25,8 +49,10 @@ const config: Config = {
                 },
             },
             fontFamily: {
-                display: ['var(--font-playfair)', 'serif'],
-                body: ['var(--font-dm-sans)', 'sans-serif'],
+                // Famílias dirigidas por tema: --font-heading/--font-text flipam em .tema-copa.
+                // padrão = Playfair/DM Sans · copa = Nunito. (Ver globals.css.)
+                display: ['var(--font-heading)', 'ui-serif', 'serif'],
+                body: ['var(--font-text)', 'ui-sans-serif', 'sans-serif'],
                 mono: ['var(--font-jetbrains)', 'monospace'],
             },
             fontSize: {
