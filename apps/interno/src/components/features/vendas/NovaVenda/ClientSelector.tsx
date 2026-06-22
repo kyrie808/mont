@@ -120,7 +120,7 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                 </button>
 
                 {/* Resultados da busca OU sugestões (rola pra revelar mais) */}
-                <div className="max-h-[420px] overflow-y-auto -mr-1 pr-1">
+                <div className="max-h-[420px] overflow-y-auto no-scrollbar">
                 {search.length >= 2 ? (
                     <div className="space-y-2">
                         {results.length === 0 ? (
