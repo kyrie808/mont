@@ -1,7 +1,8 @@
-import { Search, User, Plus } from 'lucide-react'
+import { Search, User, Plus, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Button, Badge, Modal, Input, ModalActions } from '../../../ui'
+import { Button, Modal, Input, ModalActions } from '../../../ui'
 import { useContatos } from '../../../../hooks/useContatos'
+import { useClientesSugeridos } from '../../../../hooks/useClientesSugeridos'
 import { useToast } from '../../../../components/ui/Toast'
 import { formatPhone } from '@mont/shared'
 import type { DomainContato } from '../../../../types/domain'
@@ -11,11 +12,15 @@ interface ClientSelectorProps {
     onSelect: (contato: DomainContato | null) => void
 }
 
+const rowClass =
+    'w-full px-4 py-3 bg-muted/50 rounded-lg text-left hover:bg-primary/10 transition-colors flex items-center justify-between gap-3 group'
+
 export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProps) {
-    const [isOpen, setIsOpen] = useState(false)
     const [search, setSearch] = useState('')
     const [results, setResults] = useState<DomainContato[]>([])
-    const { contatos, searchContatos, createContato } = useContatos()
+    const [selecting, setSelecting] = useState(false)
+    const { searchContatos, createContato, getContatoById } = useContatos()
+    const { data: sugeridos = [] } = useClientesSugeridos(5)
     const toast = useToast()
 
     // Quick add state
@@ -38,6 +43,14 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
         return () => clearTimeout(debounce)
     }, [search, searchContatos])
 
+    // Sugestão só traz id+nome+stats → busca o contato completo antes de selecionar.
+    const handleSelectSugerido = async (contatoId: string) => {
+        setSelecting(true)
+        const contato = await getContatoById(contatoId)
+        setSelecting(false)
+        if (contato) onSelect(contato)
+    }
+
     const handleQuickAdd = async () => {
         if (!quickName || !quickPhone) {
             toast.error('Preencha nome e telefone')
@@ -57,7 +70,6 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
         if (newContato) {
             onSelect(newContato)
             setShowQuickAdd(false)
-            setIsOpen(false)
             setQuickName('')
             setQuickPhone('')
             toast.success('Cliente cadastrado!')
@@ -85,65 +97,73 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
 
     return (
         <>
-            <div
-                onClick={() => setIsOpen(true)}
-                className="bg-card p-4 rounded-xl border-2 border-dashed border-border hover:border-primary cursor-pointer transition-colors flex items-center justify-center gap-2 text-muted-foreground group"
-            >
-                <User className="h-5 w-5 group-hover:text-primary" />
-                <span className="group-hover:text-primary font-medium">Selecionar Cliente</span>
-            </div>
-
-            {/* Selection Modal */}
-            <Modal
-                isOpen={isOpen}
-                onClose={() => setIsOpen(false)}
-                title="Selecionar Cliente"
-                size="md"
-            >
-                <div className="space-y-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nome, apelido ou telefone…"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-hidden focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60"
-                            autoFocus
-                        />
-                    </div>
-
-                    <div className="max-h-[300px] overflow-y-auto space-y-2">
-                        {/* Quick Add Button in List */}
-                        <button
-                            onClick={() => setShowQuickAdd(true)}
-                            className="w-full py-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Plus className="h-5 w-5" />
-                            <span>Cadastrar Novo</span>
-                        </button>
-
-                        {(search ? results : contatos.slice(0, 50)).map((contato) => (
-                            <button
-                                key={contato.id}
-                                onClick={() => {
-                                    onSelect(contato)
-                                    setIsOpen(false)
-                                }}
-                                className="w-full px-4 py-3 bg-muted/50 rounded-lg text-left hover:bg-primary/10 transition-colors flex items-center justify-between group"
-                            >
-                                <div>
-                                    <p className="font-medium text-foreground group-hover:text-primary">{contato.nome}</p>
-                                    <p className="text-sm text-muted-foreground">{formatPhone(contato.telefone)}</p>
-                                </div>
-                                <Badge variant={contato.status === 'cliente' ? 'success' : 'warning'}>
-                                    {contato.status === 'cliente' ? 'Cliente' : 'Lead'}
-                                </Badge>
-                            </button>
-                        ))}
-                    </div>
+            <div className="space-y-3">
+                {/* Busca inline (sem modal) */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome, apelido ou telefone…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-hidden focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground/60"
+                    />
                 </div>
-            </Modal>
+
+                {/* Cadastrar Novo (abre o modalzinho) */}
+                <button
+                    onClick={() => setShowQuickAdd(true)}
+                    className="w-full py-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
+                >
+                    <Plus className="h-5 w-5" />
+                    <span>Cadastrar Novo</span>
+                </button>
+
+                {/* Resultados da busca OU sugestões */}
+                {search.length >= 2 ? (
+                    <div className="space-y-2">
+                        {results.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente encontrado.</p>
+                        ) : (
+                            results.map((contato) => (
+                                <button
+                                    key={contato.id}
+                                    onClick={() => onSelect(contato)}
+                                    className={rowClass}
+                                >
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-foreground group-hover:text-primary truncate">{contato.nome}</p>
+                                        <p className="text-sm text-muted-foreground">{formatPhone(contato.telefone)}</p>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                                </button>
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    sugeridos.length > 0 && (
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1">
+                                Sugeridos · quem mais compra
+                            </p>
+                            {sugeridos.map((s) => (
+                                <button
+                                    key={s.contatoId}
+                                    onClick={() => handleSelectSugerido(s.contatoId)}
+                                    disabled={selecting}
+                                    className={rowClass}
+                                >
+                                    <span className="font-medium text-foreground group-hover:text-primary truncate">{s.nome}</span>
+                                    <span className="flex items-center gap-2 shrink-0 text-sm text-muted-foreground tabular-nums">
+                                        {s.totalCompras} {s.totalCompras === 1 ? 'compra' : 'compras'}
+                                        <ChevronRight className="h-5 w-5" />
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    )
+                )}
+            </div>
 
             {/* Quick Add Modal */}
             <Modal
