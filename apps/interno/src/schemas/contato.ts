@@ -17,6 +17,9 @@ export const contatoSchema = z.object({
     subtipo: z.string().optional().nullable(),
     status: z.enum(['lead', 'cliente', 'inativo', 'fornecedor']),
     origem: z.string().min(1, 'Origem é obrigatória'),
+    // Aquisição (só relevante quando origem = 'anuncio')
+    fonte: z.string().optional().nullable(),
+    campanha_id: z.string().uuid().optional().nullable(),
     indicado_por_id: z.string().uuid().optional().nullable(),
     endereco: z.string().optional().nullable(),
     cep: z.string().optional().nullable(),
@@ -29,6 +32,15 @@ export const contatoSchema = z.object({
     complemento: z.string().optional().nullable(),
     cidade: z.string().optional().nullable(),
     uf: z.string().optional().nullable(),
+}).superRefine((data, ctx) => {
+    // Quando a origem é Anúncio, a fonte é obrigatória (campanha é opcional).
+    if (data.origem === 'anuncio' && !data.fonte) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['fonte'],
+            message: 'Selecione a fonte do anúncio',
+        })
+    }
 })
 
 export type ContatoFormData = z.infer<typeof contatoSchema>

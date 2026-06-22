@@ -78,6 +78,8 @@ export class ContatoService {
             subtipo: data.subtipo,
             status: data.status as NonNullable<ContatoInsert['status']>,
             origem: data.origem as NonNullable<ContatoInsert['origem']>,
+            fonte: data.fonte ?? null,
+            campanha_id: data.campanhaId ?? null,
             indicado_por_id: data.indicadoPorId,
             endereco: data.endereco,
             cep: data.cep,
@@ -134,6 +136,8 @@ export class ContatoService {
         if (data.subtipo !== undefined) dbUpdate.subtipo = data.subtipo
         if (data.status !== undefined) dbUpdate.status = data.status as NonNullable<ContatoUpdate['status']>
         if (data.origem !== undefined) dbUpdate.origem = data.origem as NonNullable<ContatoUpdate['origem']>
+        if (data.fonte !== undefined) dbUpdate.fonte = data.fonte
+        if (data.campanhaId !== undefined) dbUpdate.campanha_id = data.campanhaId
         if (data.indicadoPorId !== undefined) dbUpdate.indicado_por_id = data.indicadoPorId
         if (data.endereco !== undefined) dbUpdate.endereco = data.endereco
         if (data.cep !== undefined) dbUpdate.cep = data.cep

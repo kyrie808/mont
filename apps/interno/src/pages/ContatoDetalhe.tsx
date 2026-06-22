@@ -14,6 +14,7 @@ import { calcularNivelCliente } from '../utils/calculations'
 // Refactored Sub-components
 import { ContatoHero } from '../components/features/contatos/detalhe/ContatoHero'
 import { ContatoIntel } from '../components/features/contatos/detalhe/ContatoIntel'
+import { AquisicaoCard } from '../components/features/contatos/detalhe/AquisicaoCard'
 import { LoyaltyJourney } from '../components/features/contatos/detalhe/LoyaltyJourney'
 import { VendasHistory } from '../components/features/contatos/detalhe/VendasHistory'
 import { CatalogOrdersHistory } from '../components/features/contatos/detalhe/CatalogOrdersHistory'
@@ -82,7 +83,9 @@ export function ContatoDetalhe() {
                         )}
                     </div>
 
-                    <LoyaltyJourney 
+                    <AquisicaoCard contato={contato} />
+
+                    <LoyaltyJourney
                         contatoId={contato.id} 
                         isB2B={contato.tipo === 'B2B'} 
                     />

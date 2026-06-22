@@ -85,6 +85,8 @@ export const toDomainContato = (dbContato: ContatoRowWithIndicador): DomainConta
         email: dbContato.email || null,
         apelido: dbContato.apelido || null,
         origem: (dbContato.origem || 'direto') as DomainContato['origem'],
+        fonte: dbContato.fonte ?? null,
+        campanhaId: dbContato.campanha_id ?? null,
         status: (dbContato.status || 'lead') as DomainContato['status'],
         tipo: (dbContato.tipo || 'B2C') as DomainContato['tipo'],
         subtipo: dbContato.subtipo || null,

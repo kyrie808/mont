@@ -11,6 +11,7 @@ import type { DomainContato, CreateContato, IndicadorRef } from '../../types/dom
 // Sub-components
 import { FormIdentidade } from '../features/contatos/form/FormIdentidade'
 import { FormClassificacao } from '../features/contatos/form/FormClassificacao'
+import { FormAquisicao } from '../features/contatos/form/FormAquisicao'
 import { FormIndicacao } from '../features/contatos/form/FormIndicacao'
 import { FormEndereco } from '../features/contatos/form/FormEndereco'
 
@@ -83,6 +84,8 @@ export function ContatoFormModal({
             reset({
                 ...contato,
                 indicado_por_id: contato.indicadoPorId,
+                fonte: contato.fonte ?? null,
+                campanha_id: contato.campanhaId ?? null,
                 cep: contato.cep || '',
                 logradouro: contato.logradouro || contato.endereco || '',
                 numero: contato.numero || '',
@@ -127,9 +130,13 @@ export function ContatoFormModal({
         try {
             const rawValues = getValues()
             const formDataKeyed = { ...data, ...rawValues }
+            // Aquisição só vale para origem = 'anuncio'; zera nos demais casos.
+            const isAnuncio = formDataKeyed.origem === 'anuncio'
             const cleanPayload: CreateContato = {
                 ...formDataKeyed,
                 indicadoPorId: formDataKeyed.indicado_por_id,
+                fonte: isAnuncio ? (formDataKeyed.fonte || null) : null,
+                campanhaId: isAnuncio ? (formDataKeyed.campanha_id || null) : null,
                 cep: formDataKeyed.cep?.replace(/\D/g, '') || null,
             } as unknown as CreateContato
 
@@ -156,6 +163,9 @@ export function ContatoFormModal({
                     <div className="space-y-6">
                         <FormIdentidade register={register} errors={errors} />
                         <FormClassificacao register={register} errors={errors} tipoValue={tipoValue} />
+                        {origemValue === 'anuncio' && (
+                            <FormAquisicao register={register} errors={errors} setValue={setValue} />
+                        )}
                         {origemValue === 'indicacao' && (
                             <div ref={dropdownRef}>
                                 <FormIndicacao 

@@ -31,6 +31,9 @@ export interface DomainContato {
     subtipo?: string | null
     status: 'lead' | 'cliente' | 'inativo' | 'fornecedor'
     origem: string
+    // Aquisição (preenchidos só quando origem = 'anuncio')
+    fonte?: string | null
+    campanhaId?: string | null
     indicadoPorId?: string | null
     indicador?: IndicadorRef | null
     endereco?: string | null
