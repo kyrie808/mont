@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { Target } from 'lucide-react'
 import type { UseFormRegister, FieldErrors } from 'react-hook-form'
 import type { ContatoFormData } from '@/schemas/contato'
@@ -7,7 +6,7 @@ import {
     SUBTIPOS_B2B_LABELS,
     CONTATO_STATUS_LABELS,
 } from '@/constants'
-import { supabase } from '@/lib/supabase'
+import { useOrigens } from '@/hooks/useOrigens'
 
 interface FormClassificacaoProps {
     register: UseFormRegister<ContatoFormData>
@@ -16,19 +15,7 @@ interface FormClassificacaoProps {
 }
 
 export function FormClassificacao({ register, errors, tipoValue }: FormClassificacaoProps) {
-    const { data: origens = [] } = useQuery({
-        queryKey: ['origens'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('origens')
-                .select('slug, label')
-                .eq('ativo', true)
-                .order('ordem')
-            if (error) throw error
-            return data
-        },
-        staleTime: Infinity,
-    })
+    const { data: origens = [] } = useOrigens()
 
     return (
         <div className="space-y-4">

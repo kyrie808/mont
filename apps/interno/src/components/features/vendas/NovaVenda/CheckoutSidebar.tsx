@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
 import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
 import { Button } from '../../../ui/Button'
+import { useOrigens } from '../../../../hooks/useOrigens'
 import { cn } from '@mont/shared'
 
 interface CheckoutSidebarProps {
@@ -13,6 +14,7 @@ interface CheckoutSidebarProps {
     total: number
     contatoId: string
     contatoNome: string
+    contatoOrigem?: string
     items: VendaFormData['itens']
 }
 
@@ -30,11 +32,16 @@ export function CheckoutSidebar({
     total,
     contatoId,
     contatoNome,
+    contatoOrigem,
     items
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showTaxaEntrega, setShowTaxaEntrega] = useState(false)
     const [valorRecebido, setValorRecebido] = useState<number | ''>('')
+    const { data: origens = [] } = useOrigens()
+
+    // Default da origem da venda: herda a origem do contato (cai em 'direto' se ausente)
+    const origemPadrao = contatoOrigem || 'direto'
 
     const {
         register,
@@ -50,6 +57,7 @@ export function CheckoutSidebar({
             data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'pix',
             taxa_entrega: 0,
+            origem: origemPadrao,
             parcelas: 1,
             itens: items,
             observacoes: '',
@@ -68,12 +76,13 @@ export function CheckoutSidebar({
             data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'pix',
             taxa_entrega: 0,
+            origem: origemPadrao,
             parcelas: 1,
             itens: items,
             observacoes: '',
             data_prevista_pagamento: null
         })
-    }, [contatoId, items, reset])
+    }, [contatoId, items, origemPadrao, reset])
 
     // Update data_prevista_pagamento automatically for Fiado
     useEffect(() => {
@@ -270,6 +279,21 @@ export function CheckoutSidebar({
                             />
                         </div>
                     )}
+                </div>
+
+                {/* Origem da Venda */}
+                <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">
+                        Origem da Venda
+                    </label>
+                    <select
+                        {...register('origem')}
+                        className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-xl outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                    >
+                        {origens.map(({ slug, label }) => (
+                            <option key={slug} value={slug}>{label}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Observações */}

@@ -142,6 +142,7 @@ export interface CreateVenda {
     formaPagamento: PagamentoMetodo
     taxaEntrega: number
     dataPrevistaPagamento?: string | null
+    origem?: string | null
     itens: {
         produtoId: string
         quantidade: number

@@ -18,6 +18,7 @@ export const vendaSchema = z.object({
     forma_pagamento: z.enum(['pix', 'dinheiro', 'cartao', 'fiado', 'brinde', 'pre_venda']),
     observacoes: z.string().optional().nullable(),
     taxa_entrega: z.number().min(0).default(0),
+    origem: z.string().optional(),
     itens: z.array(itemVendaSchema).min(1, 'Adicione pelo menos um produto'),
     parcelas: z.number().int().min(1).default(1),
     data_prevista_pagamento: z.string().optional().nullable(),
