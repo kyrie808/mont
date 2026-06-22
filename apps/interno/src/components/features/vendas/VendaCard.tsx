@@ -22,7 +22,7 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
             onClick={() => navigate(`/vendas/${venda.id}`)}
         >
             <CardHeader className="pb-2 p-5">
-                <div className="flex justify-between items-start gap-4">
+                <div className="flex justify-between items-start gap-4 min-w-0">
                     <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-xl text-foreground leading-tight truncate">
                             {venda.contato?.nome || 'Cliente Não Identificado'}
@@ -32,7 +32,7 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
                         </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
                         {/* Delivery Status */}
                         <div className={cn(
                             "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border shadow-card",
