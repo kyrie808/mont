@@ -8,6 +8,10 @@ export function BottomNav() {
 
     const isActive = (path: string) => location.pathname === path
 
+    // O "+" É o atalho de Nova Venda — redundante (e colide com a barra Voltar/Próximo)
+    // quando já se está no fluxo. Some com ele dentro da própria Nova Venda.
+    const naNovaVenda = location.pathname.startsWith('/nova-venda')
+
     return (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
             <div className="flex items-end justify-between px-2 pb-2 h-16">
@@ -28,23 +32,25 @@ export function BottomNav() {
                     label="Clientes"
                 />
 
-                {/* NOVA VENDA (FAB) */}
-                <div className="relative -top-5 mx-2">
-                    <button
-                        onClick={() => navigate('/nova-venda')}
-                        className="
-                            flex items-center justify-center 
-                            w-14 h-14 rounded-full 
-                            bg-primary text-primary-foreground 
-                            shadow-lg shadow-primary/30
-                            border-4 border-gray-50
-                            transform transition-transform active:scale-95
-                        "
-                        aria-label="Nova Venda"
-                    >
-                        <Plus className="h-7 w-7" />
-                    </button>
-                </div>
+                {/* NOVA VENDA (FAB) — escondido quando já se está na Nova Venda */}
+                {!naNovaVenda && (
+                    <div className="relative -top-5 mx-2">
+                        <button
+                            onClick={() => navigate('/nova-venda')}
+                            className="
+                                flex items-center justify-center
+                                w-14 h-14 rounded-full
+                                bg-primary text-primary-foreground
+                                shadow-lg shadow-primary/30
+                                border-4 border-gray-50
+                                transform transition-transform active:scale-95
+                            "
+                            aria-label="Nova Venda"
+                        >
+                            <Plus className="h-7 w-7" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Vendas */}
                 <NavButton
