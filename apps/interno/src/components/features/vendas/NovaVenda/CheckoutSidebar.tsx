@@ -32,7 +32,6 @@ export function CheckoutSidebar({
     items
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [showTaxaEntrega, setShowTaxaEntrega] = useState(false)
 
     const {
         register,
@@ -175,37 +174,26 @@ export function CheckoutSidebar({
                     </div>
                 )}
 
-                {/* Taxa de Entrega Toggle */}
-                <div className="space-y-3">
-                    <button
-                        type="button"
-                        onClick={() => setShowTaxaEntrega(!showTaxaEntrega)}
-                        className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-xl border border-border text-sm"
-                    >
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Truck className="w-5 h-5" />
-                            <span>Taxa de Entrega</span>
-                        </div>
-                        <span className={cn(
-                            "font-bold tabular-nums",
-                            taxaEntregaValue > 0 ? "text-primary" : "text-muted-foreground"
-                        )}>
-                            {taxaEntregaValue > 0 ? `+ ${taxaEntregaValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : 'Adicionar'}
-                        </span>
-                    </button>
-
-                    {showTaxaEntrega && (
-                        <div className="p-4 bg-muted/50 rounded-xl border border-border animate-in slide-in-from-top-1 duration-200">
-                            <input
-                                type="number"
-                                step="0.50"
-                                {...register('taxa_entrega', { valueAsNumber: true })}
-                                className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-lg text-lg font-bold outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums"
-                                placeholder="0,00"
-                                autoFocus
-                            />
-                        </div>
-                    )}
+                {/* Frete — sempre visível (obrigatório, default 0). Separa receita de frete do produto. */}
+                <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-xl border border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Truck className="w-5 h-5" />
+                        <span className="text-sm font-medium">Frete</span>
+                    </div>
+                    <div className="relative w-28">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                        <input
+                            type="number"
+                            step="0.50"
+                            min="0"
+                            {...register('taxa_entrega', { valueAsNumber: true })}
+                            className={cn(
+                                "w-full pl-9 pr-2 py-2 bg-background text-foreground border rounded-lg text-sm font-bold text-right outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums",
+                                taxaEntregaValue > 0 ? "border-primary/40 text-primary" : "border-border"
+                            )}
+                            placeholder="0,00"
+                        />
+                    </div>
                 </div>
 
                 {/* Observações */}
