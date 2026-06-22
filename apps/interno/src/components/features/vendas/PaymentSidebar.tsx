@@ -86,9 +86,8 @@ export function PaymentSidebar({
                 // não devem receber atribuição de venda (mesma regra do PurchaseOrderPaymentModal).
                 const ativas = data.filter((c) => c.ativo !== false)
                 setContas(ativas)
-                if (ativas.length > 0) {
-                    setValue('conta_id', ativas[0].id, { shouldValidate: true })
-                }
+                // NÃO pré-seleciona conta: a escolha da conta que recebeu o dinheiro tem que
+                // ser consciente (tracking financeiro). O placeholder força o usuário a escolher.
             } catch (err) {
                 console.error('[PaymentSidebar] fetchContas failed:', err)
                 setContasError('Não foi possível carregar as contas. Recarregue a página.')

@@ -146,7 +146,6 @@ export function NovaVenda() {
                 data: data.data,
                 formaPagamento: data.forma_pagamento,
                 taxaEntrega: data.taxa_entrega,
-                origem: data.origem ?? null,
                 itens: data.itens.map(it => ({
                     produtoId: it.produto_id,
                     quantidade: it.quantidade,
@@ -267,7 +266,6 @@ export function NovaVenda() {
                                             total={cartTotal}
                                             contatoId={selectedContato?.id || ''}
                                             contatoNome={selectedContato?.nome || ''}
-                                            contatoOrigem={selectedContato?.origem}
                                             items={cart.map(item => ({
                                                 produto_id: item.produto_id,
                                                 quantidade: item.quantidade,

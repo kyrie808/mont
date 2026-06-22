@@ -133,7 +133,6 @@ export const vendaService = {
             forma_pagamento: data.formaPagamento,
             taxa_entrega: data.taxaEntrega || 0,
             data_prevista_pagamento: data.dataPrevistaPagamento,
-            origem: data.origem ?? null,
             custo_total: custoTotal
         }
 

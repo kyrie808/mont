@@ -10,7 +10,9 @@ import type {
 } from '@mont/shared'
 
 export type VendaStatus = 'pendente' | 'entregue' | 'cancelada'
-export type PagamentoMetodo = 'pix' | 'dinheiro' | 'cartao' | 'fiado' | 'brinde' | 'pre_venda'
+// 'venda' = intenção de venda normal (forma real informada no Quitar). 'fiado'/'brinde' carregam lógica.
+// pix/dinheiro/cartao/pre_venda permanecem para compat com vendas históricas.
+export type PagamentoMetodo = 'venda' | 'pix' | 'dinheiro' | 'cartao' | 'fiado' | 'brinde' | 'pre_venda'
 export type PagamentoStatus = 'pendente' | 'pago'
 
 export interface IndicadorRef {
@@ -142,7 +144,6 @@ export interface CreateVenda {
     formaPagamento: PagamentoMetodo
     taxaEntrega: number
     dataPrevistaPagamento?: string | null
-    origem?: string | null
     itens: {
         produtoId: string
         quantidade: number

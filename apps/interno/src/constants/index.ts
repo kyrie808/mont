@@ -70,6 +70,7 @@ export const VENDA_STATUS_COLORS: Record<string, string> = {
 
 // Formas de pagamento
 export const FORMA_PAGAMENTO = {
+    venda: 'venda',
     pix: 'pix',
     dinheiro: 'dinheiro',
     cartao: 'cartao',
@@ -79,6 +80,7 @@ export const FORMA_PAGAMENTO = {
 } as const
 
 export const FORMA_PAGAMENTO_LABELS: Record<string, string> = {
+    venda: 'Venda',
     pix: 'PIX',
     dinheiro: 'Dinheiro',
     cartao: 'Cartão',
@@ -88,6 +90,7 @@ export const FORMA_PAGAMENTO_LABELS: Record<string, string> = {
 }
 
 export const FORMA_PAGAMENTO_ICONS: Record<string, string> = {
+    venda: '🛒',
     pix: '💸',
     dinheiro: '💵',
     cartao: '💳',

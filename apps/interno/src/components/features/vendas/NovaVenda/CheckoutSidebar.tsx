@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Calendar, DollarSign, CreditCard, FileText, Gift, Truck, ChevronRight } from 'lucide-react'
+import { ShoppingCart, Calendar, Gift, Truck, ChevronRight } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
 import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
 import { Button } from '../../../ui/Button'
-import { useOrigens } from '../../../../hooks/useOrigens'
 import { cn } from '@mont/shared'
 
 interface CheckoutSidebarProps {
@@ -14,17 +13,15 @@ interface CheckoutSidebarProps {
     total: number
     contatoId: string
     contatoNome: string
-    contatoOrigem?: string
     items: VendaFormData['itens']
 }
 
-const PAYMENT_METHODS = [
-    { id: 'pix', label: 'Pix', icon: FileText },
-    { id: 'dinheiro', label: 'Dinheiro', icon: DollarSign },
-    { id: 'cartao', label: 'Cartão', icon: CreditCard },
+// Intenção da venda (a forma REAL — pix/dinheiro/cartão — é informada no Quitar).
+const SALE_TYPES = [
+    { id: 'venda', label: 'Venda', icon: ShoppingCart },
     { id: 'fiado', label: 'Fiado', icon: Calendar },
     { id: 'brinde', label: 'Brinde', icon: Gift },
-]
+] as const
 
 export function CheckoutSidebar({
     onBack,
@@ -32,16 +29,10 @@ export function CheckoutSidebar({
     total,
     contatoId,
     contatoNome,
-    contatoOrigem,
     items
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showTaxaEntrega, setShowTaxaEntrega] = useState(false)
-    const [valorRecebido, setValorRecebido] = useState<number | ''>('')
-    const { data: origens = [] } = useOrigens()
-
-    // Default da origem da venda: herda a origem do contato (cai em 'direto' se ausente)
-    const origemPadrao = contatoOrigem || 'direto'
 
     const {
         register,
@@ -55,9 +46,8 @@ export function CheckoutSidebar({
         defaultValues: {
             contato_id: contatoId,
             data: format(new Date(), 'yyyy-MM-dd'),
-            forma_pagamento: 'pix',
+            forma_pagamento: 'venda',
             taxa_entrega: 0,
-            origem: origemPadrao,
             parcelas: 1,
             itens: items,
             observacoes: '',
@@ -67,22 +57,20 @@ export function CheckoutSidebar({
 
     const formaPagamento = watch('forma_pagamento')
     const taxaEntregaValue = watch('taxa_entrega') || 0
-    const numParcelas = watch('parcelas') || 1
     const totalGeral = total + taxaEntregaValue
 
     useEffect(() => {
         reset({
             contato_id: contatoId,
             data: format(new Date(), 'yyyy-MM-dd'),
-            forma_pagamento: 'pix',
+            forma_pagamento: 'venda',
             taxa_entrega: 0,
-            origem: origemPadrao,
             parcelas: 1,
             itens: items,
             observacoes: '',
             data_prevista_pagamento: null
         })
-    }, [contatoId, items, origemPadrao, reset])
+    }, [contatoId, items, reset])
 
     // Update data_prevista_pagamento automatically for Fiado
     useEffect(() => {
@@ -104,8 +92,6 @@ export function CheckoutSidebar({
         }
     }
 
-    const troco = typeof valorRecebido === 'number' ? valorRecebido - totalGeral : 0
-
     return (
         <div className="flex flex-col h-full bg-card border-l border-border shadow-elevated overflow-hidden">
             {/* Header */}
@@ -126,21 +112,21 @@ export function CheckoutSidebar({
                     </div>
                 </div>
 
-                {/* Forma de Pagamento */}
+                {/* Tipo de Venda (intenção) */}
                 <div className="space-y-3">
                     <label className="text-sm font-medium text-foreground">
-                        Forma de Pagamento
+                        Tipo de Venda
                     </label>
                     <div className="grid grid-cols-3 gap-2">
-                        {PAYMENT_METHODS.map((method) => {
-                            const Icon = method.icon
-                            const isSelected = formaPagamento === method.id
+                        {SALE_TYPES.map((type) => {
+                            const Icon = type.icon
+                            const isSelected = formaPagamento === type.id
                             return (
                                 <button
-                                    key={method.id}
+                                    key={type.id}
                                     type="button"
                                     aria-pressed={isSelected}
-                                    onClick={() => setValue('forma_pagamento', method.id as VendaFormData['forma_pagamento'])}
+                                    onClick={() => setValue('forma_pagamento', type.id as VendaFormData['forma_pagamento'])}
                                     className={cn(
                                         "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                                         isSelected
@@ -149,104 +135,45 @@ export function CheckoutSidebar({
                                     )}
                                 >
                                     <Icon className="w-5 h-5" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">{method.label}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">{type.label}</span>
                                 </button>
                             )
                         })}
                     </div>
+                    <p className="text-[11px] text-muted-foreground italic">
+                        A forma de pagamento (PIX, dinheiro, cartão) é informada ao quitar a venda.
+                    </p>
                 </div>
 
-                {/* Conditional Inputs */}
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {formaPagamento === 'dinheiro' && (
-                        <div className="p-4 bg-success/10 rounded-xl border border-success/30 space-y-3">
-                            <label className="text-sm font-medium text-success block">
-                                Calculadora de Troco
+                {/* Fiado: data de vencimento */}
+                {formaPagamento === 'fiado' && (
+                    <div className="space-y-4 p-4 bg-warning-strong/10 rounded-xl border border-warning-strong/30 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div>
+                            <label className="text-sm font-medium text-warning-strong block mb-1.5">
+                                Data de Vencimento
                             </label>
-                            <div className="space-y-3">
-                                <div>
-                                    <span className="text-xs text-success/80 mb-1 block">Valor Recebido</span>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-success font-medium">R$</span>
-                                        <input
-                                            type="number"
-                                            value={valorRecebido}
-                                            onChange={(e) => setValorRecebido(e.target.value ? Number(e.target.value) : '')}
-                                            className="w-full pl-9 pr-4 py-2.5 bg-background text-foreground border border-success/30 rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-success"
-                                            placeholder="0,00"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="py-2.5 px-4 bg-success/10 rounded-lg border border-success/20">
-                                    <span className="text-xs text-success/80 mb-1 block">Troco</span>
-                                    <span className={cn("text-lg font-bold tabular-nums", troco >= 0 ? "text-success" : "text-destructive")}>
-                                        {troco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {formaPagamento === 'fiado' && (
-                        <div className="space-y-4 p-4 bg-warning-strong/10 rounded-xl border border-warning-strong/30">
-                            <div>
-                                <label className="text-sm font-medium text-warning-strong block mb-1.5">
-                                    Data de Vencimento
-                                </label>
-                                <input
-                                    type="date"
-                                    {...register('data_prevista_pagamento')}
-                                    className={cn(
-                                        "w-full px-3 py-2 bg-background text-foreground border rounded-lg outline-hidden focus-visible:ring-2",
-                                        errors.data_prevista_pagamento
-                                            ? "border-destructive focus-visible:ring-destructive"
-                                            : "border-warning-strong/30 focus-visible:ring-warning-strong"
-                                    )}
-                                />
-                                {errors.data_prevista_pagamento && (
-                                    <span className="text-[10px] text-destructive mt-1 font-bold">
-                                        {errors.data_prevista_pagamento.message}
-                                    </span>
+                            <input
+                                type="date"
+                                {...register('data_prevista_pagamento')}
+                                className={cn(
+                                    "w-full px-3 py-2 bg-background text-foreground border rounded-lg outline-hidden focus-visible:ring-2",
+                                    errors.data_prevista_pagamento
+                                        ? "border-destructive focus-visible:ring-destructive"
+                                        : "border-warning-strong/30 focus-visible:ring-warning-strong"
                                 )}
-                            </div>
-                            <div className="flex items-center text-[10px] text-warning-strong italic">
-                                <ChevronRight className="w-3 h-3 mr-1 shrink-0 px-0" />
-                                Alertas financeiros automáticos
-                            </div>
-                        </div>
-                    )}
-
-                    {formaPagamento === 'cartao' && (
-                        <div className="p-4 bg-primary/10 rounded-xl border border-primary/30 space-y-3">
-                            <div>
-                                <label className="text-sm font-medium text-primary block mb-1.5">
-                                    Parcelas
-                                </label>
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        aria-label="Diminuir parcelas"
-                                        onClick={() => setValue('parcelas', Math.max(1, numParcelas - 1))}
-                                        className="p-1 px-3 bg-background text-foreground border border-primary/30 rounded-lg"
-                                    >-</button>
-                                    <span className="font-bold text-lg min-w-[20px] text-center text-foreground tabular-nums">{numParcelas}x</span>
-                                    <button
-                                        type="button"
-                                        aria-label="Aumentar parcelas"
-                                        onClick={() => setValue('parcelas', Math.min(12, numParcelas + 1))}
-                                        className="p-1 px-3 bg-background text-foreground border border-primary/30 rounded-lg"
-                                    >+</button>
-                                </div>
-                            </div>
-                            <div className="flex justify-between items-end">
-                                <span className="text-xs text-primary/80">Valor da Parcela</span>
-                                <span className="font-bold text-lg text-primary tabular-nums">
-                                    {numParcelas > 0 ? (totalGeral / numParcelas).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            />
+                            {errors.data_prevista_pagamento && (
+                                <span className="text-[10px] text-destructive mt-1 font-bold">
+                                    {errors.data_prevista_pagamento.message}
                                 </span>
-                            </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                        <div className="flex items-center text-[10px] text-warning-strong italic">
+                            <ChevronRight className="w-3 h-3 mr-1 shrink-0 px-0" />
+                            Alertas financeiros automáticos
+                        </div>
+                    </div>
+                )}
 
                 {/* Taxa de Entrega Toggle */}
                 <div className="space-y-3">
@@ -279,21 +206,6 @@ export function CheckoutSidebar({
                             />
                         </div>
                     )}
-                </div>
-
-                {/* Origem da Venda */}
-                <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-foreground">
-                        Origem da Venda
-                    </label>
-                    <select
-                        {...register('origem')}
-                        className="w-full px-4 py-2.5 bg-background text-foreground border border-border rounded-xl outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
-                    >
-                        {origens.map(({ slug, label }) => (
-                            <option key={slug} value={slug}>{label}</option>
-                        ))}
-                    </select>
                 </div>
 
                 {/* Observações */}

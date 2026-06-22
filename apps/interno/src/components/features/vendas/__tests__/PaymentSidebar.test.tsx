@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import type { Conta } from '@mont/shared'
 import { cashFlowService } from '../../../../services/cashFlowService'
 import { PaymentSidebar } from '../PaymentSidebar'
@@ -50,7 +50,7 @@ describe('PaymentSidebar', () => {
         expect(screen.getByRole('button', { name: /confirmar pagamento/i })).toBeDisabled()
     })
 
-    it('2. exibe Select e habilita botão após getContas retornar conta', async () => {
+    it('2. NÃO auto-seleciona conta: botão fica desabilitado até escolha consciente', async () => {
         mockGetContas.mockResolvedValue([mockConta])
 
         render(<PaymentSidebar {...defaultProps} />)
@@ -58,6 +58,12 @@ describe('PaymentSidebar', () => {
         await waitFor(() => {
             expect(screen.queryByText('Carregando contas...')).not.toBeInTheDocument()
         })
+
+        // Sem pré-seleção: o usuário precisa escolher a conta conscientemente.
+        expect(screen.getByRole('button', { name: /confirmar pagamento/i })).toBeDisabled()
+
+        // Após escolher a conta, o botão habilita.
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: mockConta.id } })
 
         await waitFor(() => {
             expect(screen.getByRole('button', { name: /confirmar pagamento/i })).not.toBeDisabled()
@@ -97,7 +103,7 @@ describe('PaymentSidebar', () => {
         expect(screen.getByRole('button', { name: /confirmar pagamento/i })).toBeDisabled()
     })
 
-    it('5. sem race condition: conta_id populado e botão habilitado após delay em getContas', async () => {
+    it('5. sem race condition: após delay em getContas, contas carregam e a escolha consciente habilita o botão', async () => {
         mockGetContas.mockImplementation(
             () => new Promise(resolve => setTimeout(() => resolve([mockConta]), 50))
         )
@@ -107,14 +113,19 @@ describe('PaymentSidebar', () => {
         // Durante o carregamento: botão deve estar desabilitado
         expect(screen.getByRole('button', { name: /confirmar pagamento/i })).toBeDisabled()
 
-        // Após o carregamento: botão deve estar habilitado
+        // Após o carregamento: contas disponíveis, mas botão ainda desabilitado (sem auto-select)
+        await waitFor(() => {
+            expect(screen.queryByText('Carregando contas...')).not.toBeInTheDocument()
+        })
+        expect(screen.getByRole('button', { name: /confirmar pagamento/i })).toBeDisabled()
+        expect(screen.queryByText(/nenhuma conta cadastrada/i)).not.toBeInTheDocument()
+
+        // Escolha consciente da conta habilita o botão
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: mockConta.id } })
         await waitFor(() => {
             expect(
                 screen.getByRole('button', { name: /confirmar pagamento/i })
             ).not.toBeDisabled()
         })
-
-        expect(screen.queryByText('Carregando contas...')).not.toBeInTheDocument()
-        expect(screen.queryByText(/nenhuma conta cadastrada/i)).not.toBeInTheDocument()
     })
 })
