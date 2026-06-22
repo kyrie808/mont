@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_users: {
@@ -32,6 +57,27 @@ export type Database = {
           id?: string
           role?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      campanhas: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          nome?: string
         }
         Relationships: []
       }
@@ -558,12 +604,14 @@ export type Database = {
           arquivado_em: string | null
           atualizado_em: string
           bairro: string | null
+          campanha_id: string | null
           cep: string | null
           cidade: string | null
           complemento: string | null
           created_by: string | null
           criado_em: string
           endereco: string | null
+          fonte: string | null
           fts: unknown
           id: string
           indicado_por_id: string | null
@@ -588,12 +636,14 @@ export type Database = {
           arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
+          campanha_id?: string | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           created_by?: string | null
           criado_em?: string
           endereco?: string | null
+          fonte?: string | null
           fts?: unknown
           id?: string
           indicado_por_id?: string | null
@@ -618,12 +668,14 @@ export type Database = {
           arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
+          campanha_id?: string | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           created_by?: string | null
           criado_em?: string
           endereco?: string | null
+          fonte?: string | null
           fts?: unknown
           id?: string
           indicado_por_id?: string | null
@@ -644,6 +696,20 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contatos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contatos_fonte_fkey"
+            columns: ["fonte"]
+            isOneToOne: false
+            referencedRelation: "fontes"
+            referencedColumns: ["slug"]
+          },
           {
             foreignKeyName: "contatos_indicado_por_id_fkey"
             columns: ["indicado_por_id"]
@@ -750,6 +816,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fontes: {
+        Row: {
+          ativo: boolean
+          label: string
+          ordem: number
+          slug: string
+        }
+        Insert: {
+          ativo?: boolean
+          label: string
+          ordem?: number
+          slug: string
+        }
+        Update: {
+          ativo?: boolean
+          label?: string
+          ordem?: number
+          slug?: string
+        }
+        Relationships: []
       }
       interacoes: {
         Row: {
@@ -1077,6 +1164,7 @@ export type Database = {
       }
       pagamentos_venda: {
         Row: {
+          conta_id: string | null
           criado_em: string
           data: string
           id: string
@@ -1086,6 +1174,7 @@ export type Database = {
           venda_id: string
         }
         Insert: {
+          conta_id?: string | null
           criado_em?: string
           data?: string
           id?: string
@@ -1095,6 +1184,7 @@ export type Database = {
           venda_id: string
         }
         Update: {
+          conta_id?: string | null
           criado_em?: string
           data?: string
           id?: string
@@ -1104,6 +1194,13 @@ export type Database = {
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pagamentos_venda_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pagamentos_venda_venda_id_fkey"
             columns: ["venda_id"]
@@ -2455,6 +2552,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
