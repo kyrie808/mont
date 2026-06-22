@@ -127,4 +127,30 @@ describe('registrar_pagamento_venda — split de frete (integração)', () => {
         expect(lcs[0].valor).toBe(100)
         expect(lcs[0].pagamentoId).toBeTruthy()
     })
+
+    it('desfazer pagamento: deletar por pagamento_id remove produto + frete juntos', async () => {
+        const contaId = await criarConta()
+        const vendaId = await criarVenda(100, 10)
+
+        const { error } = await supabase.rpc('registrar_pagamento_venda', {
+            p_venda_id: vendaId, p_valor: 100, p_metodo: 'pix', p_data: hoje(), p_conta_id: contaId,
+        })
+        expect(error).toBeNull()
+
+        // mesma lógica do vendaService.deleteUltimoPagamento
+        const { data: pag } = await supabase
+            .from('pagamentos_venda').select('id').eq('venda_id', vendaId)
+            .order('criado_em', { ascending: false }).limit(1).single()
+        const { data: vinculados } = await supabase
+            .from('lancamentos').select('id').eq('pagamento_id', pag!.id)
+        expect(vinculados).toHaveLength(2)
+
+        const { error: delErr } = await supabase
+            .from('lancamentos').delete().in('id', vinculados!.map((l) => l.id))
+        expect(delErr).toBeNull()
+
+        // ambos os lançamentos saíram do fluxo de caixa
+        const lcs = await lancamentosDaVenda(vendaId)
+        expect(lcs).toHaveLength(0)
+    })
 })

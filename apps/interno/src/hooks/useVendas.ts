@@ -34,6 +34,15 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
     const queryClient = useQueryClient()
     const queryKey = ['vendas', startDate?.toISOString(), endDate?.toISOString(), includePending, search, excludeCatalogo, contatoId]
 
+    // Pagar/desfazer/excluir venda cria ou remove lançamentos no fluxo de caixa.
+    // Sem isto, o extrato/resumo mostram dados velhos (cache não invalidado).
+    const invalidarCaixa = () => {
+        queryClient.invalidateQueries({ queryKey: ['extrato'] })
+        queryClient.invalidateQueries({ queryKey: ['fluxo_resumo'] })
+        queryClient.invalidateQueries({ queryKey: ['extrato_saldo'] })
+        queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] })
+    }
+
     const { data, isLoading, error, refetch } = useQuery({
         queryKey,
         queryFn: async () => {
@@ -94,6 +103,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         mutationFn: (id: string) => vendaService.deleteVenda(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
+            invalidarCaixa()
         }
     })
 
@@ -170,6 +180,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
             await vendaService.addPagamento(vendaId, data.valor, data.metodo, data.data, data.conta_id, data.observacao)
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['venda', vendaId] })
+            invalidarCaixa()
             return true
         } catch (e) { console.error(e); return false }
     }, [queryClient])
@@ -179,6 +190,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
             await vendaService.deleteUltimoPagamento(vendaId)
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['venda', vendaId] })
+            invalidarCaixa()
             return true
         } catch (e) { console.error(e); return false }
     }, [queryClient])
