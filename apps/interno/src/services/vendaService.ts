@@ -310,24 +310,39 @@ export const vendaService = {
 
         if (fetchError || !pagamento) throw fetchError || new Error('Nenhum pagamento encontrado')
 
-        // 2. Buscar lançamento correspondente por ID e deletar
-        const { data: lancamento } = await supabase
+        // 2. Deletar os lançamentos vinculados a este pagamento (produto + frete).
+        //    Novos pagamentos têm pagamento_id; legados caem no fallback por valor.
+        //    Tem que vir ANTES de apagar o pagamento (FK lancamentos.pagamento_id).
+        const { data: vinculados } = await supabase
             .from('lancamentos')
             .select('id')
-            .eq('venda_id', vendaId)
-            .eq('origem', 'venda')
-            .eq('valor', pagamento.valor)
-            .order('criado_em', { ascending: false })
-            .limit(1)
-            .maybeSingle()
+            .eq('pagamento_id', pagamento.id)
 
-        if (lancamento) {
+        if (vinculados && vinculados.length > 0) {
             const { error: lancError } = await supabase
                 .from('lancamentos')
                 .delete()
-                .eq('id', lancamento.id)
+                .in('id', vinculados.map(l => l.id))
+            if (lancError) console.error('Erro ao deletar lançamentos:', lancError)
+        } else {
+            // Fallback legado: pagamentos antigos sem pagamento_id → match por valor.
+            const { data: lancamento } = await supabase
+                .from('lancamentos')
+                .select('id')
+                .eq('venda_id', vendaId)
+                .eq('origem', 'venda')
+                .eq('valor', pagamento.valor)
+                .order('criado_em', { ascending: false })
+                .limit(1)
+                .maybeSingle()
 
-            if (lancError) console.error('Erro ao deletar lançamento:', lancError)
+            if (lancamento) {
+                const { error: lancError } = await supabase
+                    .from('lancamentos')
+                    .delete()
+                    .eq('id', lancamento.id)
+                if (lancError) console.error('Erro ao deletar lançamento:', lancError)
+            }
         }
 
         // 3. Deletar o pagamento — trigger recalcula valor_pago e pago

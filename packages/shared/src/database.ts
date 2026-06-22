@@ -998,6 +998,7 @@ export type Database = {
           descricao: string | null
           id: string
           origem: string
+          pagamento_id: string | null
           plano_conta_id: string | null
           tipo: string
           updated_by: string | null
@@ -1014,6 +1015,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           origem: string
+          pagamento_id?: string | null
           plano_conta_id?: string | null
           tipo: string
           updated_by?: string | null
@@ -1030,6 +1032,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           origem?: string
+          pagamento_id?: string | null
           plano_conta_id?: string | null
           tipo?: string
           updated_by?: string | null
@@ -1049,6 +1052,13 @@ export type Database = {
             columns: ["conta_id"]
             isOneToOne: false
             referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamentos_pagamento_id_fkey"
+            columns: ["pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "pagamentos_venda"
             referencedColumns: ["id"]
           },
           {
