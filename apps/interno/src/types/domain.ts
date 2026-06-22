@@ -173,6 +173,8 @@ export interface VendasMetrics {
     entregasPendentes: number
     entregasRealizadas: number
     lucroMes: number
+    // Receita de frete (separada do faturamento de produto)
+    receitaFrete: number
 }
 
 // Purchase Order Domain Types

@@ -158,7 +158,21 @@ export function Dashboard() {
                             className="col-span-2 md:col-span-1"
                             variant="default"
                             loading={isLoading}
-                            tooltip="Soma de todas as vendas entregues no mês, incluindo pedidos do catálogo. Vendas pagas e fiado em aberto."
+                            tooltip="Receita de PRODUTO das vendas entregues no mês (já sem o frete). O frete aparece à parte em 'Receita de Frete'."
+                        />
+
+                        <KpiCard
+                            title="Receita de Frete"
+                            value={formatCurrency(metrics?.financial?.receita_frete_mes_atual || 0)}
+                            progress={100}
+                            trend="100% margem"
+                            trendDirection="neutral"
+                            trendColor="green"
+                            icon={Truck}
+                            className="col-span-1"
+                            variant="compact"
+                            loading={isLoading}
+                            tooltip="Taxa de entrega das vendas entregues no mês. Receita pura (sem custo), separada do faturamento de produto."
                         />
 
                         <KpiCard

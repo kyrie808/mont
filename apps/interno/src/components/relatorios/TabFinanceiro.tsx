@@ -113,6 +113,7 @@ export function TabFinanceiro({ animKey }: Props) {
     const lucroEst    = fat.lucro_estimado ?? 0
     const margemBruta = fat.margem_bruta_pct ?? 0
     const fatAnterior = fat.faturamento_anterior ?? 0
+    const receitaFrete = fat.receita_frete ?? 0
 
     const maxFat = fat8m.reduce((a, b) => a.valor > b.valor ? a : b, { label: '?', valor: 0 })
     const currMesAbrev = MES_ABBREV[(fat.mes ?? 1) - 1]
@@ -141,7 +142,7 @@ export function TabFinanceiro({ animKey }: Props) {
                             letterSpacing: '0.18em', color: C_MUTED_FG,
                         }}>
                             <DollarSign size={11} strokeWidth={2.4} />
-                            {`Faturamento · ${currMesAbrev}/${fat.ano}`}
+                            {`Faturamento (produto) · ${currMesAbrev}/${fat.ano}`}
                         </div>
                         <div style={{
                             fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
@@ -177,9 +178,10 @@ export function TabFinanceiro({ animKey }: Props) {
                         }}>últimos {fat8m.length} m.</div>
                     </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-                    <MiniStat label="Lucro estimado" value={fmtBRL(lucroEst)} accent="#0a8a0a" />
-                    <MiniStat label="Margem bruta"   value={`${margemBruta.toFixed(1)}%`} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 14 }}>
+                    <MiniStat label="Lucro produto" value={fmtBRL(lucroEst)} accent="#0a8a0a" />
+                    <MiniStat label="Margem bruta"  value={`${margemBruta.toFixed(1)}%`} />
+                    <MiniStat label="Receita frete" value={fmtBRL(receitaFrete)} accent="#3B82F6" />
                 </div>
             </ChartCard>
 

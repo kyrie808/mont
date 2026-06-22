@@ -19,6 +19,7 @@ describe('dashboardService - mapDashboardMetrics', () => {
     it('should map valid inputs properly without losing data', () => {
         const mockFin = {
             faturamento: 15000,
+            receita_frete: 1200,
             lucro_estimado: 5000,
             ticket_medio: 150,
             faturamento_anterior: 10000,
@@ -48,6 +49,7 @@ describe('dashboardService - mapDashboardMetrics', () => {
         );
 
         expect(result.financial.faturamento_mes_atual).toBe(15000);
+        expect(result.financial.receita_frete_mes_atual).toBe(1200);
         expect(result.financial.variacao_percentual).toBe(50);
         expect(result.financial.vendas_mes_atual).toBe(100); // Gets it from operational
 

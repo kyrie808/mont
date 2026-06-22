@@ -53,6 +53,7 @@ export interface DashboardMetrics {
     },
     financial: {
         faturamento_mes_atual: number
+        receita_frete_mes_atual: number
         lucro_mes_atual: number
         ticket_medio_mes_atual: number
         vendas_mes_atual: number
@@ -92,7 +93,7 @@ export const dashboardService = {
         ] = await Promise.all([
             supabase
                 .from('view_home_financeiro')
-                .select('faturamento, ticket_medio, lucro_estimado, total_a_receber, liquidado_mes, liquidado_mes_count, faturamento_anterior, variacao_faturamento_percentual, alertas_financeiros')
+                .select('faturamento, receita_frete, ticket_medio, lucro_estimado, total_a_receber, liquidado_mes, liquidado_mes_count, faturamento_anterior, variacao_faturamento_percentual, alertas_financeiros')
                 .eq('mes', month)
                 .eq('ano', year)
                 .maybeSingle(),
@@ -124,6 +125,7 @@ export const dashboardService = {
 
     async getLucroLiquido(mes: Date): Promise<{
         receita_bruta: number
+        receita_frete: number
         custo_produtos: number
         lucro_bruto: number
         despesas_operacionais: number
@@ -139,19 +141,20 @@ export const dashboardService = {
 
         const { data, error } = await supabase
             .from('view_lucro_liquido_mensal')
-            .select('receita_bruta, custo_produtos, lucro_bruto, despesas_operacionais, custo_fabrica, lucro_liquido, margem_liquida_pct')
+            .select('receita_bruta, receita_frete, custo_produtos, lucro_bruto, despesas_operacionais, custo_fabrica, lucro_liquido, margem_liquida_pct')
             .gte('mes', inicio)
             .lte('mes', fim)
             .maybeSingle()
 
         if (error || !data) return {
-            receita_bruta: 0, custo_produtos: 0, lucro_bruto: 0,
+            receita_bruta: 0, receita_frete: 0, custo_produtos: 0, lucro_bruto: 0,
             despesas_operacionais: 0, custo_fabrica: 0,
             lucro_liquido: 0, margem_liquida_pct: 0
         }
 
         return {
             receita_bruta: Number(data.receita_bruta) || 0,
+            receita_frete: Number(data.receita_frete) || 0,
             custo_produtos: Number(data.custo_produtos) || 0,
             lucro_bruto: Number(data.lucro_bruto) || 0,
             despesas_operacionais: Number(data.despesas_operacionais) || 0,
@@ -266,6 +269,7 @@ export function mapDashboardMetrics(
 ): DashboardMetrics {
     const fin = financialData || {
         faturamento: 0,
+        receita_frete: 0,
         ticket_medio: 0,
         lucro_estimado: 0,
         total_a_receber: 0,
@@ -298,6 +302,7 @@ export function mapDashboardMetrics(
         },
         financial: {
             faturamento_mes_atual: fin.faturamento ?? 0,
+            receita_frete_mes_atual: fin.receita_frete ?? 0,
             lucro_mes_atual: fin.lucro_estimado ?? 0,
             ticket_medio_mes_atual: fin.ticket_medio ?? 0,
             vendas_mes_atual: op.total_vendas ?? 0,

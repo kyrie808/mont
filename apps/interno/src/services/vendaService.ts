@@ -265,8 +265,11 @@ export const vendaService = {
 
     calculateKPIs(vendas: DomainVenda[]): VendasMetrics {
         const totalVendas = vendas.length
-        const faturamentoTotal = vendas.filter(v => v.pago).reduce((acc, v) => acc + v.total, 0)
-        const faturamentoDia = vendas.filter(v => isToday(new Date(v.data)) && v.pago).reduce((acc, v) => acc + v.total, 0)
+        // Faturamento/lucro/ticket = SÓ PRODUTO (total - frete). Frete vai em receitaFrete.
+        const produtoPago = (v: DomainVenda) => v.total - (v.taxaEntrega || 0)
+        const faturamentoTotal = vendas.filter(v => v.pago).reduce((acc, v) => acc + produtoPago(v), 0)
+        const faturamentoDia = vendas.filter(v => isToday(new Date(v.data)) && v.pago).reduce((acc, v) => acc + produtoPago(v), 0)
+        const receitaFrete = vendas.filter(v => v.pago).reduce((acc, v) => acc + (v.taxaEntrega || 0), 0)
 
         const produtosVendidos = vendas.reduce((acc: any, v: DomainVenda) => {
             v.itens?.forEach((item: any) => {
@@ -289,7 +292,9 @@ export const vendaService = {
             aReceber: vendas.filter(v => !v.pago && v.status !== 'cancelada' && v.formaPagamento !== 'brinde').reduce((acc, v) => acc + v.total, 0),
             entregasPendentes: vendas.filter(v => v.status === 'pendente').length,
             entregasRealizadas: vendas.filter(v => v.status === 'entregue').length,
-            lucroMes: vendas.filter(v => v.pago).reduce((acc, v) => acc + (v.total - (v.custoTotal || 0)), 0)
+            // Lucro de produto: receita de produto (sem frete) menos custo dos produtos.
+            lucroMes: vendas.filter(v => v.pago).reduce((acc, v) => acc + (produtoPago(v) - (v.custoTotal || 0)), 0),
+            receitaFrete
         }
     },
 

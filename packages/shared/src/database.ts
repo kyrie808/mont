@@ -1910,6 +1910,7 @@ export type Database = {
           lucro_estimado: number | null
           margem_bruta_pct: number | null
           mes: number | null
+          receita_frete: number | null
           total_a_receber: number | null
           variacao_faturamento_percentual: number | null
         }
@@ -2079,6 +2080,7 @@ export type Database = {
           liquidado_mes_count: number | null
           lucro_estimado: number | null
           mes: number | null
+          receita_frete: number | null
           ticket_medio: number | null
           total_a_receber: number | null
           variacao_faturamento_percentual: number | null
@@ -2117,6 +2119,7 @@ export type Database = {
           margem_liquida_pct: number | null
           mes: string | null
           receita_bruta: number | null
+          receita_frete: number | null
         }
         Relationships: []
       }

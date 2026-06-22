@@ -118,6 +118,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         entregasPendentes: 0,
         entregasRealizadas: 0,
         lucroMes: 0,
+        receitaFrete: 0,
     }
 
     const createVenda = useCallback(async (formData: CreateVenda) => {
