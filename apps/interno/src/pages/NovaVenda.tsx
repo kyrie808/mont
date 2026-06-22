@@ -239,7 +239,7 @@ export function NovaVenda() {
                                         Total: {formatCurrency(cartTotal)}
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-y-auto px-4">
+                                <div className="flex-1 overflow-y-auto px-4 pb-28 md:pb-4">
                                     <ProductList
                                         produtos={produtos}
                                         loading={loadingProdutos}
@@ -278,9 +278,10 @@ export function NovaVenda() {
                             </div>
                         )}
 
-                        {/* Bottom Navigation Bar — fixed height, outside scroll, hidden on checkout */}
+                        {/* Barra de navegação fixa (mobile) — fina + translúcida, acima da BottomNav.
+                            `fixed` (não sticky) por causa do overflow-x-hidden do AppLayout. */}
                         {currentStep > 0 && currentStep < 2 && (
-                            <div className="shrink-0 border-t border-border bg-card p-4 md:hidden">
+                            <div className="fixed inset-x-0 bottom-20 z-30 border-t border-border bg-card/80 backdrop-blur-md px-4 py-2 md:hidden">
                                 <div className="flex gap-3 max-w-sm mx-auto">
                                     {currentStep > 0 && (
                                         <Button
