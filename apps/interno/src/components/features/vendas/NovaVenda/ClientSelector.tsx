@@ -20,7 +20,7 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
     const [results, setResults] = useState<DomainContato[]>([])
     const [selecting, setSelecting] = useState(false)
     const { searchContatos, createContato, getContatoById } = useContatos()
-    const { data: sugeridos = [] } = useClientesSugeridos(5)
+    const { data: sugeridos = [] } = useClientesSugeridos(20)
     const toast = useToast()
 
     // Quick add state
@@ -119,7 +119,8 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                     <span>Cadastrar Novo</span>
                 </button>
 
-                {/* Resultados da busca OU sugestões */}
+                {/* Resultados da busca OU sugestões (rola pra revelar mais) */}
+                <div className="max-h-[420px] overflow-y-auto -mr-1 pr-1">
                 {search.length >= 2 ? (
                     <div className="space-y-2">
                         {results.length === 0 ? (
@@ -163,6 +164,7 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                         </div>
                     )
                 )}
+                </div>
             </div>
 
             {/* Quick Add Modal */}
