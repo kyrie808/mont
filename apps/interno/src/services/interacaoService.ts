@@ -62,6 +62,29 @@ class InteracaoService {
             throw new Error(`Erro ao registrar ponto de contato: ${error.message}`)
         }
     }
+
+    async atualizarPontoContato(
+        id: string,
+        { canal, resultado, observacao, data }: Omit<CriarPontoContatoInput, 'contatoId'>,
+    ): Promise<void> {
+        const update: Database['public']['Tables']['interacoes']['Update'] = {
+            canal,
+            resultado,
+            observacao: observacao ?? null,
+            ...(data ? { data } : {}),
+        }
+        const { error } = await supabase.from('interacoes').update(update).eq('id', id)
+        if (error) {
+            throw new Error(`Erro ao atualizar contato: ${error.message}`)
+        }
+    }
+
+    async excluirInteracao(id: string): Promise<void> {
+        const { error } = await supabase.from('interacoes').delete().eq('id', id)
+        if (error) {
+            throw new Error(`Erro ao excluir interação: ${error.message}`)
+        }
+    }
 }
 
 export const interacaoService = new InteracaoService()

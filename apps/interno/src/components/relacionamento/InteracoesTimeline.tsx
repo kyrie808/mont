@@ -1,7 +1,10 @@
-import { ArrowRightLeft, MessageSquare, Tag, PhoneCall } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@mont/shared'
+import { Modal } from '../ui'
 import { useInteracoes, type Interacao } from '../../hooks/useInteracoes'
+import { RegistrarContatoForm } from './RegistrarContatoForm'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -111,12 +114,37 @@ function SkeletonTimeline() {
 
 // ─── TimelineItem ─────────────────────────────────────────────────────────────
 
-function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
+function TimelineItem({ item, isLast, onEdit }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void }) {
     const config = (item.tipo ? TIPO_CONFIG[item.tipo] : null) ?? TIPO_CONFIG_DEFAULT
     const Icon = config.icon
     const relativo = formatRelativo(item.data)
     const absoluto = formatAbsoluto(item.data)
     const title = getEventTitle(item)
+    const editable = item.tipo === 'ponto_contato' && !!onEdit
+
+    const content = (
+        <>
+            <p className="text-[13px] font-semibold leading-[1.35] text-foreground">{title}</p>
+            {item.observacao && (
+                <p className={cn(
+                    'mt-0.5 text-[11px] leading-[1.4] text-muted-foreground/70',
+                    item.tipo === 'feedback' ? 'whitespace-pre-wrap wrap-break-word' : 'truncate',
+                )}>
+                    {item.observacao}
+                </p>
+            )}
+            <div className="mt-1.5 flex items-center gap-1.5">
+                {relativo && (
+                    <>
+                        <span className="text-[10.5px] font-medium text-primary/70">{relativo}</span>
+                        <span className="text-[10.5px] text-muted-foreground/30">·</span>
+                    </>
+                )}
+                <span className="text-[10.5px] text-muted-foreground/60">{absoluto}</span>
+                {editable && <Pencil className="h-2.5 w-2.5 text-muted-foreground/40 ml-0.5" />}
+            </div>
+        </>
+    )
 
     return (
         <div className="relative flex gap-3 pb-5">
@@ -129,26 +157,18 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
             </div>
 
             {/* Content */}
-            <div className="min-w-0 flex-1 pb-1 pt-[3px]">
-                <p className="text-[13px] font-semibold leading-[1.35] text-foreground">{title}</p>
-                {item.observacao && (
-                    <p className={cn(
-                        'mt-0.5 text-[11px] leading-[1.4] text-muted-foreground/70',
-                        item.tipo === 'feedback' ? 'whitespace-pre-wrap wrap-break-word' : 'truncate',
-                    )}>
-                        {item.observacao}
-                    </p>
-                )}
-                <div className="mt-1.5 flex items-center gap-1.5">
-                    {relativo && (
-                        <>
-                            <span className="text-[10.5px] font-medium text-primary/70">{relativo}</span>
-                            <span className="text-[10.5px] text-muted-foreground/30">·</span>
-                        </>
-                    )}
-                    <span className="text-[10.5px] text-muted-foreground/60">{absoluto}</span>
-                </div>
-            </div>
+            {editable ? (
+                <button
+                    type="button"
+                    onClick={() => onEdit!(item)}
+                    className="min-w-0 flex-1 pb-1 pt-[3px] text-left -mx-1 px-1 rounded-md hover:bg-foreground/3 transition-colors"
+                    title="Editar contato"
+                >
+                    {content}
+                </button>
+            ) : (
+                <div className="min-w-0 flex-1 pb-1 pt-[3px]">{content}</div>
+            )}
         </div>
     )
 }
@@ -159,6 +179,7 @@ function TimelineItem({ item, isLast }: { item: Interacao; isLast: boolean }) {
 
 export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
     const { data: interacoes, isLoading, error } = useInteracoes(contatoId)
+    const [editing, setEditing] = useState<Interacao | null>(null)
 
     if (isLoading) return <SkeletonTimeline />
 
@@ -182,10 +203,27 @@ export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
     }
 
     return (
-        <div className="px-4 py-4">
-            {interacoes.map((item, idx) => (
-                <TimelineItem key={item.id} item={item} isLast={idx === interacoes.length - 1} />
-            ))}
-        </div>
+        <>
+            <div className="px-4 py-4">
+                {interacoes.map((item, idx) => (
+                    <TimelineItem
+                        key={item.id}
+                        item={item}
+                        isLast={idx === interacoes.length - 1}
+                        onEdit={setEditing}
+                    />
+                ))}
+            </div>
+
+            <Modal isOpen={!!editing} onClose={() => setEditing(null)} title="Editar contato" size="sm">
+                {editing && (
+                    <RegistrarContatoForm
+                        contatoId={contatoId}
+                        interacao={editing}
+                        onClose={() => setEditing(null)}
+                    />
+                )}
+            </Modal>
+        </>
     )
 }

@@ -44,4 +44,29 @@ export function useRegistrarPontoContato() {
     })
 }
 
+interface AtualizarPontoContatoInput extends RegistrarPontoContatoInput {
+    id: string
+}
+
+export function useAtualizarPontoContato() {
+    const queryClient = useQueryClient()
+    return useMutation<void, Error, AtualizarPontoContatoInput>({
+        mutationFn: ({ id, canal, resultado, observacao, data }) =>
+            interacaoService.atualizarPontoContato(id, { canal, resultado, observacao, data }),
+        onSuccess: (_data, variables) => {
+            void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
+        },
+    })
+}
+
+export function useExcluirInteracao() {
+    const queryClient = useQueryClient()
+    return useMutation<void, Error, { id: string; contatoId: string }>({
+        mutationFn: ({ id }) => interacaoService.excluirInteracao(id),
+        onSuccess: (_data, variables) => {
+            void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
+        },
+    })
+}
+
 export type { Interacao, Canal, ResultadoPontoContato }
