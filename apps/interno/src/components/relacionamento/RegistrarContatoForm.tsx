@@ -16,19 +16,24 @@ const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoPontoContato; label: stri
     { value: 'recusou', label: 'Recusou' },
 ]
 
+// datetime-local (yyyy-MM-ddTHH:mm) no horário local de São Paulo.
+const nowLocalDateTime = () =>
+    new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T').slice(0, 16)
+
 // Form de registro de ponto de contato (sua abordagem ao cliente). Reutilizado no
 // side-sheet do kanban (PerfilSideSheet) e no perfil do cliente (ContatoDetalhe).
 export function RegistrarContatoForm({ contatoId, onClose }: { contatoId: string; onClose: () => void }) {
     const [canal, setCanal] = useState<Canal>('whatsapp')
     const [resultado, setResultado] = useState<ResultadoPontoContato>('respondeu')
     const [observacao, setObservacao] = useState('')
+    const [data, setData] = useState(nowLocalDateTime)
     const { mutate, isPending, error: mutError } = useRegistrarPontoContato()
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault()
         if (isPending) return
         mutate(
-            { contatoId, canal, resultado, observacao: observacao.trim() || undefined },
+            { contatoId, canal, resultado, observacao: observacao.trim() || undefined, data: new Date(data).toISOString() },
             { onSuccess: () => { setObservacao(''); onClose() } },
         )
     }
@@ -50,6 +55,18 @@ export function RegistrarContatoForm({ contatoId, onClose }: { contatoId: string
                         </option>
                     ))}
                 </select>
+            </div>
+
+            {/* Data e hora */}
+            <div className="space-y-1.5">
+                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Data e hora</p>
+                <input
+                    type="datetime-local"
+                    value={data}
+                    onChange={(e) => setData(e.target.value)}
+                    disabled={isPending}
+                    className="w-full rounded-lg border border-border bg-foreground/4 px-2.5 py-1.5 text-[12px] text-foreground outline-hidden focus:border-primary/40 disabled:opacity-50"
+                />
             </div>
 
             {/* Resposta */}

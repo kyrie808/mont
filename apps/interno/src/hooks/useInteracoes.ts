@@ -31,6 +31,7 @@ interface RegistrarPontoContatoInput {
     canal: Canal
     resultado: ResultadoPontoContato
     observacao?: string
+    data?: string // ISO
 }
 
 export function useRegistrarPontoContato() {

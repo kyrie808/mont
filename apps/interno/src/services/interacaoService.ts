@@ -16,6 +16,7 @@ interface CriarPontoContatoInput {
     canal: Canal
     resultado: ResultadoPontoContato
     observacao?: string
+    data?: string // ISO; omitido → default now() do banco
 }
 
 class InteracaoService {
@@ -47,13 +48,14 @@ class InteracaoService {
         }
     }
 
-    async criarPontoContato({ contatoId, canal, resultado, observacao }: CriarPontoContatoInput): Promise<void> {
+    async criarPontoContato({ contatoId, canal, resultado, observacao, data }: CriarPontoContatoInput): Promise<void> {
         const insert: Database['public']['Tables']['interacoes']['Insert'] = {
             contato_id: contatoId,
             tipo: 'ponto_contato',
             canal,
             resultado,
             observacao: observacao ?? null,
+            ...(data ? { data } : {}),
         }
         const { error } = await supabase.from('interacoes').insert(insert)
         if (error) {
