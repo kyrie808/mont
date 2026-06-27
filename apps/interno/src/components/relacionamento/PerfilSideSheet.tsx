@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Phone, AlertTriangle, CheckCircle, MinusCircle } from 'lucide-react'
-import { cn, formatCurrency, formatDate, formatDateTime, formatPhone } from '@mont/shared'
+import { cn, formatCurrency, formatDate, formatPhone } from '@mont/shared'
 import { Badge } from '../ui'
 import { useContato } from '../../hooks/useContatos'
 import { useContatoTags } from '../../hooks/useTags'
 import { usePerfilExtras, useLtvContato } from '../../hooks/usePerfilSideSheet'
-import { useInteracoes } from '../../hooks/useInteracoes'
-import type { Canal } from '../../hooks/useInteracoes'
 import { RegistrarContatoForm } from './RegistrarContatoForm'
+import { InteracoesTimeline } from './InteracoesTimeline'
 import type { ProdutoRanking } from '../../services/relacionamentoService'
 import type { KanbanRow, RelacionamentoStatus } from '../../hooks/useRelacionamento'
 
@@ -27,21 +26,6 @@ const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'defa
     em_negociacao: 'default',
     resolvido: 'success',
 }
-
-const CANAL_OPTIONS: Array<{ value: Canal; label: string }> = [
-    { value: 'whatsapp', label: 'WhatsApp' },
-    { value: 'instagram', label: 'Instagram' },
-    { value: 'google', label: 'Google' },
-    { value: 'outro', label: 'Outro' },
-]
-
-const CANAL_BADGE_VARIANT: Record<Canal, 'success' | 'default' | 'warning' | 'secondary'> = {
-    whatsapp: 'success',
-    instagram: 'default',
-    google: 'warning',
-    outro: 'secondary',
-}
-
 
 const GRAIN_BG =
     `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`
@@ -219,33 +203,6 @@ function ProdutosRanking({ produtos }: { produtos: ProdutoRanking[] }) {
     )
 }
 
-// ─── FeedbackItem ─────────────────────────────────────────────────────────────
-
-function FeedbackItem({ canal, observacao, data }: { canal: string | null; observacao: string | null; data: string }) {
-    const variant = canal ? (CANAL_BADGE_VARIANT[canal as Canal] ?? 'secondary') : 'secondary'
-    const canalLabel = canal ? (CANAL_OPTIONS.find((o) => o.value === canal)?.label ?? canal) : null
-
-    return (
-        <div className="rounded-xl border border-border bg-foreground/2 px-3 py-2.5 space-y-1.5">
-            <div className="flex items-center gap-2">
-                {canalLabel && (
-                    <Badge variant={variant} className="px-1.5 py-0 text-[10px]">
-                        {canalLabel}
-                    </Badge>
-                )}
-                <span className="text-[10.5px] text-muted-foreground/50">
-                    {formatDateTime(data)}
-                </span>
-            </div>
-            {observacao && (
-                <p className="text-[12px] leading-[1.4] text-foreground/80 whitespace-pre-wrap wrap-break-word">
-                    {observacao}
-                </p>
-            )}
-        </div>
-    )
-}
-
 // ─── PanelContent ─────────────────────────────────────────────────────────────
 
 interface PanelContentProps {
@@ -263,9 +220,6 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
     const { data: allContatoTags = [], isLoading: tagsLoading } = useContatoTags()
     const { data: ltv, isLoading: ltvLoading } = useLtvContato(contatoId)
     const { data: extras, isLoading: extrasLoading } = usePerfilExtras(contatoId)
-    const { data: interacoes, isLoading: interacoesLoading } = useInteracoes(contatoId)
-
-    const feedbacks = (interacoes ?? []).filter((i) => i.tipo === 'feedback')
 
     const inicial = nomeContato.trim()[0]?.toUpperCase() ?? '?'
     const isLoading = contatoLoading || tagsLoading || ltvLoading || extrasLoading
@@ -467,30 +421,10 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                                     </div>
                                 )}
 
-                                {/* Feedback */}
+                                {/* Interações */}
                                 <div>
-                                    <SectionLabel>Feedback</SectionLabel>
-                                    {interacoesLoading ? (
-                                        <div className="animate-pulse space-y-2">
-                                            <div className="h-14 rounded-xl bg-foreground/4" />
-                                            <div className="h-14 rounded-xl bg-foreground/4" />
-                                        </div>
-                                    ) : feedbacks.length === 0 ? (
-                                        <p className="text-[11px] text-muted-foreground/40">
-                                            Nenhum feedback registrado
-                                        </p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {feedbacks.map((fb) => (
-                                                <FeedbackItem
-                                                    key={fb.id}
-                                                    canal={fb.canal}
-                                                    observacao={fb.observacao}
-                                                    data={fb.data}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                    <SectionLabel>Interações</SectionLabel>
+                                    <InteracoesTimeline contatoId={contatoId} />
                                 </div>
 
                             </div>
