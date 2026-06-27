@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Phone, AlertTriangle, CheckCircle, MinusCircle } from 'lucide-react'
 import { cn, formatCurrency, formatDate, formatDateTime, formatPhone } from '@mont/shared'
@@ -6,8 +6,9 @@ import { Badge } from '../ui'
 import { useContato } from '../../hooks/useContatos'
 import { useContatoTags } from '../../hooks/useTags'
 import { usePerfilExtras, useLtvContato } from '../../hooks/usePerfilSideSheet'
-import { useInteracoes, useRegistrarPontoContato, type ResultadoPontoContato } from '../../hooks/useInteracoes'
+import { useInteracoes } from '../../hooks/useInteracoes'
 import type { Canal } from '../../hooks/useInteracoes'
+import { RegistrarContatoForm } from './RegistrarContatoForm'
 import type { ProdutoRanking } from '../../services/relacionamentoService'
 import type { KanbanRow, RelacionamentoStatus } from '../../hooks/useRelacionamento'
 
@@ -41,12 +42,6 @@ const CANAL_BADGE_VARIANT: Record<Canal, 'success' | 'default' | 'warning' | 'se
     outro: 'secondary',
 }
 
-const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoPontoContato; label: string }> = [
-    { value: 'respondeu', label: 'Respondeu' },
-    { value: 'sem_resposta', label: 'Sem resposta' },
-    { value: 'aceitou', label: 'Aceitou' },
-    { value: 'recusou', label: 'Recusou' },
-]
 
 const GRAIN_BG =
     `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`
@@ -251,103 +246,6 @@ function FeedbackItem({ canal, observacao, data }: { canal: string | null; obser
     )
 }
 
-// ─── PontoContatoForm ─────────────────────────────────────────────────────────
-
-function PontoContatoForm({ contatoId, onClose }: { contatoId: string; onClose: () => void }) {
-    const [canal, setCanal] = useState<Canal>('whatsapp')
-    const [resultado, setResultado] = useState<ResultadoPontoContato>('respondeu')
-    const [observacao, setObservacao] = useState('')
-    const { mutate, isPending, error: mutError } = useRegistrarPontoContato()
-
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault()
-        if (isPending) return
-        mutate(
-            { contatoId, canal, resultado, observacao: observacao.trim() || undefined },
-            { onSuccess: () => { setObservacao(''); onClose() } },
-        )
-    }
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-3 px-4 py-3">
-            {/* Plataforma */}
-            <div className="space-y-1.5">
-                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Plataforma</p>
-                <select
-                    value={canal}
-                    onChange={(e) => setCanal(e.target.value as Canal)}
-                    disabled={isPending}
-                    className="w-full rounded-lg border border-border bg-foreground/4 px-2.5 py-1.5 text-[12px] text-foreground outline-hidden focus:border-primary/40 disabled:opacity-50"
-                >
-                    {CANAL_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value} className="bg-card">
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Resposta */}
-            <div className="space-y-1.5">
-                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Resposta</p>
-                <div className="flex flex-wrap gap-1.5">
-                    {RESULTADO_PONTO_OPTIONS.map((opt) => (
-                        <button
-                            key={opt.value}
-                            type="button"
-                            disabled={isPending}
-                            onClick={() => setResultado(opt.value)}
-                            className={cn(
-                                'rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50',
-                                resultado === opt.value
-                                    ? 'border-primary/40 bg-primary/15 text-primary'
-                                    : 'border-border bg-foreground/3 text-muted-foreground hover:border-foreground/20 hover:text-foreground',
-                            )}
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Nota */}
-            <div className="space-y-1.5">
-                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Nota (opcional)</p>
-                <textarea
-                    value={observacao}
-                    onChange={(e) => setObservacao(e.target.value)}
-                    disabled={isPending}
-                    placeholder="Detalhe o contato…"
-                    rows={3}
-                    className="w-full resize-none rounded-lg border border-border bg-foreground/4 px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-hidden focus:border-primary/40 disabled:opacity-50"
-                />
-            </div>
-
-            {mutError && (
-                <p className="text-[11px] text-destructive">{mutError.message}</p>
-            )}
-
-            <div className="flex gap-2">
-                <button
-                    type="submit"
-                    disabled={isPending}
-                    className="flex-1 rounded-lg bg-primary/15 px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                    {isPending ? 'Salvando…' : 'Salvar'}
-                </button>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isPending}
-                    className="rounded-lg px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
-                >
-                    Cancelar
-                </button>
-            </div>
-        </form>
-    )
-}
-
 // ─── PanelContent ─────────────────────────────────────────────────────────────
 
 interface PanelContentProps {
@@ -428,7 +326,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual, kanbanRow 
                     </div>
                     {/* Form */}
                     <div className="no-scrollbar relative z-10 flex-1 overflow-y-auto">
-                        <PontoContatoForm
+                        <RegistrarContatoForm
                             contatoId={contatoId}
                             onClose={() => setShowPontoContato(false)}
                         />
