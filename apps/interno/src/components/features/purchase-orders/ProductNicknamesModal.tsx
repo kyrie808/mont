@@ -80,7 +80,7 @@ export function ProductNicknamesModal({ isOpen, onClose }: ProductNicknamesModal
             isOpen={isOpen}
             onClose={onClose}
             title="Configurar Apelidos de Produtos"
-            size="lg"
+            size="3xl"
         >
             <div className="space-y-4 max-h-[70vh] flex flex-col">
                 <div className="relative">
