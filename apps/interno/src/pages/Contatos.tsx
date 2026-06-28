@@ -6,7 +6,7 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EmptyState, PageSkeleton, Pagination, paginateArray } from '../components/ui'
-import { ContatoCard, ContatoFormModal, ContactStoryFilter } from '../components/contatos'
+import { ContatoCard, ContatoFormModal, ContactStoryFilter, ContatosDataGrid } from '../components/contatos'
 import { useContatos } from '../hooks/useContatos'
 import { useDebounce } from '../hooks/useDebounce'
 
@@ -182,15 +182,29 @@ export function Contatos() {
                     {/* Contact List */}
                     {!loading && !error && (
                         filteredContatos.length > 0 ? (
-                            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-                                {paginatedContatos.map((contato) => (
-                                    <ContatoCard
-                                        key={contato.id}
-                                        contato={contato}
-                                        nomeIndicador={contato.indicador?.nome}
+                            <>
+                                {/* MOBILE (<lg): grade de cards + paginação — intocada (mobile sagrado) */}
+                                <div className="space-y-4 lg:hidden">
+                                    {paginatedContatos.map((contato) => (
+                                        <ContatoCard
+                                            key={contato.id}
+                                            contato={contato}
+                                            nomeIndicador={contato.indicador?.nome}
+                                        />
+                                    ))}
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalItems={filteredContatos.length}
+                                        pageSize={PAGE_SIZE}
+                                        onPageChange={setCurrentPage}
                                     />
-                                ))}
-                            </div>
+                                </div>
+
+                                {/* DESKTOP (≥lg): data grid denso — sort + paginação próprios sobre o conjunto filtrado inteiro */}
+                                <div className="hidden lg:block">
+                                    <ContatosDataGrid contatos={filteredContatos} />
+                                </div>
+                            </>
                         ) : (
                             <EmptyState
                                 icon={<Users className="h-12 w-12 text-muted-foreground" />}
@@ -205,14 +219,6 @@ export function Contatos() {
                             />
                         )
                     )}
-
-                    {/* Pagination */}
-                    <Pagination
-                        currentPage={currentPage}
-                        totalItems={filteredContatos.length}
-                        pageSize={PAGE_SIZE}
-                        onPageChange={setCurrentPage}
-                    />
 
                     <ContatoFormModal
                         isOpen={isModalOpen}

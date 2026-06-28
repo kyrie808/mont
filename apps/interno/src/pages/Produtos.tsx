@@ -18,6 +18,7 @@ import { formatCurrency } from '@mont/shared'
 import { produtoService } from '../services/produtoService'
 import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
 import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFields'
+import { ProdutosDataGrid } from '../components/features/produtos/ProdutosDataGrid'
 import { useSecoes } from '../hooks/useSecoes'
 
 
@@ -441,7 +442,8 @@ export function Produtos() {
                                 />
                             </div>
 
-                            <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+                            {/* MOBILE (<lg): grade de cards — intocada (mobile sagrado) */}
+                            <div className="space-y-3 lg:hidden">
                                 {filteredProdutos.map((produto) => {
                                     return (
                                         <Card
@@ -476,6 +478,11 @@ export function Produtos() {
                                         </Card>
                                     )
                                 })}
+                            </div>
+
+                            {/* DESKTOP (≥lg): data grid denso — sort + paginação próprios sobre o conjunto filtrado inteiro */}
+                            <div className="hidden lg:block">
+                                <ProdutosDataGrid produtos={filteredProdutos} onEdit={handleOpenEdit} />
                             </div>
                         </div>
                     )}

@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Plus, TrendingUp, DollarSign, Wallet, Settings, PackageCheck, Trash2 } from 'lucide-react'
+import { Plus, TrendingUp, DollarSign, Wallet, Settings } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card, EmptyState, Button, Badge } from '../components/ui'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { PurchaseOrderForm } from '../components/features/purchase-orders/PurchaseOrderForm'
+import { PedidosCompraDataGrid } from '../components/features/purchase-orders/PedidosCompraDataGrid'
+import { PurchaseOrderDetail } from '../components/features/purchase-orders/PurchaseOrderDetail'
 import { PurchaseOrderPaymentModal } from '../components/features/purchase-orders/PurchaseOrderPaymentModal'
 import { usePurchaseOrders } from '../hooks/usePurchaseOrders'
 import type { DomainPurchaseOrderWithItems, CreatePurchaseOrder, UpdatePurchaseOrder, PurchaseOrderPaymentStatus, CreatePurchaseOrderItem } from '../types/domain'
@@ -122,7 +124,9 @@ export function PedidosCompra() {
                     {loading && !orders.length ? <WidgetSkeleton height="h-48" lines={3} /> : orders.length === 0 ? (
                         <EmptyState title="Nenhum pedido" description="Crie seu primeiro pedido." action={<Button onClick={handleCreateNew}>Novo Pedido</Button>} />
                     ) : (
-                        <div className="flex flex-col gap-4">
+                        <>
+                        {/* MOBILE (<lg): cards expansíveis — intocados (mobile sagrado) */}
+                        <div className="flex flex-col gap-4 lg:hidden">
                             {orders.map((order) => {
                                 const statusInfo = PAYMENT_STATUS_MAP[order.paymentStatus] || PAYMENT_STATUS_MAP.unpaid
                                 const orderWithItems = order as DomainPurchaseOrderWithItems
@@ -149,108 +153,28 @@ export function PedidosCompra() {
                                             </div>
                                         </div>
 
-                                        {/* Tabela de itens */}
-                                        {orderWithItems.items && orderWithItems.items.length > 0 && (
-                                            <table className="w-full text-left text-sm">
-                                                <thead className="text-xs text-muted-foreground border-b border-border">
-                                                    <tr>
-                                                        <th className="px-4 py-2 font-medium">Produto</th>
-                                                        <th className="px-4 py-2 font-medium text-center">Qtd</th>
-                                                        <th className="px-4 py-2 font-medium text-right">Custo Unit.</th>
-                                                        <th className="px-4 py-2 font-medium text-right">Subtotal</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {orderWithItems.items.map((item) => (
-                                                        <tr key={item.id} className="border-b border-border last:border-0">
-                                                            <td className="px-4 py-2">{item.product?.nome || item.productId}</td>
-                                                            <td className="px-4 py-2 text-center">{item.quantity}</td>
-                                                            <td className="px-4 py-2 text-right">{formatCurrency(item.unitCost)}</td>
-                                                            <td className="px-4 py-2 text-right">{formatCurrency(item.totalCost)}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
-
-                                        {/* Histórico de Pagamentos */}
-                                        {orderWithItems.payments && orderWithItems.payments.length > 0 && (
-                                            <div className="px-4 py-3 border-t border-border bg-muted">
-                                                <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-                                                    Pagamentos registrados
-                                                </h4>
-                                                <div className="space-y-1">
-                                                    {orderWithItems.payments.map((payment) => (
-                                                        <div key={payment.id} className="flex flex-wrap items-center justify-between text-xs py-1.5 border-b border-border last:border-0">
-                                                            <div className="flex items-center gap-3 text-muted-foreground">
-                                                                <span>{formatDate(payment.payment_date || payment.created_at)}</span>
-                                                                <span className="capitalize">{payment.payment_method?.replace('_', ' ')}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="font-medium text-foreground">
-                                                                    {formatCurrency(payment.amount)}
-                                                                </span>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation()
-                                                                        setPaymentToDelete(payment.id)
-                                                                    }}
-                                                                    className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors"
-                                                                    title="Excluir pagamento"
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Ações (Recebimento / Pagamento) */}
-                                        {(order.status === 'pending' || order.paymentStatus !== 'paid') && (
-                                            <div className="px-4 py-3 border-t border-border">
-                                                <div className="mb-3 text-xs text-muted-foreground text-left">
-                                                    Valor do pedido {orderWithItems.fornecedor?.nome || 'não informado'}:{' '}
-                                                    <span className="font-medium text-foreground">
-                                                        {formatCurrency(order.totalAmount)}
-                                                    </span>{' '}
-                                                    = ({order.totalAmount > 0 ? Math.round((order.amountPaid / order.totalAmount) * 100) : 0}% pago)
-                                                </div>
-                                                <div className="flex flex-col sm:flex-row gap-2">
-                                                    {order.status === 'pending' && (
-                                                        <Button
-                                                            variant="success"
-                                                            onClick={(e: React.MouseEvent) => {
-                                                                e.stopPropagation()
-                                                                updateOrder({ id: order.id, updates: { status: 'received', dataRecebimento: new Date().toISOString() } })
-                                                            }}
-                                                            className="flex-1 flex items-center justify-center gap-2"
-                                                        >
-                                                            <PackageCheck size={16} />
-                                                            Confirmar Recebimento
-                                                        </Button>
-                                                    )}
-                                                    {order.paymentStatus !== 'paid' && (
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={(e: React.MouseEvent) => {
-                                                                e.stopPropagation()
-                                                                setPaymentModalOrder(orderWithItems)
-                                                            }}
-                                                            className="flex items-center justify-center gap-2 border-border hover:bg-muted"
-                                                        >
-                                                            <DollarSign size={16} />
-                                                            Quitar
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
+                                        <PurchaseOrderDetail
+                                            order={orderWithItems}
+                                            onDeletePayment={setPaymentToDelete}
+                                            onConfirmReceipt={(o) => updateOrder({ id: o.id, updates: { status: 'received', dataRecebimento: new Date().toISOString() } })}
+                                            onQuitar={setPaymentModalOrder}
+                                        />
                                     </Card>
                                 )
                             })}
                         </div>
+
+                        {/* DESKTOP (≥lg): data grid denso — uma linha por pedido, ações inline */}
+                        <div className="hidden lg:block">
+                            <PedidosCompraDataGrid
+                                orders={orders}
+                                onEdit={handleEdit}
+                                onDeletePayment={setPaymentToDelete}
+                                onConfirmReceipt={(order) => updateOrder({ id: order.id, updates: { status: 'received', dataRecebimento: new Date().toISOString() } })}
+                                onQuitar={(order) => setPaymentModalOrder(order)}
+                            />
+                        </div>
+                        </>
                     )}
 
                     {isFormOpen && (

@@ -145,7 +145,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
             isOpen={isOpen}
             onClose={onClose}
             title={initialData ? 'Editar Pedido de Compra' : 'Novo Pedido de Compra'}
-            size="lg"
+            size="3xl"
         >
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Header Fields */}
@@ -203,7 +203,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                         </div>
                     )}
 
-                    <div className="space-y-3">
+                    {/* MOBILE (<lg): cards por item — intocados (mobile sagrado) */}
+                    <div className="space-y-3 lg:hidden">
                         {items.map((item) => (
                             <div key={item.tempId} className="grid grid-cols-12 gap-3 items-end bg-muted p-3 rounded-lg border border-border hover:border-border transition-colors">
                                 <div className="col-span-12 sm:col-span-5">
@@ -263,6 +264,80 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                             </div>
                         ))}
                     </div>
+
+                    {/* DESKTOP (≥lg): tabela densa de itens */}
+                    {items.length > 0 && (
+                        <div className="hidden lg:block rounded-lg border border-border overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="text-xs text-muted-foreground bg-muted border-b border-border">
+                                    <tr>
+                                        <th className="px-3 py-2 font-medium text-left">Produto</th>
+                                        <th className="px-3 py-2 font-medium text-center w-24">Qtd</th>
+                                        <th className="px-3 py-2 font-medium text-right w-32">Custo Unit.</th>
+                                        <th className="px-3 py-2 font-medium text-right w-32">Total</th>
+                                        <th className="px-3 py-2 w-12"><span className="sr-only">Excluir</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {items.map((item) => (
+                                        <tr key={item.tempId} className="border-b border-border last:border-0">
+                                            <td className="px-3 py-2">
+                                                <select
+                                                    className="w-full bg-background border border-input rounded-lg py-2 px-3 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring transition-all appearance-none cursor-pointer hover:bg-muted h-9"
+                                                    value={item.product_id}
+                                                    onChange={(e) => handleItemChange(item.tempId, 'product_id', e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">Selecione...</option>
+                                                    {produtos.map(p => (
+                                                        <option key={p.id} value={p.id}>
+                                                            {p.nome} ({p.unidade})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="px-3 py-2 align-middle">
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleItemChange(item.tempId, 'quantity', Number(e.target.value))}
+                                                    className="h-9 text-center"
+                                                    aria-label="Quantidade"
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2 align-middle">
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={item.unit_cost}
+                                                    onChange={(e) => handleItemChange(item.tempId, 'unit_cost', Number(e.target.value))}
+                                                    className="h-9 text-right"
+                                                    aria-label="Custo unitário"
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2 text-right font-bold text-foreground tabular-nums whitespace-nowrap">
+                                                {formatCurrency(item.quantity * item.unit_cost)}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleRemoveItem(item.tempId)}
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                                                    aria-label="Excluir item"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer / Totals */}
