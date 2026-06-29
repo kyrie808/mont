@@ -7,7 +7,7 @@ import {
     type ColumnDef,
     type SortingState,
 } from '@tanstack/react-table'
-import { DollarSign, Trash2 } from 'lucide-react'
+import { DollarSign, Trash2, Pencil } from 'lucide-react'
 import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-grid'
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
@@ -28,10 +28,11 @@ function StatusBadge({ status, diasAtraso }: { status: string; diasAtraso: numbe
 interface ContasAPagarDataGridProps {
     contas: ContaAPagarEnriched[]
     onPay: (conta: ContaAPagarEnriched) => void
+    onEdit: (conta: ContaAPagarEnriched) => void
     onDelete: (conta: ContaAPagarEnriched) => void
 }
 
-export function ContasAPagarDataGrid({ contas, onPay, onDelete }: ContasAPagarDataGridProps) {
+export function ContasAPagarDataGrid({ contas, onPay, onEdit, onDelete }: ContasAPagarDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'data_vencimento', desc: false }])
 
     const columns = useMemo<ColumnDef<ContaAPagarEnriched>[]>(() => [
@@ -119,6 +120,15 @@ export function ContasAPagarDataGrid({ contas, onPay, onDelete }: ContasAPagarDa
                     <Button
                         size="icon"
                         variant="ghost"
+                        aria-label={`Editar ${row.original.credor}`}
+                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={() => onEdit(row.original)}
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        size="icon"
+                        variant="ghost"
                         aria-label={`Excluir ${row.original.credor}`}
                         className="h-8 w-8 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
                         onClick={() => onDelete(row.original)}
@@ -129,7 +139,7 @@ export function ContasAPagarDataGrid({ contas, onPay, onDelete }: ContasAPagarDa
             ),
             meta: { headerClassName: 'text-right', cellClassName: 'text-right' },
         },
-    ], [onPay, onDelete])
+    ], [onPay, onEdit, onDelete])
 
     const table = useReactTable({
         data: contas,

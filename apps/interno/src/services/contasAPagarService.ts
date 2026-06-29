@@ -3,6 +3,7 @@ import type { Database } from '@mont/shared'
 
 type ContaAPagarRow = Database['public']['Tables']['contas_a_pagar']['Row']
 type ContaAPagarInsert = Database['public']['Tables']['contas_a_pagar']['Insert']
+type ContaAPagarUpdate = Database['public']['Tables']['contas_a_pagar']['Update']
 type PagamentoRow = Database['public']['Tables']['pagamentos_conta_a_pagar']['Row']
 
 export interface ContaAPagarWithCategoria extends ContaAPagarRow {
@@ -60,6 +61,26 @@ export const contasAPagarService = {
 
         if (error) throw error
         return data as string[]
+    },
+
+    async updateContaAPagar(id: string, patch: {
+        credor?: string
+        descricao?: string
+        valor_total?: number
+        data_vencimento?: string
+        plano_conta_id?: string
+        referencia?: string | null
+    }): Promise<void> {
+        const updates: ContaAPagarUpdate = { ...patch }
+        // valor só chega aqui quando a despesa NÃO tem pagamento (guard na UI) → saldo = valor_total
+        if (patch.valor_total != null) updates.saldo_devedor = patch.valor_total
+
+        const { error } = await supabase
+            .from('contas_a_pagar')
+            .update(updates)
+            .eq('id', id)
+
+        if (error) throw error
     },
 
     async getProjecaoPagamentos() {

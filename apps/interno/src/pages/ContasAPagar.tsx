@@ -10,11 +10,13 @@ import {
     CalendarDays,
     Trash2,
     Repeat,
+    Pencil,
 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { Button, Badge, EmptyState, ConfirmDialog } from '../components/ui'
 import { useToast } from '../components/ui/Toast'
 import { ContaAPagarModal, type ContaAPagarFormData } from '../components/features/contas-a-pagar/ContaAPagarModal'
+import { EditDespesaModal } from '../components/features/contas-a-pagar/EditDespesaModal'
 import { PagamentoContaAPagarModal } from '../components/features/contas-a-pagar/PagamentoContaAPagarModal'
 import { ContasAPagarDataGrid } from '../components/features/contas-a-pagar/ContasAPagarDataGrid'
 import { useContasAPagar } from '../hooks/useContasAPagar'
@@ -36,13 +38,14 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'warning' | 'defaul
 }
 
 export function ContasAPagar() {
-    const { contasAPagar, loading, createContaAPagar, criarObrigacaoParcelada, deleteContaAPagar, isDeleting, registrarPagamento, refetch } = useContasAPagar()
+    const { contasAPagar, loading, createContaAPagar, criarObrigacaoParcelada, updateContaAPagar, deleteContaAPagar, isDeleting, registrarPagamento, refetch } = useContasAPagar()
     const { recorrentes, createRecorrente, updateRecorrente, deleteRecorrente, gerarDoMes } = useDespesasRecorrentes()
     const toast = useToast()
     const [filter, setFilter] = useState<StatusFilter>('todos')
     const [searchTerm, setSearchTerm] = useState('')
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [paymentTarget, setPaymentTarget] = useState<ContaAPagarEnriched | null>(null)
+    const [editTarget, setEditTarget] = useState<ContaAPagarEnriched | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<ContaAPagarEnriched | null>(null)
     const [recorrenteDeleteTarget, setRecorrenteDeleteTarget] = useState<DespesaRecorrenteWithCategoria | null>(null)
 
@@ -141,10 +144,9 @@ export function ContasAPagar() {
                 plano_conta_id: data.plano_conta_id,
                 total_parcelas: totalParcelas,
                 referencia: data.referencia,
-                observacao: data.observacao,
             })
         } else {
-            await createContaAPagar({
+            const row = await createContaAPagar({
                 descricao: data.descricao,
                 credor: data.credor,
                 valor_total: data.valor_total,
@@ -153,8 +155,18 @@ export function ContasAPagar() {
                 parcela_atual: 1,
                 total_parcelas: 1,
                 referencia: data.referencia || null,
-                observacao: data.observacao || null,
             })
+
+            // "Já paguei": registra a saída no caixa na hora (status → pago).
+            if (data.ja_pago && data.pagamento_conta_id && data.pagamento_data) {
+                await registrarPagamento({
+                    contaAPagarId: row.id,
+                    valor: data.valor_total,
+                    dataPagamento: data.pagamento_data,
+                    contaId: data.pagamento_conta_id,
+                    metodoPagamento: data.pagamento_metodo,
+                })
+            }
         }
     }
 
@@ -442,6 +454,13 @@ export function ContasAPagar() {
                                                         </Button>
                                                     )}
                                                     <button
+                                                        onClick={() => setEditTarget(conta)}
+                                                        className="flex items-center justify-center size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
+                                                        aria-label={`Editar despesa ${conta.credor}`}
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => setDeleteTarget(conta)}
                                                         className="flex items-center justify-center size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
                                                         aria-label={`Excluir despesa ${conta.credor}`}
@@ -468,6 +487,7 @@ export function ContasAPagar() {
                             <ContasAPagarDataGrid
                                 contas={filtered}
                                 onPay={setPaymentTarget}
+                                onEdit={setEditTarget}
                                 onDelete={setDeleteTarget}
                             />
                         </div>
@@ -480,6 +500,17 @@ export function ContasAPagar() {
                 isOpen={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
                 onSave={handleCreate}
+            />
+
+            <EditDespesaModal
+                isOpen={!!editTarget}
+                conta={editTarget}
+                onClose={() => setEditTarget(null)}
+                onSave={async (id, patch) => {
+                    await updateContaAPagar({ id, patch })
+                    toast.success('Despesa atualizada!')
+                    refetch()
+                }}
             />
 
             {paymentTarget && (

@@ -36,6 +36,23 @@ export function useContasAPagar() {
         },
     })
 
+    const updateMutation = useMutation({
+        mutationFn: (params: {
+            id: string
+            patch: {
+                credor?: string
+                descricao?: string
+                valor_total?: number
+                data_vencimento?: string
+                plano_conta_id?: string
+                referencia?: string | null
+            }
+        }) => contasAPagarService.updateContaAPagar(params.id, params.patch),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['contas_a_pagar'] })
+        },
+    })
+
     const deleteMutation = useMutation({
         mutationFn: (id: string) => contasAPagarService.deleteContaAPagar(id),
         onSuccess: () => {
@@ -71,6 +88,7 @@ export function useContasAPagar() {
         refetch,
         createContaAPagar: createMutation.mutateAsync,
         criarObrigacaoParcelada: criarParceladaMutation.mutateAsync,
+        updateContaAPagar: updateMutation.mutateAsync,
         registrarPagamento: registrarPagamentoMutation.mutateAsync,
         deleteContaAPagar: deleteMutation.mutateAsync,
         isCreating: createMutation.isPending || criarParceladaMutation.isPending,

@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_users: {
@@ -443,6 +418,7 @@ export type Database = {
       contas_a_pagar: {
         Row: {
           atualizado_em: string | null
+          campanha_id: string | null
           competencia: string | null
           created_at: string | null
           created_by: string | null
@@ -467,6 +443,7 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string | null
+          campanha_id?: string | null
           competencia?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -491,6 +468,7 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string | null
+          campanha_id?: string | null
           competencia?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -514,6 +492,13 @@ export type Database = {
           valor_total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "contas_a_pagar_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contas_a_pagar_plano_conta_id_fkey"
             columns: ["plano_conta_id"]
@@ -2565,9 +2550,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
