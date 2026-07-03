@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_users: {
@@ -585,6 +610,7 @@ export type Database = {
       }
       contatos: {
         Row: {
+          ad_referral: Json | null
           apelido: string | null
           arquivado_em: string | null
           atualizado_em: string
@@ -595,6 +621,8 @@ export type Database = {
           complemento: string | null
           created_by: string | null
           criado_em: string
+          ctwa_clid: string | null
+          ctwa_clid_em: string | null
           endereco: string | null
           fonte: string | null
           fts: unknown
@@ -617,6 +645,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          ad_referral?: Json | null
           apelido?: string | null
           arquivado_em?: string | null
           atualizado_em?: string
@@ -627,6 +656,8 @@ export type Database = {
           complemento?: string | null
           created_by?: string | null
           criado_em?: string
+          ctwa_clid?: string | null
+          ctwa_clid_em?: string | null
           endereco?: string | null
           fonte?: string | null
           fts?: unknown
@@ -649,6 +680,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          ad_referral?: Json | null
           apelido?: string | null
           arquivado_em?: string | null
           atualizado_em?: string
@@ -659,6 +691,8 @@ export type Database = {
           complemento?: string | null
           created_by?: string | null
           criado_em?: string
+          ctwa_clid?: string | null
+          ctwa_clid_em?: string | null
           endereco?: string | null
           fonte?: string | null
           fts?: unknown
@@ -1062,6 +1096,117 @@ export type Database = {
           },
           {
             foreignKeyName: "lancamentos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_eventos: {
+        Row: {
+          action_source: string
+          contato_id: string
+          criado_em: string
+          ctwa_clid: string | null
+          enviado_em: string | null
+          event_id: string
+          event_time: string
+          evento: string
+          id: string
+          moeda: string
+          resposta_meta: Json | null
+          status: string
+          tentativas: number
+          valor: number | null
+          venda_id: string | null
+        }
+        Insert: {
+          action_source: string
+          contato_id: string
+          criado_em?: string
+          ctwa_clid?: string | null
+          enviado_em?: string | null
+          event_id: string
+          event_time: string
+          evento: string
+          id?: string
+          moeda?: string
+          resposta_meta?: Json | null
+          status?: string
+          tentativas?: number
+          valor?: number | null
+          venda_id?: string | null
+        }
+        Update: {
+          action_source?: string
+          contato_id?: string
+          criado_em?: string
+          ctwa_clid?: string | null
+          enviado_em?: string | null
+          event_id?: string
+          event_time?: string
+          evento?: string
+          id?: string
+          moeda?: string
+          resposta_meta?: Json | null
+          status?: string
+          tentativas?: number
+          valor?: number | null
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_projecao_recebimentos"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "meta_eventos_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
@@ -2550,6 +2695,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
