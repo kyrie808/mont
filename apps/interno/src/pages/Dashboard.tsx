@@ -18,12 +18,13 @@ import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useDashboardFilter } from '../hooks/useDashboardFilter'
 import { dashboardService } from '../services/dashboardService'
 import { formatCurrency } from '@mont/shared'
-import { cn } from '@mont/shared'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { isMesEmCurso } from '../utils/calculations'
 import { AlertasFinanceiroWidget } from '@/components/dashboard/AlertasFinanceiroWidget'
+import { NotificationPanel } from '@/components/dashboard/NotificationPanel'
+import { useAlertasContasAPagar } from '@/hooks/useAlertasContasAPagar'
 
 import { TopIndicadoresWidget } from '@/components/dashboard/TopIndicadoresWidget'
 import { UltimasVendasWidget } from '@/components/dashboard/UltimasVendasWidget'
@@ -31,6 +32,7 @@ import { MonthPicker } from '@/components/dashboard/MonthPicker'
 
 export function Dashboard() {
     const [isRefreshing, setIsRefreshing] = useState(false)
+    const [notifOpen, setNotifOpen] = useState(false)
     const { openDrawer } = useNavigationStore()
     const [userName, setUserName] = useState<string>('Comandante')
     const [greeting, setGreeting] = useState<string>('Olá')
@@ -38,6 +40,7 @@ export function Dashboard() {
 
 
     const { data: metrics, isLoading: isLoadingMetrics, refetch } = useDashboardMetrics(month, year)
+    const { alertas: aPagarAlertas, count: countPagar, refetch: refetchPagar } = useAlertasContasAPagar()
     const [lucroData, setLucroData] = useState({ lucro_bruto: 0, receita_bruta: 0, lucro_liquido: 0, margem_liquida_pct: 0 })
     const [liquidadoData, setLiquidadoData] = useState({ vendas_liquidadas: 0, total_liquidado: 0 })
     const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_contatos_abertos: 0 })
@@ -103,11 +106,13 @@ export function Dashboard() {
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true)
-        await refetch()
+        await Promise.all([refetch(), refetchPagar()])
         setIsRefreshing(false)
-    }, [refetch])
+    }, [refetch, refetchPagar])
 
-    const totalAlerts = metrics?.financial?.alertas_financeiros?.length || 0
+    const aReceberAlertas = metrics?.financial?.alertas_financeiros ?? []
+    // Badge do sino = contas a pagar (vencendo/vencidas) + recebíveis atrasados.
+    const totalAlerts = countPagar + aReceberAlertas.length
 
     return (
         <>
@@ -120,17 +125,26 @@ export function Dashboard() {
                     <div className="flex items-center gap-2">
                         <ThemeToggle />
                         <button
-                            aria-label="Atualizar alertas"
+                            aria-label="Notificações"
                             className="flex size-11 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors relative"
-                            onClick={handleRefresh}
+                            onClick={() => setNotifOpen(true)}
                         >
-                            <Bell className={cn("text-foreground w-6 h-6", isRefreshing && "animate-spin motion-reduce:animate-none")} />
+                            <Bell className="text-foreground w-6 h-6" />
                             {totalAlerts > 0 && (
                                 <span className="absolute top-2 right-2 size-2 bg-semantic-red rounded-full border-2 border-background animate-pulse motion-reduce:animate-none" />
                             )}
                         </button>
                     </div>
                 }
+            />
+
+            <NotificationPanel
+                isOpen={notifOpen}
+                onClose={() => setNotifOpen(false)}
+                aPagar={aPagarAlertas}
+                aReceber={aReceberAlertas}
+                onRefresh={handleRefresh}
+                refreshing={isRefreshing}
             />
 
                 {/* Main Content */}
