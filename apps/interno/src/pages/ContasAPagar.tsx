@@ -113,6 +113,15 @@ export function ContasAPagar() {
         return result
     }, [enrichedContas, filter, searchTerm, selectedMonth])
 
+    // Mês futuro (picker é do ano corrente) com despesas fixas ativas → as ocorrências
+    // ainda não foram geradas (geração é preguiçosa, só do mês corrente). Nesse caso o
+    // empty-state deve explicar isso em vez de "Registre sua primeira despesa".
+    const fixasAguardandoGeracao =
+        filter === 'todos' &&
+        !searchTerm &&
+        MONTHS_MAP[selectedMonth] > new Date().getMonth() &&
+        recorrentes.some(r => r.ativa)
+
     const handleCreate = async (data: ContaAPagarFormData) => {
         // Despesa FIXA: cria o template recorrente e já materializa o mês corrente.
         if (data.recorrente && data.dia_vencimento != null) {
@@ -343,18 +352,27 @@ export function ContasAPagar() {
                         <p className="text-sm font-bold text-muted-foreground uppercase">Carregando despesas...</p>
                     </div>
                 ) : filtered.length === 0 ? (
-                    <EmptyState
-                        icon={<CheckCircle2 className="w-12 h-12" />}
-                        title="Nenhuma despesa encontrada"
-                        description={filter === 'todos' && !searchTerm
-                            ? "Registre sua primeira despesa para começar"
-                            : "Nenhum resultado para os filtros aplicados"
-                        }
-                        action={filter === 'todos' && !searchTerm
-                            ? <Button onClick={() => setIsCreateOpen(true)}>Nova Despesa</Button>
-                            : undefined
-                        }
-                    />
+                    fixasAguardandoGeracao ? (
+                        <EmptyState
+                            icon={<Repeat className="w-12 h-12" />}
+                            title="Despesas fixas ainda não geradas"
+                            description="As despesas fixas deste mês são geradas automaticamente quando o mês começar. Você ainda pode lançar uma despesa avulsa."
+                            action={<Button onClick={() => setIsCreateOpen(true)}>Nova Despesa</Button>}
+                        />
+                    ) : (
+                        <EmptyState
+                            icon={<CheckCircle2 className="w-12 h-12" />}
+                            title="Nenhuma despesa encontrada"
+                            description={filter === 'todos' && !searchTerm
+                                ? "Registre sua primeira despesa para começar"
+                                : "Nenhum resultado para os filtros aplicados"
+                            }
+                            action={filter === 'todos' && !searchTerm
+                                ? <Button onClick={() => setIsCreateOpen(true)}>Nova Despesa</Button>
+                                : undefined
+                            }
+                        />
+                    )
                 ) : (
                     <>
                         {/* MOBILE (<lg): cards — mobile sagrado */}
