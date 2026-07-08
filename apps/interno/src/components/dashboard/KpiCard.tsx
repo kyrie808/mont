@@ -72,7 +72,11 @@ export function KpiCard({
 
     return (
         <Card
-            className={cn("shadow-card bg-card border-border rounded-xl", className)}
+            className={cn(
+                "shadow-card bg-card border-border rounded-xl",
+                onClick && "cursor-pointer hover:shadow-elevated transition-shadow",
+                className,
+            )}
             onClick={onClick}
         >
             <CardContent className="p-5">

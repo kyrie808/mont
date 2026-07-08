@@ -12,6 +12,7 @@ import {
     ShoppingCart,
     Wallet,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
@@ -31,6 +32,7 @@ import { UltimasVendasWidget } from '@/components/dashboard/UltimasVendasWidget'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 
 export function Dashboard() {
+    const navigate = useNavigate()
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
     const { openDrawer } = useNavigationStore()
@@ -172,6 +174,7 @@ export function Dashboard() {
                             className="col-span-2 md:col-span-1"
                             variant="default"
                             loading={isLoading}
+                            onClick={() => navigate('/vendas?status=entregue')}
                             tooltip="Receita de PRODUTO das vendas entregues no mês (já sem o frete). O frete aparece à parte em 'Receita de Frete'."
                         />
 
@@ -242,6 +245,7 @@ export function Dashboard() {
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
+                            onClick={() => navigate('/vendas?pagamento=pendente')}
                             tooltip="Total de fiado em aberto de todos os meses — não é filtrado pelo mês selecionado."
                         />
 
@@ -256,6 +260,7 @@ export function Dashboard() {
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
+                            onClick={() => navigate('/vendas?pagamento=pago')}
                             tooltip="Dinheiro que entrou no caixa no mês selecionado. Inclui fiados de meses anteriores pagos agora."
                         />
 
@@ -281,6 +286,7 @@ export function Dashboard() {
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
+                            onClick={() => navigate('/vendas')}
                         />
 
                         <KpiCard
@@ -305,6 +311,7 @@ export function Dashboard() {
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
+                            onClick={() => navigate('/vendas?status=pendente')}
                         />
 
                         <KpiCard
@@ -317,6 +324,7 @@ export function Dashboard() {
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
+                            onClick={() => navigate('/vendas?status=entregue')}
                         />
                     </div>
 
