@@ -16,6 +16,7 @@ const schema = z.object({
     valor_total: z.number().min(0.01, 'Valor deve ser maior que zero'),
     plano_conta_id: z.string().min(1, 'Categoria é obrigatória'),
     recorrente: z.boolean(),
+    variavel: z.boolean(),
     data_vencimento: z.string().optional(),
     dia_vencimento: z.number().min(1, 'Dia entre 1 e 31').max(31, 'Dia entre 1 e 31').optional(),
     total_parcelas: z.number().min(1).max(60),
@@ -109,6 +110,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
             valor_total: 0,
             plano_conta_id: '',
             recorrente: false,
+            variavel: false,
             data_vencimento: '',
             dia_vencimento: 5,
             total_parcelas: 1,
@@ -133,6 +135,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
     const totalParcelas = watch('total_parcelas')
     const dataVencimento = watch('data_vencimento')
     const recorrente = watch('recorrente')
+    const variavel = watch('variavel')
     const jaPago = watch('ja_pago')
     const isParcelado = !recorrente && totalParcelas > 1
     const podeJaPago = !recorrente && totalParcelas === 1
@@ -141,6 +144,11 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
     useEffect(() => {
         if (recorrente && jaPago) setValue('ja_pago', false)
     }, [recorrente, jaPago, setValue])
+
+    // "Variável" só faz sentido em recorrente; ao desligar a recorrência, zera.
+    useEffect(() => {
+        if (!recorrente && variavel) setValue('variavel', false)
+    }, [recorrente, variavel, setValue])
 
     const parcelas = useMemo(
         () => isParcelado ? gerarPreviewParcelas(valorTotal, totalParcelas, dataVencimento ?? '') : [],
@@ -200,7 +208,7 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                         error={errors.credor?.message}
                     />
                     <Input
-                        label="Valor Total"
+                        label={recorrente && variavel ? 'Valor estimado' : 'Valor Total'}
                         type="text"
                         inputMode="numeric"
                         value={displayValor}
@@ -238,6 +246,30 @@ export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalPr
                         <span className={cn("inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform", recorrente ? "translate-x-5" : "translate-x-0.5")} />
                     </span>
                 </button>
+
+                {/* Toggle: valor variável (só para recorrente) — o valor vira estimativa e é ajustado por mês */}
+                {recorrente && (
+                    <button
+                        type="button"
+                        onClick={() => setValue('variavel', !variavel, { shouldValidate: true })}
+                        className={cn(
+                            "w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all",
+                            variavel ? "border-primary bg-primary/5" : "border-border bg-card hover:border-foreground/30"
+                        )}
+                        aria-pressed={variavel}
+                    >
+                        <span className="flex items-center gap-2 min-w-0">
+                            <Wallet className={cn("w-4 h-4 shrink-0", variavel ? "text-primary" : "text-muted-foreground")} />
+                            <span className="flex flex-col min-w-0">
+                                <span className="text-sm font-bold text-foreground">Valor variável</span>
+                                <span className="text-xs text-muted-foreground truncate">Ex: luz, água — o valor acima é só estimativa; ajuste a conta do mês quando chegar</span>
+                            </span>
+                        </span>
+                        <span className={cn("relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors", variavel ? "bg-primary" : "bg-muted")}>
+                            <span className={cn("inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform", variavel ? "translate-x-5" : "translate-x-0.5")} />
+                        </span>
+                    </button>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {recorrente ? (

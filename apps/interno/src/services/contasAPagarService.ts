@@ -71,9 +71,9 @@ export const contasAPagarService = {
         plano_conta_id?: string
         referencia?: string | null
     }): Promise<void> {
+        // `saldo_devedor` é coluna GENERATED ALWAYS AS (valor_total - valor_pago) no banco:
+        // NÃO pode ser escrita (levanta 428C9) — deriva sozinha ao atualizar valor_total.
         const updates: ContaAPagarUpdate = { ...patch }
-        // valor só chega aqui quando a despesa NÃO tem pagamento (guard na UI) → saldo = valor_total
-        if (patch.valor_total != null) updates.saldo_devedor = patch.valor_total
 
         const { error } = await supabase
             .from('contas_a_pagar')

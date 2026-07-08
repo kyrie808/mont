@@ -47,6 +47,7 @@ export const cashFlowService = {
         const { data, error } = await supabase
             .from('contas')
             .select('id, nome, tipo, banco, ativo, saldo_atual, saldo_inicial, criado_em, atualizado_em')
+            .eq('ativo', true)
             .order('nome')
         if (error) throw error
         return data as Conta[]
@@ -60,6 +61,46 @@ export const cashFlowService = {
             .single()
         if (error) throw error
         return created as Conta
+    },
+
+    /** Edita metadados da conta (nome/banco/tipo). NUNCA saldo — é derivado dos lançamentos. */
+    async updateConta(id: string, patch: { nome?: string; banco?: string; tipo?: string }) {
+        const { data: updated, error } = await supabase
+            .from('contas')
+            .update(patch)
+            .eq('id', id)
+            .select()
+            .single()
+        if (error) throw error
+        return updated as Conta
+    },
+
+    /**
+     * Soft-delete: marca `ativo = false`. Nunca DELETE físico — há 5 FKs (lancamentos,
+     * pagamentos_venda, pagamentos_conta_a_pagar, purchase_order_payments) com RESTRICT,
+     * e o histórico do extrato precisa preservar a conta. Desativada, ela some das listas
+     * (getContas filtra ativo=true) e do saldo consolidado.
+     */
+    async desativarConta(id: string) {
+        const { error } = await supabase
+            .from('contas')
+            .update({ ativo: false })
+            .eq('id', id)
+        if (error) throw error
+    },
+
+    /**
+     * Reconciliação: calibra o saldo do sistema para o saldo REAL da conta via RPC.
+     * O RPC calcula a diferença e insere UM lançamento origem='ajuste' (nunca escreve
+     * saldo_atual na mão — Regra #3). Retorna o id do lançamento, ou null se já batia.
+     */
+    async ajustarSaldoConta(contaId: string, saldoReal: number): Promise<string | null> {
+        const { data, error } = await supabase.rpc('registrar_ajuste_saldo', {
+            p_conta_id: contaId,
+            p_saldo_real: Math.round(saldoReal * 100) / 100,
+        })
+        if (error) throw error
+        return data as string | null
     },
 
     // --- Plano de Contas ---
