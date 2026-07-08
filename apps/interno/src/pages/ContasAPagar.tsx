@@ -233,7 +233,7 @@ export function ContasAPagar() {
                 }
             />
 
-            <main className="max-w-5xl lg:max-w-[1500px] mx-auto p-4 pb-24 space-y-6">
+            <main className="w-full max-w-5xl lg:max-w-[1500px] mx-auto p-4 pb-24 space-y-6">
                 <MonthPicker selectedMonth={selectedMonth} onMonthSelect={setSelectedMonth} />
 
                 {/* Despesas Fixas (recorrentes) — templates que geram uma conta todo mês */}
