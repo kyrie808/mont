@@ -122,6 +122,7 @@ export function ContasAPagar() {
                 valor: data.valor_total,
                 plano_conta_id: data.plano_conta_id,
                 dia_vencimento: data.dia_vencimento,
+                variavel: data.variavel,
                 ativa: true,
             })
             const now = new Date()
@@ -243,7 +244,14 @@ export function ContasAPagar() {
                                     )}
                                 >
                                     <div className="min-w-0">
-                                        <p className="font-bold text-foreground truncate">{r.descricao}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold text-foreground truncate">{r.descricao}</p>
+                                            {r.variavel && (
+                                                <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                                                    Variável
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-muted-foreground truncate">
                                             {r.credor} · vence dia {r.dia_vencimento}
                                             {r.plano_de_contas?.nome ? ` · ${r.plano_de_contas.nome}` : ''}
@@ -251,7 +259,10 @@ export function ContasAPagar() {
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0">
-                                        <span className="font-bold text-foreground tabular-nums">{formatCurrency(r.valor)}</span>
+                                        <span className="font-bold text-foreground tabular-nums">
+                                            {r.variavel && <span className="text-muted-foreground font-normal">~</span>}
+                                            {formatCurrency(r.valor)}
+                                        </span>
                                         <button
                                             type="button"
                                             onClick={() => toggleRecorrenteAtiva(r)}

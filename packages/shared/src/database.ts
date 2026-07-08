@@ -795,6 +795,7 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
           valor: number
+          variavel: boolean
         }
         Insert: {
           ativa?: boolean
@@ -810,6 +811,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           valor: number
+          variavel?: boolean
         }
         Update: {
           ativa?: boolean
@@ -825,6 +827,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           valor?: number
+          variavel?: boolean
         }
         Relationships: [
           {
@@ -2492,6 +2495,10 @@ export type Database = {
       receive_purchase_order: {
         Args: { p_order_id: string }
         Returns: undefined
+      }
+      registrar_ajuste_saldo: {
+        Args: { p_conta_id: string; p_saldo_real: number }
+        Returns: string
       }
       registrar_despesa_manual: {
         Args: {
