@@ -45,7 +45,8 @@ export function NovaVenda() {
         updateQuantity,
         setCliente: setSelectedContato,
         setItems,
-        clearCart
+        clearCart,
+        ensureIdempotencyKey
     } = useCartStore()
 
     // Local UI State
@@ -140,33 +141,45 @@ export function NovaVenda() {
 
 
     const handleConfirmSale = useCallback(async (data: VendaFormData) => {
-        try {
-            const vendaData = {
-                contatoId: data.contato_id || selectedContato?.id || '',
-                data: data.data,
-                formaPagamento: data.forma_pagamento,
-                taxaEntrega: data.taxa_entrega,
-                itens: data.itens.map(it => ({
-                    produtoId: it.produto_id,
-                    quantidade: it.quantidade,
-                    precoUnitario: it.preco_unitario,
-                    subtotal: it.subtotal
-                })),
-                dataPrevistaPagamento: data.data_prevista_pagamento,
-            }
-            const venda = await createVenda(vendaData)
-            if (venda) {
-                toast.success('Venda realizada com sucesso!')
-                clearCart()
-                setCurrentStep(0)
-                navigate(`/vendas/${venda.id}`)
-            } else {
-                toast.error('Erro ao realizar venda. Tente novamente.')
-            }
-        } catch (_error) {
-            toast.error('Ocorreu um erro ao processar a venda')
+        // Pré-check de conexão: sem isto, um submit offline ficava travado/perdido
+        // em silêncio. Avisa claramente e nem tenta gravar (carrinho preservado).
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            toast.error('Sem conexão. A venda NÃO foi salva — conecte-se e tente de novo.')
+            return
         }
-    }, [selectedContato, createVenda, toast, clearCart, navigate])
+
+        // Chave de idempotência do checkout atual: persistida no carrinho, faz o
+        // backend deduplicar reenvios (sinal fraco) e cliques duplos no mesmo id.
+        const idempotencyKey = ensureIdempotencyKey()
+
+        const vendaData = {
+            contatoId: data.contato_id || selectedContato?.id || '',
+            data: data.data,
+            formaPagamento: data.forma_pagamento,
+            taxaEntrega: data.taxa_entrega,
+            itens: data.itens.map(it => ({
+                produtoId: it.produto_id,
+                quantidade: it.quantidade,
+                precoUnitario: it.preco_unitario,
+                subtotal: it.subtotal
+            })),
+            dataPrevistaPagamento: data.data_prevista_pagamento,
+        }
+
+        try {
+            const venda = await createVenda(vendaData, idempotencyKey)
+            toast.success('Venda realizada com sucesso!')
+            clearCart()
+            setCurrentStep(0)
+            navigate(`/vendas/${venda.id}`)
+        } catch (error) {
+            // Falha real (rede instável/timeout/servidor). NÃO limpamos o carrinho
+            // nem a chave: um novo envio reusa a mesma chave e o backend deduplica,
+            // então refazer é seguro (não gera duplicata).
+            console.error('[NovaVenda] falha ao confirmar venda:', error)
+            toast.error('Não foi possível salvar a venda (conexão instável?). O carrinho foi mantido — confira em Vendas antes de refazer; refazer não gera duplicata.')
+        }
+    }, [selectedContato, createVenda, toast, clearCart, navigate, ensureIdempotencyKey])
 
     const nextStep = (contatoOverride?: typeof selectedContato) => {
         const contato = contatoOverride ?? selectedContato

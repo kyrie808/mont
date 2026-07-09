@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { VendaInsert, VendaUpdate, ItemVendaInsert } from '@mont/shared'
+import type { VendaUpdate } from '@mont/shared'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
 import { toDomainVenda, type VendaRowWithRelations } from './mappers'
 import { isToday } from 'date-fns'
@@ -107,52 +107,29 @@ export const vendaService = {
         return toDomainVenda(data as unknown as VendaRowWithRelations)
     },
 
-    async createVenda(data: CreateVenda): Promise<DomainVenda> {
-        // 1. Buscar custos dos produtos para cálculo de lucro
-        const produtoIds = data.itens.map(it => it.produtoId)
-        const { data: produtos } = await supabase
-            .from('produtos')
-            .select('id, custo')
-            .in('id', produtoIds)
-
-        const custoPorProduto = Object.fromEntries(
-            (produtos || []).map((p: any) => [p.id, p.custo || 0])
-        )
-
-        // 2. Calcular custo total da venda
-        const custoTotal = data.itens.reduce((acc, it) =>
-            acc + (custoPorProduto[it.produtoId] || 0) * it.quantidade, 0
-        )
-
-        const vInsert: VendaInsert = {
-            contato_id: data.contatoId,
-            data: data.data,
-            status: 'pendente',
-            total: data.itens.reduce((acc, item) => acc + item.subtotal, 0) + (data.taxaEntrega || 0),
-            pago: false,
-            forma_pagamento: data.formaPagamento,
-            taxa_entrega: data.taxaEntrega || 0,
-            data_prevista_pagamento: data.dataPrevistaPagamento,
-            custo_total: custoTotal
-        }
-
-        const { data: vendaData, error: vendaError } = await supabase.from('vendas').insert(vInsert).select().single()
-        if (vendaError) throw vendaError
-
-        if (data.itens.length > 0) {
-            const iInserts: ItemVendaInsert[] = data.itens.map(it => ({
-                venda_id: vendaData.id,
+    // Cria a venda de forma ATÔMICA via RPC criar_venda (header + itens numa
+    // única transação) com idempotência. Substitui os 2 inserts separados que,
+    // em sinal fraco, podiam gravar parcial / perder / duplicar. Custos e totais
+    // são calculados no servidor. Retorna só o id (é tudo que a navegação usa;
+    // a tela de detalhe recarrega os próprios dados).
+    async createVenda(data: CreateVenda, idempotencyKey: string): Promise<{ id: string }> {
+        const { data: vendaId, error } = await supabase.rpc('criar_venda', {
+            p_contato_id: data.contatoId,
+            p_data: data.data,
+            p_forma_pagamento: data.formaPagamento,
+            p_taxa_entrega: data.taxaEntrega ?? 0,
+            p_itens: data.itens.map(it => ({
                 produto_id: it.produtoId,
                 quantidade: it.quantidade,
                 preco_unitario: it.precoUnitario,
                 subtotal: it.subtotal,
-                custo_unitario: custoPorProduto[it.produtoId] || 0
-            }))
-            const { error: itensError } = await supabase.from('itens_venda').insert(iInserts)
-            if (itensError) throw itensError
-        }
-
-        return this.getVendaById(vendaData.id)
+            })),
+            p_idempotency_key: idempotencyKey,
+            p_data_prevista_pagamento: data.dataPrevistaPagamento ?? undefined,
+        })
+        if (error) throw error
+        if (!vendaId) throw new Error('criar_venda não retornou o id da venda')
+        return { id: vendaId }
     },
 
     async updateVenda(id: string, data: UpdateVenda): Promise<DomainVenda> {
