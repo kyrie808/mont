@@ -10,19 +10,26 @@ export interface CartItem extends ItemVendaFormData {
 interface CartState {
     items: CartItem[]
     cliente: DomainContato | null
+    // Chave de idempotência do checkout atual. Persistida junto com o carrinho:
+    // sobrevive a reload/retry (sinal fraco) e faz o backend deduplicar reenvios
+    // e cliques duplos no MESMO id de venda. Só é resetada ao concluir (clearCart).
+    idempotencyKey: string | null
     addItem: (item: CartItem) => void
     removeItem: (produtoId: string) => void
     updateQuantity: (produtoId: string, quantidade: number) => void
     setCliente: (cliente: DomainContato | null) => void
     setItems: (items: CartItem[]) => void
+    // Retorna a chave do checkout atual, gerando uma nova se ainda não houver.
+    ensureIdempotencyKey: () => string
     clearCart: () => void
 }
 
 export const useCartStore = create<CartState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             items: [],
             cliente: null,
+            idempotencyKey: null,
             addItem: (item) =>
                 set((state) => {
                     const existingItem = state.items.find(
@@ -63,7 +70,14 @@ export const useCartStore = create<CartState>()(
                 })),
             setCliente: (cliente) => set({ cliente }),
             setItems: (items) => set({ items }),
-            clearCart: () => set({ items: [], cliente: null }),
+            ensureIdempotencyKey: () => {
+                const existing = get().idempotencyKey
+                if (existing) return existing
+                const key = crypto.randomUUID()
+                set({ idempotencyKey: key })
+                return key
+            },
+            clearCart: () => set({ items: [], cliente: null, idempotencyKey: null }),
         }),
         {
             name: 'massas-cart-storage',

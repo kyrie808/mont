@@ -19,7 +19,7 @@ interface UseVendasReturn {
     error: string | null
     metrics: VendasMetrics
     refetch: () => Promise<void>
-    createVenda: (data: CreateVenda) => Promise<DomainVenda | null>
+    createVenda: (data: CreateVenda, idempotencyKey: string) => Promise<{ id: string }>
     updateVendaStatus: (id: string, status: 'pendente' | 'entregue' | 'cancelada') => Promise<boolean>
     updateVendaPago: (id: string, pago: boolean) => Promise<boolean>
     deleteVenda: (id: string) => Promise<boolean>
@@ -66,12 +66,18 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
     })
 
     const createVendaMutation = useMutation({
-        mutationFn: (data: CreateVenda) => vendaService.createVenda(data),
+        mutationFn: ({ data, idempotencyKey }: { data: CreateVenda; idempotencyKey: string }) =>
+            vendaService.createVenda(data, idempotencyKey),
+        // 'always': nunca pausa em silêncio quando offline (o default 'online'
+        // deixava a mutation pendente pra sempre, causando a venda "sumida").
+        // Offline vira falha rápida, tratada com aviso claro em NovaVenda.
+        networkMode: 'always',
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] })
             queryClient.invalidateQueries({ queryKey: ['produtos'] })
-        }
+        },
+        onError: (e) => { console.error('[createVenda] falha ao criar venda:', e) },
     })
 
     const updateVendaMutation = useMutation({
@@ -131,11 +137,12 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         receitaFrete: 0,
     }
 
-    const createVenda = useCallback(async (formData: CreateVenda) => {
-        try {
-            return await createVendaMutation.mutateAsync(formData)
-        } catch (e) { console.error(e); return null }
-    }, [createVendaMutation])
+    // Propaga o erro (não mascara em null): quem chama decide a UX de falha.
+    const createVenda = useCallback(
+        (formData: CreateVenda, idempotencyKey: string) =>
+            createVendaMutation.mutateAsync({ data: formData, idempotencyKey }),
+        [createVendaMutation],
+    )
 
     const updateVenda = useCallback(async (id: string, formData: UpdateVenda) => {
         try {

@@ -1865,6 +1865,7 @@ export type Database = {
           forma_pagamento: string
           fts: unknown
           id: string
+          idempotency_key: string | null
           observacoes: string | null
           origem: string | null
           pago: boolean
@@ -1888,6 +1889,7 @@ export type Database = {
           forma_pagamento: string
           fts?: unknown
           id?: string
+          idempotency_key?: string | null
           observacoes?: string | null
           origem?: string | null
           pago?: boolean
@@ -1911,6 +1913,7 @@ export type Database = {
           forma_pagamento?: string
           fts?: unknown
           id?: string
+          idempotency_key?: string | null
           observacoes?: string | null
           origem?: string | null
           pago?: boolean
@@ -2443,6 +2446,18 @@ export type Database = {
           p_uf?: string
         }
         Returns: Json
+      }
+      criar_venda: {
+        Args: {
+          p_contato_id: string
+          p_data: string
+          p_data_prevista_pagamento?: string
+          p_forma_pagamento: string
+          p_idempotency_key: string
+          p_itens: Json
+          p_taxa_entrega: number
+        }
+        Returns: string
       }
       delete_image_reference: {
         Args: { p_produto_id: string }
