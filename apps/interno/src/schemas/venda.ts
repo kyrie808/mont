@@ -22,6 +22,9 @@ export const vendaSchema = z.object({
     itens: z.array(itemVendaSchema).min(1, 'Adicione pelo menos um produto'),
     parcelas: z.number().int().min(1).default(1),
     data_prevista_pagamento: z.string().optional().nullable(),
+    // Entrega: entregador atribuído (null = retirada) + nota livre pro entregador.
+    entregador_id: z.string().uuid().optional().nullable(),
+    observacao_entregador: z.string().optional().nullable(),
 }).refine((data) => {
     if (data.forma_pagamento === 'fiado' && !data.data_prevista_pagamento) {
         return false

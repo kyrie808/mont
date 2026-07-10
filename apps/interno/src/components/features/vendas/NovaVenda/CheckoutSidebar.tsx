@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Calendar, Gift, Truck, ChevronRight } from 'lucide-react'
+import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
 import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
+import { useEntregadores } from '../../../../hooks/useEntregadores'
 import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
 
@@ -32,6 +33,10 @@ export function CheckoutSidebar({
     items
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
+    // Retirada (default) x Entrega. Só na Entrega atribuímos um entregador — a venda
+    // cai no app dele. Retirada mantém entregador_id nulo (não vai pra ninguém).
+    const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrega'>('retirada')
+    const { entregadores } = useEntregadores()
 
     const {
         register,
@@ -50,15 +55,19 @@ export function CheckoutSidebar({
             parcelas: 1,
             itens: items,
             observacoes: '',
-            data_prevista_pagamento: null
+            data_prevista_pagamento: null,
+            entregador_id: null,
+            observacao_entregador: ''
         }
     })
 
     const formaPagamento = watch('forma_pagamento')
+    const entregadorId = watch('entregador_id')
     const taxaEntregaValue = watch('taxa_entrega') || 0
     const totalGeral = total + taxaEntregaValue
 
     useEffect(() => {
+        setTipoEntrega('retirada')
         reset({
             contato_id: contatoId,
             data: format(new Date(), 'yyyy-MM-dd'),
@@ -67,9 +76,20 @@ export function CheckoutSidebar({
             parcelas: 1,
             itens: items,
             observacoes: '',
-            data_prevista_pagamento: null
+            data_prevista_pagamento: null,
+            entregador_id: null,
+            observacao_entregador: ''
         })
     }, [contatoId, items, reset])
+
+    // Alternar Retirada/Entrega. Retirada zera a atribuição e a nota do entregador.
+    const handleTipoEntrega = (tipo: 'retirada' | 'entrega') => {
+        setTipoEntrega(tipo)
+        if (tipo === 'retirada') {
+            setValue('entregador_id', null)
+            setValue('observacao_entregador', '')
+        }
+    }
 
     // Update data_prevista_pagamento automatically for Fiado
     useEffect(() => {
@@ -194,6 +214,70 @@ export function CheckoutSidebar({
                             placeholder="0,00"
                         />
                     </div>
+                </div>
+
+                {/* Método de entrega: Retirada x Entrega (atribui entregador) */}
+                <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">
+                        Entrega
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {([
+                            { id: 'retirada', label: 'Retirada', icon: Store },
+                            { id: 'entrega', label: 'Entrega', icon: Truck },
+                        ] as const).map((opt) => {
+                            const Icon = opt.icon
+                            const isSelected = tipoEntrega === opt.id
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    onClick={() => handleTipoEntrega(opt.id)}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                        isSelected
+                                            ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
+                                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">{opt.label}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {tipoEntrega === 'entrega' && (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                                    Entregador
+                                </label>
+                                <select
+                                    value={entregadorId ?? ''}
+                                    onChange={(e) => setValue('entregador_id', e.target.value || null)}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                >
+                                    <option value="">Selecione o entregador…</option>
+                                    {entregadores.map((ent) => (
+                                        <option key={ent.id} value={ent.id}>{ent.nome}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                                    Observação para o entregador
+                                </label>
+                                <textarea
+                                    {...register('observacao_entregador')}
+                                    rows={2}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring resize-none text-sm placeholder:text-muted-foreground/60"
+                                    placeholder="Ex: Aguardar confirmação de pagamento para entregar."
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Observações */}

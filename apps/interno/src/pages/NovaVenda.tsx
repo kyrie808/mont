@@ -164,6 +164,8 @@ export function NovaVenda() {
                 subtotal: it.subtotal
             })),
             dataPrevistaPagamento: data.data_prevista_pagamento,
+            entregadorId: data.entregador_id ?? null,
+            observacaoEntregador: data.observacao_entregador ?? null,
         }
 
         try {

@@ -126,6 +126,8 @@ export const vendaService = {
             })),
             p_idempotency_key: idempotencyKey,
             p_data_prevista_pagamento: data.dataPrevistaPagamento ?? undefined,
+            p_entregador_id: data.entregadorId ?? undefined,
+            p_observacao_entregador: data.observacaoEntregador ?? undefined,
         })
         if (error) throw error
         if (!vendaId) throw new Error('criar_venda não retornou o id da venda')

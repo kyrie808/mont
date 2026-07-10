@@ -153,6 +153,9 @@ export interface CreateVenda {
         precoUnitario: number
         subtotal: number
     }[]
+    // Entrega: entregador atribuído (null/undefined = retirada) + nota pro entregador.
+    entregadorId?: string | null
+    observacaoEntregador?: string | null
 }
 
 export type UpdateVenda = Partial<Omit<CreateVenda, 'itens'>> & {
