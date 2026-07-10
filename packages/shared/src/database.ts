@@ -839,6 +839,33 @@ export type Database = {
           },
         ]
       }
+      entregadores: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          id: string
+          nome: string
+          repasse_por_entrega: number
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          nome: string
+          repasse_por_entrega?: number
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          nome?: string
+          repasse_por_entrega?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       fontes: {
         Row: {
           ativo: boolean
@@ -1862,6 +1889,7 @@ export type Database = {
           data: string
           data_entrega: string | null
           data_prevista_pagamento: string | null
+          entregador_id: string | null
           forma_pagamento: string
           fts: unknown
           id: string
@@ -1870,6 +1898,8 @@ export type Database = {
           origem: string | null
           pago: boolean
           parcelas: number | null
+          recebido_em: string | null
+          recebido_por_entregador_id: string | null
           status: string
           taxa_entrega: number | null
           total: number
@@ -1886,6 +1916,7 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          entregador_id?: string | null
           forma_pagamento: string
           fts?: unknown
           id?: string
@@ -1894,6 +1925,8 @@ export type Database = {
           origem?: string | null
           pago?: boolean
           parcelas?: number | null
+          recebido_em?: string | null
+          recebido_por_entregador_id?: string | null
           status?: string
           taxa_entrega?: number | null
           total: number
@@ -1910,6 +1943,7 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          entregador_id?: string | null
           forma_pagamento?: string
           fts?: unknown
           id?: string
@@ -1918,6 +1952,8 @@ export type Database = {
           origem?: string | null
           pago?: boolean
           parcelas?: number | null
+          recebido_em?: string | null
+          recebido_por_entregador_id?: string | null
           status?: string
           taxa_entrega?: number | null
           total?: number
@@ -1973,6 +2009,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_relacionamento_kanban"
             referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "vendas_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_recebido_por_entregador_id_fkey"
+            columns: ["recebido_por_entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2500,6 +2550,7 @@ export type Database = {
         }[]
       }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      is_entregador: { Args: { check_user_id?: string }; Returns: boolean }
       produtos_comprados_juntos: {
         Args: { p_limit?: number; p_produto_id: string }
         Returns: {
