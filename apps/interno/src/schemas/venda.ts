@@ -19,9 +19,16 @@ export const vendaSchema = z.object({
     forma_pagamento: z.enum(['venda', 'fiado', 'brinde']),
     observacoes: z.string().optional().nullable(),
     taxa_entrega: z.number().min(0).default(0),
+    // Desconto em R$ sobre o produto (reduz o total). Fixo, não percentual.
+    desconto: z.number().min(0).default(0),
     itens: z.array(itemVendaSchema).min(1, 'Adicione pelo menos um produto'),
     parcelas: z.number().int().min(1).default(1),
     data_prevista_pagamento: z.string().optional().nullable(),
+    // Entrega: entregador atribuído (null = retirada) + nota livre pro entregador.
+    entregador_id: z.string().uuid().optional().nullable(),
+    observacao_entregador: z.string().optional().nullable(),
+    // Cliente combinou pagar em dinheiro na entrega (o entregador coleta o total).
+    dinheiro_na_entrega: z.boolean().optional().default(false),
 }).refine((data) => {
     if (data.forma_pagamento === 'fiado' && !data.data_prevista_pagamento) {
         return false

@@ -126,6 +126,7 @@ export interface DomainVenda {
     pago: boolean
     formaPagamento: PagamentoMetodo
     taxaEntrega: number
+    desconto: number
     itens: DomainItemVenda[]
     pagamentos: DomainPagamento[]
     criadoEm: string
@@ -153,6 +154,13 @@ export interface CreateVenda {
         precoUnitario: number
         subtotal: number
     }[]
+    // Entrega: entregador atribuído (null/undefined = retirada) + nota pro entregador.
+    entregadorId?: string | null
+    observacaoEntregador?: string | null
+    // Pagamento em dinheiro na entrega (o entregador coleta o total).
+    dinheiroNaEntrega?: boolean
+    // Desconto em R$ sobre o produto.
+    desconto?: number
 }
 
 export type UpdateVenda = Partial<Omit<CreateVenda, 'itens'>> & {

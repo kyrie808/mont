@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_users: {
@@ -838,6 +813,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      entregadores: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          id: string
+          nome: string
+          repasse_por_entrega: number
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          nome: string
+          repasse_por_entrega?: number
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          nome?: string
+          repasse_por_entrega?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       fontes: {
         Row: {
@@ -1862,14 +1864,20 @@ export type Database = {
           data: string
           data_entrega: string | null
           data_prevista_pagamento: string | null
+          desconto: number
+          dinheiro_na_entrega: boolean
+          entregador_id: string | null
           forma_pagamento: string
           fts: unknown
           id: string
           idempotency_key: string | null
+          observacao_entregador: string | null
           observacoes: string | null
           origem: string | null
           pago: boolean
           parcelas: number | null
+          recebido_em: string | null
+          recebido_por_entregador_id: string | null
           status: string
           taxa_entrega: number | null
           total: number
@@ -1886,14 +1894,20 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          desconto?: number
+          dinheiro_na_entrega?: boolean
+          entregador_id?: string | null
           forma_pagamento: string
           fts?: unknown
           id?: string
           idempotency_key?: string | null
+          observacao_entregador?: string | null
           observacoes?: string | null
           origem?: string | null
           pago?: boolean
           parcelas?: number | null
+          recebido_em?: string | null
+          recebido_por_entregador_id?: string | null
           status?: string
           taxa_entrega?: number | null
           total: number
@@ -1910,14 +1924,20 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          desconto?: number
+          dinheiro_na_entrega?: boolean
+          entregador_id?: string | null
           forma_pagamento?: string
           fts?: unknown
           id?: string
           idempotency_key?: string | null
+          observacao_entregador?: string | null
           observacoes?: string | null
           origem?: string | null
           pago?: boolean
           parcelas?: number | null
+          recebido_em?: string | null
+          recebido_por_entregador_id?: string | null
           status?: string
           taxa_entrega?: number | null
           total?: number
@@ -1973,6 +1993,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_relacionamento_kanban"
             referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "vendas_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_recebido_por_entregador_id_fkey"
+            columns: ["recebido_por_entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2407,6 +2441,17 @@ export type Database = {
       }
     }
     Functions: {
+      _pagamento_venda_core: {
+        Args: {
+          p_conta_id: string
+          p_data: string
+          p_metodo: string
+          p_observacao?: string
+          p_valor: number
+          p_venda_id: string
+        }
+        Returns: string
+      }
       add_image_reference: {
         Args: { p_produto_id: string; p_url: string }
         Returns: undefined
@@ -2452,9 +2497,13 @@ export type Database = {
           p_contato_id: string
           p_data: string
           p_data_prevista_pagamento?: string
+          p_desconto?: number
+          p_dinheiro_na_entrega?: boolean
+          p_entregador_id?: string
           p_forma_pagamento: string
           p_idempotency_key: string
           p_itens: Json
+          p_observacao_entregador?: string
           p_taxa_entrega: number
         }
         Returns: string
@@ -2462,6 +2511,39 @@ export type Database = {
       delete_image_reference: {
         Args: { p_produto_id: string }
         Returns: undefined
+      }
+      entregador_marcar_entregue: {
+        Args: { p_venda_id: string }
+        Returns: undefined
+      }
+      entregador_marcar_recebido_dinheiro: {
+        Args: { p_venda_id: string }
+        Returns: string
+      }
+      entregador_minhas_entregas: {
+        Args: never
+        Returns: {
+          bairro: string
+          cep: string
+          cidade: string
+          cliente_apelido: string
+          cliente_nome: string
+          cliente_telefone: string
+          complemento: string
+          data: string
+          endereco: string
+          estado_pagamento: string
+          logradouro: string
+          numero: string
+          observacao_entregador: string
+          recebido_em: string
+          repasse: number
+          status_entrega: string
+          taxa_entrega: number
+          uf: string
+          valor_a_receber: number
+          venda_id: string
+        }[]
       }
       fn_ajusta_estoque_item: {
         Args: {
@@ -2500,6 +2582,7 @@ export type Database = {
         }[]
       }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      is_entregador: { Args: { check_user_id?: string }; Returns: boolean }
       produtos_comprados_juntos: {
         Args: { p_limit?: number; p_produto_id: string }
         Returns: {
@@ -2717,9 +2800,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],

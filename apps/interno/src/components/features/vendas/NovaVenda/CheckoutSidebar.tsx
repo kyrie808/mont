@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Calendar, Gift, Truck, ChevronRight } from 'lucide-react'
+import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store, Tag } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
 import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
+import { useEntregadores } from '../../../../hooks/useEntregadores'
 import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
 
@@ -32,6 +33,10 @@ export function CheckoutSidebar({
     items
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
+    // Retirada (default) x Entrega. Só na Entrega atribuímos um entregador — a venda
+    // cai no app dele. Retirada mantém entregador_id nulo (não vai pra ninguém).
+    const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrega'>('retirada')
+    const { entregadores } = useEntregadores()
 
     const {
         register,
@@ -47,29 +52,53 @@ export function CheckoutSidebar({
             data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'venda',
             taxa_entrega: 0,
+            desconto: 0,
             parcelas: 1,
             itens: items,
             observacoes: '',
-            data_prevista_pagamento: null
+            data_prevista_pagamento: null,
+            entregador_id: null,
+            observacao_entregador: '',
+            dinheiro_na_entrega: false
         }
     })
 
     const formaPagamento = watch('forma_pagamento')
+    const entregadorId = watch('entregador_id')
+    const dinheiroNaEntrega = watch('dinheiro_na_entrega')
     const taxaEntregaValue = watch('taxa_entrega') || 0
-    const totalGeral = total + taxaEntregaValue
+    const descontoValue = watch('desconto') || 0
+    // Produto com piso 0 (espelha o clamp da RPC) + frete.
+    const totalGeral = Math.max(total - descontoValue, 0) + taxaEntregaValue
 
     useEffect(() => {
+        setTipoEntrega('retirada')
         reset({
             contato_id: contatoId,
             data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'venda',
             taxa_entrega: 0,
+            desconto: 0,
             parcelas: 1,
             itens: items,
             observacoes: '',
-            data_prevista_pagamento: null
+            data_prevista_pagamento: null,
+            entregador_id: null,
+            observacao_entregador: '',
+            dinheiro_na_entrega: false
         })
     }, [contatoId, items, reset])
+
+    // Alternar Retirada/Entrega. Retirada zera a atribuição e a nota do entregador.
+    const handleTipoEntrega = (tipo: 'retirada' | 'entrega') => {
+        setTipoEntrega(tipo)
+        if (tipo === 'retirada') {
+            setValue('taxa_entrega', 0)
+            setValue('entregador_id', null)
+            setValue('observacao_entregador', '')
+            setValue('dinheiro_na_entrega', false)
+        }
+    }
 
     // Update data_prevista_pagamento automatically for Fiado
     useEffect(() => {
@@ -174,11 +203,11 @@ export function CheckoutSidebar({
                     </div>
                 )}
 
-                {/* Frete — sempre visível (obrigatório, default 0). Separa receita de frete do produto. */}
+                {/* Desconto (R$) — reduz o total do produto (fixo, não %). */}
                 <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-xl border border-border">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <Truck className="w-5 h-5" />
-                        <span className="text-sm font-medium">Frete</span>
+                        <Tag className="w-5 h-5" />
+                        <span className="text-sm font-medium">Desconto</span>
                     </div>
                     <div className="relative w-28">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
@@ -186,14 +215,110 @@ export function CheckoutSidebar({
                             type="number"
                             step="0.50"
                             min="0"
-                            {...register('taxa_entrega', { valueAsNumber: true })}
+                            max={total}
+                            {...register('desconto', { valueAsNumber: true })}
                             className={cn(
                                 "w-full pl-9 pr-2 py-2 bg-background text-foreground border rounded-lg text-sm font-bold text-right outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums",
-                                taxaEntregaValue > 0 ? "border-primary/40 text-primary" : "border-border"
+                                descontoValue > 0 ? "border-success/40 text-success" : "border-border"
                             )}
                             placeholder="0,00"
                         />
                     </div>
+                </div>
+
+                {/* Método de entrega: Retirada x Entrega (atribui entregador) */}
+                <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">
+                        Entrega
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {([
+                            { id: 'retirada', label: 'Retirada', icon: Store },
+                            { id: 'entrega', label: 'Entrega', icon: Truck },
+                        ] as const).map((opt) => {
+                            const Icon = opt.icon
+                            const isSelected = tipoEntrega === opt.id
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    onClick={() => handleTipoEntrega(opt.id)}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                        isSelected
+                                            ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
+                                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">{opt.label}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {tipoEntrega === 'entrega' && (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            {/* Frete — só faz sentido na entrega (retirada = R$0). */}
+                            <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-xl border border-border">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Truck className="w-5 h-5" />
+                                    <span className="text-sm font-medium">Frete</span>
+                                </div>
+                                <div className="relative w-28">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.50"
+                                        min="0"
+                                        {...register('taxa_entrega', { valueAsNumber: true })}
+                                        className={cn(
+                                            "w-full pl-9 pr-2 py-2 bg-background text-foreground border rounded-lg text-sm font-bold text-right outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums",
+                                            taxaEntregaValue > 0 ? "border-primary/40 text-primary" : "border-border"
+                                        )}
+                                        placeholder="0,00"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                                    Entregador
+                                </label>
+                                <select
+                                    value={entregadorId ?? ''}
+                                    onChange={(e) => setValue('entregador_id', e.target.value || null)}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                >
+                                    <option value="">Selecione o entregador…</option>
+                                    {entregadores.map((ent) => (
+                                        <option key={ent.id} value={ent.id}>{ent.nome}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                                    Observação para o entregador
+                                </label>
+                                <textarea
+                                    {...register('observacao_entregador')}
+                                    rows={2}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring resize-none text-sm placeholder:text-muted-foreground/60"
+                                    placeholder="Ex: Aguardar confirmação de pagamento para entregar."
+                                />
+                            </div>
+                            {/* Pagamento em dinheiro na entrega: só aqui o entregador vê "receber R$ X". */}
+                            <label className="flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-border bg-background px-3 py-2.5">
+                                <input
+                                    type="checkbox"
+                                    checked={!!dinheiroNaEntrega}
+                                    onChange={(e) => setValue('dinheiro_na_entrega', e.target.checked)}
+                                    className="h-4 w-4 rounded border-border accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                                />
+                                <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 {/* Observações */}

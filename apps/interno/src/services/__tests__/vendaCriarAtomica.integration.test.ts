@@ -114,4 +114,28 @@ describe('criar_venda — criação atômica + idempotência (integração)', ()
         const { data: itens } = await supabase.from('itens_venda').select('id').eq('venda_id', id1 as string)
         expect(itens).toHaveLength(1)
     })
+
+    it('aplica desconto: total = subtotais − desconto + frete', async () => {
+        const produto = await pegarProdutoComCusto()
+        const contatoId = await criarContato()
+        const key = crypto.randomUUID()
+
+        const { data: vendaId, error } = await supabase.rpc('criar_venda', {
+            p_contato_id: contatoId,
+            p_data: '2026-07-10',
+            p_forma_pagamento: 'venda',
+            p_taxa_entrega: 5,
+            p_itens: [{ produto_id: produto.id, quantidade: 4, preco_unitario: 25, subtotal: 100 }],
+            p_idempotency_key: key,
+            p_desconto: 10,
+        })
+        expect(error).toBeNull()
+
+        const { data: venda } = await supabase
+            .from('vendas')
+            .select('total, desconto, taxa_entrega')
+            .eq('id', vendaId as string).single()
+        expect(Number(venda!.desconto)).toBe(10)
+        expect(Number(venda!.total)).toBe(95) // 100 (subtotal) − 10 (desconto) + 5 (frete)
+    })
 })

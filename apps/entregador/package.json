@@ -1,0 +1,31 @@
+{
+  "name": "entregador",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mont/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.106.0",
+    "@tanstack/react-query": "^5.100.11",
+    "lucide-react": "^0.556.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@mont/config": "workspace:^",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "tailwindcss": "^4.3.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.3"
+  }
+}
