@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store } from 'lucide-react'
+import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store, Tag } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
@@ -52,6 +52,7 @@ export function CheckoutSidebar({
             data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'venda',
             taxa_entrega: 0,
+            desconto: 0,
             parcelas: 1,
             itens: items,
             observacoes: '',
@@ -66,7 +67,9 @@ export function CheckoutSidebar({
     const entregadorId = watch('entregador_id')
     const dinheiroNaEntrega = watch('dinheiro_na_entrega')
     const taxaEntregaValue = watch('taxa_entrega') || 0
-    const totalGeral = total + taxaEntregaValue
+    const descontoValue = watch('desconto') || 0
+    // Produto com piso 0 (espelha o clamp da RPC) + frete.
+    const totalGeral = Math.max(total - descontoValue, 0) + taxaEntregaValue
 
     useEffect(() => {
         setTipoEntrega('retirada')
@@ -75,6 +78,7 @@ export function CheckoutSidebar({
             data: format(new Date(), 'yyyy-MM-dd'),
             forma_pagamento: 'venda',
             taxa_entrega: 0,
+            desconto: 0,
             parcelas: 1,
             itens: items,
             observacoes: '',
@@ -198,6 +202,29 @@ export function CheckoutSidebar({
                         </div>
                     </div>
                 )}
+
+                {/* Desconto (R$) — reduz o total do produto (fixo, não %). */}
+                <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-xl border border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Tag className="w-5 h-5" />
+                        <span className="text-sm font-medium">Desconto</span>
+                    </div>
+                    <div className="relative w-28">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                        <input
+                            type="number"
+                            step="0.50"
+                            min="0"
+                            max={total}
+                            {...register('desconto', { valueAsNumber: true })}
+                            className={cn(
+                                "w-full pl-9 pr-2 py-2 bg-background text-foreground border rounded-lg text-sm font-bold text-right outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums",
+                                descontoValue > 0 ? "border-success/40 text-success" : "border-border"
+                            )}
+                            placeholder="0,00"
+                        />
+                    </div>
+                </div>
 
                 {/* Método de entrega: Retirada x Entrega (atribui entregador) */}
                 <div className="space-y-3">

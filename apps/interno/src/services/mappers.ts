@@ -184,6 +184,7 @@ export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
         pago: dbVenda.pago ?? false,
         formaPagamento: dbVenda.forma_pagamento as DomainVenda['formaPagamento'],
         taxaEntrega: Number(dbVenda.taxa_entrega || 0),
+        desconto: Number(dbVenda.desconto || 0),
         itens: (dbVenda.itens || []).map(i => toDomainItemVenda(i as ItemVendaRowWithProduto)),
         pagamentos: (dbVenda.pagamentos || []).map(p => toDomainPagamento(p as PagamentoRowWithStatus)),
         criadoEm: dbVenda.criado_em,

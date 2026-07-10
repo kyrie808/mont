@@ -14,6 +14,7 @@ function makeVenda(overrides: Partial<DomainVenda> = {}): DomainVenda {
     pago: false,
     formaPagamento: 'pix',
     taxaEntrega: 0,
+    desconto: 0,
     itens: [],
     pagamentos: [],
     criadoEm: '2026-04-23T23:30:35.219Z',

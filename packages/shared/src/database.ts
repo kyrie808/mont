@@ -1864,6 +1864,7 @@ export type Database = {
           data: string
           data_entrega: string | null
           data_prevista_pagamento: string | null
+          desconto: number
           dinheiro_na_entrega: boolean
           entregador_id: string | null
           forma_pagamento: string
@@ -1893,6 +1894,7 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          desconto?: number
           dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento: string
@@ -1922,6 +1924,7 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          desconto?: number
           dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento?: string
@@ -2494,6 +2497,7 @@ export type Database = {
           p_contato_id: string
           p_data: string
           p_data_prevista_pagamento?: string
+          p_desconto?: number
           p_dinheiro_na_entrega?: boolean
           p_entregador_id?: string
           p_forma_pagamento: string

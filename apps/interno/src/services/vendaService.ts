@@ -129,6 +129,7 @@ export const vendaService = {
             p_entregador_id: data.entregadorId ?? undefined,
             p_observacao_entregador: data.observacaoEntregador ?? undefined,
             p_dinheiro_na_entrega: data.dinheiroNaEntrega ?? false,
+            p_desconto: data.desconto ?? 0,
         })
         if (error) throw error
         if (!vendaId) throw new Error('criar_venda não retornou o id da venda')

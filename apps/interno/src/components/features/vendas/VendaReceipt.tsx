@@ -72,10 +72,12 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
                             <span className="font-mono text-foreground tabular-nums">{formatCurrency(venda.taxaEntrega)}</span>
                         </div>
                     )}
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground">Desconto</span>
-                        <span className="font-mono text-success tabular-nums">- {formatCurrency(0)}</span>
-                    </div>
+                    {venda.desconto > 0 && (
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">Desconto</span>
+                            <span className="font-mono text-success tabular-nums">- {formatCurrency(venda.desconto)}</span>
+                        </div>
+                    )}
 
                     <div className="flex justify-between items-center text-sm font-bold mt-2 pt-2 border-t border-border">
                         <span className="text-foreground">Subtotal</span>
