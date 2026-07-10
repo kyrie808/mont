@@ -65,9 +65,10 @@ export function EntregaCard({ entrega, onRecebido, onEntregue, processando }: En
             </div>
 
             {recebeNaEntrega && !jaRecebido && (
-                <p className="mt-2 text-sm font-semibold text-amber-700">
-                    Receber {moeda(entrega.taxa_entrega)} em dinheiro na entrega.
-                </p>
+                <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">Pagamento: Dinheiro na Entrega</p>
+                    <p className="text-sm font-semibold text-amber-800">Receber {moeda(entrega.valor_a_receber)}</p>
+                </div>
             )}
             {jaRecebido && (
                 <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-emerald-700">

@@ -156,6 +156,8 @@ export interface CreateVenda {
     // Entrega: entregador atribuído (null/undefined = retirada) + nota pro entregador.
     entregadorId?: string | null
     observacaoEntregador?: string | null
+    // Pagamento em dinheiro na entrega (o entregador coleta o total).
+    dinheiroNaEntrega?: boolean
 }
 
 export type UpdateVenda = Partial<Omit<CreateVenda, 'itens'>> & {

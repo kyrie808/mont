@@ -1864,6 +1864,7 @@ export type Database = {
           data: string
           data_entrega: string | null
           data_prevista_pagamento: string | null
+          dinheiro_na_entrega: boolean
           entregador_id: string | null
           forma_pagamento: string
           fts: unknown
@@ -1892,6 +1893,7 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento: string
           fts?: unknown
@@ -1920,6 +1922,7 @@ export type Database = {
           data?: string
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
+          dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento?: string
           fts?: unknown
@@ -2491,6 +2494,7 @@ export type Database = {
           p_contato_id: string
           p_data: string
           p_data_prevista_pagamento?: string
+          p_dinheiro_na_entrega?: boolean
           p_entregador_id?: string
           p_forma_pagamento: string
           p_idempotency_key: string
@@ -2533,6 +2537,7 @@ export type Database = {
           status_entrega: string
           taxa_entrega: number
           uf: string
+          valor_a_receber: number
           venda_id: string
         }[]
       }

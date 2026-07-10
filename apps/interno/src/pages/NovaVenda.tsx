@@ -166,6 +166,7 @@ export function NovaVenda() {
             dataPrevistaPagamento: data.data_prevista_pagamento,
             entregadorId: data.entregador_id ?? null,
             observacaoEntregador: data.observacao_entregador ?? null,
+            dinheiroNaEntrega: data.dinheiro_na_entrega ?? false,
         }
 
         try {

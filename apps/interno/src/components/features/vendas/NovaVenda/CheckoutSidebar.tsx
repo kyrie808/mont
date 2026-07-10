@@ -57,12 +57,14 @@ export function CheckoutSidebar({
             observacoes: '',
             data_prevista_pagamento: null,
             entregador_id: null,
-            observacao_entregador: ''
+            observacao_entregador: '',
+            dinheiro_na_entrega: false
         }
     })
 
     const formaPagamento = watch('forma_pagamento')
     const entregadorId = watch('entregador_id')
+    const dinheiroNaEntrega = watch('dinheiro_na_entrega')
     const taxaEntregaValue = watch('taxa_entrega') || 0
     const totalGeral = total + taxaEntregaValue
 
@@ -78,7 +80,8 @@ export function CheckoutSidebar({
             observacoes: '',
             data_prevista_pagamento: null,
             entregador_id: null,
-            observacao_entregador: ''
+            observacao_entregador: '',
+            dinheiro_na_entrega: false
         })
     }, [contatoId, items, reset])
 
@@ -88,6 +91,7 @@ export function CheckoutSidebar({
         if (tipo === 'retirada') {
             setValue('entregador_id', null)
             setValue('observacao_entregador', '')
+            setValue('dinheiro_na_entrega', false)
         }
     }
 
@@ -276,6 +280,16 @@ export function CheckoutSidebar({
                                     placeholder="Ex: Aguardar confirmação de pagamento para entregar."
                                 />
                             </div>
+                            {/* Pagamento em dinheiro na entrega: só aqui o entregador vê "receber R$ X". */}
+                            <label className="flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-border bg-background px-3 py-2.5">
+                                <input
+                                    type="checkbox"
+                                    checked={!!dinheiroNaEntrega}
+                                    onChange={(e) => setValue('dinheiro_na_entrega', e.target.checked)}
+                                    className="h-4 w-4 rounded border-border accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                                />
+                                <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
+                            </label>
                         </div>
                     )}
                 </div>

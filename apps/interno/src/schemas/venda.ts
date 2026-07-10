@@ -25,6 +25,8 @@ export const vendaSchema = z.object({
     // Entrega: entregador atribuído (null = retirada) + nota livre pro entregador.
     entregador_id: z.string().uuid().optional().nullable(),
     observacao_entregador: z.string().optional().nullable(),
+    // Cliente combinou pagar em dinheiro na entrega (o entregador coleta o total).
+    dinheiro_na_entrega: z.boolean().optional().default(false),
 }).refine((data) => {
     if (data.forma_pagamento === 'fiado' && !data.data_prevista_pagamento) {
         return false

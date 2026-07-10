@@ -76,7 +76,7 @@ async function criarContato() {
 }
 
 /** Cria uma venda pela conta-teste e atribui (ou não) a um entregador. */
-async function criarVenda(opts: { forma: string; taxa?: number; entregadorId?: string | null; observacao?: string | null }) {
+async function criarVenda(opts: { forma: string; taxa?: number; entregadorId?: string | null; observacao?: string | null; dinheiroNaEntrega?: boolean }) {
     const produto = await pegarProduto()
     const contatoId = await criarContato()
     const { data: vendaId, error } = await admin.rpc('criar_venda', {
@@ -88,6 +88,7 @@ async function criarVenda(opts: { forma: string; taxa?: number; entregadorId?: s
         p_idempotency_key: crypto.randomUUID(),
         p_entregador_id: opts.entregadorId ?? undefined,
         p_observacao_entregador: opts.observacao ?? undefined,
+        p_dinheiro_na_entrega: opts.dinheiroNaEntrega ?? false,
     })
     if (error) throw error
     return { vendaId: vendaId as string, total: 40 + (opts.taxa ?? 0) }
@@ -124,9 +125,9 @@ afterEach(async () => {
 })
 
 describe('entregador_minhas_entregas (integração)', () => {
-    it('devolve só as entregas atribuídas ao entregador, com campos curados', async () => {
-        const atribuida = await criarVenda({ forma: 'venda', taxa: 5, entregadorId, observacao: 'Aguardar confirmação do pix' })
-        const outra = await criarVenda({ forma: 'venda', taxa: 5, entregadorId: null }) // não atribuída
+    it('marcado "dinheiro na entrega" → receber_na_entrega, com valor_a_receber = total', async () => {
+        const atribuida = await criarVenda({ forma: 'venda', taxa: 5, entregadorId, observacao: 'Cobrar em dinheiro', dinheiroNaEntrega: true })
+        const outra = await criarVenda({ forma: 'venda', taxa: 5, entregadorId: null, dinheiroNaEntrega: true }) // não atribuída
 
         const { data, error } = await mauricio.rpc('entregador_minhas_entregas')
         expect(error).toBeNull()
@@ -134,18 +135,26 @@ describe('entregador_minhas_entregas (integração)', () => {
         expect(linha).toBeTruthy()
         expect((data ?? []).some((r) => r.venda_id === outra.vendaId)).toBe(false)
 
-        // curado: estado derivado, frete, observação, repasse, cliente/endereço
-        expect(linha!.estado_pagamento).toBe('receber_na_entrega') // venda não paga
+        // curado: estado derivado do flag, valor a receber = total (não o frete), etc.
+        expect(linha!.estado_pagamento).toBe('receber_na_entrega')
+        expect(Number(linha!.valor_a_receber)).toBe(atribuida.total) // 45, não o frete
         expect(Number(linha!.taxa_entrega)).toBe(5)
-        expect(linha!.observacao_entregador).toBe('Aguardar confirmação do pix')
+        expect(linha!.observacao_entregador).toBe('Cobrar em dinheiro')
         expect(Number(linha!.repasse)).toBe(5)
         expect(linha!.cliente_nome).toContain('Cliente Entrega')
 
-        // NÃO vaza financeiro
+        // NÃO vaza financeiro (valor_a_receber é o que ele coleta, não receita/margem)
         expect('total' in linha!).toBe(false)
         expect('custo_total' in linha!).toBe(false)
         expect('lucro' in linha!).toBe(false)
         expect('valor_pago' in linha!).toBe(false)
+    })
+
+    it('SEM flag (cliente paga a Mont por PIX) → so_entregar', async () => {
+        const pix = await criarVenda({ forma: 'venda', taxa: 5, entregadorId }) // sem dinheiroNaEntrega
+        const { data } = await mauricio.rpc('entregador_minhas_entregas')
+        const linha = (data ?? []).find((r) => r.venda_id === pix.vendaId)
+        expect(linha!.estado_pagamento).toBe('so_entregar')
     })
 
     it('fiado aparece como "so_entregar" (não coleta na entrega)', async () => {
@@ -163,7 +172,7 @@ describe('entregador_minhas_entregas (integração)', () => {
 
 describe('entregador_marcar_recebido_dinheiro (integração)', () => {
     it('registra o restante em dinheiro no Caixa + marcador de recebido', async () => {
-        const { vendaId, total } = await criarVenda({ forma: 'venda', taxa: 5, entregadorId })
+        const { vendaId, total } = await criarVenda({ forma: 'venda', taxa: 5, entregadorId, dinheiroNaEntrega: true })
 
         const { error } = await mauricio.rpc('entregador_marcar_recebido_dinheiro', { p_venda_id: vendaId })
         expect(error).toBeNull()
@@ -183,14 +192,14 @@ describe('entregador_marcar_recebido_dinheiro (integração)', () => {
         expect(Number(pags![0].valor)).toBe(total)
     })
 
-    it('rejeita venda fiado (não é para receber na entrega)', async () => {
-        const { vendaId } = await criarVenda({ forma: 'fiado', entregadorId })
+    it('rejeita venda SEM flag dinheiro_na_entrega (paga por PIX à Mont)', async () => {
+        const { vendaId } = await criarVenda({ forma: 'venda', taxa: 5, entregadorId }) // sem flag
         const { error } = await mauricio.rpc('entregador_marcar_recebido_dinheiro', { p_venda_id: vendaId })
         expect(error).not.toBeNull()
     })
 
     it('rejeita venda não atribuída ao entregador', async () => {
-        const { vendaId } = await criarVenda({ forma: 'venda', entregadorId: null })
+        const { vendaId } = await criarVenda({ forma: 'venda', entregadorId: null, dinheiroNaEntrega: true })
         const { error } = await mauricio.rpc('entregador_marcar_recebido_dinheiro', { p_venda_id: vendaId })
         expect(error).not.toBeNull()
     })
