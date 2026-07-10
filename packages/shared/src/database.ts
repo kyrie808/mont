@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_users: {
@@ -1894,6 +1869,7 @@ export type Database = {
           fts: unknown
           id: string
           idempotency_key: string | null
+          observacao_entregador: string | null
           observacoes: string | null
           origem: string | null
           pago: boolean
@@ -1921,6 +1897,7 @@ export type Database = {
           fts?: unknown
           id?: string
           idempotency_key?: string | null
+          observacao_entregador?: string | null
           observacoes?: string | null
           origem?: string | null
           pago?: boolean
@@ -1948,6 +1925,7 @@ export type Database = {
           fts?: unknown
           id?: string
           idempotency_key?: string | null
+          observacao_entregador?: string | null
           observacoes?: string | null
           origem?: string | null
           pago?: boolean
@@ -2457,6 +2435,17 @@ export type Database = {
       }
     }
     Functions: {
+      _pagamento_venda_core: {
+        Args: {
+          p_conta_id: string
+          p_data: string
+          p_metodo: string
+          p_observacao?: string
+          p_valor: number
+          p_venda_id: string
+        }
+        Returns: string
+      }
       add_image_reference: {
         Args: { p_produto_id: string; p_url: string }
         Returns: undefined
@@ -2502,9 +2491,11 @@ export type Database = {
           p_contato_id: string
           p_data: string
           p_data_prevista_pagamento?: string
+          p_entregador_id?: string
           p_forma_pagamento: string
           p_idempotency_key: string
           p_itens: Json
+          p_observacao_entregador?: string
           p_taxa_entrega: number
         }
         Returns: string
@@ -2512,6 +2503,38 @@ export type Database = {
       delete_image_reference: {
         Args: { p_produto_id: string }
         Returns: undefined
+      }
+      entregador_marcar_entregue: {
+        Args: { p_venda_id: string }
+        Returns: undefined
+      }
+      entregador_marcar_recebido_dinheiro: {
+        Args: { p_venda_id: string }
+        Returns: string
+      }
+      entregador_minhas_entregas: {
+        Args: never
+        Returns: {
+          bairro: string
+          cep: string
+          cidade: string
+          cliente_apelido: string
+          cliente_nome: string
+          cliente_telefone: string
+          complemento: string
+          data: string
+          endereco: string
+          estado_pagamento: string
+          logradouro: string
+          numero: string
+          observacao_entregador: string
+          recebido_em: string
+          repasse: number
+          status_entrega: string
+          taxa_entrega: number
+          uf: string
+          venda_id: string
+        }[]
       }
       fn_ajusta_estoque_item: {
         Args: {
@@ -2768,9 +2791,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
