@@ -89,6 +89,7 @@ export function CheckoutSidebar({
     const handleTipoEntrega = (tipo: 'retirada' | 'entrega') => {
         setTipoEntrega(tipo)
         if (tipo === 'retirada') {
+            setValue('taxa_entrega', 0)
             setValue('entregador_id', null)
             setValue('observacao_entregador', '')
             setValue('dinheiro_na_entrega', false)
@@ -198,28 +199,6 @@ export function CheckoutSidebar({
                     </div>
                 )}
 
-                {/* Frete — sempre visível (obrigatório, default 0). Separa receita de frete do produto. */}
-                <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-xl border border-border">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Truck className="w-5 h-5" />
-                        <span className="text-sm font-medium">Frete</span>
-                    </div>
-                    <div className="relative w-28">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                        <input
-                            type="number"
-                            step="0.50"
-                            min="0"
-                            {...register('taxa_entrega', { valueAsNumber: true })}
-                            className={cn(
-                                "w-full pl-9 pr-2 py-2 bg-background text-foreground border rounded-lg text-sm font-bold text-right outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums",
-                                taxaEntregaValue > 0 ? "border-primary/40 text-primary" : "border-border"
-                            )}
-                            placeholder="0,00"
-                        />
-                    </div>
-                </div>
-
                 {/* Método de entrega: Retirada x Entrega (atribui entregador) */}
                 <div className="space-y-3">
                     <label className="text-sm font-medium text-foreground">
@@ -254,6 +233,27 @@ export function CheckoutSidebar({
 
                     {tipoEntrega === 'entrega' && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            {/* Frete — só faz sentido na entrega (retirada = R$0). */}
+                            <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-xl border border-border">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Truck className="w-5 h-5" />
+                                    <span className="text-sm font-medium">Frete</span>
+                                </div>
+                                <div className="relative w-28">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.50"
+                                        min="0"
+                                        {...register('taxa_entrega', { valueAsNumber: true })}
+                                        className={cn(
+                                            "w-full pl-9 pr-2 py-2 bg-background text-foreground border rounded-lg text-sm font-bold text-right outline-hidden focus-visible:ring-2 focus-visible:ring-ring tabular-nums",
+                                            taxaEntregaValue > 0 ? "border-primary/40 text-primary" : "border-border"
+                                        )}
+                                        placeholder="0,00"
+                                    />
+                                </div>
+                            </div>
                             <div>
                                 <label className="text-xs font-medium text-muted-foreground block mb-1.5">
                                     Entregador
