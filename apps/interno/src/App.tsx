@@ -17,7 +17,7 @@ const Ranking = lazy(() => import('./pages/Ranking').then(m => ({ default: m.Ran
 function ParkedRoute() { return null }
 const Relacionamento = lazy(() => import('./pages/Relacionamento').then(m => ({ default: m.Relacionamento })))
 const RelatorioFabrica = ParkedRoute
-const Entregas = ParkedRoute
+const Entregas = lazy(() => import('./pages/Entregas').then(m => ({ default: m.Entregas })))
 const FluxoCaixa = lazy(() => import('./pages/FluxoCaixa').then(m => ({ default: m.FluxoCaixa })))
 const ContasReceber = ParkedRoute
 const ContasAPagar = lazy(() => import('./pages/ContasAPagar').then(m => ({ default: m.ContasAPagar })))

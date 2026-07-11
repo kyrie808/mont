@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Wallet, CalendarDays, PackageCheck, Receipt } from 'lucide-react'
+import { Loader2, Wallet, CalendarDays, PackageCheck, Receipt, Banknote } from 'lucide-react'
 import { useEntregas } from '../hooks/useEntregas'
 import { entregasService } from '../services/entregasService'
 import { moeda, hojeSP, dataBR } from '../lib/format'
@@ -22,6 +22,13 @@ export function GanhosPage() {
     const hojeGanho = soma(hojeEntregues)
 
     const lista = repasses ?? []
+    // Meus ganhos: devido (ganho por entregas) − pago (repasses recebidos). Dinheiro DELE.
+    const totalPago = lista.reduce((acc, r) => acc + Number(r.valor ?? 0), 0)
+    const saldo = totalGanho - totalPago
+    // Dinheiro da MONT em mãos: recolhido do cliente e ainda não acertado com a Mont.
+    const emMaos = (data ?? [])
+        .filter((e) => e.recebido_em && !e.dinheiro_acertado_em)
+        .reduce((acc, e) => acc + Number(e.valor_recebido ?? 0), 0)
 
     const verComprovante = async (path: string) => {
         setErro(null)
@@ -55,16 +62,27 @@ export function GanhosPage() {
                     </div>
                 ) : (
                     <>
-                        {/* Destaque: total a receber */}
+                        {/* Meus ganhos — o dinheiro DELE (repasse) */}
                         <div className="rounded-2xl bg-emerald-600 p-5 text-white shadow-sm">
                             <div className="flex items-center gap-2 text-sm font-medium text-emerald-50">
-                                <Wallet className="h-4 w-4" /> Total a receber
+                                <Wallet className="h-4 w-4" /> Meus ganhos — a receber
                             </div>
-                            <p className="mt-1 text-3xl font-black tabular-nums">{moeda(totalGanho)}</p>
+                            <p className="mt-1 text-3xl font-black tabular-nums">{moeda(saldo)}</p>
                             <p className="mt-1 text-sm text-emerald-50">
-                                {entregues.length} entrega(s) realizada(s)
+                                {moeda(totalGanho)} ganho · {moeda(totalPago)} já recebido
                             </p>
                         </div>
+
+                        {/* Dinheiro da MONT em mãos — NÃO é dele, é da Mont */}
+                        {emMaos > 0 && (
+                            <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+                                <div className="flex items-center gap-2 text-sm font-bold text-amber-800">
+                                    <Banknote className="h-4 w-4" /> Dinheiro da Mont em mãos
+                                </div>
+                                <p className="mt-1 text-2xl font-black tabular-nums text-amber-900">{moeda(emMaos)}</p>
+                                <p className="mt-1 text-xs text-amber-700">Esse valor é da Mont — repassar no acerto.</p>
+                            </div>
+                        )}
 
                         {/* Hoje */}
                         <div className="rounded-2xl border border-slate-200 bg-white p-4">

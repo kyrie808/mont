@@ -1878,6 +1878,7 @@ export type Database = {
           data_entrega: string | null
           data_prevista_pagamento: string | null
           desconto: number
+          dinheiro_acertado_em: string | null
           dinheiro_na_entrega: boolean
           entregador_id: string | null
           forma_pagamento: string
@@ -1908,6 +1909,7 @@ export type Database = {
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
           desconto?: number
+          dinheiro_acertado_em?: string | null
           dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento: string
@@ -1938,6 +1940,7 @@ export type Database = {
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
           desconto?: number
+          dinheiro_acertado_em?: string | null
           dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento?: string
@@ -2470,6 +2473,19 @@ export type Database = {
         Args: { p_produto_id: string; p_url: string }
         Returns: undefined
       }
+      admin_extrato_entregadores: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          devido: number
+          dinheiro_coletado: number
+          entregador_id: string
+          entregas: number
+          nome: string
+          pago: number
+          repasse_por_entrega: number
+          saldo_repasse: number
+        }[]
+      }
       criar_obrigacao_parcelada: {
         Args: {
           p_credor: string
@@ -2555,6 +2571,7 @@ export type Database = {
           cliente_telefone: string
           complemento: string
           data: string
+          dinheiro_acertado_em: string
           endereco: string
           estado_pagamento: string
           logradouro: string
@@ -2566,6 +2583,7 @@ export type Database = {
           taxa_entrega: number
           uf: string
           valor_a_receber: number
+          valor_recebido: number
           venda_id: string
         }[]
       }

@@ -42,7 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
             { label: 'Clientes',    path: '/contatos',         icon: Users },
             { label: 'Nova Venda',  path: NOVA_VENDA_PATH,     icon: Plus },
             { label: 'Vendas',      path: '/vendas',           icon: ShoppingCart },
-            { label: 'Entregas',    path: '/entregas',         icon: Truck, locked: true },
+            { label: 'Entregas',    path: '/entregas',         icon: Truck },
         ],
     },
     {
