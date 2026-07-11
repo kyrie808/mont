@@ -2533,6 +2533,16 @@ export type Database = {
         Args: { p_venda_id: string }
         Returns: string
       }
+      entregador_meus_repasses: {
+        Args: never
+        Returns: {
+          categoria: string
+          comprovante_url: string
+          data: string
+          lancamento_id: string
+          valor: number
+        }[]
+      }
       entregador_minhas_entregas: {
         Args: never
         Returns: {
