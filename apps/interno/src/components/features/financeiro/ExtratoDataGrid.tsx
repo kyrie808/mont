@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { Paperclip } from 'lucide-react'
 import {
     useReactTable,
     getCoreRowModel,
@@ -7,6 +8,7 @@ import {
     type ColumnDef,
     type SortingState,
 } from '@tanstack/react-table'
+import { comprovanteService } from '@/services/comprovanteService'
 import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-grid'
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
@@ -30,6 +32,18 @@ interface ExtratoDataGridProps {
 export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'data', desc: true }])
 
+    // Abre o comprovante (repasse) por signed URL — aba já aberta síncrono, navega após o await.
+    const verComprovante = useCallback(async (path: string) => {
+        const win = window.open('', '_blank', 'noopener')
+        try {
+            const url = await comprovanteService.signedUrl(path)
+            if (win) win.location.href = url
+            else window.location.href = url
+        } catch {
+            win?.close()
+        }
+    }, [])
+
     const columns = useMemo<ColumnDef<ExtratoItem>[]>(() => [
         {
             accessorKey: 'data',
@@ -50,6 +64,15 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
                 <div className="min-w-0">
                     <div className="font-semibold text-foreground truncate">{row.original.descricao || 'Lançamento'}</div>
                     <div className="text-xs text-muted-foreground uppercase tracking-wider">{row.original.origem}</div>
+                    {row.original.comprovante_url && (
+                        <button
+                            type="button"
+                            onClick={() => verComprovante(row.original.comprovante_url!)}
+                            className="mt-1 flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-wider hover:underline"
+                        >
+                            <Paperclip className="w-3 h-3" /> Ver comprovante
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -86,7 +109,7 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
             },
             meta: { headerClassName: 'text-right', cellClassName: 'text-right' },
         },
-    ], [])
+    ], [verComprovante])
 
     const table = useReactTable({
         data: extrato,

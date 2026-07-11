@@ -107,7 +107,7 @@ export const cashFlowService = {
     async getPlanoDeContas() {
         const { data, error } = await supabase
             .from('plano_de_contas')
-            .select('id, nome, tipo, categoria, ativo, automatica')
+            .select('id, nome, tipo, categoria, ativo, automatica, codigo')
             .eq('ativo', true)
             .eq('automatica', false)
             .order('nome')

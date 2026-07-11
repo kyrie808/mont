@@ -2220,6 +2220,7 @@ export type Database = {
         Row: {
           categoria_nome: string | null
           categoria_tipo: string | null
+          comprovante_url: string | null
           conta_id: string | null
           data: string | null
           descricao: string | null
