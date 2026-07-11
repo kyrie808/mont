@@ -96,9 +96,10 @@ export const vendaService = {
             .from('vendas')
             .select(`
                 *,
-                contato:contatos(id, nome, telefone, tipo, status),
+                contato:contatos(id, nome, telefone, tipo, status, endereco, logradouro, numero, complemento, bairro, cidade, uf, cep),
                 itens:itens_venda(*, produto:produtos(id, nome, codigo, preco, unidade)),
-                pagamentos:pagamentos_venda(*)
+                pagamentos:pagamentos_venda(*),
+                entregador:entregadores!entregador_id(nome)
             `)
             .eq('id', id)
             .single()

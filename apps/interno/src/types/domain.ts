@@ -135,6 +135,9 @@ export interface DomainVenda {
     dataPrevistaPagamento?: string | null
     /** Observação/declaração escrita pelo ENTREGADOR na entrega (read-only no admin). */
     notaEntregador?: string | null
+    /** Entregador atribuído (null = retirada) + nome, pro card "Entrega". */
+    entregadorId?: string | null
+    entregadorNome?: string | null
 }
 
 // Creation/Update types (Domain-side)

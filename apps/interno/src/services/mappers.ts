@@ -53,6 +53,7 @@ export type VendaRowWithRelations = VendaRow & {
     contato?: ContatoRow | null
     itens?: ItemVendaRow[]
     pagamentos?: PagamentoRow[]
+    entregador?: { nome: string } | null
 }
 
 type ProdutoRowWithImages = ProdutoRow & {
@@ -191,7 +192,9 @@ export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
         valorPago: (dbVenda.pagamentos || []).reduce((acc: number, p) => acc + Number((p as PagamentoRowWithStatus).valor || 0), 0),
         origem: dbVenda.origem,
         dataPrevistaPagamento: dbVenda.data_prevista_pagamento,
-        notaEntregador: dbVenda.nota_entregador ?? null
+        notaEntregador: dbVenda.nota_entregador ?? null,
+        entregadorId: dbVenda.entregador_id ?? null,
+        entregadorNome: dbVenda.entregador?.nome ?? null
     }
 }
 
