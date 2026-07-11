@@ -1885,6 +1885,7 @@ export type Database = {
           fts: unknown
           id: string
           idempotency_key: string | null
+          nota_entregador: string | null
           observacao_entregador: string | null
           observacoes: string | null
           origem: string | null
@@ -1916,6 +1917,7 @@ export type Database = {
           fts?: unknown
           id?: string
           idempotency_key?: string | null
+          nota_entregador?: string | null
           observacao_entregador?: string | null
           observacoes?: string | null
           origem?: string | null
@@ -1947,6 +1949,7 @@ export type Database = {
           fts?: unknown
           id?: string
           idempotency_key?: string | null
+          nota_entregador?: string | null
           observacao_entregador?: string | null
           observacoes?: string | null
           origem?: string | null
@@ -2575,6 +2578,7 @@ export type Database = {
           endereco: string
           estado_pagamento: string
           logradouro: string
+          nota_entregador: string
           numero: string
           observacao_entregador: string
           recebido_em: string
@@ -2586,6 +2590,10 @@ export type Database = {
           valor_recebido: number
           venda_id: string
         }[]
+      }
+      entregador_salvar_nota: {
+        Args: { p_nota: string; p_venda_id: string }
+        Returns: undefined
       }
       fn_ajusta_estoque_item: {
         Args: {

@@ -26,6 +26,15 @@ export const entregasService = {
         if (error) throw error
     },
 
+    /** Salva a observação/declaração do entregador na entrega (via RPC própria). */
+    async salvarNota(vendaId: string, nota: string): Promise<void> {
+        const { error } = await supabase.rpc('entregador_salvar_nota', {
+            p_venda_id: vendaId,
+            p_nota: nota,
+        })
+        if (error) throw error
+    },
+
     /** Perfil do entregador logado (lê a própria linha — policy own-row do Stage 0). */
     async meuPerfil(): Promise<{ nome: string; repasse_por_entrega: number } | null> {
         const { data: userData } = await supabase.auth.getUser()
