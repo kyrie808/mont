@@ -22,4 +22,18 @@ export const entregasService = {
         const { error } = await supabase.rpc('entregador_marcar_entregue', { p_venda_id: vendaId })
         if (error) throw error
     },
+
+    /** Perfil do entregador logado (lê a própria linha — policy own-row do Stage 0). */
+    async meuPerfil(): Promise<{ nome: string; repasse_por_entrega: number } | null> {
+        const { data: userData } = await supabase.auth.getUser()
+        const uid = userData.user?.id
+        if (!uid) return null
+        const { data, error } = await supabase
+            .from('entregadores')
+            .select('nome, repasse_por_entrega')
+            .eq('user_id', uid)
+            .maybeSingle()
+        if (error) throw error
+        return data
+    },
 }

@@ -1,20 +1,16 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { LogOut, RefreshCw, PackageOpen, Loader2 } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { RefreshCw, PackageOpen, Loader2 } from 'lucide-react'
 import { entregasService } from '../services/entregasService'
-import { useAuth } from '../hooks/useAuth'
+import { useEntregas } from '../hooks/useEntregas'
 import { EntregaCard } from '../components/EntregaCard'
 
 export function EntregasPage() {
-    const { signOut } = useAuth()
     const queryClient = useQueryClient()
     const [vendaEmAcao, setVendaEmAcao] = useState<string | null>(null)
     const [erro, setErro] = useState<string | null>(null)
 
-    const { data: entregas, isLoading, isFetching, refetch } = useQuery({
-        queryKey: ['entregas'],
-        queryFn: () => entregasService.listar(),
-    })
+    const { data: entregas, isLoading, isFetching, refetch } = useEntregas()
 
     const recebidoMutation = useMutation({
         mutationFn: (vendaId: string) => entregasService.marcarRecebidoDinheiro(vendaId),
@@ -32,36 +28,24 @@ export function EntregasPage() {
         onSettled: () => setVendaEmAcao(null),
     })
 
-    const lista = entregas ?? []
-    const pendentes = lista.filter((e) => e.status_entrega !== 'entregue')
-    const concluidas = lista.filter((e) => e.status_entrega === 'entregue')
+    // Só as pendentes; as concluídas vão pra aba Histórico.
+    const pendentes = (entregas ?? []).filter((e) => e.status_entrega !== 'entregue')
 
     return (
-        <div className="mx-auto min-h-dvh max-w-md pb-10">
-            {/* Top bar */}
+        <div className="mx-auto min-h-dvh max-w-md pb-24">
             <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
                 <div>
                     <h1 className="text-lg font-black text-slate-900">Minhas entregas</h1>
                     <p className="text-xs text-slate-500">{pendentes.length} pendente(s)</p>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        type="button"
-                        onClick={() => refetch()}
-                        className="rounded-xl p-2 text-slate-500 active:scale-95"
-                        aria-label="Atualizar"
-                    >
-                        <RefreshCw className={`h-5 w-5 ${isFetching ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => signOut()}
-                        className="rounded-xl p-2 text-slate-500 active:scale-95"
-                        aria-label="Sair"
-                    >
-                        <LogOut className="h-5 w-5" />
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    onClick={() => refetch()}
+                    className="rounded-xl p-2 text-slate-500 active:scale-95"
+                    aria-label="Atualizar"
+                >
+                    <RefreshCw className={`h-5 w-5 ${isFetching ? 'animate-spin' : ''}`} />
+                </button>
             </header>
 
             {erro && (
@@ -73,40 +57,21 @@ export function EntregasPage() {
                     <div className="flex justify-center py-16 text-slate-400">
                         <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
-                ) : lista.length === 0 ? (
+                ) : pendentes.length === 0 ? (
                     <div className="flex flex-col items-center py-16 text-center text-slate-400">
                         <PackageOpen className="mb-3 h-10 w-10" />
-                        <p className="font-medium">Nenhuma entrega atribuída a você.</p>
+                        <p className="font-medium">Nenhuma entrega pendente.</p>
                     </div>
                 ) : (
-                    <>
-                        {pendentes.map((e) => (
-                            <EntregaCard
-                                key={e.venda_id}
-                                entrega={e}
-                                onRecebido={(id) => recebidoMutation.mutate(id)}
-                                onEntregue={(id) => entregueMutation.mutate(id)}
-                                processando={vendaEmAcao === e.venda_id}
-                            />
-                        ))}
-
-                        {concluidas.length > 0 && (
-                            <>
-                                <p className="pt-4 text-xs font-bold uppercase tracking-wide text-slate-400">
-                                    Concluídas hoje
-                                </p>
-                                {concluidas.map((e) => (
-                                    <EntregaCard
-                                        key={e.venda_id}
-                                        entrega={e}
-                                        onRecebido={(id) => recebidoMutation.mutate(id)}
-                                        onEntregue={(id) => entregueMutation.mutate(id)}
-                                        processando={vendaEmAcao === e.venda_id}
-                                    />
-                                ))}
-                            </>
-                        )}
-                    </>
+                    pendentes.map((e) => (
+                        <EntregaCard
+                            key={e.venda_id}
+                            entrega={e}
+                            onRecebido={(id) => recebidoMutation.mutate(id)}
+                            onEntregue={(id) => entregueMutation.mutate(id)}
+                            processando={vendaEmAcao === e.venda_id}
+                        />
+                    ))
                 )}
             </main>
         </div>
