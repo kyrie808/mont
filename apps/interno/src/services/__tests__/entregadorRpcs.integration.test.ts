@@ -231,3 +231,39 @@ describe('RLS Stage 0 — o entregador não lê tabelas sensíveis direto', () =
         expect(data ?? []).toHaveLength(0)
     })
 })
+
+describe('entregador_meus_repasses + repasse via despesa manual (integração)', () => {
+    async function pegarCategoriaRepasse() {
+        const { data, error } = await admin.from('plano_de_contas')
+            .select('id').eq('codigo', 'TAXA_ENTREGA_ENTREGADOR').single()
+        if (error) throw error
+        return data.id as string
+    }
+
+    it('admin loga repasse com entregador+comprovante → Maurício vê em meus_repasses', async () => {
+        const catId = await pegarCategoriaRepasse()
+        const path = `${entregadorId}/fake-test-${Date.now()}.jpg`
+        const { error: eDesp } = await admin.rpc('registrar_despesa_manual', {
+            p_valor: 5,
+            p_descricao: 'Repasse teste',
+            p_data: '2026-07-10',
+            p_conta_id: contaCaixaId,
+            p_plano_conta_id: catId,
+            p_entregador_id: entregadorId,
+            p_comprovante_url: path,
+        })
+        expect(eDesp).toBeNull()
+
+        const { data: repasses, error } = await mauricio.rpc('entregador_meus_repasses')
+        expect(error).toBeNull()
+        const r = (repasses ?? []).find((x) => x.comprovante_url === path)
+        expect(r).toBeTruthy()
+        expect(Number(r!.valor)).toBe(5)
+        expect(r!.categoria).toBe('Taxa de Entrega')
+    })
+
+    it('guard: admin (não-entregador) não pode chamar entregador_meus_repasses', async () => {
+        const { error } = await admin.rpc('entregador_meus_repasses')
+        expect(error).not.toBeNull()
+    })
+})
