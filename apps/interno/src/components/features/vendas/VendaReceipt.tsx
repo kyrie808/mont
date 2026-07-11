@@ -82,9 +82,8 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
                     <div className="flex justify-between items-center text-sm font-bold mt-2 pt-2 border-t border-border">
                         <span className="text-foreground">Subtotal</span>
                         <span className="font-mono text-foreground dark:text-primary tabular-nums">
-                            {formatCurrency(
-                                venda.itens.reduce((acc, item) => acc + item.subtotal, 0) + (venda.taxaEntrega || 0)
-                            )}
+                            {/* Valor autoritativo do banco (já com desconto + clamp GREATEST). */}
+                            {formatCurrency(venda.total)}
                         </span>
                     </div>
 
