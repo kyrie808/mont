@@ -1888,6 +1888,7 @@ export type Database = {
           nota_entregador: string | null
           observacao_entregador: string | null
           observacoes: string | null
+          ordem_rota: number | null
           origem: string | null
           pago: boolean
           parcelas: number | null
@@ -1920,6 +1921,7 @@ export type Database = {
           nota_entregador?: string | null
           observacao_entregador?: string | null
           observacoes?: string | null
+          ordem_rota?: number | null
           origem?: string | null
           pago?: boolean
           parcelas?: number | null
@@ -1952,6 +1954,7 @@ export type Database = {
           nota_entregador?: string | null
           observacao_entregador?: string | null
           observacoes?: string | null
+          ordem_rota?: number | null
           origem?: string | null
           pago?: boolean
           parcelas?: number | null
@@ -2590,6 +2593,10 @@ export type Database = {
           valor_recebido: number
           venda_id: string
         }[]
+      }
+      entregador_reordenar_rota: {
+        Args: { p_venda_ids: string[] }
+        Returns: undefined
       }
       entregador_salvar_nota: {
         Args: { p_nota: string; p_venda_id: string }

@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, PackageOpen, Loader2 } from 'lucide-react'
-import { entregasService } from '../services/entregasService'
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core'
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { entregasService, type Entrega } from '../services/entregasService'
 import { useEntregas } from '../hooks/useEntregas'
-import { EntregaCard } from '../components/EntregaCard'
+import { SortableEntregaCard } from '../components/SortableEntregaCard'
 
 export function EntregasPage() {
     const queryClient = useQueryClient()
@@ -11,6 +20,23 @@ export function EntregasPage() {
     const [erro, setErro] = useState<string | null>(null)
 
     const { data: entregas, isLoading, isFetching, refetch } = useEntregas()
+
+    // Só as pendentes; as concluídas vão pra aba Histórico.
+    const pendentes = useMemo(
+        () => (entregas ?? []).filter((e) => e.status_entrega !== 'entregue'),
+        [entregas],
+    )
+    const byId = useMemo(
+        () => new Map<string, Entrega>(pendentes.map((e) => [e.venda_id, e])),
+        [pendentes],
+    )
+
+    // Ordem local (arrastável). Re-sincroniza com o servidor a cada refetch —
+    // que já devolve na ordem_rota gravada.
+    const [ordem, setOrdem] = useState<string[]>([])
+    useEffect(() => {
+        setOrdem(pendentes.map((e) => e.venda_id))
+    }, [pendentes])
 
     const recebidoMutation = useMutation({
         mutationFn: (vendaId: string) => entregasService.marcarRecebidoDinheiro(vendaId),
@@ -36,15 +62,34 @@ export function EntregasPage() {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entregas'] }),
     })
 
-    // Só as pendentes; as concluídas vão pra aba Histórico.
-    const pendentes = (entregas ?? []).filter((e) => e.status_entrega !== 'entregue')
+    const reordenarMutation = useMutation({
+        mutationFn: (ids: string[]) => entregasService.reordenarRota(ids),
+        onMutate: () => setErro(null),
+        onError: () => setErro('Não foi possível salvar a ordem. Tente de novo.'),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entregas'] }),
+    })
+
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+    function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event
+        if (!over || active.id === over.id) return
+        setOrdem((prev) => {
+            const oldIndex = prev.indexOf(String(active.id))
+            const newIndex = prev.indexOf(String(over.id))
+            if (oldIndex < 0 || newIndex < 0) return prev
+            const nova = arrayMove(prev, oldIndex, newIndex)
+            reordenarMutation.mutate(nova)
+            return nova
+        })
+    }
 
     return (
         <div className="mx-auto min-h-dvh max-w-md pb-24">
             <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
                 <div>
                     <h1 className="text-lg font-black text-slate-900">Minhas entregas</h1>
-                    <p className="text-xs text-slate-500">{pendentes.length} pendente(s)</p>
+                    <p className="text-xs text-slate-500">{pendentes.length} pendente(s) · arraste para ordenar a rota</p>
                 </div>
                 <button
                     type="button"
@@ -71,16 +116,25 @@ export function EntregasPage() {
                         <p className="font-medium">Nenhuma entrega pendente.</p>
                     </div>
                 ) : (
-                    pendentes.map((e) => (
-                        <EntregaCard
-                            key={e.venda_id}
-                            entrega={e}
-                            onRecebido={(id) => recebidoMutation.mutate(id)}
-                            onEntregue={(id) => entregueMutation.mutate(id)}
-                            onSalvarNota={(id, nota) => notaMutation.mutate({ vendaId: id, nota })}
-                            processando={vendaEmAcao === e.venda_id}
-                        />
-                    ))
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={ordem} strategy={verticalListSortingStrategy}>
+                            {ordem.map((id, i) => {
+                                const e = byId.get(id)
+                                if (!e) return null
+                                return (
+                                    <SortableEntregaCard
+                                        key={id}
+                                        entrega={e}
+                                        posicao={i + 1}
+                                        onRecebido={(vId) => recebidoMutation.mutate(vId)}
+                                        onEntregue={(vId) => entregueMutation.mutate(vId)}
+                                        onSalvarNota={(vId, nota) => notaMutation.mutate({ vendaId: vId, nota })}
+                                        processando={vendaEmAcao === id}
+                                    />
+                                )
+                            })}
+                        </SortableContext>
+                    </DndContext>
                 )}
             </main>
         </div>

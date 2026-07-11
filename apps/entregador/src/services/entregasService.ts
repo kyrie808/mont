@@ -35,6 +35,12 @@ export const entregasService = {
         if (error) throw error
     },
 
+    /** Reordena a rota: manda os ids na ordem desejada (grava vendas.ordem_rota). */
+    async reordenarRota(vendaIds: string[]): Promise<void> {
+        const { error } = await supabase.rpc('entregador_reordenar_rota', { p_venda_ids: vendaIds })
+        if (error) throw error
+    },
+
     /** Perfil do entregador logado (lê a própria linha — policy own-row do Stage 0). */
     async meuPerfil(): Promise<{ nome: string; repasse_por_entrega: number } | null> {
         const { data: userData } = await supabase.auth.getUser()

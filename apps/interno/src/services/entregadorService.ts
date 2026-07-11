@@ -17,6 +17,17 @@ export interface DinheiroAAcertar {
     clienteNome: string
 }
 
+/** Uma entrega atribuída (lista do hub admin, com posição na rota). */
+export interface EntregaLista {
+    id: string
+    clienteNome: string
+    entregadorNome: string
+    status: string
+    data: string
+    ordemRota: number | null
+    enderecoCurto: string
+}
+
 export const entregadorService = {
     /** Entregadores ativos, para o seletor de atribuição no checkout. Admin lê via RLS. */
     async listAtivos(): Promise<EntregadorOption[]> {
@@ -63,5 +74,43 @@ export const entregadorService = {
             .update({ dinheiro_acertado_em: new Date().toISOString() })
             .eq('id', vendaId)
         if (error) throw error
+    },
+
+    /** Entregas atribuídas a um entregador (ou todos), na ordem da rota. Admin lê via RLS.
+     *  Período (inicio/fim) recorta no padrão COALESCE(data_entrega, data), como o extrato. */
+    async getEntregas(
+        opts: { entregadorId?: string; incluirEntregues?: boolean; inicio?: string; fim?: string } = {},
+    ): Promise<EntregaLista[]> {
+        let q = supabase
+            .from('vendas')
+            .select('id, status, data, data_entrega, ordem_rota, contato:contatos(nome, logradouro, numero, bairro), entregador:entregadores!entregador_id(nome)')
+            .not('entregador_id', 'is', null)
+        if (opts.entregadorId) q = q.eq('entregador_id', opts.entregadorId)
+        if (opts.inicio && opts.fim) {
+            // COALESCE(data_entrega, data) dentro do período (mesma semântica do extrato).
+            q = q.or(
+                `and(data_entrega.gte.${opts.inicio},data_entrega.lte.${opts.fim}),` +
+                `and(data_entrega.is.null,data.gte.${opts.inicio},data.lte.${opts.fim})`,
+            )
+        }
+        q = opts.incluirEntregues
+            ? q.neq('status', 'cancelada')
+            : q.not('status', 'in', '(entregue,cancelada)')
+        q = q.order('ordem_rota', { ascending: true, nullsFirst: false }).order('data', { ascending: true })
+
+        const { data, error } = await q
+        if (error) throw error
+        return (data ?? []).map((v) => ({
+            id: v.id as string,
+            status: v.status as string,
+            data: (v.data_entrega ?? v.data) as string,
+            ordemRota: (v.ordem_rota as number | null) ?? null,
+            clienteNome: v.contato?.nome ?? '—',
+            entregadorNome: v.entregador?.nome ?? '—',
+            enderecoCurto: [
+                [v.contato?.logradouro, v.contato?.numero].filter(Boolean).join(', '),
+                v.contato?.bairro,
+            ].filter(Boolean).join(' · '),
+        }))
     },
 }
