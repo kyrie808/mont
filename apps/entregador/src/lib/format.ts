@@ -11,3 +11,17 @@ export const dataBR = (d: string | null | undefined): string => {
     const [y, m, day] = d.split('-')
     return `${day}/${m}/${y}`
 }
+
+/** 'YYYY-MM-DD' → Date LOCAL (evita o shift de UTC de new Date('2026-07-06')). */
+export const parseYMD = (s: string): Date => {
+    const [y, m, d] = s.split('-').map(Number)
+    return new Date(y, m - 1, d)
+}
+
+/** Date → 'YYYY-MM-DD' pelos componentes LOCAIS (casa com vendas.data). */
+export const toYMD = (d: Date): string => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}

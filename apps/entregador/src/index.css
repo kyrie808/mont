@@ -1,5 +1,70 @@
 @import "tailwindcss";
 
+/*
+ * ──────────────────────────────────────────────────────────────────
+ *  Base do design-system (subset LIGHT) — plantada junto do calendário.
+ *  Tokens copiados do interno (apps/interno/src/index.css, tema Stitch light).
+ *  Light-only por ora; sem dark, sem tema completo (o app entregador ainda
+ *  vai ser estilizado). O @theme inline liga os CSS vars às utilities do
+ *  Tailwind v4 (bg-card / text-muted-foreground / border-input / ring-ring…).
+ * ──────────────────────────────────────────────────────────────────
+ */
+:root {
+    color-scheme: light;
+
+    --background: 0 0% 100%;
+    --foreground: 120 36% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 120 36% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 120 36% 10%;
+
+    --primary: 118 86% 50%;
+    --primary-foreground: 120 28% 14%;
+
+    --secondary: 120 10% 97%;
+    --secondary-foreground: 120 36% 10%;
+
+    --muted: 120 10% 97%;
+    --muted-foreground: 120 5% 45%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 120 36% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 120 10% 90%;
+    --input: 120 10% 90%;
+    --ring: 118 86% 50%;
+
+    --radius: 1rem;
+}
+
+@theme inline {
+    --color-background: hsl(var(--background));
+    --color-foreground: hsl(var(--foreground));
+    --color-card: hsl(var(--card));
+    --color-card-foreground: hsl(var(--card-foreground));
+    --color-popover: hsl(var(--popover));
+    --color-popover-foreground: hsl(var(--popover-foreground));
+    --color-primary: hsl(var(--primary));
+    --color-primary-foreground: hsl(var(--primary-foreground));
+    --color-secondary: hsl(var(--secondary));
+    --color-secondary-foreground: hsl(var(--secondary-foreground));
+    --color-muted: hsl(var(--muted));
+    --color-muted-foreground: hsl(var(--muted-foreground));
+    --color-accent: hsl(var(--accent));
+    --color-accent-foreground: hsl(var(--accent-foreground));
+    --color-destructive: hsl(var(--destructive));
+    --color-destructive-foreground: hsl(var(--destructive-foreground));
+    --color-border: hsl(var(--border));
+    --color-input: hsl(var(--input));
+    --color-ring: hsl(var(--ring));
+}
+
 html {
     -webkit-tap-highlight-color: transparent;
 }
@@ -9,4 +74,18 @@ body {
     background: #f1f5f9;
     color: #0f172a;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Bottom sheet do dia (DiaSheet) — sobe de baixo. */
+@keyframes slide-up {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
