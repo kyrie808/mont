@@ -299,3 +299,31 @@ describe('admin_extrato_entregadores (integração)', () => {
         expect(error).not.toBeNull()
     })
 })
+
+describe('acerto do dinheiro (Stage 2d) (integração)', () => {
+    it('recolher → valor_recebido>0 e não acertado; admin acerta → acertado', async () => {
+        const { vendaId, total } = await criarVenda({ forma: 'venda', taxa: 0, entregadorId, dinheiroNaEntrega: true })
+        // Maurício recolhe o dinheiro na entrega
+        await mauricio.rpc('entregador_marcar_recebido_dinheiro', { p_venda_id: vendaId })
+
+        // minhas_entregas: valor_recebido = total e ainda não acertado
+        const { data: ent1 } = await mauricio.rpc('entregador_minhas_entregas')
+        const linha1 = (ent1 ?? []).find((r) => r.venda_id === vendaId)
+        expect(Number(linha1!.valor_recebido)).toBe(total)
+        expect(linha1!.dinheiro_acertado_em).toBeNull()
+
+        // aparece na lista "a acertar" do admin
+        const { data: aAcertar } = await admin.from('vendas')
+            .select('id').eq('id', vendaId)
+            .is('dinheiro_acertado_em', null).not('recebido_por_entregador_id', 'is', null)
+        expect((aAcertar ?? []).length).toBe(1)
+
+        // admin confirma o recebimento
+        await admin.from('vendas').update({ dinheiro_acertado_em: new Date().toISOString() }).eq('id', vendaId)
+
+        // minhas_entregas: agora acertado (sai do "em mãos")
+        const { data: ent2 } = await mauricio.rpc('entregador_minhas_entregas')
+        const linha2 = (ent2 ?? []).find((r) => r.venda_id === vendaId)
+        expect(linha2!.dinheiro_acertado_em).not.toBeNull()
+    })
+})

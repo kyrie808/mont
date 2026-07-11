@@ -1878,6 +1878,7 @@ export type Database = {
           data_entrega: string | null
           data_prevista_pagamento: string | null
           desconto: number
+          dinheiro_acertado_em: string | null
           dinheiro_na_entrega: boolean
           entregador_id: string | null
           forma_pagamento: string
@@ -1908,6 +1909,7 @@ export type Database = {
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
           desconto?: number
+          dinheiro_acertado_em?: string | null
           dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento: string
@@ -1938,6 +1940,7 @@ export type Database = {
           data_entrega?: string | null
           data_prevista_pagamento?: string | null
           desconto?: number
+          dinheiro_acertado_em?: string | null
           dinheiro_na_entrega?: boolean
           entregador_id?: string | null
           forma_pagamento?: string
@@ -2568,6 +2571,7 @@ export type Database = {
           cliente_telefone: string
           complemento: string
           data: string
+          dinheiro_acertado_em: string
           endereco: string
           estado_pagamento: string
           logradouro: string
@@ -2579,6 +2583,7 @@ export type Database = {
           taxa_entrega: number
           uf: string
           valor_a_receber: number
+          valor_recebido: number
           venda_id: string
         }[]
       }
