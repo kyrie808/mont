@@ -12,6 +12,7 @@ import { PaymentSidebar } from '../components/features/vendas/PaymentSidebar'
 import { VendaReceipt } from '../components/features/vendas/VendaReceipt'
 import { VendaAcoesPrincipais } from '../components/features/vendas/VendaAcoesPrincipais'
 import { VendaInfoCliente } from '../components/features/vendas/VendaInfoCliente'
+import { VendaInfoEntrega } from '../components/features/vendas/VendaInfoEntrega'
 import { VendaMetaInfo } from '../components/features/vendas/VendaMetaInfo'
 import { VendaAcoesSecundarias } from '../components/features/vendas/VendaAcoesSecundarias'
 import { VendaModais } from '../components/features/vendas/VendaModais'
@@ -158,6 +159,8 @@ export function VendaDetalhe() {
                 />
 
                 <VendaInfoCliente contato={venda.contato} />
+
+                {venda.entregadorId && <VendaInfoEntrega venda={venda} />}
 
                 {venda.notaEntregador && (
                     <div className="mt-4 rounded-xl border border-border bg-card p-4">
