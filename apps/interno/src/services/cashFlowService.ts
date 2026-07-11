@@ -165,6 +165,8 @@ export const cashFlowService = {
         data: string
         conta_id: string
         plano_conta_id: string
+        entregador_id?: string | null
+        comprovante_url?: string | null
     }) {
         const { error } = await supabase.rpc('registrar_despesa_manual', {
             p_valor: Math.round(data.valor * 100) / 100,
@@ -172,6 +174,8 @@ export const cashFlowService = {
             p_data: data.data,
             p_conta_id: data.conta_id,
             p_plano_conta_id: data.plano_conta_id,
+            p_entregador_id: data.entregador_id ?? undefined,
+            p_comprovante_url: data.comprovante_url ?? undefined,
         })
         if (error) throw error
     },

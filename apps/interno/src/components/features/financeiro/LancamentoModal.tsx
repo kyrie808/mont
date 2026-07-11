@@ -7,6 +7,8 @@ import { Modal, ModalActions, Button } from '../../ui'
 import { useContas } from '../../../hooks/useContas'
 import { usePlanoDeContas } from '../../../hooks/usePlanoDeContas'
 import { useLancamentos } from '../../../hooks/useLancamentos'
+import { useEntregadores } from '../../../hooks/useEntregadores'
+import { comprovanteService } from '../../../services/comprovanteService'
 import { useToast } from '../../ui/Toast'
 import { cn } from '@mont/shared'
 import { formatCurrency } from '@mont/shared'
@@ -20,6 +22,9 @@ const lancamentoSchema = z.object({
 })
 
 type LancamentoFormData = z.infer<typeof lancamentoSchema>
+
+// Categorias de repasse ao entregador — revelam o seletor de entregador + comprovante.
+const REPASSE_CODES = ['TAXA_ENTREGA_ENTREGADOR', 'AJUDA_CUSTO_ENTREGADOR']
 
 interface LancamentoModalProps {
     type: 'entrada' | 'saida'
@@ -35,12 +40,16 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
     const { contas } = useContas()
     const { planoContas } = usePlanoDeContas()
     const { registrarDespesaManual, registrarEntradaManual } = useLancamentos()
+    const { entregadores } = useEntregadores()
     const [displayValor, setDisplayValor] = useState('')
+    const [entregadorId, setEntregadorId] = useState('')
+    const [comprovanteFile, setComprovanteFile] = useState<File | null>(null)
 
     const {
         register,
         handleSubmit,
         setValue,
+        watch,
         formState: { errors, isSubmitting },
     } = useForm<LancamentoFormData>({
         resolver: zodResolver(lancamentoSchema),
@@ -58,6 +67,11 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
     // Filter categories based on type
     const filteredCategorias = planoContas.filter((c) => c.tipo === (type === 'entrada' ? 'receita' : 'despesa'))
 
+    // Repasse ao entregador? (revela seletor de entregador + comprovante)
+    const planoContaId = watch('plano_conta_id')
+    const catSelecionada = planoContas.find((c) => c.id === planoContaId)
+    const isRepasse = type === 'saida' && REPASSE_CODES.includes(catSelecionada?.codigo ?? '')
+
     // Currency Mask Logic
     const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value.replace(/\D/g, '')
@@ -74,7 +88,20 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
 
     const onSubmit = async (data: LancamentoFormData) => {
         try {
-            const payload = { ...data, descricao: data.descricao || null }
+            if (isRepasse && !entregadorId) {
+                toast.error('Selecione o entregador para o repasse.')
+                return
+            }
+            let comprovante_url: string | null = null
+            if (isRepasse && comprovanteFile && entregadorId) {
+                comprovante_url = await comprovanteService.upload(comprovanteFile, entregadorId)
+            }
+            const payload = {
+                ...data,
+                descricao: data.descricao || null,
+                entregador_id: isRepasse ? entregadorId : null,
+                comprovante_url,
+            }
             if (type === 'saida') {
                 await registrarDespesaManual(payload)
             } else {
@@ -215,6 +242,38 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
                     </div>
                     {errors.plano_conta_id && <p className="mt-1 text-xs text-destructive px-1">{errors.plano_conta_id.message}</p>}
                 </div>
+
+                {/* Repasse ao entregador: entregador + comprovante (só nas categorias de repasse) */}
+                {isRepasse && (
+                    <div className="space-y-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                        <div>
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
+                                Entregador
+                            </label>
+                            <select
+                                value={entregadorId}
+                                onChange={(e) => setEntregadorId(e.target.value)}
+                                className={cn(inputBase, "h-12 px-3 py-2 text-sm appearance-none")}
+                            >
+                                <option value="">Selecione o entregador...</option>
+                                {entregadores.map((ent) => (
+                                    <option key={ent.id} value={ent.id}>{ent.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
+                                Comprovante (opcional)
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(e) => setComprovanteFile(e.target.files?.[0] ?? null)}
+                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-foreground"
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Descrição Field */}
                 <div>
