@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { Truck, Loader2, Banknote, Check, ListOrdered, SlidersHorizontal } from 'lucide-react'
@@ -12,6 +13,7 @@ import { useToast } from '../components/ui/Toast'
 // atribuídas" e "Repasse"; "Dinheiro a acertar" é alerta sempre-visível (sem filtro).
 export function Entregas() {
     const toast = useToast()
+    const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [mes, setMes] = useState(() => format(new Date(), 'yyyy-MM'))
     const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
@@ -59,6 +61,18 @@ export function Entregas() {
         },
         onSettled: () => setConfirmandoId(null),
     })
+
+    // Posição na rota = índice dentro da sequência de cada entregador (nunca "-";
+    // bate com o app). A lista já vem ordenada por entregador → ordem_rota → data.
+    const posMap = useMemo(() => {
+        const counter: Record<string, number> = {}
+        const m: Record<string, number> = {}
+        for (const e of entregasLista ?? []) {
+            counter[e.entregadorId] = (counter[e.entregadorId] ?? 0) + 1
+            m[e.id] = counter[e.entregadorId]
+        }
+        return m
+    }, [entregasLista])
 
     const pendentes = aAcertar ?? []
     const totalAAcertar = pendentes.reduce((acc, v) => acc + v.total, 0)
@@ -157,9 +171,14 @@ export function Entregas() {
                             {(entregasLista ?? []).map((e) => {
                                 const entregue = e.status === 'entregue'
                                 return (
-                                    <div key={e.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+                                    <button
+                                        key={e.id}
+                                        type="button"
+                                        onClick={() => navigate(`/vendas/${e.id}`)}
+                                        className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted active:scale-[0.99]"
+                                    >
                                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-foreground">
-                                            {e.ordemRota ?? '–'}
+                                            {posMap[e.id]}
                                         </span>
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate text-sm font-semibold text-foreground">{e.clienteNome}</p>
@@ -174,7 +193,7 @@ export function Entregas() {
                                         )}>
                                             {entregue ? 'Entregue' : 'A fazer'}
                                         </span>
-                                    </div>
+                                    </button>
                                 )
                             })}
                         </div>
