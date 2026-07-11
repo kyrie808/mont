@@ -8,6 +8,8 @@ type LancamentoManualData = {
     data: string
     conta_id: string
     plano_conta_id: string
+    entregador_id?: string | null
+    comprovante_url?: string | null
 }
 
 export function useLancamentos() {

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Receipt, Filter, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Receipt, Filter, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, ChevronLeft, ChevronRight, Paperclip } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '../../ui'
 import { formatCurrency } from '@mont/shared'
 import { cn } from '@mont/shared'
 import type { ExtratoItem } from '@mont/shared'
+import { comprovanteService } from '../../../services/comprovanteService'
 
 interface ExtratoMensalProps {
     extrato: ExtratoItem[]
@@ -20,6 +21,19 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
         (paginaAtual - 1) * itensPorPagina,
         paginaAtual * itensPorPagina
     )
+
+    // Abre o comprovante (repasse) por signed URL. Abre a aba já (síncrono) e navega
+    // após o await pra não bater no bloqueio de popup.
+    const verComprovante = async (path: string) => {
+        const win = window.open('', '_blank', 'noopener')
+        try {
+            const url = await comprovanteService.signedUrl(path)
+            if (win) win.location.href = url
+            else window.location.href = url
+        } catch {
+            win?.close()
+        }
+    }
 
     return (
         <section className="space-y-4">
@@ -74,6 +88,15 @@ export function ExtratoMensal({ extrato, loadingExtrato }: ExtratoMensalProps) {
                                                     {item.categoria_nome || 'Lançamento'}
                                                 </Badge>
                                             </div>
+                                            {item.comprovante_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => verComprovante(item.comprovante_url!)}
+                                                    className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-wider hover:underline"
+                                                >
+                                                    <Paperclip className="w-3 h-3" /> Ver comprovante
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="text-right">
