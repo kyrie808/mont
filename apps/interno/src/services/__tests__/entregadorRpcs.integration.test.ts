@@ -357,3 +357,28 @@ describe('entregador_salvar_nota (Feature #4 — prova de entrega) (integração
         expect(error).not.toBeNull()
     })
 })
+
+describe('entregador_reordenar_rota (Feature #1 — ordenar a rota) (integração)', () => {
+    it('reordena a rota dele → minhas_entregas respeita a ordem', async () => {
+        const a = await criarVenda({ forma: 'venda', entregadorId })
+        const b = await criarVenda({ forma: 'venda', entregadorId })
+        const c = await criarVenda({ forma: 'venda', entregadorId })
+        const desejada = [c.vendaId, a.vendaId, b.vendaId]
+
+        const { error } = await mauricio.rpc('entregador_reordenar_rota', { p_venda_ids: desejada })
+        expect(error).toBeNull()
+
+        const { data } = await mauricio.rpc('entregador_minhas_entregas')
+        const ids = (data ?? []).map((r) => r.venda_id).filter((id) => desejada.includes(id))
+        expect(ids).toEqual(desejada)
+    })
+
+    it('rejeita reordenar incluindo venda não atribuída a ele', async () => {
+        const minha = await criarVenda({ forma: 'venda', entregadorId })
+        const alheia = await criarVenda({ forma: 'venda', entregadorId: null })
+        const { error } = await mauricio.rpc('entregador_reordenar_rota', {
+            p_venda_ids: [minha.vendaId, alheia.vendaId],
+        })
+        expect(error).not.toBeNull()
+    })
+})
