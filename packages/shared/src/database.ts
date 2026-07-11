@@ -1014,12 +1014,14 @@ export type Database = {
       lancamentos: {
         Row: {
           atualizado_em: string | null
+          comprovante_url: string | null
           conta_destino_id: string | null
           conta_id: string
           created_by: string | null
           criado_em: string | null
           data: string
           descricao: string | null
+          entregador_id: string | null
           id: string
           origem: string
           pagamento_id: string | null
@@ -1031,12 +1033,14 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string | null
+          comprovante_url?: string | null
           conta_destino_id?: string | null
           conta_id: string
           created_by?: string | null
           criado_em?: string | null
           data?: string
           descricao?: string | null
+          entregador_id?: string | null
           id?: string
           origem: string
           pagamento_id?: string | null
@@ -1048,12 +1052,14 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string | null
+          comprovante_url?: string | null
           conta_destino_id?: string | null
           conta_id?: string
           created_by?: string | null
           criado_em?: string | null
           data?: string
           descricao?: string | null
+          entregador_id?: string | null
           id?: string
           origem?: string
           pagamento_id?: string | null
@@ -1076,6 +1082,13 @@ export type Database = {
             columns: ["conta_id"]
             isOneToOne: false
             referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamentos_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
             referencedColumns: ["id"]
           },
           {
@@ -2600,9 +2613,11 @@ export type Database = {
       }
       registrar_despesa_manual: {
         Args: {
+          p_comprovante_url?: string
           p_conta_id: string
           p_data: string
           p_descricao: string
+          p_entregador_id?: string
           p_plano_conta_id: string
           p_valor: number
         }
