@@ -21,6 +21,7 @@ export interface DinheiroAAcertar {
 export interface EntregaLista {
     id: string
     clienteNome: string
+    entregadorId: string
     entregadorNome: string
     status: string
     data: string
@@ -83,7 +84,7 @@ export const entregadorService = {
     ): Promise<EntregaLista[]> {
         let q = supabase
             .from('vendas')
-            .select('id, status, data, data_entrega, ordem_rota, contato:contatos(nome, logradouro, numero, bairro), entregador:entregadores!entregador_id(nome)')
+            .select('id, status, data, data_entrega, ordem_rota, entregador_id, contato:contatos(nome, logradouro, numero, bairro), entregador:entregadores!entregador_id(nome)')
             .not('entregador_id', 'is', null)
         if (opts.entregadorId) q = q.eq('entregador_id', opts.entregadorId)
         if (opts.inicio && opts.fim) {
@@ -96,7 +97,12 @@ export const entregadorService = {
         q = opts.incluirEntregues
             ? q.neq('status', 'cancelada')
             : q.not('status', 'in', '(entregue,cancelada)')
-        q = q.order('ordem_rota', { ascending: true, nullsFirst: false }).order('data', { ascending: true })
+        // Agrupa por entregador + sequência da rota (ordem_rota, depois data) → a
+        // posição na rota é o índice dentro do grupo de cada entregador.
+        q = q
+            .order('entregador_id', { ascending: true })
+            .order('ordem_rota', { ascending: true, nullsFirst: false })
+            .order('data', { ascending: true })
 
         const { data, error } = await q
         if (error) throw error
@@ -106,6 +112,7 @@ export const entregadorService = {
             data: (v.data_entrega ?? v.data) as string,
             ordemRota: (v.ordem_rota as number | null) ?? null,
             clienteNome: v.contato?.nome ?? '—',
+            entregadorId: v.entregador_id as string,
             entregadorNome: v.entregador?.nome ?? '—',
             enderecoCurto: [
                 [v.contato?.logradouro, v.contato?.numero].filter(Boolean).join(', '),
