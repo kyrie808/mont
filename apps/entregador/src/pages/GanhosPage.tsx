@@ -22,6 +22,9 @@ export function GanhosPage() {
     const hojeGanho = soma(hojeEntregues)
 
     const lista = repasses ?? []
+    // Saldo com a Mont = devido (ganho por entregas) − pago (repasses recebidos). Client-side.
+    const totalPago = lista.reduce((acc, r) => acc + Number(r.valor ?? 0), 0)
+    const saldo = totalGanho - totalPago
 
     const verComprovante = async (path: string) => {
         setErro(null)
@@ -55,14 +58,14 @@ export function GanhosPage() {
                     </div>
                 ) : (
                     <>
-                        {/* Destaque: total a receber */}
+                        {/* Destaque: saldo com a Mont (o que ela ainda deve a ele) */}
                         <div className="rounded-2xl bg-emerald-600 p-5 text-white shadow-sm">
                             <div className="flex items-center gap-2 text-sm font-medium text-emerald-50">
-                                <Wallet className="h-4 w-4" /> Total a receber
+                                <Wallet className="h-4 w-4" /> Saldo com a Mont
                             </div>
-                            <p className="mt-1 text-3xl font-black tabular-nums">{moeda(totalGanho)}</p>
+                            <p className="mt-1 text-3xl font-black tabular-nums">{moeda(saldo)}</p>
                             <p className="mt-1 text-sm text-emerald-50">
-                                {entregues.length} entrega(s) realizada(s)
+                                {moeda(totalGanho)} ganho · {moeda(totalPago)} já recebido
                             </p>
                         </div>
 

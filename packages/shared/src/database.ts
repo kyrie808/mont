@@ -2470,6 +2470,19 @@ export type Database = {
         Args: { p_produto_id: string; p_url: string }
         Returns: undefined
       }
+      admin_extrato_entregadores: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          devido: number
+          dinheiro_coletado: number
+          entregador_id: string
+          entregas: number
+          nome: string
+          pago: number
+          repasse_por_entrega: number
+          saldo_repasse: number
+        }[]
+      }
       criar_obrigacao_parcelada: {
         Args: {
           p_credor: string

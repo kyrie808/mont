@@ -267,3 +267,35 @@ describe('entregador_meus_repasses + repasse via despesa manual (integração)',
         expect(error).not.toBeNull()
     })
 })
+
+describe('admin_extrato_entregadores (integração)', () => {
+    it('agrega o repasse pago e mantém a invariante saldo = devido − pago', async () => {
+        const { data: cat } = await admin.from('plano_de_contas')
+            .select('id').eq('codigo', 'TAXA_ENTREGA_ENTREGADOR').single()
+        await admin.rpc('registrar_despesa_manual', {
+            p_valor: 7,
+            p_descricao: 'Repasse extrato teste',
+            p_data: '2026-07-11',
+            p_conta_id: contaCaixaId,
+            p_plano_conta_id: cat!.id as string,
+            p_entregador_id: entregadorId,
+        })
+
+        const { data: extrato, error } = await admin.rpc('admin_extrato_entregadores', {
+            p_inicio: '2026-07-01', p_fim: '2026-07-31',
+        })
+        expect(error).toBeNull()
+        const row = (extrato ?? []).find((r) => r.entregador_id === entregadorId)
+        expect(row).toBeTruthy()
+        expect(Number(row!.pago)).toBeGreaterThanOrEqual(7)
+        // invariante do cálculo
+        expect(Number(row!.saldo_repasse)).toBeCloseTo(Number(row!.devido) - Number(row!.pago), 2)
+    })
+
+    it('guard: entregador (não-admin) não pode chamar', async () => {
+        const { error } = await mauricio.rpc('admin_extrato_entregadores', {
+            p_inicio: '2026-07-01', p_fim: '2026-07-31',
+        })
+        expect(error).not.toBeNull()
+    })
+})
