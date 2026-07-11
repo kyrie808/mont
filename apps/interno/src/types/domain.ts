@@ -133,6 +133,8 @@ export interface DomainVenda {
     valorPago: number
     origem?: 'catalogo' | 'direta' | string | null
     dataPrevistaPagamento?: string | null
+    /** Observação/declaração escrita pelo ENTREGADOR na entrega (read-only no admin). */
+    notaEntregador?: string | null
 }
 
 // Creation/Update types (Domain-side)

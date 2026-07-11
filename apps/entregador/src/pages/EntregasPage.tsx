@@ -28,6 +28,14 @@ export function EntregasPage() {
         onSettled: () => setVendaEmAcao(null),
     })
 
+    const notaMutation = useMutation({
+        mutationFn: ({ vendaId, nota }: { vendaId: string; nota: string }) =>
+            entregasService.salvarNota(vendaId, nota),
+        onMutate: () => setErro(null),
+        onError: () => setErro('Não foi possível salvar a observação. Tente de novo.'),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['entregas'] }),
+    })
+
     // Só as pendentes; as concluídas vão pra aba Histórico.
     const pendentes = (entregas ?? []).filter((e) => e.status_entrega !== 'entregue')
 
@@ -69,6 +77,7 @@ export function EntregasPage() {
                             entrega={e}
                             onRecebido={(id) => recebidoMutation.mutate(id)}
                             onEntregue={(id) => entregueMutation.mutate(id)}
+                            onSalvarNota={(id, nota) => notaMutation.mutate({ vendaId: id, nota })}
                             processando={vendaEmAcao === e.venda_id}
                         />
                     ))

@@ -190,7 +190,8 @@ export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
         criadoEm: dbVenda.criado_em,
         valorPago: (dbVenda.pagamentos || []).reduce((acc: number, p) => acc + Number((p as PagamentoRowWithStatus).valor || 0), 0),
         origem: dbVenda.origem,
-        dataPrevistaPagamento: dbVenda.data_prevista_pagamento
+        dataPrevistaPagamento: dbVenda.data_prevista_pagamento,
+        notaEntregador: dbVenda.nota_entregador ?? null
     }
 }
 

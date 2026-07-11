@@ -327,3 +327,33 @@ describe('acerto do dinheiro (Stage 2d) (integração)', () => {
         expect(linha2!.dinheiro_acertado_em).not.toBeNull()
     })
 })
+
+describe('entregador_salvar_nota (Feature #4 — prova de entrega) (integração)', () => {
+    it('Maurício salva a observação na venda dele → aparece em minhas_entregas', async () => {
+        const { vendaId } = await criarVenda({ forma: 'venda', taxa: 5, entregadorId })
+        const nota = `Deixei com o vizinho, portão 12 ${Date.now()}`
+
+        const { error } = await mauricio.rpc('entregador_salvar_nota', { p_venda_id: vendaId, p_nota: nota })
+        expect(error).toBeNull()
+
+        const { data } = await mauricio.rpc('entregador_minhas_entregas')
+        const linha = (data ?? []).find((r) => r.venda_id === vendaId)
+        expect(linha!.nota_entregador).toBe(nota)
+    })
+
+    it('texto em branco limpa a nota (NULLIF/trim → null)', async () => {
+        const { vendaId } = await criarVenda({ forma: 'venda', entregadorId })
+        await mauricio.rpc('entregador_salvar_nota', { p_venda_id: vendaId, p_nota: 'algo' })
+        await mauricio.rpc('entregador_salvar_nota', { p_venda_id: vendaId, p_nota: '   ' })
+
+        const { data } = await mauricio.rpc('entregador_minhas_entregas')
+        const linha = (data ?? []).find((r) => r.venda_id === vendaId)
+        expect(linha!.nota_entregador).toBeNull()
+    })
+
+    it('rejeita salvar nota em venda não atribuída a ele', async () => {
+        const { vendaId } = await criarVenda({ forma: 'venda', entregadorId: null })
+        const { error } = await mauricio.rpc('entregador_salvar_nota', { p_venda_id: vendaId, p_nota: 'x' })
+        expect(error).not.toBeNull()
+    })
+})

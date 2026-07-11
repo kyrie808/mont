@@ -159,6 +159,15 @@ export function VendaDetalhe() {
 
                 <VendaInfoCliente contato={venda.contato} />
 
+                {venda.notaEntregador && (
+                    <div className="mt-4 rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Observação do entregador
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{venda.notaEntregador}</p>
+                    </div>
+                )}
+
                 <VendaMetaInfo vendaId={venda.id} formaPagamento={venda.formaPagamento} />
 
                 <VendaAcoesSecundarias

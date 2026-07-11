@@ -1,4 +1,5 @@
-import { MapPin, Phone, Truck, Banknote, Check, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { MapPin, Phone, Truck, Banknote, Check, Loader2, StickyNote, Pencil } from 'lucide-react'
 import type { Entrega } from '../services/entregasService'
 
 interface EntregaCardProps {
@@ -6,6 +7,8 @@ interface EntregaCardProps {
     onRecebido: (vendaId: string) => void
     onEntregue: (vendaId: string) => void
     processando: boolean
+    /** Presente = observação editável (aba Entregas). Ausente = read-only (Histórico). */
+    onSalvarNota?: (vendaId: string, nota: string) => void
 }
 
 function formatarEndereco(e: Entrega): string {
@@ -22,7 +25,9 @@ function formatarEndereco(e: Entrega): string {
 const moeda = (v: number | null) =>
     (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-export function EntregaCard({ entrega, onRecebido, onEntregue, processando }: EntregaCardProps) {
+export function EntregaCard({ entrega, onRecebido, onEntregue, processando, onSalvarNota }: EntregaCardProps) {
+    const [editandoNota, setEditandoNota] = useState(false)
+    const [texto, setTexto] = useState(entrega.nota_entregador ?? '')
     const entregue = entrega.status_entrega === 'entregue'
     const recebeNaEntrega = entrega.estado_pagamento === 'receber_na_entrega'
     const jaRecebido = Boolean(entrega.recebido_em)
@@ -80,6 +85,62 @@ export function EntregaCard({ entrega, onRecebido, onEntregue, processando }: En
                 <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
                     {entrega.observacao_entregador}
                 </div>
+            )}
+
+            {/* Observação do entregador — editável na aba Entregas; read-only no Histórico. */}
+            {onSalvarNota ? (
+                editandoNota ? (
+                    <div className="mt-3 space-y-2">
+                        <textarea
+                            value={texto}
+                            onChange={(e) => setTexto(e.target.value)}
+                            rows={3}
+                            placeholder="Ex.: deixei com o vizinho, portão 12…"
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-slate-400"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => { onSalvarNota(entrega.venda_id, texto); setEditandoNota(false) }}
+                                className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-sm font-bold text-white active:scale-95"
+                            >
+                                <Check className="h-4 w-4" /> Salvar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setTexto(entrega.nota_entregador ?? ''); setEditandoNota(false) }}
+                                className="rounded-xl px-3 py-1.5 text-sm font-medium text-slate-500 active:scale-95"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                ) : entrega.nota_entregador ? (
+                    <button
+                        type="button"
+                        onClick={() => { setTexto(entrega.nota_entregador ?? ''); setEditandoNota(true) }}
+                        className="mt-3 flex w-full items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 active:scale-[0.99]"
+                    >
+                        <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                        <span className="flex-1">{entrega.nota_entregador}</span>
+                        <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => { setTexto(''); setEditandoNota(true) }}
+                        className="mt-3 flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-500 active:scale-95"
+                    >
+                        <StickyNote className="h-4 w-4" /> Observação
+                    </button>
+                )
+            ) : (
+                entrega.nota_entregador && (
+                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                        <span>{entrega.nota_entregador}</span>
+                    </div>
+                )
             )}
 
             {/* Ações */}
