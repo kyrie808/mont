@@ -39,7 +39,7 @@ export function VendasFilters({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder="Buscar por cliente ou ID…"
+                    placeholder="Buscar por cliente…"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-2 focus:ring-ring shadow-card transition-colors"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
