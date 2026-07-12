@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { vendaService } from '../services/vendaService'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
@@ -63,6 +63,10 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         },
         enabled,
         staleTime: 1000 * 60 * 5,
+        // Ao mudar o termo de busca (nova queryKey), mantém o resultado anterior
+        // enquanto busca → isLoading fica false → a página (e a searchbar) não
+        // desmonta e o foco é preservado (fim do "pisca" a cada letra).
+        placeholderData: keepPreviousData,
     })
 
     const createVendaMutation = useMutation({

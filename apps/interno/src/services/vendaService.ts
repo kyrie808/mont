@@ -48,11 +48,16 @@ async function _syncCatPedido(
 
 export const vendaService = {
     async getVendas(startDate?: Date, endDate?: Date, includePending = false, search?: string, excludeCatalogo = false, contatoId?: string): Promise<DomainVenda[]> {
+        // Busca por cliente = inner join no contato + ilike (substring), igual à busca
+        // de Clientes. NÃO usar vendas.fts: a coluna gerada só indexa id+observações,
+        // nunca o nome do cliente (coluna gerada não referencia contatos).
+        const term = search ? search.replace(/[%_]/g, '').trim() : ''
+        const contatoEmbed = term ? 'contato:contatos!inner' : 'contato:contatos'
         let query = supabase
             .from('vendas')
             .select(`
                 *,
-                contato:contatos(id, nome, telefone, origem, indicado_por_id, status),
+                ${contatoEmbed}(id, nome, apelido, telefone, origem, indicado_por_id, status),
                 itens:itens_venda(*, produto:produtos(id, nome, codigo)),
                 pagamentos:pagamentos_venda(*)
             `)
@@ -66,8 +71,11 @@ export const vendaService = {
             query = query.neq('origem', 'catalogo')
         }
 
-        if (search) {
-            query = query.textSearch('fts', search, { type: 'websearch', config: 'simple' })
+        if (term) {
+            query = query.or(
+                `nome.ilike.%${term}%,apelido.ilike.%${term}%,telefone.ilike.%${term}%`,
+                { referencedTable: 'contato' },
+            )
         }
 
         if (includePending && (startDate || endDate)) {

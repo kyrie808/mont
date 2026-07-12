@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, Search, Diamond, Flame, History, Users, X, UserCheck } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
@@ -24,6 +24,13 @@ export function Contatos() {
 
     // Advanced Search Logic (Server-side)
     const debouncedSearchTerm = useDebounce(searchTerm, 500)
+
+    // Ao abrir a busca (a barra colapsa via max-h, o input fica montado), foca o
+    // campo pra já poder digitar sem clicar. rAF garante o foco após a expansão.
+    const searchInputRef = useRef<HTMLInputElement>(null)
+    useEffect(() => {
+        if (showSearch) requestAnimationFrame(() => searchInputRef.current?.focus())
+    }, [showSearch])
 
     const { contatos, loading, error, refetch } = useContatos({
         filtros: {
@@ -118,6 +125,7 @@ export function Contatos() {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input
+                                ref={searchInputRef}
                                 type="text"
                                 placeholder="Buscar por nome, apelido ou telefone..."
                                 className="pl-10"
@@ -126,7 +134,6 @@ export function Contatos() {
                                     setSearchTerm(e.target.value)
                                     setCurrentPage(1)
                                 }}
-                                autoFocus
                             />
                         </div>
                     </div>
