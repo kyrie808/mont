@@ -150,7 +150,7 @@ export function Dashboard() {
             />
 
                 {/* Main Content */}
-                <main className="w-full mx-auto lg:max-w-[1500px] flex flex-col gap-6 px-4 lg:px-6 pb-24 lg:pb-8">
+                <main className="w-full flex flex-col gap-6 px-4 lg:px-6 pb-24 lg:pb-8">
 
                     {/* Month Picker Navigation */}
                     <MonthPicker selectedMonth={selectedMonthStr} onMonthSelect={handleMonthSelect} />

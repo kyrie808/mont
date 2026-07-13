@@ -65,8 +65,8 @@ export function FluxoCaixa() {
     return (
         <>
             <Header title="Financeiro" showBack centerTitle />
-            <PageContainer className="pt-0 pb-24 bg-transparent px-4 lg:px-6">
-                <div className="mx-auto w-full lg:max-w-[1500px]">
+            <PageContainer className="pt-0 pb-24 bg-transparent">
+                <div>
 
                     {/* Hub Tabs Navigation */}
                     <div className="px-4 mt-4">

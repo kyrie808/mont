@@ -85,7 +85,7 @@ export function Estoque() {
                 onMenuClick={openDrawer}
             />
             <PageContainer className="pt-0 pb-24 bg-transparent px-4">
-                <div className="mx-auto w-full lg:max-w-[1500px] space-y-4">
+                <div className="space-y-4">
                     {loading && <PageSkeleton rows={10} showHeader showCards />}
 
                     {!loading && (
