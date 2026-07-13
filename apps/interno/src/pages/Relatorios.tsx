@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Header } from '../components/layout/Header'
+import { PageContainer } from '../components/layout/PageContainer'
 import { TabFinanceiro } from '../components/relatorios/TabFinanceiro'
 import { TabClientes } from '../components/relatorios/TabClientes'
 import { TabProdutos } from '../components/relatorios/TabProdutos'
 import { TabMarketing } from '../components/relatorios/TabMarketing'
-import { C_BG, C_FG, C_MUTED_FG, C_BORDER, C_MUTED } from '../components/relatorios/Charts'
+import { C_FG, C_MUTED_FG, C_MUTED } from '../components/relatorios/Charts'
 
 type TabId     = 'financeiro' | 'clientes' | 'produtos' | 'marketing'
 type PeriodId  = '30d' | '90d' | '6m' | '1a'
@@ -25,7 +25,6 @@ const PERIODS: { id: PeriodId; label: string }[] = [
 ]
 
 export function Relatorios() {
-    const navigate   = useNavigate()
     const [tab,     setTab]     = useState<TabId>('financeiro')
     const [period,  setPeriod]  = useState<PeriodId>('30d')
     const [animKey, setAnimKey] = useState(0)
@@ -45,40 +44,13 @@ export function Relatorios() {
     const tabIdx = TABS.findIndex(t => t.id === tab)
 
     return (
-        <div style={{ minHeight: '100dvh', background: C_BG }}>
+        <>
+            <Header title="Relatórios" showBack />
+            <PageContainer className="pt-0 pb-24 bg-transparent">
 
-            {/* ── STICKY COMPOUND HEADER ────────────────────────────────── */}
-            <div style={{
-                position: 'sticky', top: 0, zIndex: 40,
-                background: 'hsl(var(--background) / 0.95)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                borderBottom: `1px solid ${C_BORDER}`,
-            }}>
-
-                {/* Row 1: back + title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 16px 8px' }}>
-                    <button
-                        aria-label="Voltar"
-                        onClick={() => navigate(-1)}
-                        style={{
-                            width: 36, height: 36, borderRadius: '50%',
-                            border: 'none', background: 'transparent', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: C_FG, flexShrink: 0, marginLeft: -4,
-                        }}
-                    >
-                        <ArrowLeft size={22} strokeWidth={2.4} />
-                    </button>
-                    <span style={{
-                        fontSize: 18, fontWeight: 800, color: C_FG,
-                        letterSpacing: '-0.02em', flex: 1,
-                    }}>Relatórios</span>
-                </div>
-
-                {/* Row 2: period selector — only for tabs with temporal data */}
+                {/* Seletor de período — só pras abas com dado temporal */}
                 {(tab === 'financeiro' || tab === 'marketing') && (
-                    <div style={{ display: 'flex', gap: 6, padding: '0 16px 10px' }}>
+                    <div style={{ display: 'flex', gap: 6, padding: '10px 0' }}>
                         {PERIODS.map(p => {
                             const active = period === p.id
                             return (
@@ -104,8 +76,8 @@ export function Relatorios() {
                     </div>
                 )}
 
-                {/* Row 3: tab bar */}
-                <div style={{ position: 'relative', display: 'flex', padding: '0 16px' }}>
+                {/* Abas */}
+                <div style={{ position: 'relative', display: 'flex', borderBottom: '1px solid hsl(var(--border))' }}>
                     {TABS.map(t => (
                         <button
                             key={t.id}
@@ -125,22 +97,21 @@ export function Relatorios() {
                     ))}
                     <div style={{
                         position: 'absolute', bottom: 0,
-                        left:  `calc(16px + ${tabIdx} * (100% - 32px) / ${TABS.length})`,
-                        width: `calc((100% - 32px) / ${TABS.length})`,
+                        left:  `calc(${tabIdx} * 100% / ${TABS.length})`,
+                        width: `calc(100% / ${TABS.length})`,
                         height: 2, borderRadius: 999, background: C_FG,
                         transition: 'left 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
                     }} />
                 </div>
-            </div>
 
-            {/* ── SCROLLABLE BODY ───────────────────────────────────────── */}
-            <div style={{ padding: '16px 16px 100px' }}>
-                {tab === 'financeiro' && <TabFinanceiro animKey={`${period}-${animKey}`} />}
-                {tab === 'clientes'   && <TabClientes   animKey={`${period}-${animKey}`} />}
-                {tab === 'produtos'   && <TabProdutos   animKey={`${period}-${animKey}`} />}
-                {tab === 'marketing'  && <TabMarketing  animKey={`${period}-${animKey}`} />}
-            </div>
-
-        </div>
+                {/* Conteúdo */}
+                <div style={{ paddingTop: 16 }}>
+                    {tab === 'financeiro' && <TabFinanceiro animKey={`${period}-${animKey}`} />}
+                    {tab === 'clientes'   && <TabClientes   animKey={`${period}-${animKey}`} />}
+                    {tab === 'produtos'   && <TabProdutos   animKey={`${period}-${animKey}`} />}
+                    {tab === 'marketing'  && <TabMarketing  animKey={`${period}-${animKey}`} />}
+                </div>
+            </PageContainer>
+        </>
     )
 }
