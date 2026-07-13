@@ -1,5 +1,5 @@
 import { DollarSign, MessageCircle, AlertTriangle } from 'lucide-react'
-import { formatCurrency } from '@mont/shared'
+import { formatCurrency, cn } from '@mont/shared'
 import { DashboardCarousel } from './DashboardCarousel'
 import { useAlertasFinanceiros } from '@/hooks/useAlertasFinanceiros'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -57,24 +57,36 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
     if (loading) return <div className="h-40 animate-pulse bg-muted rounded-xl" />
 
     if (atrasados.length === 0) {
+        const empty = (
+            <div className="w-full flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border border-dashed">
+                <DollarSign className="size-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhuma pendência urgente</p>
+            </div>
+        )
         return (
-            <DashboardCarousel
-                title="Contas a Receber"
-                icon={DollarSign}
-                count={0}
-                emptyState={
-                    <div className="w-full flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border border-dashed">
-                        <DollarSign className="size-8 text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">Nenhuma pendência urgente</p>
+            <>
+                {/* Mobile: carousel atual (congelado) */}
+                <div className="lg:hidden">
+                    <DashboardCarousel title="Contas a Receber" icon={DollarSign} count={0} emptyState={empty}>
+                        {null}
+                    </DashboardCarousel>
+                </div>
+                {/* Desktop */}
+                <div className="hidden lg:flex lg:flex-col lg:gap-3">
+                    <div className="flex items-center gap-2 px-1">
+                        <DollarSign className="size-4 text-muted-foreground" />
+                        <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Contas a Receber</h2>
                     </div>
-                }
-            >
-                {null}
-            </DashboardCarousel>
+                    {empty}
+                </div>
+            </>
         )
     }
 
     return (
+        <>
+        {/* Mobile: carousel atual (congelado) */}
+        <div className="lg:hidden">
         <DashboardCarousel
             title="Contas a Receber"
             icon={DollarSign}
@@ -122,5 +134,43 @@ export function AlertasFinanceiroWidget({ data, loading: externalLoading }: Aler
                 </div>
             ))}
         </DashboardCarousel>
+        </div>
+
+        {/* Desktop: lista vertical tokenizada — cor escala pela gravidade */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-3">
+            <div className="flex items-center gap-2 px-1">
+                <DollarSign className="size-4 text-muted-foreground" />
+                <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Contas a Receber</h2>
+                <span className="ml-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-bold text-warning-strong">{atrasados.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+                {atrasados.map((alerta) => {
+                    const severe = alerta.diasAtraso > 7
+                    return (
+                        <div key={alerta.venda.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-card">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <span className={cn('size-2 shrink-0 rounded-full', severe ? 'bg-destructive' : 'bg-warning-strong')} />
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-bold text-foreground">{alerta.venda.contato?.nome || 'Cliente'}</p>
+                                    <p className={cn('text-xs font-semibold', severe ? 'text-destructive' : 'text-warning-strong')}>
+                                        {alerta.diasAtraso} dias de atraso
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-3">
+                                <span className="text-sm font-bold text-foreground tabular-nums">{formatCurrency(alerta.venda.total)}</span>
+                                <button
+                                    onClick={() => handleWhatsApp(alerta.venda.contato?.telefone || '', alerta.venda.contato?.nome || '', alerta.venda.total)}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                                >
+                                    <MessageCircle className="size-3.5" /> Cobrar
+                                </button>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+        </>
     )
 }

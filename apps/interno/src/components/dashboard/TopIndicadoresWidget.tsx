@@ -1,7 +1,21 @@
-﻿import { Trophy } from 'lucide-react'
+﻿import { Trophy, Medal } from 'lucide-react'
+import { cn, formatCurrency } from '@mont/shared'
 import { useTopIndicadores } from '@/hooks/useTopIndicadores'
 import { PodiumCard } from '@/components/dashboard/PodiumCard'
 import type { TopIndicador } from '@/services/dashboardService'
+
+/** Cor do badge de posição por rank (ouro/prata/bronze tokenizado). Desktop. */
+function rankBadge(rank: number): string {
+    switch (rank) {
+        case 1: return 'bg-accent/20 text-foreground ring-1 ring-accent/50'
+        case 2: return 'bg-muted text-muted-foreground ring-1 ring-border'
+        case 3: return 'bg-warning-strong/15 text-warning-strong ring-1 ring-warning-strong/40'
+        default: return 'bg-muted text-muted-foreground'
+    }
+}
+function medalColor(rank: number): string {
+    return rank === 1 ? 'text-accent' : rank === 2 ? 'text-muted-foreground' : 'text-warning-strong'
+}
 
 
 
@@ -41,7 +55,8 @@ export function TopIndicadoresWidget({ data, loading: externalLoading }: TopIndi
                 </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
+            {/* Mobile: pódio atual (congelado) */}
+            <div className="grid grid-cols-1 gap-3 lg:hidden">
                 {validIndicadores.map((indicador, index) => (
                     <PodiumCard
                         key={indicador.indicadorId}
@@ -52,6 +67,38 @@ export function TopIndicadoresWidget({ data, loading: externalLoading }: TopIndi
                         secondaryAccent="text-primary"
                     />
                 ))}
+            </div>
+
+            {/* Desktop: lista limpa — badge de posição colorido + card neutro */}
+            <div className="hidden lg:flex lg:flex-col lg:gap-2">
+                {validIndicadores.map((indicador, index) => {
+                    const rank = index + 1
+                    return (
+                        <div
+                            key={indicador.indicadorId}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-card"
+                        >
+                            <div className="flex min-w-0 items-center gap-3">
+                                <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold', rankBadge(rank))}>
+                                    {rank}
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-bold text-foreground">{indicador.nome}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {indicador.totalIndicados} {indicador.totalIndicados === 1 ? 'cliente indicado' : 'clientes indicados'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                {rank <= 3 && <Medal className={cn('size-4', medalColor(rank))} />}
+                                <div className="text-right">
+                                    <p className="text-sm font-bold text-primary tabular-nums">{formatCurrency(indicador.totalVendasIndicados)}</p>
+                                    <p className="text-[10px] text-muted-foreground">em vendas</p>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )
