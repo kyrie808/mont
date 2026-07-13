@@ -17,11 +17,7 @@ const DEFAULT_CONFIG: FreteConfig = {
     modo: 'valor_fixo',
     origem: { lat: -23.7205964, lng: -46.524444, label: 'Cozinha — Montanhão/SBC', cep: '09784-410' },
     faixas: [
-        { ateKm: 3, valorFixo: 5 },
-        { ateKm: 5, valorFixo: 9 },
-        { ateKm: 8, valorFixo: 14 },
-        { ateKm: 10, valorFixo: 18 },
-        { ateKm: 15, valorFixo: 25 },
+        { ateKm: 30, valorFixo: 5 },
     ],
     foraDoAlcance: 'a_combinar',
 }
