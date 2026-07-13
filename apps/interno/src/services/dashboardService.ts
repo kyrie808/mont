@@ -31,6 +31,8 @@ export interface VendaAlerta {
     contato: {
         nome: string | null
     } | null
+    /** A view_home_operacional devolve o nome do cliente NESTE campo (plano). */
+    contato_nome?: string | null
 }
 
 export interface RawFinanceiroAlerta {
@@ -256,6 +258,59 @@ export const dashboardService = {
         return {
             total_a_receber: Number(result.total_a_receber) || 0,
             total_contatos_abertos: Number(result.total_contatos_abertos) || 0
+        }
+    },
+
+    /**
+     * Metas = MÉDIA histórica de cada KPI mensal dos meses CONCLUÍDOS
+     * (desde o zero-day do tracking, 2026-05, excluindo o mês corrente parcial).
+     * Serve de "meta" das barras de KPI até haver meta real. Frontend-only.
+     */
+    async getMetasMedia(): Promise<{
+        faturamento: number
+        receitaFrete: number
+        ticketMedio: number
+        liquidado: number
+        lucroBruto: number
+        lucroLiquido: number
+        vendas: number
+        itens: number
+        meses: number
+    }> {
+        const now = new Date()
+        const startOrd = 2026 * 12 + 5 // maio/2026 (zero-day do tracking financeiro)
+        const curOrd = now.getFullYear() * 12 + (now.getMonth() + 1)
+
+        const [{ data: finRows }, { data: lucroRows }, { data: opRows }] = await Promise.all([
+            supabase.from('view_home_financeiro').select('faturamento, ticket_medio, receita_frete, liquidado_mes, mes, ano'),
+            supabase.from('view_lucro_liquido_mensal').select('lucro_bruto, lucro_liquido, mes'),
+            supabase.from('view_home_operacional').select('total_vendas, total_itens, mes, ano'),
+        ])
+
+        const media = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0)
+        const inWindowMesAno = (r: { mes: number | string | null; ano: number | string | null }) => {
+            const ord = Number(r.ano) * 12 + Number(r.mes)
+            return ord >= startOrd && ord < curOrd
+        }
+        const inWindowDate = (r: { mes: string | null }) => {
+            const [y, m] = String(r.mes).slice(0, 7).split('-').map(Number) // 'YYYY-MM' local-safe
+            return y * 12 + m >= startOrd && y * 12 + m < curOrd
+        }
+
+        const fin = (finRows ?? []).filter(inWindowMesAno)
+        const lucro = (lucroRows ?? []).filter(inWindowDate)
+        const op = (opRows ?? []).filter(inWindowMesAno)
+
+        return {
+            faturamento: media(fin.map((r) => Number(r.faturamento) || 0)),
+            receitaFrete: media(fin.map((r) => Number(r.receita_frete) || 0)),
+            ticketMedio: media(fin.map((r) => Number(r.ticket_medio) || 0)),
+            liquidado: media(fin.map((r) => Number(r.liquidado_mes) || 0)),
+            lucroBruto: media(lucro.map((r) => Number(r.lucro_bruto) || 0)),
+            lucroLiquido: media(lucro.map((r) => Number(r.lucro_liquido) || 0)),
+            vendas: media(op.map((r) => Number(r.total_vendas) || 0)),
+            itens: media(op.map((r) => Number(r.total_itens) || 0)),
+            meses: Math.max(fin.length, lucro.length, op.length),
         }
     }
 }

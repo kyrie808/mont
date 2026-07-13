@@ -31,7 +31,8 @@ export function UltimasVendasWidget({ data, loading: externalLoading }: UltimasV
             status: v.status,
             pago: v.pago,
             data: v.data,
-            contato: v.contato
+            // A view devolve o nome no campo plano `contato_nome`; fallback pro aninhado.
+            contato: { nome: v.contato_nome ?? v.contato?.nome ?? null }
         }))
         : (rawVendas as VendaAlerta[]).slice(0, 5)
 
