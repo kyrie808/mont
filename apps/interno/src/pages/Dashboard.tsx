@@ -22,6 +22,7 @@ import { formatCurrency } from '@mont/shared'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { KpiCard } from '@/components/dashboard/KpiCard'
+import { KpiCardDesktop } from '@/components/dashboard/KpiCardDesktop'
 import { isMesEmCurso } from '../utils/calculations'
 import { AlertasFinanceiroWidget } from '@/components/dashboard/AlertasFinanceiroWidget'
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel'
@@ -46,6 +47,10 @@ export function Dashboard() {
     const [lucroData, setLucroData] = useState({ lucro_bruto: 0, receita_bruta: 0, lucro_liquido: 0, margem_liquida_pct: 0 })
     const [liquidadoData, setLiquidadoData] = useState({ vendas_liquidadas: 0, total_liquidado: 0 })
     const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_contatos_abertos: 0 })
+    const [metas, setMetas] = useState({
+        faturamento: 0, receitaFrete: 0, ticketMedio: 0, liquidado: 0,
+        lucroBruto: 0, lucroLiquido: 0, vendas: 0, itens: 0, meses: 0,
+    })
     const [isLoadingLucro, setIsLoadingLucro] = useState(true)
 
     const isLoading = isLoadingMetrics || isLoadingLucro
@@ -54,14 +59,16 @@ export function Dashboard() {
         const fetchData = async () => {
             setIsLoadingLucro(true)
             const date = new Date(year, month - 1, 1)
-            const [lucro, liquidado, aReceber] = await Promise.all([
+            const [lucro, liquidado, aReceber, metasData] = await Promise.all([
                 dashboardService.getLucroLiquido(date),
                 dashboardService.getLiquidadoMes(date),
                 dashboardService.getTotalAReceber(),
+                dashboardService.getMetasMedia(),
             ])
             setLucroData(lucro)
             setLiquidadoData(liquidado)
             setAReceberGlobal(aReceber)
+            setMetas(metasData)
             setIsLoadingLucro(false)
         }
         fetchData()
@@ -163,7 +170,8 @@ export function Dashboard() {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {/* KPIs financeiros — MOBILE/TABLET (congelado, < lg) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 lg:hidden">
                         <KpiCard
                             title="Faturamento"
                             value={formatCurrency(metrics?.financial?.faturamento_mes_atual || 0)}
@@ -266,6 +274,62 @@ export function Dashboard() {
 
                     </div>
 
+                    {/* KPIs financeiros — DESKTOP (≥ lg): barra = % da meta (média), cor semântica */}
+                    <div className="mb-6 hidden gap-4 lg:grid lg:grid-cols-4">
+                        <KpiCardDesktop
+                            title="Faturamento"
+                            value={formatCurrency(metrics?.financial?.faturamento_mes_atual || 0)}
+                            className="col-span-2"
+                            loading={isLoading}
+                            onClick={() => navigate('/vendas?status=entregue')}
+                            tooltip="Receita de PRODUTO das vendas entregues no mês (sem frete)."
+                            meta={{ current: metrics?.financial?.faturamento_mes_atual || 0, goal: metas.faturamento, emCurso: isMesEmCurso(year, month) }}
+                        />
+                        <KpiCardDesktop
+                            title="Receita de Frete"
+                            value={formatCurrency(metrics?.financial?.receita_frete_mes_atual || 0)}
+                            loading={isLoading}
+                            meta={{ current: metrics?.financial?.receita_frete_mes_atual || 0, goal: metas.receitaFrete, emCurso: isMesEmCurso(year, month) }}
+                            tooltip="Taxa de entrega das vendas entregues no mês. Receita pura (sem custo)."
+                        />
+                        <KpiCardDesktop
+                            title="Lucro Bruto"
+                            value={formatCurrency(lucroData.lucro_bruto)}
+                            loading={isLoading}
+                            meta={{ current: lucroData.lucro_bruto, goal: metas.lucroBruto, emCurso: isMesEmCurso(year, month) }}
+                            tooltip="Receita das vendas entregues menos o custo dos produtos."
+                        />
+                        <KpiCardDesktop
+                            title="Lucro Líquido"
+                            value={formatCurrency(lucroData.lucro_liquido)}
+                            loading={isLoading}
+                            meta={{ current: lucroData.lucro_liquido, goal: metas.lucroLiquido, emCurso: isMesEmCurso(year, month) }}
+                            tooltip="Lucro real do mês (desconta custo dos produtos, fábrica e despesas)."
+                        />
+                        <KpiCardDesktop
+                            title="Ticket Médio"
+                            value={formatCurrency(metrics?.financial?.ticket_medio_mes_atual || 0)}
+                            loading={isLoading}
+                            meta={{ current: metrics?.financial?.ticket_medio_mes_atual || 0, goal: metas.ticketMedio, emCurso: isMesEmCurso(year, month), cumulative: false }}
+                            tooltip="Valor médio por venda entregue no mês (comparado direto com a média histórica)."
+                        />
+                        <KpiCardDesktop
+                            title="A Receber"
+                            value={formatCurrency(aReceberGlobal.total_a_receber)}
+                            loading={isLoading}
+                            onClick={() => navigate('/vendas?pagamento=pendente')}
+                            subtitle={`${aReceberGlobal.total_contatos_abertos} clientes a receber`}
+                            tooltip="Total de fiado em aberto de todos os meses (não filtra pelo mês selecionado)."
+                        />
+                        <KpiCardDesktop
+                            title="Liquidado no Mês"
+                            value={formatCurrency(liquidadoData.total_liquidado)}
+                            loading={isLoading}
+                            onClick={() => navigate('/vendas?pagamento=pago')}
+                            meta={{ current: liquidadoData.total_liquidado, goal: metas.liquidado, emCurso: isMesEmCurso(year, month) }}
+                            tooltip="Dinheiro que entrou no caixa no mês (inclui fiados de meses anteriores pagos agora)."
+                        />
+                    </div>
 
                     {/* VENDAS & ENTREGAS Section */}
                     <div className="flex items-center gap-2 mb-2 mt-2 px-1">
@@ -275,7 +339,8 @@ export function Dashboard() {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {/* MOBILE/TABLET (congelado, < lg) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 lg:hidden">
                         <KpiCard
                             title="Vendas"
                             value={(metrics?.financial?.vendas_mes_atual || 0).toString()}
@@ -325,6 +390,37 @@ export function Dashboard() {
                             variant="compact"
                             loading={isLoading}
                             onClick={() => navigate('/vendas?status=entregue')}
+                        />
+                    </div>
+
+                    {/* Vendas & Entregas — DESKTOP (≥ lg) */}
+                    <div className="mb-6 hidden gap-4 lg:grid lg:grid-cols-4">
+                        <KpiCardDesktop
+                            title="Vendas"
+                            value={(metrics?.financial?.vendas_mes_atual || 0).toString()}
+                            loading={isLoading}
+                            onClick={() => navigate('/vendas')}
+                            meta={{ current: metrics?.financial?.vendas_mes_atual || 0, goal: metas.vendas, emCurso: isMesEmCurso(year, month), unit: 'num' }}
+                        />
+                        <KpiCardDesktop
+                            title="Itens"
+                            value={(metrics?.operational?.total_itens || 0).toString()}
+                            loading={isLoading}
+                            meta={{ current: metrics?.operational?.total_itens || 0, goal: metas.itens, emCurso: isMesEmCurso(year, month), unit: 'num' }}
+                        />
+                        <KpiCardDesktop
+                            title="Pendentes"
+                            value={(metrics?.operational?.entregas_pendentes_total || 0).toString()}
+                            loading={isLoading}
+                            onClick={() => navigate('/vendas?status=pendente')}
+                            subtitle="a entregar"
+                        />
+                        <KpiCardDesktop
+                            title="Entregues"
+                            value={(metrics?.operational?.entregas_hoje_realizadas || 0).toString()}
+                            loading={isLoading}
+                            onClick={() => navigate('/vendas?status=entregue')}
+                            subtitle="hoje"
                         />
                     </div>
 
