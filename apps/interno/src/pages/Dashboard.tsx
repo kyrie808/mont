@@ -171,7 +171,7 @@ export function Dashboard() {
                             trend={isMesEmCurso(year, month) ? 'mês em curso' : `${metrics?.financial?.variacao_percentual?.toFixed(1) || 0}%`}
                             trendDirection={isMesEmCurso(year, month) ? 'neutral' : (metrics?.financial?.variacao_percentual || 0) >= 0 ? 'up' : 'down'}
                             icon={TrendingUp}
-                            className="col-span-2 md:col-span-1"
+                            className="col-span-2"
                             variant="default"
                             loading={isLoading}
                             onClick={() => navigate('/vendas?status=entregue')}
@@ -328,16 +328,17 @@ export function Dashboard() {
                         />
                     </div>
 
-                    {/* Widgets Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                        <div className="space-y-8">
+                    {/* Widgets Grid — mobile/tablet inalterado; em telas largas (xl) os
+                        wrappers viram `contents` → 3 colunas equilibradas (Alertas · Top · Últimas). */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                        <div className="space-y-8 xl:space-y-0 xl:contents">
                             <AlertasFinanceiroWidget
                                 data={metrics?.financial?.alertas_financeiros}
                                 loading={isLoading}
                             />
                         </div>
 
-                        <div className="space-y-8">
+                        <div className="space-y-8 xl:space-y-0 xl:contents">
                             <TopIndicadoresWidget
                                 data={metrics?.operational?.ranking_indicacoes}
                                 loading={isLoading}
