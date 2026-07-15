@@ -3,9 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import { PageContainer } from '../components/layout/PageContainer'
-import { PageSkeleton, paginateArray } from '../components/ui'
+import { PageSkeleton, paginateArray, Button } from '../components/ui'
+import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { useVendas } from '../hooks/useVendas'
 import { useDashboardFilter } from '../hooks/useDashboardFilter'
+import { useMonthPickerBinding } from '../hooks/useMonthPickerBinding'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useDebounce } from '../hooks/useDebounce'
 
 // Sub-components
@@ -20,14 +23,16 @@ export function Vendas() {
     const { openDrawer } = useNavigationStore()
     const [searchParams, setSearchParams] = useSearchParams()
     const { startDate, endDate } = useDashboardFilter()
+    const { selectedMonthStr, handleMonthSelect } = useMonthPickerBinding()
     const statusFilter = searchParams.get('status') as StatusFilter | null
     const pagamentoFilter = searchParams.get('pagamento') as PagamentoFilter | null
 
+    // Entrega e Pagamento são dimensões INDEPENDENTES — `filteredVendas` já faz o AND.
+    // (Antes cada setter limpava o outro, o que impedia "Entregues + Pendentes" = fiado a receber.)
     const setStatusFilter = (val: StatusFilter) => {
         const newParams = new URLSearchParams(searchParams)
         if (val === newParams.get('status')) newParams.delete('status')
         else newParams.set('status', val)
-        newParams.delete('pagamento')
         setSearchParams(newParams)
         setCurrentPage(1)
     }
@@ -36,14 +41,30 @@ export function Vendas() {
         const newParams = new URLSearchParams(searchParams)
         if (val === newParams.get('pagamento')) newParams.delete('pagamento')
         else newParams.set('pagamento', val)
-        newParams.delete('status')
         setSearchParams(newParams)
         setCurrentPage(1)
     }
 
     const [searchTerm, setSearchTerm] = useState('')
     const debouncedSearchTerm = useDebounce(searchTerm, 500)
-    const { vendas, loading, deleteVenda } = useVendas({ startDate, endDate, includePending: true, search: debouncedSearchTerm })
+
+    // `includePending` monta um OR no service: (data no mês) OU pendente OU não-paga —
+    // ou seja, arrasta vendas em aberto de QUALQUER mês pra dentro do mês selecionado.
+    // Desktop (afirma um mês via MonthPicker): mês limpo por padrão; o toggle traz as
+    // pendências de volta explicitamente. Mobile: intocado — segue trazendo tudo, como hoje.
+    const isDesktop = useMediaQuery('(min-width: 1024px)')
+    const emAberto = searchParams.get('emAberto') === '1'
+    const includePending = isDesktop ? emAberto : true
+
+    const toggleEmAberto = () => {
+        const newParams = new URLSearchParams(searchParams)
+        if (emAberto) newParams.delete('emAberto')
+        else newParams.set('emAberto', '1')
+        setSearchParams(newParams)
+        setCurrentPage(1)
+    }
+
+    const { vendas, loading, deleteVenda } = useVendas({ startDate, endDate, includePending, search: debouncedSearchTerm })
     
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [vendaToDelete, setVendaToDelete] = useState<string | null>(null)
@@ -106,6 +127,27 @@ export function Vendas() {
         <>
             <Header title="Vendas" showMenu centerTitle onMenuClick={openDrawer} />
                 <PageContainer className="pt-0 pb-24 bg-transparent">
+                    {/* DESKTOP (≥lg): seletor de período. Mobile não ganha o picker
+                        (layout sagrado) — segue herdando o período do filtro global.
+                        Sem KPIs aqui de propósito: números vivem no Início, com as regras
+                        canônicas. Contagens ficam nas abas de filtro logo abaixo. */}
+                    <div className="hidden lg:block space-y-4 mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1 min-w-0">
+                                <MonthPicker selectedMonth={selectedMonthStr} onMonthSelect={handleMonthSelect} />
+                            </div>
+                            <Button
+                                variant={emAberto ? 'primary' : 'outline'}
+                                size="sm"
+                                className="shrink-0"
+                                aria-pressed={emAberto}
+                                onClick={toggleEmAberto}
+                            >
+                                Incluir em aberto de outros meses
+                            </Button>
+                        </div>
+                    </div>
+
                     <VendasFilters
                         searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         statusFilter={statusFilter} setStatusFilter={setStatusFilter}
