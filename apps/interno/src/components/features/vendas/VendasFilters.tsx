@@ -1,5 +1,6 @@
 import { Search, Truck, DollarSign } from 'lucide-react'
 import { Badge } from '../../../components/ui'
+import { VendasFilterTabs } from './VendasFilterTabs'
 
 
 interface VendasFiltersProps {
@@ -46,7 +47,20 @@ export function VendasFilters({
                 />
             </div>
 
-            <div className="space-y-3 pb-2">
+            {/* DESKTOP (≥lg): dois segmented controls independentes (Entrega + Pagamento) */}
+            <div className="hidden lg:block">
+                <VendasFilterTabs
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    pagamentoFilter={pagamentoFilter}
+                    setPagamentoFilter={setPagamentoFilter}
+                    deliveryCounts={deliveryCounts}
+                    paymentCounts={paymentCounts}
+                />
+            </div>
+
+            {/* MOBILE (<lg): fileiras de badges — intocadas (mobile sagrado) */}
+            <div className="space-y-3 pb-2 lg:hidden">
                 {/* Delivery Filters */}
                 <div className="flex items-center gap-3">
                     <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary">

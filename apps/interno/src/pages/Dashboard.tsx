@@ -17,6 +17,7 @@ import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useDashboardFilter } from '../hooks/useDashboardFilter'
+import { useMonthPickerBinding } from '../hooks/useMonthPickerBinding'
 import { dashboardService } from '../services/dashboardService'
 import { formatCurrency } from '@mont/shared'
 import { supabase } from '@/lib/supabase'
@@ -39,7 +40,7 @@ export function Dashboard() {
     const { openDrawer } = useNavigationStore()
     const [userName, setUserName] = useState<string>('Comandante')
     const [greeting, setGreeting] = useState<string>('Olá')
-    const { month, year, setMonth } = useDashboardFilter()
+    const { month, year } = useDashboardFilter()
 
 
     const { data: metrics, isLoading: isLoadingMetrics, refetch } = useDashboardMetrics(month, year)
@@ -93,25 +94,8 @@ export function Dashboard() {
         fetchUserAndGreeting()
     }, [])
 
-    // Derive selected month string for MonthPicker
-    const selectedDate = new Date(year, month - 1, 1)
-    const selectedMonthStr = selectedDate.toLocaleString('pt-BR', { month: 'short', timeZone: 'America/Sao_Paulo' })
-        .replace('.', '')
-        .replace(/^./, str => str.toUpperCase())
-
-    const handleMonthSelect = (monthName: string) => {
-        const monthsMap: { [key: string]: number } = {
-            'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
-            'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12
-        }
-        const m = monthsMap[monthName]
-        if (m !== undefined) {
-            const currentYear = new Date().getFullYear()
-            // Important: use current year or allow filter to handle year
-            // For now, we follow the old logic of current year but use setMonth from filter
-            setMonth(new Date(currentYear, m - 1, 1))
-        }
-    }
+    // Binding do MonthPicker ↔ filtro global (fonte única, compartilhada com Vendas)
+    const { selectedMonthStr, handleMonthSelect } = useMonthPickerBinding()
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true)
@@ -317,8 +301,10 @@ export function Dashboard() {
                             title="A Receber"
                             value={formatCurrency(aReceberGlobal.total_a_receber)}
                             loading={isLoading}
-                            onClick={() => navigate('/vendas?pagamento=pendente')}
-                            subtitle={`${aReceberGlobal.total_contatos_abertos} clientes a receber`}
+                            // Card é backlog (todos os meses) → o destino precisa do emAberto,
+                            // senão a lista vem escopada no mês e não bate com o número do card.
+                            onClick={() => navigate('/vendas?pagamento=pendente&emAberto=1')}
+                            subtitle={`${aReceberGlobal.total_contatos_abertos} clientes · todos os meses`}
                             tooltip="Total de fiado em aberto de todos os meses (não filtra pelo mês selecionado)."
                         />
                         <KpiCardDesktop
@@ -396,11 +382,14 @@ export function Dashboard() {
                     {/* Vendas & Entregas — DESKTOP (≥ lg) */}
                     <div className="mb-6 hidden gap-4 lg:grid lg:grid-cols-4">
                         <KpiCardDesktop
-                            title="Vendas"
+                            title="Vendas entregues"
                             value={(metrics?.financial?.vendas_mes_atual || 0).toString()}
                             loading={isLoading}
-                            onClick={() => navigate('/vendas')}
+                            // O número é count(status='entregue') → o destino precisa do mesmo
+                            // recorte, senão o card diz 76 e a lista mostra 81.
+                            onClick={() => navigate('/vendas?status=entregue')}
                             meta={{ current: metrics?.financial?.vendas_mes_atual || 0, goal: metas.vendas, emCurso: isMesEmCurso(year, month), unit: 'num' }}
+                            tooltip="Vendas entregues no mês — mesmo critério do faturamento. Pendentes e canceladas não entram."
                         />
                         <KpiCardDesktop
                             title="Itens"
@@ -412,8 +401,10 @@ export function Dashboard() {
                             title="Pendentes"
                             value={(metrics?.operational?.entregas_pendentes_total || 0).toString()}
                             loading={isLoading}
-                            onClick={() => navigate('/vendas?status=pendente')}
-                            subtitle="a entregar"
+                            // Backlog (todos os meses), igual ao A Receber → destino com emAberto.
+                            onClick={() => navigate('/vendas?status=pendente&emAberto=1')}
+                            subtitle="a entregar · todos os meses"
+                            tooltip="Pedidos aguardando entrega, de qualquer mês (não filtra pelo mês selecionado)."
                         />
                         <KpiCardDesktop
                             title="Entregues"
