@@ -159,6 +159,7 @@ describe('Domain Mappers', () => {
                 status: 'entregue',
                 pago: true,
                 forma_pagamento: 'pix',
+                valor_pago: '200.00', // coluna mantida pelo trigger = SUM(pagamentos)
                 taxa_entrega: '15.00',
                 criado_em: '2023-10-01T10:00:00Z',
                 atualizado_em: '2023-10-01T10:00:00Z',
@@ -195,8 +196,50 @@ describe('Domain Mappers', () => {
             expect(result.pagamentos.length).toBe(2)
             expect(result.contato?.nome).toBe('Cliente Teste')
 
-            // Critical assertion: The mapper calculates valorPago by reducing pagamentos
+            // Contrato: valorPago vem da COLUNA `valor_pago` (mantida pelo trigger
+            // update_venda_pagamento_summary), não da soma de `pagamentos` — assim
+            // frontend e views/RPCs leem a mesma fonte e não podem divergir.
             expect(result.valorPago).toBe(200)
+        })
+
+        it('lê valorPago da coluna, não da soma — venda LEGADA paga sem linhas de pagamento', () => {
+            // ~342 vendas de dez/2025→mar/2026 foram pagas antes da arquitetura de
+            // pagamentos_venda: têm pago=true e a coluna certa, mas ZERO linhas.
+            // Somar `pagamentos` reportaria R$0 numa venda paga.
+            const dbVenda = {
+                id: 'v-legado',
+                total: '50.00',
+                pago: true,
+                valor_pago: '50.00',
+                forma_pagamento: 'dinheiro',
+                itens: [],
+                pagamentos: [],
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = toDomainVenda(dbVenda as unknown as any)
+
+            expect(result.valorPago).toBe(50)
+            expect(result.pagamentos).toEqual([])
+        })
+
+        it('brinde tem valorPago 0 mesmo que sobre alguma linha de pagamento', () => {
+            // Brinde nunca recebe dinheiro; o banco garante valor_pago=0 (fn_brinde_invariante).
+            const dbVenda = {
+                id: 'v-brinde',
+                total: '25.00',
+                pago: false,
+                valor_pago: '0',
+                forma_pagamento: 'brinde',
+                itens: [],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pagamentos: [{ id: 'p-orfao', venda_id: 'v-brinde', valor: 25, metodo: 'pix', data: '2026-01-19' } as unknown as any],
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = toDomainVenda(dbVenda as unknown as any)
+
+            expect(result.valorPago).toBe(0)
         })
 
         it('should handle Venda without pagamentos gracefully', () => {
