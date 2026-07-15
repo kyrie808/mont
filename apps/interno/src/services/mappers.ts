@@ -189,7 +189,13 @@ export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
         itens: (dbVenda.itens || []).map(i => toDomainItemVenda(i as ItemVendaRowWithProduto)),
         pagamentos: (dbVenda.pagamentos || []).map(p => toDomainPagamento(p as PagamentoRowWithStatus)),
         criadoEm: dbVenda.criado_em,
-        valorPago: (dbVenda.pagamentos || []).reduce((acc: number, p) => acc + Number((p as PagamentoRowWithStatus).valor || 0), 0),
+        // Lê a COLUNA, não a soma de `pagamentos`. `vendas.valor_pago` é mantida pelo
+        // trigger `update_venda_pagamento_summary` (recalcula o SUM real a cada
+        // insert/update/delete de pagamento), e é a mesma fonte que as views/RPCs usam
+        // — logo frontend e Dashboard não têm como divergir.
+        // Somar `pagamentos` aqui dava 0 nas ~342 vendas legadas (pagas antes da
+        // arquitetura de pagamentos_venda, extintas em abr/2026), que têm a coluna certa.
+        valorPago: Number(dbVenda.valor_pago || 0),
         origem: dbVenda.origem,
         dataPrevistaPagamento: dbVenda.data_prevista_pagamento,
         notaEntregador: dbVenda.nota_entregador ?? null,
