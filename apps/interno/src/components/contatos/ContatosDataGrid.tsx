@@ -15,19 +15,13 @@ import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-colu
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
 import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
-import { formatDate, cn } from '@mont/shared'
+import { formatCurrency, formatDate, cn } from '@mont/shared'
 import type { DomainContato } from '@/types/domain'
+import type { ContatoResumo } from '@/hooks/useContatosResumo'
+import { classificarContato, SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
 
-// Mesma semântica de cor do ContatoCard (statusConfig) — tokens, nunca cor crua.
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-    cliente: { label: 'Cliente', cls: 'bg-success/10 text-success border-success/20' },
-    lead: { label: 'Lead', cls: 'bg-warning/10 text-warning-strong border-warning/20' },
-    inativo: { label: 'Inativo', cls: 'bg-muted text-muted-foreground border-border' },
-    fornecedor: { label: 'Fornecedor', cls: 'bg-foreground/5 text-foreground/80 border-foreground/20' },
-}
-
-function StatusBadge({ status }: { status: DomainContato['status'] }) {
-    const s = STATUS_CONFIG[status] ?? STATUS_CONFIG.cliente
+function SegmentoBadge({ segmento }: { segmento: SegmentoCliente }) {
+    const s = SEGMENTO_BADGE[segmento]
     return <span className={cn(badgeBase, s.cls)}>{s.label}</span>
 }
 
@@ -49,9 +43,10 @@ function abrirWhatsapp(telefone: string) {
 
 interface ContatosDataGridProps {
     contatos: DomainContato[]
+    resumo: ReadonlyMap<string, ContatoResumo>
 }
 
-export function ContatosDataGrid({ contatos }: ContatosDataGridProps) {
+export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
     const navigate = useNavigate()
     const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
 
@@ -80,9 +75,37 @@ export function ContatosDataGrid({ contatos }: ContatosDataGridProps) {
             cell: ({ row }) => <TipoBadge tipo={row.original.tipo} />,
         },
         {
-            accessorKey: 'status',
-            header: ({ column }) => <DataGridColumnHeader column={column} title="Status" />,
-            cell: ({ row }) => <StatusBadge status={row.original.status} />,
+            id: 'segmento',
+            accessorFn: (c) => SEGMENTO_BADGE[classificarContato(c, resumo.get(c.id))].label,
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Segmento" />,
+            cell: ({ row }) => <SegmentoBadge segmento={classificarContato(row.original, resumo.get(row.original.id))} />,
+        },
+        {
+            id: 'compras',
+            accessorFn: (c) => resumo.get(c.id)?.totalCompras ?? 0,
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Compras" />,
+            cell: ({ row }) => {
+                const n = resumo.get(row.original.id)?.totalCompras ?? 0
+                return <span className={cn('tabular-nums whitespace-nowrap', n === 0 && 'text-muted-foreground')}>{n || '—'}</span>
+            },
+        },
+        {
+            id: 'totalGasto',
+            accessorFn: (c) => resumo.get(c.id)?.totalGasto ?? 0,
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Total gasto" />,
+            cell: ({ row }) => {
+                const v = resumo.get(row.original.id)?.totalGasto ?? 0
+                return <span className={cn('tabular-nums whitespace-nowrap font-medium', v === 0 ? 'text-muted-foreground' : 'text-foreground')}>{v > 0 ? formatCurrency(v) : '—'}</span>
+            },
+        },
+        {
+            id: 'ultimaCompra',
+            accessorFn: (c) => resumo.get(c.id)?.ultimaCompra ?? '',
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Última compra" />,
+            cell: ({ row }) => {
+                const d = resumo.get(row.original.id)?.ultimaCompra
+                return <span className="text-muted-foreground whitespace-nowrap">{d ? formatDate(d) : '—'}</span>
+            },
         },
         {
             id: 'cidade',
@@ -116,7 +139,7 @@ export function ContatosDataGrid({ contatos }: ContatosDataGridProps) {
             ),
             meta: { headerClassName: 'w-12', cellClassName: 'w-12' },
         },
-    ], [])
+    ], [resumo])
 
     const table = useReactTable({
         data: contatos,

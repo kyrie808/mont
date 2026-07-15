@@ -2,6 +2,7 @@ import { User, Store, Calendar, MessageCircle, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { formatRelativeDate } from '@mont/shared'
 import type { DomainContato } from '../../types/domain'
+import type { SegmentoCliente } from '../../utils/segmentoCliente'
 import { cn } from '@mont/shared'
 
 interface ContatoCardProps {
@@ -9,9 +10,11 @@ interface ContatoCardProps {
     onClick?: () => void
     nomeIndicador?: string | null
     nivelEmoji?: string
+    /** Segmento derivado do comportamento (funil). Se ausente, cai em 'cliente'. */
+    segmento?: SegmentoCliente
 }
 
-export function ContatoCard({ contato, onClick }: ContatoCardProps) {
+export function ContatoCard({ contato, onClick, segmento }: ContatoCardProps) {
     const navigate = useNavigate()
 
     const handleClick = () => {
@@ -28,8 +31,13 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
         window.open(`https://wa.me/55${phone}`, '_blank')
     }
 
-    // Status Colors/Styles (via tokens semânticos)
+    // Cores/estilos por segmento (via tokens semânticos)
     const statusConfig = {
+        vip: {
+            badge: "bg-primary/10 text-primary border-primary/20",
+            dot: "bg-primary",
+            label: "VIP"
+        },
         cliente: {
             badge: "bg-success/10 text-success border-success/20",
             dot: "bg-success",
@@ -44,10 +52,15 @@ export function ContatoCard({ contato, onClick }: ContatoCardProps) {
             badge: "bg-muted text-muted-foreground border-border",
             dot: "bg-muted-foreground",
             label: "Inativo"
+        },
+        fornecedor: {
+            badge: "bg-foreground/5 text-foreground/80 border-foreground/20",
+            dot: "bg-muted-foreground",
+            label: "Fornecedor"
         }
     }
 
-    const currentStatus = statusConfig[contato.status as keyof typeof statusConfig] || statusConfig.cliente
+    const currentStatus = statusConfig[segmento ?? 'cliente'] || statusConfig.cliente
     const relativeDate = formatRelativeDate(contato.criadoEm)
     const TipoIcon = contato.tipo === 'B2B' ? Store : User
 
