@@ -19,6 +19,9 @@ export interface TopIndicador {
     indicadorId: string
     nome: string
     totalIndicados: number
+    /** Quantos dos trazidos compraram. Opcional: o JSON do Início passou a trazê-lo,
+     *  mas mantemos opcional para tolerar payloads antigos em cache. */
+    totalConvertidos?: number
     totalVendasIndicados: number
 }
 

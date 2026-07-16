@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Award, Trash2 } from 'lucide-react'
+import { Award, Trash2, UserPlus } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button, PageSkeleton } from '../components/ui'
 import { ContatoFormModal } from '../components/contatos'
+import { IndicadosDetalhe } from '../components/dashboard/IndicadosDetalhe'
 import { useContato, useContatos } from '../hooks/useContatos'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
 import { useIndicacoes } from '../hooks/useIndicacoes'
+import { useIndicadosDoIndicador } from '../hooks/useIndicadosDoIndicador'
 import { calcularNivelCliente } from '../utils/calculations'
 
 // Refactored Sub-components
@@ -29,6 +31,8 @@ export function ContatoDetalhe() {
     const { deleteContato } = useContatos()
     const { vendas: vendasRaw } = useVendas({ excludeCatalogo: true, contatoId: id })
     const { getIndicadorById } = useIndicacoes()
+    // Quem esta pessoa trouxe (drill-down por compra real; só renderiza se houver).
+    const { indicados: indicadosDoContato } = useIndicadosDoIndicador(id ?? null)
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -89,9 +93,22 @@ export function ContatoDetalhe() {
                     <ContatoInteracoes contatoId={contato.id} />
 
                     <LoyaltyJourney
-                        contatoId={contato.id} 
-                        isB2B={contato.tipo === 'B2B'} 
+                        contatoId={contato.id}
+                        isB2B={contato.tipo === 'B2B'}
                     />
+
+                    {/* Clientes que esta pessoa indicou (só aparece se trouxe alguém) */}
+                    {indicadosDoContato.length > 0 && (
+                        <div className="p-5 bg-card border border-border rounded-xl shadow-card">
+                            <div className="flex items-center gap-2 mb-3">
+                                <UserPlus className="h-5 w-5 text-primary shrink-0" />
+                                <h3 className="text-sm font-bold text-foreground">
+                                    Clientes que indicou ({indicadosDoContato.length})
+                                </h3>
+                            </div>
+                            <IndicadosDetalhe indicadorId={contato.id} />
+                        </div>
+                    )}
 
                     <CatalogOrdersHistory contatoId={contato.id} />
 

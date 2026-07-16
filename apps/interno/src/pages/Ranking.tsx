@@ -156,8 +156,10 @@ export function Ranking() {
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                         {activeTab === 'compras' ? (
                             <>
-                                {/* Período: Geral × Do mês (os 2 aparelhos). MonthPicker só no desktop. */}
-                                <div className="mb-2 flex flex-col gap-3 lg:flex-row lg:items-center">
+                                {/* Período: Geral × Do mês (os 2 aparelhos). MonthPicker só no desktop,
+                                    em linha própria e largura total — a faixa dos 12 meses precisa de
+                                    espaço (em container estreito ela cortava os meses seguintes). */}
+                                <div className="mb-2 space-y-3">
                                     <div className="lg:w-64">
                                         <Tabs value={escopo} onValueChange={(v) => setEscopo(v as EscopoType)}>
                                             <TabsList>
@@ -167,7 +169,7 @@ export function Ranking() {
                                         </Tabs>
                                     </div>
                                     {escopo === 'mes' && (
-                                        <div className="hidden lg:block lg:w-64">
+                                        <div className="hidden lg:block">
                                             <MonthPicker selectedMonth={selectedMonthStr} onMonthSelect={handleMonthSelect} />
                                         </div>
                                     )}
@@ -175,7 +177,13 @@ export function Ranking() {
                                 <RankingComprasWidget data={topRanking} loading={loading} />
                             </>
                         ) : (
-                            <TopIndicadoresWidget />
+                            <>
+                                {/* Indicações é vitalício (o prêmio não reinicia por mês) — sem toggle. */}
+                                <p className="mb-2 text-xs text-muted-foreground">
+                                    Ranking vitalício · total de todas as indicações
+                                </p>
+                                <TopIndicadoresWidget />
+                            </>
                         )}
                     </div>
 

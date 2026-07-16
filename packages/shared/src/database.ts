@@ -2095,6 +2095,7 @@ export type Database = {
         Row: {
           indicador_id: string | null
           nome: string | null
+          total_convertidos: number | null
           total_indicados: number | null
           total_vendas_indicados: number | null
         }
@@ -2733,6 +2734,17 @@ export type Database = {
       replace_combo_componentes: {
         Args: { p_combo_id: string; p_itens: Json }
         Returns: undefined
+      }
+      rpc_indicados_do_indicador: {
+        Args: { p_indicador_id: string }
+        Returns: {
+          comprou: boolean
+          contato_id: string
+          nome: string
+          total_compras: number
+          total_gasto: number
+          ultima_compra: string
+        }[]
       }
       rpc_perfil_extras: { Args: { p_contato_id: string }; Returns: Json }
       rpc_ranking_compras: {
