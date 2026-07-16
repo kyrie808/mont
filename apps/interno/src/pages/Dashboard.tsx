@@ -47,7 +47,7 @@ export function Dashboard() {
     const { alertas: aPagarAlertas, count: countPagar, refetch: refetchPagar } = useAlertasContasAPagar()
     const [lucroData, setLucroData] = useState({ lucro_bruto: 0, receita_bruta: 0, lucro_liquido: 0, margem_liquida_pct: 0 })
     const [liquidadoData, setLiquidadoData] = useState({ vendas_liquidadas: 0, total_liquidado: 0 })
-    const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_contatos_abertos: 0 })
+    const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_contatos_abertos: 0, a_receber_mes: 0 })
     const [metas, setMetas] = useState({
         faturamento: 0, receitaFrete: 0, ticketMedio: 0, liquidado: 0,
         lucroBruto: 0, lucroLiquido: 0, vendas: 0, itens: 0, meses: 0,
@@ -63,7 +63,7 @@ export function Dashboard() {
             const [lucro, liquidado, aReceber, metasData] = await Promise.all([
                 dashboardService.getLucroLiquido(date),
                 dashboardService.getLiquidadoMes(date),
-                dashboardService.getTotalAReceber(),
+                dashboardService.getTotalAReceber(year, month),
                 dashboardService.getMetasMedia(),
             ])
             setLucroData(lucro)
@@ -304,8 +304,8 @@ export function Dashboard() {
                             // Card é backlog (todos os meses) → o destino precisa do emAberto,
                             // senão a lista vem escopada no mês e não bate com o número do card.
                             onClick={() => navigate('/vendas?pagamento=pendente&emAberto=1')}
-                            subtitle={`${aReceberGlobal.total_contatos_abertos} clientes · todos os meses`}
-                            tooltip="Total de fiado em aberto de todos os meses (não filtra pelo mês selecionado)."
+                            subtitle={`${aReceberGlobal.total_contatos_abertos} clientes · ${formatCurrency(aReceberGlobal.a_receber_mes)} de ${selectedMonthStr.toLowerCase()}`}
+                            tooltip="Total de fiado em aberto de TODOS os meses — dívida não tem mês, e a maior parte dela é de meses anteriores. O valor do mês selecionado aparece como contexto."
                         />
                         <KpiCardDesktop
                             title="Liquidado no Mês"
@@ -337,7 +337,9 @@ export function Dashboard() {
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
-                            onClick={() => navigate('/vendas')}
+                            // O número é count(status='entregue') → o destino leva o mesmo
+                            // recorte, senão o card diz 76 e a lista mostra 81.
+                            onClick={() => navigate('/vendas?status=entregue')}
                         />
 
                         <KpiCard
@@ -410,7 +412,9 @@ export function Dashboard() {
                             title="Entregues"
                             value={(metrics?.operational?.entregas_hoje_realizadas || 0).toString()}
                             loading={isLoading}
-                            onClick={() => navigate('/vendas?status=entregue')}
+                            // Sem clique de propósito: este número é do DIA, e a página de
+                            // Vendas só recorta por mês — qualquer destino mostraria outro
+                            // número e voltaria a mentir. Card informativo.
                             subtitle="hoje"
                         />
                     </div>

@@ -248,16 +248,27 @@ export const dashboardService = {
         }))
     },
 
-    async getTotalAReceber(): Promise<{
+    /**
+     * A Receber. O `total_a_receber` é de TODOS os meses de propósito — dívida não tem
+     * mês, e 62% dela está fora do mês corrente (a mais antiga é de jan/2026). O mês
+     * (`a_receber_mes`) vem como contexto, nunca como o número principal.
+     */
+    async getTotalAReceber(ano?: number, mes?: number): Promise<{
         total_a_receber: number
         total_contatos_abertos: number
+        a_receber_mes: number
     }> {
-        const { data, error } = await supabase.rpc('rpc_total_a_receber_dashboard')
-        if (error || !data) return { total_a_receber: 0, total_contatos_abertos: 0 }
-        const result = data as { total_a_receber: number; total_contatos_abertos: number }
+        const vazio = { total_a_receber: 0, total_contatos_abertos: 0, a_receber_mes: 0 }
+        const { data, error } = await supabase.rpc('rpc_total_a_receber_dashboard', {
+            p_ano: ano ?? undefined,
+            p_mes: mes ?? undefined,
+        })
+        if (error || !data) return vazio
+        const result = data as { total_a_receber: number; total_contatos_abertos: number; a_receber_mes: number }
         return {
             total_a_receber: Number(result.total_a_receber) || 0,
-            total_contatos_abertos: Number(result.total_contatos_abertos) || 0
+            total_contatos_abertos: Number(result.total_contatos_abertos) || 0,
+            a_receber_mes: Number(result.a_receber_mes) || 0,
         }
     },
 

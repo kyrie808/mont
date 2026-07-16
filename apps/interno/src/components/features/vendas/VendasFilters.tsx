@@ -1,5 +1,5 @@
-import { Search, Truck, DollarSign } from 'lucide-react'
-import { Badge } from '../../../components/ui'
+import { Search, Truck, DollarSign, Plus } from 'lucide-react'
+import { Badge, Button } from '../../../components/ui'
 import { VendasFilterTabs } from './VendasFilterTabs'
 
 
@@ -22,6 +22,9 @@ interface VendasFiltersProps {
         parcial: number
         pendente: number
     }
+    /** Toggle "ver todas" — no mobile ele mora aqui (o desktop tem o dele na top bar). */
+    emAberto: boolean
+    onToggleEmAberto: () => void
 }
 
 export function VendasFilters({
@@ -32,7 +35,9 @@ export function VendasFilters({
     pagamentoFilter,
     setPagamentoFilter,
     deliveryCounts,
-    paymentCounts
+    paymentCounts,
+    emAberto,
+    onToggleEmAberto
 }: VendasFiltersProps) {
     return (
         <div className="mb-6 space-y-4">
@@ -134,6 +139,19 @@ export function VendasFilters({
                         </Badge>
                     </div>
                 </div>
+
+                {/* "Ver todas": a lista é o mês; isto traz as vendas em aberto de meses
+                    anteriores (a entregar + a receber) pra nada se perder por esquecimento. */}
+                <Button
+                    variant={emAberto ? 'primary' : 'outline'}
+                    size="sm"
+                    className="w-full"
+                    aria-pressed={emAberto}
+                    onClick={onToggleEmAberto}
+                    leftIcon={<Plus className="h-3.5 w-3.5" />}
+                >
+                    Incluir em aberto de outros meses
+                </Button>
             </div>
         </div>
     )

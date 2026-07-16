@@ -8,7 +8,6 @@ import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { useVendas } from '../hooks/useVendas'
 import { useDashboardFilter } from '../hooks/useDashboardFilter'
 import { useMonthPickerBinding } from '../hooks/useMonthPickerBinding'
-import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useDebounce } from '../hooks/useDebounce'
 
 // Sub-components
@@ -50,11 +49,10 @@ export function Vendas() {
 
     // `includePending` monta um OR no service: (data no mês) OU pendente OU não-paga —
     // ou seja, arrasta vendas em aberto de QUALQUER mês pra dentro do mês selecionado.
-    // Desktop (afirma um mês via MonthPicker): mês limpo por padrão; o toggle traz as
-    // pendências de volta explicitamente. Mobile: intocado — segue trazendo tudo, como hoje.
-    const isDesktop = useMediaQuery('(min-width: 1024px)')
+    // A lista é "o mês": só traz o resto quando o usuário pede, no toggle explícito.
+    // Os lembretes (o que falta entregar / o que falta receber) moram no Início.
     const emAberto = searchParams.get('emAberto') === '1'
-    const includePending = isDesktop ? emAberto : true
+    const includePending = emAberto
 
     const toggleEmAberto = () => {
         const newParams = new URLSearchParams(searchParams)
@@ -153,6 +151,7 @@ export function Vendas() {
                         statusFilter={statusFilter} setStatusFilter={setStatusFilter}
                         pagamentoFilter={pagamentoFilter} setPagamentoFilter={setPagamentoFilter}
                         deliveryCounts={deliveryCounts} paymentCounts={paymentCounts}
+                        emAberto={emAberto} onToggleEmAberto={toggleEmAberto}
                     />
                     <VendasList
                         vendas={paginateArray(filteredVendas, currentPage, PAGE_SIZE)}
