@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_users: {
@@ -2710,7 +2735,10 @@ export type Database = {
         Returns: undefined
       }
       rpc_perfil_extras: { Args: { p_contato_id: string }; Returns: Json }
-      rpc_total_a_receber_dashboard: { Args: never; Returns: Json }
+      rpc_total_a_receber_dashboard: {
+        Args: { p_ano?: number; p_mes?: number }
+        Returns: Json
+      }
       update_purchase_order_with_items: {
         Args: {
           p_fornecedor_id: string
@@ -2859,6 +2887,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
