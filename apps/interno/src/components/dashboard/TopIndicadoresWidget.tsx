@@ -2,21 +2,8 @@
 import { cn, formatCurrency } from '@mont/shared'
 import { useTopIndicadores } from '@/hooks/useTopIndicadores'
 import { PodiumCard } from '@/components/dashboard/PodiumCard'
+import { rankBadge, medalColor } from '@/components/dashboard/rankBadge'
 import type { TopIndicador } from '@/services/dashboardService'
-
-/** Cor do badge de posição por rank (ouro/prata/bronze tokenizado). Desktop. */
-function rankBadge(rank: number): string {
-    switch (rank) {
-        case 1: return 'bg-accent/20 text-foreground ring-1 ring-accent/50'
-        case 2: return 'bg-muted text-muted-foreground ring-1 ring-border'
-        case 3: return 'bg-warning-strong/15 text-warning-strong ring-1 ring-warning-strong/40'
-        default: return 'bg-muted text-muted-foreground'
-    }
-}
-function medalColor(rank: number): string {
-    return rank === 1 ? 'text-accent' : rank === 2 ? 'text-muted-foreground' : 'text-warning-strong'
-}
-
 
 
 interface TopIndicadoresWidgetProps {

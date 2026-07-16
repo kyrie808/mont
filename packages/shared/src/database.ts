@@ -2735,6 +2735,16 @@ export type Database = {
         Returns: undefined
       }
       rpc_perfil_extras: { Args: { p_contato_id: string }; Returns: Json }
+      rpc_ranking_compras: {
+        Args: { p_ano?: number; p_mes?: number }
+        Returns: {
+          contato_id: string
+          nome: string
+          total_compras: number
+          total_pontos: number
+          ultima_compra: string
+        }[]
+      }
       rpc_total_a_receber_dashboard: {
         Args: { p_ano?: number; p_mes?: number }
         Returns: Json
