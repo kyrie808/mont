@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Award, AlertTriangle } from 'lucide-react'
 import { useRptMargemPorSku, useRptGiroEstoque, useRptLtvPorCliente } from '../../hooks/useRelatorios'
+import type { PeriodoRel } from '../../services/relatorioService'
 import {
     HBars,
     C_FG, C_MUTED_FG, C_MUTED, C_MONO,
@@ -11,19 +12,22 @@ import {
     Insight, ChartCard, MiniStat, SectionEyebrow, EmptyState,
 } from './RelatoriosUI'
 
-interface Props { animKey: string | number }
+interface Props { animKey: string | number; periodo: PeriodoRel }
 
-const STATUS_COLOR: Record<string, string> = {
-    alto:   '#13ec13',
-    medio:  '#3B82F6',
-    baixo:  '#E5A50A',
-    parado: '#ef4444',
+// Contrato REAL da view/RPC de giro: status_estoque ∈ {zerado, abaixo_minimo, ok}.
+// (Antes o código esperava alto/medio/baixo/parado — não casava, seção ficava zerada.)
+type StatusEstoque = 'zerado' | 'abaixo_minimo' | 'ok'
+const STOCK_META: Record<StatusEstoque, { label: string; color: string }> = {
+    zerado:        { label: 'zerado',       color: '#ef4444' },
+    abaixo_minimo: { label: 'abaixo mín.',  color: '#E5A50A' },
+    ok:            { label: 'ok',           color: '#13ec13' },
 }
+const stockColor = (s: string): string => STOCK_META[s as StatusEstoque]?.color ?? C_MUTED
 
-export function TabProdutos({ animKey }: Props) {
-    const { data: margens = [], isLoading: l1, isError: e1 } = useRptMargemPorSku()
-    const { data: giros = [],   isLoading: l2, isError: e2 } = useRptGiroEstoque()
-    const { data: ltvRows = [] }                              = useRptLtvPorCliente()
+export function TabProdutos({ animKey, periodo }: Props) {
+    const { data: margens = [], isLoading: l1, isError: e1 } = useRptMargemPorSku(periodo)
+    const { data: giros = [],   isLoading: l2, isError: e2 } = useRptGiroEstoque(periodo)
+    const { data: ltvRows = [] }                              = useRptLtvPorCliente(periodo)
 
     const isLoading = l1 || l2
     const isError   = e1 || e2
@@ -40,49 +44,64 @@ export function TabProdutos({ animKey }: Props) {
                 qtd:        m.total_vendido ?? 0,
                 estoque:    g?.estoque_atual ?? 0,
                 estoqueMin: g?.estoque_minimo ?? 0,
-                status:     (g?.status_estoque ?? 'medio') as 'alto' | 'medio' | 'baixo' | 'parado',
+                status:     (g?.status_estoque ?? 'ok') as StatusEstoque,
             }
         })
     }, [margens, giros])
 
     const derived = useMemo(() => {
-        if (!produtos.length) return null
+        if (!produtos.length && !giros.length) return null
 
-        const margemMedia   = Math.round(produtos.reduce((s, p) => s + p.margem, 0) / produtos.length)
-        const baixoEstoque  = produtos.filter(p => p.status === 'baixo').length
-        const parados       = produtos.filter(p => p.status === 'parado').length
+        const margemMedia   = produtos.length ? Math.round(produtos.reduce((s, p) => s + p.margem, 0) / produtos.length) : 0
         const totalReceita  = produtos.reduce((s, p) => s + p.receita, 0)
 
         const topByReceita  = [...produtos].sort((a, b) => b.receita - a.receita).slice(0, 7)
         const top5Receita   = topByReceita.slice(0, 5).reduce((s, p) => s + p.receita, 0)
         const top5Pct       = totalReceita > 0 ? Math.round(top5Receita / totalReceita * 100) : 0
 
-        const statusCount   = produtos.reduce((acc, p) => {
-            acc[p.status] = (acc[p.status] ?? 0) + 1
+        // Saúde do estoque vem de `giros` (TODOS os produtos ativos, snapshot atual de estoque),
+        // não de `produtos` (só os que venderam no período) — senão um zerado que não vendeu somia.
+        const statusCount = giros.reduce((acc, g) => {
+            const s = (g.status_estoque ?? 'ok') as StatusEstoque
+            acc[s] = (acc[s] ?? 0) + 1
             return acc
-        }, {} as Record<string, number>)
-        const baixoOuParado = produtos.filter(p => p.status === 'baixo' || p.status === 'parado')
+        }, {} as Record<StatusEstoque, number>)
+        const zerados   = statusCount.zerado ?? 0
+        const abaixoMin = statusCount.abaixo_minimo ?? 0
+        // "Precisam de atenção" = zerado + abaixo do mínimo (zerado primeiro).
+        const precisamAtencao = giros
+            .filter(g => g.status_estoque === 'zerado' || g.status_estoque === 'abaixo_minimo')
+            .map(g => ({
+                id:         g.produto_id,
+                nome:       g.nome ?? '—',
+                status:     (g.status_estoque ?? 'ok') as StatusEstoque,
+                estoque:    g.estoque_atual ?? 0,
+                estoqueMin: g.estoque_minimo ?? 0,
+                qtd:        g.total_vendido_historico ?? 0,
+            }))
+            .sort((a, b) => (a.status === 'zerado' ? 0 : 1) - (b.status === 'zerado' ? 0 : 1))
 
         const topProduct = margens[0]
 
+        // outros = receita de vendas sem itens (LTV-produto − receita itemizada). Ambos produto.
         const totalLtv      = ltvRows.reduce((s, c) => s + (c.ltv_total ?? 0), 0)
         const outrosReceita = Math.round(totalLtv) - Math.round(totalReceita)
 
         return {
-            margemMedia, baixoEstoque, parados, totalReceita,
+            margemMedia, zerados, abaixoMin, totalReceita,
             topByReceita, top5Receita, top5Pct,
-            statusCount, baixoOuParado, topProduct, outrosReceita,
+            statusCount, precisamAtencao, totalProdutos: giros.length, topProduct, outrosReceita,
         }
-    }, [produtos, margens, ltvRows])
+    }, [produtos, giros, margens, ltvRows])
 
     if (isLoading) return <EmptyState msg="Carregando dados de produtos…" />
     if (isError)   return <EmptyState msg="Falha ao carregar dados de produtos." />
     if (!derived)  return <EmptyState msg="Sem dados de produtos disponíveis." />
 
     const {
-        margemMedia, baixoEstoque, parados, totalReceita,
+        margemMedia, zerados, abaixoMin, totalReceita,
         topByReceita, top5Receita, top5Pct,
-        statusCount, baixoOuParado, topProduct, outrosReceita,
+        statusCount, precisamAtencao, totalProdutos, topProduct, outrosReceita,
     } = derived
 
     return (
@@ -118,11 +137,11 @@ export function TabProdutos({ animKey }: Props) {
                     }}>{(topProduct?.margem_pct ?? 0).toFixed(1)}% mg.</div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 14 }}>
-                    <MiniStat label="Margem média"  value={`${margemMedia}%`} />
-                    <MiniStat label="Baixo estoque" value={fmtNum(baixoEstoque)}
-                              accent={baixoEstoque > 0 ? '#c2410c' : undefined} />
-                    <MiniStat label="Parados"       value={fmtNum(parados)}
-                              accent={parados > 0 ? '#b91c1c' : undefined} />
+                    <MiniStat label="Margem média" value={`${margemMedia}%`} />
+                    <MiniStat label="Abaixo mín."  value={fmtNum(abaixoMin)}
+                              accent={abaixoMin > 0 ? '#c2410c' : undefined} />
+                    <MiniStat label="Zerados"      value={fmtNum(zerados)}
+                              accent={zerados > 0 ? '#b91c1c' : undefined} />
                 </div>
             </ChartCard>
 
@@ -139,7 +158,7 @@ export function TabProdutos({ animKey }: Props) {
                             animKey={`${animKey}-tr`}
                             data={topByReceita.map(p => ({
                                 id: p.id, label: p.nome, value: p.receita,
-                                color: STATUS_COLOR[p.status],
+                                color: stockColor(p.status),
                             }))}
                             fmtValue={fmtBRLk}
                             width={326}
@@ -167,37 +186,36 @@ export function TabProdutos({ animKey }: Props) {
             <section>
                 <Insight
                     eyebrow="Saúde do estoque"
-                    headline={`${baixoOuParado.length} SKUs precisam de atenção.`}
-                    sub={`${statusCount.alto ?? 0} giro alto · ${statusCount.medio ?? 0} médio · ${statusCount.baixo ?? 0} baixo · ${statusCount.parado ?? 0} parado`}
+                    headline={`${precisamAtencao.length} SKUs precisam de atenção.`}
+                    sub={`${statusCount.zerado ?? 0} zerados · ${statusCount.abaixo_minimo ?? 0} abaixo do mínimo · ${statusCount.ok ?? 0} ok`}
                 />
                 <ChartCard padding={14}>
                     <StockBar
                         key={`${animKey}-sb`}
                         counts={[
-                            { id: 'alto',   label: 'alto',   n: statusCount.alto   ?? 0, color: STATUS_COLOR.alto   },
-                            { id: 'medio',  label: 'médio',  n: statusCount.medio  ?? 0, color: STATUS_COLOR.medio  },
-                            { id: 'baixo',  label: 'baixo',  n: statusCount.baixo  ?? 0, color: STATUS_COLOR.baixo  },
-                            { id: 'parado', label: 'parado', n: statusCount.parado ?? 0, color: STATUS_COLOR.parado },
+                            { id: 'zerado',        label: 'zerado',      n: statusCount.zerado        ?? 0, color: STOCK_META.zerado.color },
+                            { id: 'abaixo_minimo', label: 'abaixo mín.', n: statusCount.abaixo_minimo ?? 0, color: STOCK_META.abaixo_minimo.color },
+                            { id: 'ok',            label: 'ok',          n: statusCount.ok            ?? 0, color: STOCK_META.ok.color },
                         ]}
-                        total={produtos.length}
+                        total={totalProdutos}
                         animKey={`${animKey}-sb`}
                     />
 
-                    {baixoOuParado.length > 0 && (
+                    {precisamAtencao.length > 0 && (
                         <div style={{ marginTop: 14 }}>
                             <SectionEyebrow icon={<AlertTriangle size={11} strokeWidth={2.4} style={{ color: '#b91c1c' }} />}>
                                 <span style={{ color: '#b91c1c' }}>Atenção</span>
                             </SectionEyebrow>
-                            {baixoOuParado.map((p, i) => (
+                            {precisamAtencao.map((p, i) => (
                                 <StockRow
                                     key={p.id ?? i}
                                     nome={p.nome}
-                                    status={p.status}
+                                    status={STOCK_META[p.status].label}
                                     estoque={p.estoque}
                                     estoqueMin={p.estoqueMin}
                                     qtd={p.qtd}
-                                    color={STATUS_COLOR[p.status]}
-                                    last={i === baixoOuParado.length - 1}
+                                    color={stockColor(p.status)}
+                                    last={i === precisamAtencao.length - 1}
                                 />
                             ))}
                         </div>

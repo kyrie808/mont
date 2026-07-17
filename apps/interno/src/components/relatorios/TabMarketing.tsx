@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useRptMarketingPedidos } from '../../hooks/useRelatorios'
+import type { PeriodoRel } from '../../services/relatorioService'
 import {
     Donut, StackedArea,
     C_FG, C_MUTED_FG, C_MUTED, C_MONO,
@@ -10,10 +11,10 @@ import {
     Insight, ChartCard, MiniStat, LegendDot, EmptyState,
 } from './RelatoriosUI'
 
-interface Props { animKey: string | number }
+interface Props { animKey: string | number; periodo: PeriodoRel }
 
-export function TabMarketing({ animKey }: Props) {
-    const { data: rows = [], isLoading, isError } = useRptMarketingPedidos()
+export function TabMarketing({ animKey, periodo }: Props) {
+    const { data: rows = [], isLoading, isError } = useRptMarketingPedidos(periodo)
 
     const derived = useMemo(() => {
         if (!rows.length) return null
@@ -137,9 +138,9 @@ export function TabMarketing({ animKey }: Props) {
             {/* 4. TICKET MÉDIO POR CANAL ───────────────────────────────────── */}
             <section>
                 <Insight
-                    eyebrow="Ticket médio · Canal"
+                    eyebrow="Ticket por pedido · Canal"
                     headline={`Online ${ticketOnline >= ticketDireto ? 'lidera' : 'abaixo'} com ${fmtBRL(ticketOnline)}.`}
-                    sub={`Direto: ${fmtBRL(ticketDireto)} · diferença de ${fmtBRL(Math.abs(ticketOnline - ticketDireto))}`}
+                    sub={`Direto: ${fmtBRL(ticketDireto)} · média por pedido (não por cliente/dia)`}
                 />
                 <ChartCard padding={14}>
                     <TicketCompare

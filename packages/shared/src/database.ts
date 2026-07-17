@@ -2761,6 +2761,80 @@ export type Database = {
         Args: { p_ano?: number; p_mes?: number }
         Returns: Json
       }
+      rpt_distribuicao_forma_pagamento_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          faturamento: number
+          forma_pagamento: string
+          pct_contagem: number
+          pct_faturamento: number
+          total_vendas: number
+          vendas_liquidadas: number
+          vendas_pendentes: number
+        }[]
+      }
+      rpt_giro_estoque_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          codigo: string
+          estoque_atual: number
+          estoque_minimo: number
+          giro_estoque: number
+          nome: string
+          produto_id: string
+          status_estoque: string
+          total_comprado_historico: number
+          total_vendido_historico: number
+        }[]
+      }
+      rpt_ltv_por_cliente_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          contato_id: string
+          dias_relacionamento: number
+          ltv_total: number
+          nome: string
+          primeira_compra: string
+          status: string
+          status_atividade: string
+          telefone: string
+          ticket_medio: number
+          tipo: string
+          total_pedidos: number
+          ultima_compra: string
+        }[]
+      }
+      rpt_margem_por_sku_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          codigo: string
+          custo_total: number
+          lucro_bruto: number
+          margem_pct: number
+          nome: string
+          produto_id: string
+          receita_total: number
+          total_vendido: number
+          unidade: string
+        }[]
+      }
+      rpt_marketing_pedidos_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          data_venda: string
+          entregas_count: number
+          faturamento: number
+          faturamento_direto: number
+          faturamento_online: number
+          mes_iso: string
+          pedidos_diretos: number
+          pedidos_online: number
+          retiradas_count: number
+          semana_iso: string
+          ticket_medio: number
+          total_pedidos: number
+        }[]
+      }
       update_purchase_order_with_items: {
         Args: {
           p_fornecedor_id: string

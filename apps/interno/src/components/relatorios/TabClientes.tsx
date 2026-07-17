@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 import { useRptLtvPorCliente } from '../../hooks/useRelatorios'
+import type { PeriodoRel } from '../../services/relatorioService'
 import {
     HBars,
     C_FG, C_MUTED_FG, C_MONO,
@@ -10,15 +11,15 @@ import {
     Insight, ChartCard, EmptyState,
 } from './RelatoriosUI'
 
-interface Props { animKey: string | number }
+interface Props { animKey: string | number; periodo: PeriodoRel }
 
 function diasSemComprar(ultimaCompra: string | null): number {
     if (!ultimaCompra) return 999
     return Math.floor((Date.now() - new Date(ultimaCompra).getTime()) / 86400000)
 }
 
-export function TabClientes({ animKey }: Props) {
-    const { data: clientes = [], isLoading, isError } = useRptLtvPorCliente()
+export function TabClientes({ animKey, periodo }: Props) {
+    const { data: clientes = [], isLoading, isError } = useRptLtvPorCliente(periodo)
 
     const derived = useMemo(() => {
         if (!clientes.length) return null

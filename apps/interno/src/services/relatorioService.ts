@@ -1,39 +1,46 @@
+import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
-import type { Tables } from '@mont/shared'
+import type { Database, Tables } from '@mont/shared'
+
+type Fn<T extends keyof Database['public']['Functions']> = Database['public']['Functions'][T]['Returns']
+
+/** Período dos relatórios: um mês específico OU geral (todos os tempos). */
+export type PeriodoRel = { tipo: 'geral' } | { tipo: 'mes'; ano: number; mes: number }
+
+/** Converte o período no intervalo [desde, ate] (yyyy-MM-dd). Geral = null/null. */
+export function rangeDoPeriodo(p: PeriodoRel): { desde: string | null; ate: string | null } {
+    if (p.tipo === 'geral') return { desde: null, ate: null }
+    const first = new Date(p.ano, p.mes - 1, 1)
+    const last = new Date(p.ano, p.mes, 0) // dia 0 do mês seguinte = último dia deste mês
+    return { desde: format(first, 'yyyy-MM-dd'), ate: format(last, 'yyyy-MM-dd') }
+}
 
 export const relatorioService = {
     // ── Clientes ──────────────────────────────────────────────────────────────
 
-    async getLtvPorCliente(): Promise<Tables<'rpt_ltv_por_cliente'>[]> {
-        const { data, error } = await supabase
-            .from('rpt_ltv_por_cliente')
-            .select('*')
-            .order('ltv_total', { ascending: false, nullsFirst: false })
+    async getLtvPorCliente(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_ltv_por_cliente_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_ltv_por_cliente_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
         if (error) throw error
         return data ?? []
     },
 
     // ── Produtos ──────────────────────────────────────────────────────────────
 
-    async getMargemPorSku(): Promise<Tables<'rpt_margem_por_sku'>[]> {
-        const { data, error } = await supabase
-            .from('rpt_margem_por_sku')
-            .select('*')
-            .order('margem_pct', { ascending: false, nullsFirst: false })
+    async getMargemPorSku(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_margem_por_sku_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_margem_por_sku_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
         if (error) throw error
         return data ?? []
     },
 
-    async getGiroEstoque(): Promise<Tables<'rpt_giro_estoque'>[]> {
-        const { data, error } = await supabase
-            .from('rpt_giro_estoque')
-            .select('*')
-            .order('giro_estoque', { ascending: true, nullsFirst: false })
+    async getGiroEstoque(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_giro_estoque_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_giro_estoque_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
         if (error) throw error
         return data ?? []
     },
 
     // ── Financeiro ────────────────────────────────────────────────────────────
+    //   O comparativo é mensal (view canônica, reconcilia com o Início). A aba recorta
+    //   as linhas client-side pelo mês/geral selecionado.
 
     async getFaturamentoComparativo(): Promise<Tables<'rpt_faturamento_comparativo'>[]> {
         const { data, error } = await supabase
@@ -45,11 +52,8 @@ export const relatorioService = {
         return data ?? []
     },
 
-    async getDistribuicaoFormaPagamento(): Promise<Tables<'rpt_distribuicao_forma_pagamento'>[]> {
-        const { data, error } = await supabase
-            .from('rpt_distribuicao_forma_pagamento')
-            .select('*')
-            .order('faturamento', { ascending: false, nullsFirst: false })
+    async getDistribuicaoFormaPagamento(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_distribuicao_forma_pagamento_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_distribuicao_forma_pagamento_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
         if (error) throw error
         return data ?? []
     },
@@ -74,11 +78,8 @@ export const relatorioService = {
 
     // ── Marketing ─────────────────────────────────────────────────────────────
 
-    async getMarketingPedidos(): Promise<Tables<'vw_marketing_pedidos'>[]> {
-        const { data, error } = await supabase
-            .from('vw_marketing_pedidos')
-            .select('*')
-            .order('data_venda', { ascending: false })
+    async getMarketingPedidos(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_marketing_pedidos_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_marketing_pedidos_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
         if (error) throw error
         return data ?? []
     },

@@ -15,8 +15,21 @@ import {
     fmtBRL, fmtBRLk, MES_ABBREV,
     Insight, ChartCard, MiniStat, DeltaPill, EmptyState,
 } from './RelatoriosUI'
+import type { PeriodoRel } from '../../services/relatorioService'
 
-interface Props { animKey: string | number }
+interface Props { animKey: string | number; periodo: PeriodoRel }
+
+/** Linha do hero do Financeiro (mês selecionado) ou agregado no Geral. */
+interface HeroFat {
+    ano: number | null
+    mes: number | null
+    faturamento: number
+    lucro_estimado: number
+    receita_frete: number
+    margem_bruta_pct: number
+    faturamento_anterior: number
+    variacao_faturamento_percentual: number
+}
 
 function pgLabel(forma: string | null): string {
     const s = (forma ?? '').toLowerCase()
@@ -39,21 +52,54 @@ function pgColor(forma: string | null): string {
     return '#71717a'
 }
 
-export function TabFinanceiro({ animKey }: Props) {
+export function TabFinanceiro({ animKey, periodo }: Props) {
     const { data: faturamentos = [], isLoading: l1, isError: e1 } = useRptFaturamentoComparativo()
-    const { data: formasPgto = [],   isLoading: l2, isError: e2 } = useRptDistribuicaoFormaPagamento()
+    const { data: formasPgto = [],   isLoading: l2, isError: e2 } = useRptDistribuicaoFormaPagamento(periodo)
     const { data: recebimentos = [], isLoading: l3, isError: e3 } = useRptProjecaoRecebimentos()
     const { data: contasPagar = [],  isLoading: l4, isError: e4 } = useRptProjecaoPagamentos()
 
     const isLoading = l1 || l2 || l3 || l4
     const isError   = e1 || e2 || e3 || e4
 
-    const fat = faturamentos[0]
+    const isGeral = periodo.tipo === 'geral'
 
-    const fat8m = useMemo(() => faturamentos.slice(0, 8).reverse().map(f => ({
-        label: MES_ABBREV[(f.mes ?? 1) - 1],
-        valor: f.faturamento ?? 0,
-    })), [faturamentos])
+    // Hero + evolução respondem ao período. Mês = linha daquele mês (evolução até ele);
+    // Geral = agregado de todos os meses (evolução = todos).
+    const { fat, fat8m } = useMemo<{ fat: HeroFat | null; fat8m: { label: string; valor: number }[] }>(() => {
+        if (!faturamentos.length) return { fat: null, fat8m: [] }
+        const ym = (f: { ano: number | null; mes: number | null }) => (f.ano ?? 0) * 100 + (f.mes ?? 0)
+        const asc = [...faturamentos].sort((a, b) => ym(a) - ym(b))
+
+        if (periodo.tipo === 'geral') {
+            const soma = (k: 'faturamento' | 'lucro_estimado' | 'receita_frete') =>
+                faturamentos.reduce((s, f) => s + (f[k] ?? 0), 0)
+            const faturamento = soma('faturamento')
+            const lucro = soma('lucro_estimado')
+            const heroFat: HeroFat = {
+                ano: null, mes: null, faturamento, lucro_estimado: lucro,
+                receita_frete: soma('receita_frete'),
+                margem_bruta_pct: faturamento > 0 ? Math.round(lucro / faturamento * 1000) / 10 : 0,
+                faturamento_anterior: 0, variacao_faturamento_percentual: 0,
+            }
+            return { fat: heroFat, fat8m: asc.slice(-8).map(f => ({ label: MES_ABBREV[(f.mes ?? 1) - 1], valor: f.faturamento ?? 0 })) }
+        }
+
+        const alvo = periodo.ano * 100 + periodo.mes
+        const idx = asc.findIndex(f => ym(f) === alvo)
+        const row = asc[idx]
+        const heroFat: HeroFat = row
+            ? {
+                ano: row.ano, mes: row.mes, faturamento: row.faturamento ?? 0,
+                lucro_estimado: row.lucro_estimado ?? 0, receita_frete: row.receita_frete ?? 0,
+                margem_bruta_pct: row.margem_bruta_pct ?? 0,
+                faturamento_anterior: row.faturamento_anterior ?? 0,
+                variacao_faturamento_percentual: row.variacao_faturamento_percentual ?? 0,
+              }
+            : { ano: periodo.ano, mes: periodo.mes, faturamento: 0, lucro_estimado: 0, receita_frete: 0,
+                margem_bruta_pct: 0, faturamento_anterior: 0, variacao_faturamento_percentual: 0 }
+        const upTo = asc.filter(f => ym(f) <= alvo).slice(-8)
+        return { fat: heroFat, fat8m: upTo.map(f => ({ label: MES_ABBREV[(f.mes ?? 1) - 1], valor: f.faturamento ?? 0 })) }
+    }, [faturamentos, periodo])
 
     const pagamentos = useMemo(() => formasPgto.map(p => ({
         forma: p.forma_pagamento,
@@ -116,12 +162,15 @@ export function TabFinanceiro({ animKey }: Props) {
     const receitaFrete = fat.receita_frete ?? 0
 
     const maxFat = fat8m.reduce((a, b) => a.valor > b.valor ? a : b, { label: '?', valor: 0 })
-    const currMesAbrev = MES_ABBREV[(fat.mes ?? 1) - 1]
+    const currMesAbrev = fat.mes ? MES_ABBREV[fat.mes - 1] : ''
     const prevMesAbrev = (fat.mes ?? 1) > 1 ? MES_ABBREV[(fat.mes! - 2)] : MES_ABBREV[11]
-    const emCurso = isMesEmCurso(fat.ano ?? 0, fat.mes ?? 0)
-    const evolHeadline = emCurso
-        ? `${currMesAbrev}/${fat.ano} · mês em curso.`
-        : `${currMesAbrev} está ${Math.abs(delta).toFixed(1)}% ${delta >= 0 ? 'acima' : 'abaixo'} de ${prevMesAbrev}.`
+    const emCurso = !isGeral && isMesEmCurso(fat.ano ?? 0, fat.mes ?? 0)
+    const periodoLabel = isGeral ? 'Geral' : `${currMesAbrev}/${fat.ano}`
+    const evolHeadline = isGeral
+        ? `Todos os tempos · ${fat8m.length} ${fat8m.length === 1 ? 'mês' : 'meses'}.`
+        : emCurso
+            ? `${currMesAbrev}/${fat.ano} · mês em curso.`
+            : `${currMesAbrev} está ${Math.abs(delta).toFixed(1)}% ${delta >= 0 ? 'acima' : 'abaixo'} de ${prevMesAbrev}.`
 
     const topPg   = pagamentos[0]
     const fiadoPg = pagamentos.find(p => p.forma?.toLowerCase().includes('fiado'))
@@ -142,7 +191,7 @@ export function TabFinanceiro({ animKey }: Props) {
                             letterSpacing: '0.18em', color: C_MUTED_FG,
                         }}>
                             <DollarSign size={11} strokeWidth={2.4} />
-                            {`Faturamento (produto) · ${currMesAbrev}/${fat.ano}`}
+                            {`Faturamento (produto) · ${periodoLabel}`}
                         </div>
                         <div style={{
                             fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
@@ -150,7 +199,9 @@ export function TabFinanceiro({ animKey }: Props) {
                             letterSpacing: '-0.04em', lineHeight: 1, marginTop: 6,
                         }}>{fmtBRL(faturamento)}</div>
                         <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {emCurso ? (
+                            {isGeral ? (
+                                <span style={{ fontSize: 11, color: C_MUTED_FG, fontWeight: 600 }}>todos os tempos</span>
+                            ) : emCurso ? (
                                 <span style={{ fontSize: 11, color: C_MUTED_FG, fontWeight: 600 }}>mês em curso</span>
                             ) : (
                                 <>
@@ -210,7 +261,7 @@ export function TabFinanceiro({ animKey }: Props) {
             {pagamentos.length > 0 && (
                 <section>
                     <Insight
-                        eyebrow="Como recebemos · total"
+                        eyebrow={`Como recebemos · ${periodoLabel}`}
                         headline={topPg ? `${topPg.label} paga ${topPg.pct}% do que entra.` : 'Distribuição por forma de pagamento.'}
                         sub={pgInsightSub}
                     />
