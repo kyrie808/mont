@@ -9,6 +9,7 @@ import { PedidosCompraDataGrid } from '../components/features/purchase-orders/Pe
 import { PurchaseOrderDetail } from '../components/features/purchase-orders/PurchaseOrderDetail'
 import { PurchaseOrderPaymentModal } from '../components/features/purchase-orders/PurchaseOrderPaymentModal'
 import { usePurchaseOrders } from '../hooks/usePurchaseOrders'
+import { useToast } from '../components/ui/Toast'
 import type { DomainPurchaseOrderWithItems, CreatePurchaseOrder, UpdatePurchaseOrder, PurchaseOrderPaymentStatus, CreatePurchaseOrderItem } from '../types/domain'
 import { formatCurrency, formatDate } from '@mont/shared'
 import { WidgetSkeleton } from '../components/ui'
@@ -28,10 +29,24 @@ export function PedidosCompra() {
         loading,
         createOrder,
         updateOrder,
+        receberPedido,
         addPayment,
         deletePayment,
         refetch
     } = usePurchaseOrders()
+    const toast = useToast()
+
+    // Confirmar recebimento agora DÁ ENTRADA no estoque (RPC receive_purchase_order):
+    // incrementa o estoque_atual dos itens e recalcula o custo médio. Antes só mudava o status.
+    const handleConfirmReceipt = async (order: DomainPurchaseOrderWithItems) => {
+        try {
+            await receberPedido(order.id)
+            toast.success('Recebimento confirmado — estoque atualizado.')
+        } catch (e) {
+            const msg = (e as Error)?.message ?? ''
+            toast.error(msg.includes('already received') ? 'Este pedido já foi recebido.' : 'Não foi possível confirmar o recebimento.')
+        }
+    }
 
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [isNicknamesOpen, setIsNicknamesOpen] = useState(false)
@@ -156,7 +171,7 @@ export function PedidosCompra() {
                                         <PurchaseOrderDetail
                                             order={orderWithItems}
                                             onDeletePayment={setPaymentToDelete}
-                                            onConfirmReceipt={(o) => updateOrder({ id: o.id, updates: { status: 'received', dataRecebimento: new Date().toISOString() } })}
+                                            onConfirmReceipt={handleConfirmReceipt}
                                             onQuitar={setPaymentModalOrder}
                                         />
                                     </Card>
@@ -170,7 +185,7 @@ export function PedidosCompra() {
                                 orders={orders}
                                 onEdit={handleEdit}
                                 onDeletePayment={setPaymentToDelete}
-                                onConfirmReceipt={(order) => updateOrder({ id: order.id, updates: { status: 'received', dataRecebimento: new Date().toISOString() } })}
+                                onConfirmReceipt={handleConfirmReceipt}
                                 onQuitar={(order) => setPaymentModalOrder(order)}
                             />
                         </div>

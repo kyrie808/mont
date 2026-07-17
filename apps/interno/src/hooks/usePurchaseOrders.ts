@@ -27,6 +27,17 @@ export function usePurchaseOrders() {
         }
     })
 
+    // Confirmar recebimento DÁ ENTRADA no estoque (RPC receive_purchase_order) — por isso
+    // invalida também 'produtos' (e o relatório de estoque, que deriva de produtos/vendas).
+    const receberMutation = useMutation({
+        mutationFn: (id: string) => purchaseOrderService.receberPedido(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['purchase_orders'] })
+            queryClient.invalidateQueries({ queryKey: ['produtos'] })
+            queryClient.invalidateQueries({ queryKey: ['relatorio'] })
+        }
+    })
+
     const deleteMutation = useMutation({
         mutationFn: (id: string) => purchaseOrderService.deleteOrder(id),
         onSuccess: () => {
@@ -56,6 +67,7 @@ export function usePurchaseOrders() {
         refetch,
         createOrder: createMutation.mutateAsync,
         updateOrder: updateMutation.mutateAsync,
+        receberPedido: receberMutation.mutateAsync,
         deleteOrder: deleteMutation.mutateAsync,
         addPayment: addPaymentMutation.mutateAsync,
         deletePayment: deletePaymentMutation.mutateAsync

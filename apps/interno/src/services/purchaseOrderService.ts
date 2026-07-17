@@ -126,6 +126,20 @@ export const purchaseOrderService = {
         return result
     },
 
+    /**
+     * Confirma o recebimento via RPC `receive_purchase_order`: DÁ ENTRADA no estoque
+     * (incrementa `produtos.estoque_atual`), recalcula o custo médio ponderado e marca
+     * o pedido como `received`. A RPC trava contra receber duas vezes ("already received").
+     * (Antes o recebimento só mudava o status — o estoque nunca subia por compra.)
+     */
+    async receberPedido(id: string): Promise<DomainPurchaseOrderWithItems> {
+        const { error } = await supabase.rpc('receive_purchase_order', { p_order_id: id })
+        if (error) throw error
+        const result = await this.fetchOrderById(id)
+        if (!result) throw new Error('Pedido recebido mas não encontrado')
+        return result
+    },
+
     async deleteOrder(id: string): Promise<void> {
         const { error } = await supabase
             .from('purchase_orders')
