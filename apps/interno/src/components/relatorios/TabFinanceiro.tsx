@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { isMesEmCurso } from '../../utils/calculations'
-import { AlertTriangle, DollarSign, PiggyBank, CreditCard } from 'lucide-react'
+import { AlertTriangle, DollarSign, ChevronDown, ChevronRight, CalendarOff } from 'lucide-react'
 import {
     useRptFaturamentoComparativo,
     useRptDistribuicaoFormaPagamento,
@@ -8,8 +8,8 @@ import {
     useRptProjecaoPagamentos,
 } from '../../hooks/useRelatorios'
 import {
-    Sparkline, AreaChart, Donut, StackedTimeline,
-    C_MUTED_FG, C_FG, C_MONO,
+    Sparkline, AreaChart, Donut,
+    C_MUTED_FG, C_FG, C_MONO, COL_PRIMARY, COL_DESTRUCT, COL_WARNING,
 } from './Charts'
 import {
     fmtBRL, fmtBRLk, MES_ABBREV,
@@ -62,6 +62,7 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
     const isError   = e1 || e2 || e3 || e4
 
     const isGeral = periodo.tipo === 'geral'
+    const [verTodosAtraso, setVerTodosAtraso] = useState(false)
 
     // Hero + evolução respondem ao período. Mês = linha daquele mês (evolução até ele);
     // Geral = agregado de todos os meses (evolução = todos).
@@ -109,45 +110,45 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
         color: pgColor(p.forma_pagamento),
     })), [formasPgto])
 
-    const { timelineData, totalReceber, totalPagar, saldoPrevisto, qtdVendas, qtdContas, atrasados, vencidas } = useMemo(() => {
+    const receberInfo = useMemo(() => {
         const today = new Date(); today.setHours(0, 0, 0, 0)
-        const openReceb = recebimentos.filter(r => (r.saldo_aberto ?? 0) > 0)
+        const open = recebimentos.filter(r => (r.saldo_aberto ?? 0) > 0)
         const openPagar = contasPagar.filter(p => (p.saldo_devedor ?? 0) > 0)
+        const sum = (rows: typeof open) => rows.reduce((s, r) => s + (r.saldo_aberto ?? 0), 0)
 
-        const totalReceber = openReceb.reduce((s, r) => s + (r.saldo_aberto ?? 0), 0)
+        const vencidos = open.filter(r => r.situacao === 'vencido')
+        const semData  = open.filter(r => r.situacao === 'sem_data')
+        const aVencer  = open.filter(r => ['vence_hoje', 'proximos_7_dias', 'proximos_30_dias'].includes(r.situacao ?? ''))
+        const futuro   = open.filter(r => r.situacao === 'futuro')
+
+        const totalReceber = sum(open)
         const totalPagar   = openPagar.reduce((s, p) => s + (p.saldo_devedor ?? 0), 0)
-        const qtdVendas  = openReceb.length
-        const qtdContas  = openPagar.length
 
-        const atrasados = openReceb
-            .filter(r => r.situacao === 'vencido')
+        const buckets = [
+            { id: 'vencido',  label: 'Vencido',  qtd: vencidos.length, valor: sum(vencidos), color: COL_DESTRUCT, alerta: true },
+            { id: 'sem_data', label: 'Sem data', qtd: semData.length,  valor: sum(semData),  color: COL_WARNING,  alerta: true },
+            { id: 'a_vencer', label: 'A vencer',  qtd: aVencer.length,  valor: sum(aVencer),  color: COL_PRIMARY,  alerta: false },
+            { id: 'futuro',   label: 'Futuro',    qtd: futuro.length,   valor: sum(futuro),   color: C_MUTED_FG,   alerta: false },
+        ]
+
+        const atrasadosLista = vencidos
             .map(r => ({
                 id: r.venda_id ?? Math.random().toString(),
                 nome: r.contato_nome ?? '—',
                 dias: r.data_prevista_pagamento
-                    ? Math.floor((today.getTime() - new Date(r.data_prevista_pagamento).getTime()) / 86400000)
-                    : 0,
+                    ? Math.floor((today.getTime() - new Date(r.data_prevista_pagamento).getTime()) / 86400000) : 0,
                 valor: r.saldo_aberto ?? 0,
             }))
             .sort((a, b) => b.dias - a.dias)
-            .slice(0, 6)
 
-        const vencidas = openPagar.filter(p => (p.dias_atraso ?? 0) > 0).length
-
-        const timelineData = Array.from({ length: 30 }, (_, i) => {
-            const date = new Date(today.getTime() + i * 86400000)
-            const dateStr = date.toISOString().slice(0, 10)
-            const receber = openReceb
-                .filter(r => r.data_prevista_pagamento === dateStr)
-                .reduce((s, r) => s + (r.saldo_aberto ?? 0), 0)
-            const pagar = openPagar
-                .filter(p => p.data_vencimento === dateStr)
-                .reduce((s, p) => s + (p.saldo_devedor ?? 0), 0)
-            return { dia: i + 1, receber, pagar }
-        })
-
-        const saldoPrevisto = Math.round(totalReceber) - Math.round(totalPagar)
-        return { timelineData, totalReceber, totalPagar, saldoPrevisto, qtdVendas, qtdContas, atrasados, vencidas }
+        return {
+            totalReceber, totalPagar, qtdVendas: open.length,
+            buckets, atrasadosLista,
+            semDataQtd: semData.length, semDataValor: sum(semData),
+            qtdContas: openPagar.length,
+            vencidasPagar: openPagar.filter(p => (p.dias_atraso ?? 0) > 0).length,
+            saldoPrevisto: Math.round(sum(open)) - Math.round(totalPagar),
+        }
     }, [recebimentos, contasPagar])
 
     if (isLoading) return <EmptyState msg="Carregando dados financeiros…" />
@@ -179,10 +180,10 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
         : pagamentos[1] ? `${pagamentos[1].label}: ${pagamentos[1].pct}% · ${fmtBRL(pagamentos[1].valor)}` : ''
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-4 lg:items-start">
 
             {/* 1. HERO ─────────────────────────────────────────────────────── */}
-            <ChartCard padding={16}>
+            <ChartCard padding={16} className="lg:col-span-12">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div>
                         <div style={{
@@ -238,7 +239,7 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
 
             {/* 2. EVOLUÇÃO 8 MESES ────────────────────────────────────────── */}
             {fat8m.length > 1 && (
-                <section>
+                <section className="lg:col-span-8">
                     <Insight
                         eyebrow="Evolução 8 meses"
                         headline={evolHeadline}
@@ -259,7 +260,7 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
 
             {/* 3. FORMAS DE PAGAMENTO ─────────────────────────────────────── */}
             {pagamentos.length > 0 && (
-                <section>
+                <section className="lg:col-span-4">
                     <Insight
                         eyebrow={`Como recebemos · ${periodoLabel}`}
                         headline={topPg ? `${topPg.label} paga ${topPg.pct}% do que entra.` : 'Distribuição por forma de pagamento.'}
@@ -269,10 +270,10 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                             <Donut
                                 animKey={`${animKey}-pg`}
-                                segments={pagamentos.map(p => ({ pct: p.pct, color: p.color }))}
+                                segments={pagamentos.map(p => ({ pct: p.pct, color: p.color, label: p.label, value: p.valor }))}
                                 centerLabel={topPg ? `${topPg.pct}%` : '—'}
                                 centerSub={topPg?.label}
-                                size={110}
+                                size={120}
                             />
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {pagamentos.map(p => (
@@ -294,127 +295,75 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
                 </section>
             )}
 
-            {/* 4. PRÓXIMOS 30 DIAS ────────────────────────────────────────── */}
-            <section>
+            {/* 4. A RECEBER (fiado) — por urgência ─────────────────────────── */}
+            <section className="lg:col-span-12">
                 <Insight
-                    eyebrow="Próximos 30 dias"
-                    headline={`${fmtBRL(totalReceber)} para entrar, ${fmtBRL(totalPagar)} para sair.`}
-                    sub={`Saldo previsto: ${saldoPrevisto >= 0 ? '+' : '−'}${fmtBRL(Math.abs(saldoPrevisto))}`}
+                    eyebrow="A receber · fiado"
+                    headline={`${fmtBRL(receberInfo.totalReceber)} a receber em ${receberInfo.qtdVendas} vendas.`}
+                    sub={`A pagar: ${fmtBRL(receberInfo.totalPagar)}${receberInfo.qtdContas > 0 ? ` · ${receberInfo.qtdContas} contas` : ''}${receberInfo.vencidasPagar > 0 ? ` · ${receberInfo.vencidasPagar} vencidas` : ''}`}
                 />
                 <ChartCard padding={14}>
-                    <StackedTimeline
-                        data={timelineData}
-                        width={326} height={130}
-                        animKey={`${animKey}-tl`}
-                    />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-                        {/* A receber */}
-                        <div style={{
-                            background: 'rgba(19,236,19,.06)',
-                            border: '1px solid rgba(19,236,19,.20)',
-                            borderRadius: 10, padding: '10px 12px',
-                        }}>
-                            <div style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                                letterSpacing: '0.08em', color: '#0a8a0a',
+                    {/* Buckets de urgência */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                        {receberInfo.buckets.map(b => (
+                            <div key={b.id} style={{
+                                borderRadius: 10, padding: '10px 12px',
+                                background: 'hsl(var(--muted) / 0.35)',
+                                border: '1px solid hsl(var(--border))',
+                                borderLeft: `3px solid ${b.color}`,
                             }}>
-                                <PiggyBank size={11} strokeWidth={2.4} /> A receber
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: b.color }}>
+                                    <span style={{ width: 7, height: 7, borderRadius: 999, background: b.color }} /> {b.label}
+                                </div>
+                                <div style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', fontSize: 16, fontWeight: 700, color: C_FG, letterSpacing: '-0.02em', marginTop: 4, lineHeight: 1 }}>{fmtBRL(b.valor)}</div>
+                                <div style={{ fontSize: 10, fontWeight: 500, color: C_MUTED_FG, marginTop: 2 }}>{b.qtd} {b.qtd === 1 ? 'venda' : 'vendas'}</div>
                             </div>
-                            <div style={{
-                                fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
-                                fontSize: 16, fontWeight: 700, color: C_FG,
-                                letterSpacing: '-0.02em', marginTop: 3, lineHeight: 1.05,
-                            }}>{fmtBRL(totalReceber)}</div>
-                            <div style={{
-                                fontSize: 10, fontWeight: 500, color: C_MUTED_FG, marginTop: 2,
-                                fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
-                            }}>
-                                {qtdVendas} vendas
-                                {atrasados.length > 0 && (
-                                    <span style={{ color: '#b91c1c', fontWeight: 700, marginLeft: 4 }}>
-                                        · {atrasados.length} atrasadas
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        {/* A pagar */}
-                        <div style={{
-                            background: 'rgba(239,68,68,.05)',
-                            border: '1px solid rgba(239,68,68,.15)',
-                            borderRadius: 10, padding: '10px 12px',
-                        }}>
-                            <div style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                                letterSpacing: '0.08em', color: '#b91c1c',
-                            }}>
-                                <CreditCard size={11} strokeWidth={2.4} /> A pagar
-                            </div>
-                            <div style={{
-                                fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
-                                fontSize: 16, fontWeight: 700, color: C_FG,
-                                letterSpacing: '-0.02em', marginTop: 3, lineHeight: 1.05,
-                            }}>{fmtBRL(totalPagar)}</div>
-                            <div style={{
-                                fontSize: 10, fontWeight: 500, color: C_MUTED_FG, marginTop: 2,
-                                fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
-                            }}>
-                                {qtdContas} contas
-                                {vencidas > 0 && (
-                                    <span style={{ color: '#b91c1c', fontWeight: 700, marginLeft: 4 }}>
-                                        · {vencidas} vencidas
-                                    </span>
-                                )}
-                            </div>
-                        </div>
+                        ))}
                     </div>
 
-                    {/* Atrasados list */}
-                    {atrasados.length > 0 && (
-                        <div style={{ marginTop: 14 }}>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                marginBottom: 8,
-                            }}>
-                                <span style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                                    fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                                    letterSpacing: '0.12em', color: '#b91c1c',
-                                }}>
-                                    <AlertTriangle size={11} strokeWidth={2.4} />
-                                    {atrasados.length} {atrasados.length === 1 ? 'pagamento atrasado' : 'pagamentos atrasados'}
-                                </span>
+                    {/* Sem data — o dinheiro esquecido */}
+                    {receberInfo.semDataQtd > 0 && (
+                        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'hsl(var(--warning-strong) / 0.08)', border: '1px solid hsl(var(--warning-strong) / 0.3)' }}>
+                            <CalendarOff size={16} strokeWidth={2.2} style={{ color: COL_WARNING, flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: C_FG, fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums' }}>{fmtBRL(receberInfo.semDataValor)} sem data de cobrança</div>
+                                <div style={{ fontSize: 11, color: C_MUTED_FG, fontWeight: 500 }}>{receberInfo.semDataQtd} fiados sem previsão — defina uma data pra não esquecer de cobrar.</div>
                             </div>
-                            {atrasados.map((a, i) => (
+                        </div>
+                    )}
+
+                    {/* Lista de atrasados (contagem REAL, expansível) */}
+                    {receberInfo.atrasadosLista.length > 0 && (
+                        <div style={{ marginTop: 14 }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: COL_DESTRUCT, marginBottom: 8 }}>
+                                <AlertTriangle size={11} strokeWidth={2.4} />
+                                {receberInfo.atrasadosLista.length} {receberInfo.atrasadosLista.length === 1 ? 'pagamento atrasado' : 'pagamentos atrasados'}
+                            </div>
+                            {(verTodosAtraso ? receberInfo.atrasadosLista : receberInfo.atrasadosLista.slice(0, 6)).map((a, i, arr) => (
                                 <div key={a.id} style={{
-                                    display: 'flex', alignItems: 'center', gap: 10,
-                                    padding: '8px 0',
-                                    borderBottom: i === atrasados.length - 1 ? 'none' : `1px solid hsl(var(--border))`,
+                                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+                                    borderBottom: i === arr.length - 1 ? 'none' : '1px solid hsl(var(--border))',
                                 }}>
-                                    <span style={{
-                                        flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                                        background: 'rgba(239,68,68,.08)', color: '#b91c1c',
-                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    }}>
+                                    <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: 'hsl(var(--destructive) / 0.1)', color: COL_DESTRUCT, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <AlertTriangle size={13} strokeWidth={2.4} />
                                     </span>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{
-                                            fontSize: 12, fontWeight: 700, color: C_FG,
-                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                        }}>{a.nome}</div>
-                                        <div style={{
-                                            fontSize: 10, fontWeight: 700, color: '#b91c1c',
-                                            fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', marginTop: 1,
-                                        }}>{a.dias}d de atraso</div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: C_FG, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.nome}</div>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: COL_DESTRUCT, fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>{a.dias}d de atraso</div>
                                     </div>
-                                    <span style={{
-                                        fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
-                                        fontSize: 13, fontWeight: 700, color: C_FG, letterSpacing: '-0.01em',
-                                    }}>{fmtBRL(a.valor)}</span>
+                                    <span style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', fontSize: 13, fontWeight: 700, color: C_FG, letterSpacing: '-0.01em' }}>{fmtBRL(a.valor)}</span>
                                 </div>
                             ))}
+                            {receberInfo.atrasadosLista.length > 6 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setVerTodosAtraso(v => !v)}
+                                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Lexend', fontSize: 11, fontWeight: 700, color: C_MUTED_FG }}
+                                >
+                                    {verTodosAtraso ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    {verTodosAtraso ? 'Ver menos' : `Ver todos (${receberInfo.atrasadosLista.length})`}
+                                </button>
+                            )}
                         </div>
                     )}
                 </ChartCard>

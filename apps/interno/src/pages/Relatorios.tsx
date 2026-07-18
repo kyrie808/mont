@@ -77,8 +77,15 @@ export function Relatorios() {
         <>
             <Header title="Relatórios" showBack />
             <PageContainer className="pt-0 pb-24 bg-transparent">
+              {/* Largura cheia, igual às outras páginas do desktop (sem cap/centralização) */}
+              <div>
 
-                {/* Período: Mês (com navegação) ou Geral — vale para as 4 abas */}
+                {/* Período: Mês/Geral — some na aba Clientes (vitalícia por natureza). */}
+                {tab === 'clientes' ? (
+                    <div style={{ padding: '10px 0', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: C_MUTED_FG }}>
+                        Base completa · vitalício
+                    </div>
+                ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', flexWrap: 'wrap' }}>
                     <button
                         onClick={setModoMes}
@@ -110,6 +117,7 @@ export function Relatorios() {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Abas */}
                 <div style={{ position: 'relative', display: 'flex', borderBottom: '1px solid hsl(var(--border))' }}>
@@ -142,10 +150,11 @@ export function Relatorios() {
                 {/* Conteúdo */}
                 <div style={{ paddingTop: 16 }}>
                     {tab === 'financeiro' && <TabFinanceiro periodo={periodo} animKey={childAnimKey} />}
-                    {tab === 'clientes'   && <TabClientes   periodo={periodo} animKey={childAnimKey} />}
+                    {tab === 'clientes'   && <TabClientes   animKey={childAnimKey} />}
                     {tab === 'produtos'   && <TabProdutos   periodo={periodo} animKey={childAnimKey} />}
                     {tab === 'marketing'  && <TabMarketing  periodo={periodo} animKey={childAnimKey} />}
                 </div>
+              </div>
             </PageContainer>
         </>
     )

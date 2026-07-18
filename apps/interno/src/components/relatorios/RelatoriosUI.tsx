@@ -47,11 +47,12 @@ interface ChartCardProps {
     children: React.ReactNode
     padding?: number
     style?: React.CSSProperties
+    className?: string
 }
 
-export function ChartCard({ children, padding = 14, style }: ChartCardProps) {
+export function ChartCard({ children, padding = 14, style, className }: ChartCardProps) {
     return (
-        <div style={{
+        <div className={className} style={{
             background: C_CARD,
             border: `1px solid ${C_BORDER}`,
             borderRadius: 16,
