@@ -36,14 +36,20 @@ export function TabMarketing({ animKey, periodo }: Props) {
         const ticketOnline = totalPedOnline > 0 ? totalOnline / totalPedOnline : 0
         const ticketDireto = totalPedDireto > 0 ? totalDireto / totalPedDireto : 0
 
-        const sorted = [...rows].sort((a, b) =>
-            (a.semana_iso ?? '').localeCompare(b.semana_iso ?? ''))
-        const last8  = sorted.slice(-8)
-        const weeks  = last8.map(r => ({
-            sem:    (r.semana_iso ?? '').replace(/^\d{4}-/, ''),
-            online: r.pedidos_online  ?? 0,
-            direto: r.pedidos_diretos ?? 0,
-        }))
+        // Os rows vêm por DIA (o RPC agrupa por data). Agrega por semana_iso e pega as
+        // últimas 8 SEMANAS reais (antes pegava os últimos 8 dias → eixo "28 28 28…").
+        const porSemana = new Map<string, { online: number; direto: number }>()
+        for (const r of rows) {
+            const k = r.semana_iso ?? ''
+            const acc = porSemana.get(k) ?? { online: 0, direto: 0 }
+            acc.online += r.pedidos_online ?? 0
+            acc.direto += r.pedidos_diretos ?? 0
+            porSemana.set(k, acc)
+        }
+        const weeks = [...porSemana.entries()]
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .slice(-8)
+            .map(([k, v]) => ({ sem: k.replace(/^\d{4}-W?/, ''), online: v.online, direto: v.direto }))
 
         const onlineGrowth = weeks.length >= 2 && weeks[0].online > 0
             ? Math.round(((weeks[weeks.length - 1].online - weeks[0].online) / weeks[0].online) * 100)
@@ -71,17 +77,17 @@ export function TabMarketing({ animKey, periodo }: Props) {
     } = derived
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-4 lg:items-start">
 
             {/* 1. KPI GRID ─────────────────────────────────────────────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div className="lg:col-span-12" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                 <MiniStat label="Pedidos"   value={fmtNum(totalPedidos)} />
                 <MiniStat label="Entregas"  value={fmtNum(totalEntregas)} />
                 <MiniStat label="Retiradas" value={fmtNum(totalRetiradas)} />
             </div>
 
             {/* 2. ORIGEM DAS VENDAS ────────────────────────────────────────── */}
-            <section>
+            <section className="lg:col-span-5">
                 <Insight
                     eyebrow="Origem · Canal"
                     headline={`Online representa ${onlinePct}% do faturamento.`}
@@ -92,12 +98,12 @@ export function TabMarketing({ animKey, periodo }: Props) {
                         <Donut
                             animKey={`${animKey}-mk-d`}
                             segments={[
-                                { pct: onlinePct, color: '#13ec13' },
-                                { pct: diretoPct, color: '#10b981' },
+                                { pct: onlinePct, color: '#13ec13', label: 'online', value: totalOnline },
+                                { pct: diretoPct, color: '#10b981', label: 'direto', value: totalDireto },
                             ]}
                             centerLabel={`${onlinePct}%`}
                             centerSub="online"
-                            size={106}
+                            size={120}
                         />
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
                             <ChannelRow color="#13ec13" label="Online"
@@ -111,7 +117,7 @@ export function TabMarketing({ animKey, periodo }: Props) {
 
             {/* 3. EVOLUÇÃO SEMANAL ─────────────────────────────────────────── */}
             {weeks.length >= 2 && (
-                <section>
+                <section className="lg:col-span-7">
                     <Insight
                         eyebrow="Evolução · Semanal"
                         headline={`Pedidos online ${onlineGrowth >= 0 ? '+' : ''}${onlineGrowth}% em ${weeks.length} semanas.`}
@@ -136,7 +142,7 @@ export function TabMarketing({ animKey, periodo }: Props) {
             )}
 
             {/* 4. TICKET MÉDIO POR CANAL ───────────────────────────────────── */}
-            <section>
+            <section className="lg:col-span-5">
                 <Insight
                     eyebrow="Ticket por pedido · Canal"
                     headline={`Online ${ticketOnline >= ticketDireto ? 'lidera' : 'abaixo'} com ${fmtBRL(ticketOnline)}.`}

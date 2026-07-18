@@ -3,8 +3,7 @@ import { Award, AlertTriangle } from 'lucide-react'
 import { useRptMargemPorSku, useRptGiroEstoque, useRptLtvPorCliente } from '../../hooks/useRelatorios'
 import type { PeriodoRel } from '../../services/relatorioService'
 import {
-    HBars,
-    C_FG, C_MUTED_FG, C_MUTED, C_MONO,
+    C_FG, C_MUTED_FG, C_MUTED, C_MONO, COL_PRIMARY, COL_WARNING,
     useAnim,
 } from './Charts'
 import {
@@ -55,9 +54,21 @@ export function TabProdutos({ animKey, periodo }: Props) {
         const margemMedia   = produtos.length ? Math.round(produtos.reduce((s, p) => s + p.margem, 0) / produtos.length) : 0
         const totalReceita  = produtos.reduce((s, p) => s + p.receita, 0)
 
-        const topByReceita  = [...produtos].sort((a, b) => b.receita - a.receita).slice(0, 7)
-        const top5Receita   = topByReceita.slice(0, 5).reduce((s, p) => s + p.receita, 0)
-        const top5Pct       = totalReceita > 0 ? Math.round(top5Receita / totalReceita * 100) : 0
+        // Curva ABC (por receita acumulada): A = até 80%, B = até 95%, C = resto.
+        // O produto que CRUZA o limiar entra na faixa onde começou (convenção usual).
+        const byReceita = [...produtos].filter(p => p.receita > 0).sort((a, b) => b.receita - a.receita)
+        let acum = 0
+        const abc = byReceita.map(p => {
+            const antesPct = totalReceita > 0 ? acum / totalReceita * 100 : 0
+            acum += p.receita
+            const classe: 'A' | 'B' | 'C' = antesPct < 80 ? 'A' : antesPct < 95 ? 'B' : 'C'
+            return { id: p.id, nome: p.nome, receita: p.receita, margem: p.margem, pctAcum: totalReceita > 0 ? Math.round(acum / totalReceita * 100) : 0, classe }
+        })
+        const abcResumo = (['A', 'B', 'C'] as const).map(cl => {
+            const g = abc.filter(a => a.classe === cl)
+            const receita = g.reduce((s, a) => s + a.receita, 0)
+            return { classe: cl, qtd: g.length, receita, pct: totalReceita > 0 ? Math.round(receita / totalReceita * 100) : 0 }
+        })
 
         // Saúde do estoque vem de `giros` (TODOS os produtos ativos, snapshot atual de estoque),
         // não de `produtos` (só os que venderam no período) — senão um zerado que não vendeu somia.
@@ -89,7 +100,7 @@ export function TabProdutos({ animKey, periodo }: Props) {
 
         return {
             margemMedia, zerados, abaixoMin, totalReceita,
-            topByReceita, top5Receita, top5Pct,
+            abc, abcResumo,
             statusCount, precisamAtencao, totalProdutos: giros.length, topProduct, outrosReceita,
         }
     }, [produtos, giros, margens, ltvRows])
@@ -99,16 +110,18 @@ export function TabProdutos({ animKey, periodo }: Props) {
     if (!derived)  return <EmptyState msg="Sem dados de produtos disponíveis." />
 
     const {
-        margemMedia, zerados, abaixoMin, totalReceita,
-        topByReceita, top5Receita, top5Pct,
+        margemMedia, zerados, abaixoMin,
+        abc, abcResumo,
         statusCount, precisamAtencao, totalProdutos, topProduct, outrosReceita,
     } = derived
+    const classeA = abcResumo.find(r => r.classe === 'A')
+    const classeColor = (cl: 'A' | 'B' | 'C') => cl === 'A' ? COL_PRIMARY : cl === 'B' ? COL_WARNING : C_MUTED_FG
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-4 lg:items-start">
 
             {/* 1. HERO ─────────────────────────────────────────────────────── */}
-            <ChartCard padding={14}>
+            <ChartCard padding={14} className="lg:col-span-12">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{
                         flexShrink: 0, width: 42, height: 42, borderRadius: 12,
@@ -134,7 +147,7 @@ export function TabProdutos({ animKey, periodo }: Props) {
                         background: 'rgba(19,236,19,.10)',
                         fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em',
                         flexShrink: 0,
-                    }}>{(topProduct?.margem_pct ?? 0).toFixed(1)}% mg.</div>
+                    }}>{fmtBRLk(topProduct?.lucro_bruto ?? 0)} lucro · {(topProduct?.margem_pct ?? 0).toFixed(0)}% mg.</div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 14 }}>
                     <MiniStat label="Margem média" value={`${margemMedia}%`} />
@@ -145,45 +158,54 @@ export function TabProdutos({ animKey, periodo }: Props) {
                 </div>
             </ChartCard>
 
-            {/* 2. TOP 7 POR RECEITA ────────────────────────────────────────── */}
-            {topByReceita.length > 0 && (
-                <section>
+            {/* 2. CURVA ABC ─────────────────────────────────────────────────── */}
+            {abc.length > 0 && (
+                <section className="lg:col-span-7">
                     <Insight
-                        eyebrow="Ranking · Receita"
-                        headline={`Top 5 produtos respondem por ${top5Pct}% da receita.`}
-                        sub={`${fmtBRL(top5Receita)} de ${fmtBRL(totalReceita)} no período.`}
+                        eyebrow="Curva ABC · vencedores"
+                        headline={`${fmtNum(classeA?.qtd ?? 0)} produtos (classe A) geram ${classeA?.pct ?? 0}% da receita.`}
+                        sub="A = até 80% do faturamento · B = até 95% · C = a cauda."
                     />
                     <ChartCard padding={14}>
-                        <HBars
-                            animKey={`${animKey}-tr`}
-                            data={topByReceita.map(p => ({
-                                id: p.id, label: p.nome, value: p.receita,
-                                color: stockColor(p.status),
-                            }))}
-                            fmtValue={fmtBRLk}
-                            width={326}
-                        />
-                        {outrosReceita !== 0 && (
-                            <div style={{
-                                marginTop: 10, paddingTop: 10,
-                                borderTop: `1px solid hsl(var(--border))`,
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            }}>
-                                <span style={{ fontSize: 11, fontWeight: 600, color: C_MUTED_FG }}>
-                                    Outros · não itemizado
-                                </span>
-                                <span style={{
-                                    fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums',
-                                    fontSize: 11, fontWeight: 700, color: C_MUTED_FG,
-                                }}>{fmtBRL(outrosReceita)}</span>
-                            </div>
-                        )}
+                        {/* resumo A/B/C */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {abcResumo.map(r => (
+                                <div key={r.classe} style={{ borderRadius: 10, padding: '9px 11px', background: 'hsl(var(--muted) / 0.35)', border: '1px solid hsl(var(--border))', borderLeft: `3px solid ${classeColor(r.classe)}` }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: classeColor(r.classe) }}>
+                                        <span style={{ width: 7, height: 7, borderRadius: 999, background: classeColor(r.classe) }} /> Classe {r.classe}
+                                    </div>
+                                    <div style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', fontSize: 16, fontWeight: 700, color: C_FG, marginTop: 4, lineHeight: 1 }}>{r.pct}%</div>
+                                    <div style={{ fontSize: 10, color: C_MUTED_FG, fontWeight: 500, marginTop: 2 }}>{fmtNum(r.qtd)} {r.qtd === 1 ? 'produto' : 'produtos'}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* lista por produto: classe + nome + margem + receita */}
+                        <div style={{ marginTop: 12 }}>
+                            {abc.map((p, i) => (
+                                <div key={p.id ?? i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+                                    borderBottom: i === abc.length - 1 ? 'none' : '1px solid hsl(var(--border))',
+                                }}>
+                                    <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: 6, background: `color-mix(in srgb, ${classeColor(p.classe)} 16%, transparent)`, color: classeColor(p.classe), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, fontFamily: 'Lexend' }}>{p.classe}</span>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, color: C_FG, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</span>
+                                    <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: C_MUTED_FG, fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', width: 52, textAlign: 'right' }}>{p.margem.toFixed(0)}% mg</span>
+                                    <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: C_FG, fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', width: 64, textAlign: 'right' }}>{fmtBRLk(p.receita)}</span>
+                                </div>
+                            ))}
+                            {outrosReceita > 0 && (
+                                <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid hsl(var(--border))', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: C_MUTED_FG }}>Outros · vendas sem itens</span>
+                                    <span style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', fontSize: 11, fontWeight: 700, color: C_MUTED_FG }}>{fmtBRL(outrosReceita)}</span>
+                                </div>
+                            )}
+                        </div>
                     </ChartCard>
                 </section>
             )}
 
             {/* 3. SAÚDE DO ESTOQUE ─────────────────────────────────────────── */}
-            <section>
+            <section className="lg:col-span-5">
                 <Insight
                     eyebrow="Saúde do estoque"
                     headline={`${precisamAtencao.length} SKUs precisam de atenção.`}
