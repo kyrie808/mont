@@ -525,6 +525,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contas_a_pagar_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
+          },
+          {
             foreignKeyName: "contas_a_pagar_plano_conta_id_fkey"
             columns: ["plano_conta_id"]
             isOneToOne: false
@@ -721,6 +728,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "campanhas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contatos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
           },
           {
             foreignKeyName: "contatos_fonte_fkey"
@@ -2101,6 +2115,32 @@ export type Database = {
         }
         Relationships: []
       }
+      rpt_aquisicao_fonte: {
+        Row: {
+          converteram: number | null
+          fonte: string | null
+          leads: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contatos_fonte_fkey"
+            columns: ["fonte"]
+            isOneToOne: false
+            referencedRelation: "fontes"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      rpt_aquisicao_mensal: {
+        Row: {
+          ano: number | null
+          mes: number | null
+          novos_compradores: number | null
+          novos_leads: number | null
+          origem: string | null
+        }
+        Relationships: []
+      }
       rpt_break_even_mensal: {
         Row: {
           break_even_receita: number | null
@@ -2114,6 +2154,17 @@ export type Database = {
           margem_liquida_pct: number | null
           mes: string | null
           receita_bruta: number | null
+        }
+        Relationships: []
+      }
+      rpt_campanhas: {
+        Row: {
+          ativo: boolean | null
+          campanha_id: string | null
+          converteram: number | null
+          leads: number | null
+          nome: string | null
+          receita_gerada: number | null
         }
         Relationships: []
       }
@@ -2794,6 +2845,7 @@ export type Database = {
           dias_relacionamento: number
           ltv_total: number
           nome: string
+          origem: string
           primeira_compra: string
           status: string
           status_atividade: string
@@ -2833,6 +2885,16 @@ export type Database = {
           semana_iso: string
           ticket_medio: number
           total_pedidos: number
+        }[]
+      }
+      rpt_promocoes_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          brindes_clientes: number
+          brindes_qtd: number
+          brindes_valor: number
+          desconto_qtd: number
+          desconto_total: number
         }[]
       }
       update_purchase_order_with_items: {

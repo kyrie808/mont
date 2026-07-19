@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown } from 'lucide-react'
-import { C_CARD, C_BORDER, C_MUTED, C_FG, C_MUTED_FG, C_SHADOW } from './Charts'
+import { C_CARD, C_BORDER, C_MUTED, C_MUTED_FG, C_SHADOW } from './Charts'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 export const fmtBRL  = (n: number) => 'R$ ' + Math.round(n).toLocaleString('pt-BR')
@@ -14,6 +14,8 @@ export const fmtNum = (n: number) => Math.round(n).toLocaleString('pt-BR')
 export const MES_ABBREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
 
 // ── Insight ────────────────────────────────────────────────────────────────────
+// Cabeçalho de seção na escala tipográfica do sistema (Lexend): kicker discreto +
+// frase-insight em text-base bold + apoio muted. Sem px inline mágico.
 interface InsightProps {
     eyebrow?: string
     headline: string
@@ -22,21 +24,13 @@ interface InsightProps {
 
 export function Insight({ eyebrow, headline, sub }: InsightProps) {
     return (
-        <div style={{ marginBottom: 10, paddingLeft: 4 }}>
+        <div className="mb-2.5 pl-1">
             {eyebrow && (
-                <div style={{
-                    fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.18em', color: C_MUTED_FG,
-                }}>{eyebrow}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{eyebrow}</div>
             )}
-            <div style={{
-                marginTop: 4, fontSize: 15, fontWeight: 800, color: C_FG,
-                letterSpacing: '-0.015em', lineHeight: 1.25,
-            }}>{headline}</div>
+            <div className="mt-1 text-base font-bold leading-snug text-foreground">{headline}</div>
             {sub && (
-                <div style={{
-                    marginTop: 3, fontSize: 11, color: C_MUTED_FG, fontWeight: 500,
-                }}>{sub}</div>
+                <div className="mt-1 text-[13px] font-medium leading-snug text-muted-foreground">{sub}</div>
             )}
         </div>
     )
@@ -75,18 +69,12 @@ interface MiniStatProps {
 
 export function MiniStat({ label, value, accent, sub }: MiniStatProps) {
     return (
-        <div style={{ background: C_MUTED, borderRadius: 10, padding: '9px 11px' }}>
-            <div style={{
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.06em', color: C_MUTED_FG,
-            }}>{label}</div>
-            <div style={{
-                fontFamily: 'ui-monospace, monospace', fontVariantNumeric: 'tabular-nums',
-                fontSize: 15, fontWeight: 700, color: accent ?? C_FG,
-                letterSpacing: '-0.02em', marginTop: 3, lineHeight: 1.05,
-            }}>{value}</div>
+        <div className="rounded-[10px] bg-muted px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+            <div className="mt-1 font-mono text-base font-bold tabular-nums leading-tight text-foreground"
+                 style={accent ? { color: accent } : undefined}>{value}</div>
             {sub && (
-                <div style={{ fontSize: 10, color: C_MUTED_FG, fontWeight: 500, marginTop: 2 }}>{sub}</div>
+                <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">{sub}</div>
             )}
         </div>
     )
@@ -129,15 +117,10 @@ interface SectionEyebrowProps {
 
 export function SectionEyebrow({ icon, children, right }: SectionEyebrowProps) {
     return (
-        <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: 8, paddingLeft: 4,
-        }}>
-            <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.15em', color: C_MUTED_FG,
-            }}>{icon}{children}</span>
+        <div className="mb-2 flex items-center justify-between pl-1">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {icon}{children}
+            </span>
             {right}
         </div>
     )

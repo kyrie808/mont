@@ -70,7 +70,7 @@ export function TabClientes({ animKey }: Props) {
     const { total, funil, adormPct, ltvMedio, ticketMedio, totalLtv, top20Count, top20Ltv, paretoTopPct, topByLtv, recuperar, recuperarValor, adormCount } = derived
 
     return (
-        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-4 lg:items-start">
+        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-x-4 lg:gap-y-8 lg:items-start">
 
             {/* 1. SAÚDE DA BASE ────────────────────────────────────────────── */}
             <section className="lg:col-span-12">

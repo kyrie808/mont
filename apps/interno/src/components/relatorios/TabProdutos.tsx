@@ -118,7 +118,7 @@ export function TabProdutos({ animKey, periodo }: Props) {
     const classeColor = (cl: 'A' | 'B' | 'C') => cl === 'A' ? COL_PRIMARY : cl === 'B' ? COL_WARNING : C_MUTED_FG
 
     return (
-        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-4 lg:items-start">
+        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-x-4 lg:gap-y-8 lg:items-start">
 
             {/* 1. HERO ─────────────────────────────────────────────────────── */}
             <ChartCard padding={14} className="lg:col-span-12">
