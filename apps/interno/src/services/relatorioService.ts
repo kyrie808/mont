@@ -84,4 +84,48 @@ export const relatorioService = {
         return data ?? []
     },
 
+    /** Aquisição mensal por origem (view vitalícia; a aba recorta client-side). */
+    async getAquisicaoMensal(): Promise<Tables<'rpt_aquisicao_mensal'>[]> {
+        const { data, error } = await supabase.from('rpt_aquisicao_mensal').select('*')
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** Alavancas: brindes doados + descontos concedidos no período. */
+    async getPromocoes(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_promocoes_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_promocoes_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** Ranking de indicações completo (embaixadores) — vitalício. */
+    async getRankingIndicacoes(): Promise<Tables<'ranking_indicacoes'>[]> {
+        const { data, error } = await supabase
+            .from('ranking_indicacoes')
+            .select('*')
+            .order('total_vendas_indicados', { ascending: false })
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** Campanhas com leads/conversão/receita gerada — vitalício. */
+    async getCampanhas(): Promise<Tables<'rpt_campanhas'>[]> {
+        const { data, error } = await supabase
+            .from('rpt_campanhas')
+            .select('*')
+            .order('leads', { ascending: false })
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** Leads por fonte de anúncio (meta/google/tiktok) — vitalício. */
+    async getAquisicaoFonte(): Promise<Tables<'rpt_aquisicao_fonte'>[]> {
+        const { data, error } = await supabase
+            .from('rpt_aquisicao_fonte')
+            .select('*')
+            .order('leads', { ascending: false })
+        if (error) throw error
+        return data ?? []
+    },
+
 }

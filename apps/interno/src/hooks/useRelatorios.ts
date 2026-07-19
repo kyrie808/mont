@@ -79,3 +79,48 @@ export function useRptMarketingPedidos(periodo: PeriodoRel) {
         staleTime: STALE_TIME,
     })
 }
+
+/** Aquisição mensal por origem (vitalícia; a aba recorta por período no client). */
+export function useRptAquisicaoMensal() {
+    return useQuery({
+        queryKey: ['relatorio', 'aquisicao_mensal'],
+        queryFn: relatorioService.getAquisicaoMensal,
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Brindes + descontos concedidos no período (alavancas de promoção). */
+export function useRptPromocoes(periodo: PeriodoRel) {
+    return useQuery({
+        queryKey: ['relatorio', 'promocoes', periodoKey(periodo)],
+        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getPromocoes(desde, ate) },
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Ranking de indicações completo (embaixadores) — vitalício. */
+export function useRptRankingIndicacoes() {
+    return useQuery({
+        queryKey: ['relatorio', 'ranking_indicacoes'],
+        queryFn: relatorioService.getRankingIndicacoes,
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Campanhas (leads/conversão/receita) — vitalício. */
+export function useRptCampanhas() {
+    return useQuery({
+        queryKey: ['relatorio', 'campanhas'],
+        queryFn: relatorioService.getCampanhas,
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Leads por fonte de anúncio — vitalício. */
+export function useRptAquisicaoFonte() {
+    return useQuery({
+        queryKey: ['relatorio', 'aquisicao_fonte'],
+        queryFn: relatorioService.getAquisicaoFonte,
+        staleTime: STALE_TIME,
+    })
+}

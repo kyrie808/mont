@@ -180,7 +180,7 @@ export function TabFinanceiro({ animKey, periodo }: Props) {
         : pagamentos[1] ? `${pagamentos[1].label}: ${pagamentos[1].pct}% · ${fmtBRL(pagamentos[1].valor)}` : ''
 
     return (
-        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-4 lg:items-start">
+        <div className="grid gap-[18px] lg:grid-cols-12 lg:gap-x-4 lg:gap-y-8 lg:items-start">
 
             {/* 1. HERO ─────────────────────────────────────────────────────── */}
             <ChartCard padding={16} className="lg:col-span-12">

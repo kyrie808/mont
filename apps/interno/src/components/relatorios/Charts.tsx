@@ -97,13 +97,16 @@ export function Sparkline({ data, color = COL_PRIMARY, width = 80, height = 24, 
 interface AreaChartProps {
     data: number[]; labels: string[]; currentIndex?: number
     width?: number; height?: number; color?: string; animKey: string | number
+    // Formatação dos valores (eixo Y + tooltip). Default = moeda; passe fmtNum p/ contagens.
+    fmtValue?: (v: number) => string
+    fmtAxis?: (v: number) => string
 }
 
 export function AreaChart({ height = 170, ...props }: AreaChartProps) {
     return <Responsive height={height}>{(width) => <AreaChartSvg {...props} width={width} height={height} />}</Responsive>
 }
 
-function AreaChartSvg({ data, labels, currentIndex, width, height = 170, color = COL_PRIMARY, animKey }: AreaChartProps & { width: number }) {
+function AreaChartSvg({ data, labels, currentIndex, width, height = 170, color = COL_PRIMARY, animKey, fmtValue = fmtBRL, fmtAxis = fmtBRLk }: AreaChartProps & { width: number }) {
     const svgRef = useRef<SVGSVGElement>(null)
     const t = useAnim([animKey])
     const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<{ i: number }>()
@@ -132,7 +135,7 @@ function AreaChartSvg({ data, labels, currentIndex, width, height = 170, color =
                     <g key={tv}>
                         <line x1={padL} x2={width - padR} y1={y(tv)} y2={y(tv)} stroke={C_BORDER} strokeDasharray="2 4" opacity={0.5} />
                         <text x={padL - 7} y={y(tv) + 3} textAnchor="end" fontSize="9" fill={C_MUTED_FG} fontFamily={C_MONO}>
-                            {fmtBRLk(tv)}
+                            {fmtAxis(tv)}
                         </text>
                     </g>
                 ))}
@@ -159,7 +162,7 @@ function AreaChartSvg({ data, labels, currentIndex, width, height = 170, color =
             {tooltipData && (
                 <TooltipWithBounds left={(tooltipLeft ?? 0) + 8} top={(tooltipTop ?? 0) - 8} style={tooltipStyle}>
                     <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{labels[tooltipData.i]}</div>
-                    <div style={{ fontFamily: C_MONO }}>{fmtBRL(data[tooltipData.i])}</div>
+                    <div style={{ fontFamily: C_MONO }}>{fmtValue(data[tooltipData.i])}</div>
                 </TooltipWithBounds>
             )}
         </>
@@ -222,9 +225,14 @@ function HBarsSvg({ data, width, animKey, fmtValue, barHeight = 22, gap = 8 }: H
 
 // ── Donut ──────────────────────────────────────────────────────────────────────
 export interface DonutSegment { pct: number; color: string; label?: string; value?: number }
-interface DonutProps { segments: DonutSegment[]; centerLabel: string; centerSub?: string; size?: number; strokeW?: number; animKey: string | number }
+interface DonutProps {
+    segments: DonutSegment[]; centerLabel: string; centerSub?: string
+    size?: number; strokeW?: number; animKey: string | number
+    // Formatação do valor no hover. Default = moeda; passe fmtNum p/ contagens.
+    fmtValue?: (v: number) => string
+}
 
-export function Donut({ segments, centerLabel, centerSub, size = 120, strokeW = 16, animKey }: DonutProps) {
+export function Donut({ segments, centerLabel, centerSub, size = 120, strokeW = 16, animKey, fmtValue = fmtBRLk }: DonutProps) {
     const r = (size - strokeW) / 2
     const c = 2 * Math.PI * r
     const t = useAnim([animKey])
@@ -251,7 +259,7 @@ export function Donut({ segments, centerLabel, centerSub, size = 120, strokeW = 
                 {hover !== null && segments[hover].label ? (
                     <>
                         <div style={{ fontFamily: C_MONO, fontVariantNumeric: 'tabular-nums', fontSize: 18, fontWeight: 800, color: C_FG, lineHeight: 1 }}>
-                            {segments[hover].value !== undefined ? fmtBRLk(segments[hover].value!) : `${Math.round(segments[hover].pct)}%`}
+                            {segments[hover].value !== undefined ? fmtValue(segments[hover].value!) : `${Math.round(segments[hover].pct)}%`}
                         </div>
                         <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: C_MUTED_FG, marginTop: 3 }}>
                             {segments[hover].label}
