@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Award, Trash2, UserPlus } from 'lucide-react'
+import { Award, Trash2, UserPlus, Tag, MessageSquarePlus } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button, PageSkeleton } from '../components/ui'
@@ -11,13 +11,20 @@ import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
 import { useIndicacoes } from '../hooks/useIndicacoes'
 import { useIndicadosDoIndicador } from '../hooks/useIndicadosDoIndicador'
+import { useContatosResumo } from '../hooks/useContatosResumo'
 import { calcularNivelCliente } from '../utils/calculations'
+import { classificarContato } from '../utils/segmentoCliente'
 
 // Refactored Sub-components
 import { ContatoHero } from '../components/features/contatos/detalhe/ContatoHero'
 import { ContatoIntel } from '../components/features/contatos/detalhe/ContatoIntel'
 import { AquisicaoCard } from '../components/features/contatos/detalhe/AquisicaoCard'
 import { ContatoInteracoes } from '../components/features/contatos/detalhe/ContatoInteracoes'
+import { PerfilClienteRico } from '../components/relacionamento/PerfilClienteRico'
+import { TagsSideSheet } from '../components/relacionamento/TagsSideSheet'
+import { FeedbackSideSheet } from '../components/relacionamento/FeedbackSideSheet'
+import { useKanbanRowContato } from '../hooks/usePerfilSideSheet'
+import type { RelacionamentoStatus } from '../hooks/useRelacionamento'
 import { LoyaltyJourney } from '../components/features/contatos/detalhe/LoyaltyJourney'
 import { VendasHistory } from '../components/features/contatos/detalhe/VendasHistory'
 import { CatalogOrdersHistory } from '../components/features/contatos/detalhe/CatalogOrdersHistory'
@@ -33,10 +40,15 @@ export function ContatoDetalhe() {
     const { getIndicadorById } = useIndicacoes()
     // Quem esta pessoa trouxe (drill-down por compra real; só renderiza se houver).
     const { indicados: indicadosDoContato } = useIndicadosDoIndicador(id ?? null)
+    const resumoMap = useContatosResumo()
+    const { data: kanbanRow } = useKanbanRowContato(id ?? null)
+    const statusRel: RelacionamentoStatus = (kanbanRow?.status_relacionamento as RelacionamentoStatus) ?? 'a_contatar'
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [tagsOpen, setTagsOpen] = useState(false)
+    const [feedbackOpen, setFeedbackOpen] = useState(false)
 
     if (loading) return <PageSkeleton rows={4} showHeader showCards={false} />
     if (error || !contato) return <> <Header title="Erro" showBack /><PageContainer><div className="text-destructive">Contato não encontrado</div></PageContainer> </>
@@ -46,6 +58,7 @@ export function ContatoDetalhe() {
     const indicadorInfo = getIndicadorById(id || '')
     const indicacoesConvertidas = indicadorInfo?.indicacoesConvertidas || 0
     const nivelCliente = calcularNivelCliente(vendasValidas.length, indicacoesConvertidas)
+    const segmento = classificarContato(contato, resumoMap.get(contato.id))
 
     const handleDelete = async () => {
         setIsDeleting(true)
@@ -62,8 +75,9 @@ export function ContatoDetalhe() {
     return (
         <>
             <ContatoHero
-                    contato={contato} 
-                    nivel={nivelCliente.nivel} 
+                    contato={contato}
+                    nivel={nivelCliente.nivel}
+                    segmento={segmento}
                     onEdit={() => setIsEditModalOpen(true)}
                 />
 
@@ -89,6 +103,31 @@ export function ContatoDetalhe() {
                     </div>
 
                     <AquisicaoCard contato={contato} />
+
+                    {/* Painel rico do relacionamento (mesma fonte do kanban): tags, ritmo,
+                        financeiro, fiado, última compra, produtos. Timeline fica no card abaixo. */}
+                    <div className="p-5 bg-card border border-border rounded-xl shadow-card space-y-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">Relacionamento</h3>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setTagsOpen(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                                >
+                                    <Tag className="h-3.5 w-3.5" /> Tags
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFeedbackOpen(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                                >
+                                    <MessageSquarePlus className="h-3.5 w-3.5" /> Feedback
+                                </button>
+                            </div>
+                        </div>
+                        <PerfilClienteRico contatoId={contato.id} showInteracoes={false} />
+                    </div>
 
                     <ContatoInteracoes contatoId={contato.id} />
 
@@ -139,6 +178,22 @@ export function ContatoDetalhe() {
                         onConfirm={handleDelete}
                         isDeleting={isDeleting}
                         contato={contato}
+                    />
+
+                    <TagsSideSheet
+                        isOpen={tagsOpen}
+                        onClose={() => setTagsOpen(false)}
+                        contatoId={contato.id}
+                        nomeContato={contato.nome}
+                        statusAtual={statusRel}
+                    />
+
+                    <FeedbackSideSheet
+                        isOpen={feedbackOpen}
+                        onClose={() => setFeedbackOpen(false)}
+                        contatoId={contato.id}
+                        nomeContato={contato.nome}
+                        statusAtual={statusRel}
                     />
 
                 </PageContainer>

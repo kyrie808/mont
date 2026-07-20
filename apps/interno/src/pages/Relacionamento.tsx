@@ -691,7 +691,6 @@ export function Relacionamento() {
                     contatoId={perfilTarget.contatoId}
                     nomeContato={perfilTarget.nomeContato}
                     statusAtual={perfilTarget.statusAtual}
-                    kanbanRow={perfilTarget.kanbanRow}
                 />
             )}
 

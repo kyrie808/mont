@@ -6,14 +6,17 @@ import { Button } from '../../../../components/ui'
 import { cn } from '@mont/shared'
 import { getWhatsAppLink } from '@mont/shared'
 import type { DomainContato } from '../../../../types/domain'
+import { SEGMENTO_BADGE, type SegmentoCliente } from '../../../../utils/segmentoCliente'
 
 interface ContatoHeroProps {
     contato: DomainContato
     nivel: string
+    /** Segmento de ciclo de vida derivado do comportamento (Lead/Cliente/VIP/Inativo). */
+    segmento?: SegmentoCliente
     onEdit: () => void
 }
 
-export function ContatoHero({ contato, nivel, onEdit }: ContatoHeroProps) {
+export function ContatoHero({ contato, nivel, segmento, onEdit }: ContatoHeroProps) {
     const navigate = useNavigate()
     const AvatarIcon = contato.tipo === 'B2B' ? Building2 : User
     const isGold = nivel === 'ouro'
@@ -57,6 +60,15 @@ export function ContatoHero({ contato, nivel, onEdit }: ContatoHeroProps) {
                 <h1 className="text-2xl font-bold text-center text-foreground tracking-tight mb-1">
                     {contato.nome} {contato.apelido && <span className="text-muted-foreground font-medium text-lg ml-2">● ({contato.apelido})</span>}
                 </h1>
+
+                {segmento && (
+                    <span className={cn(
+                        "mb-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide",
+                        SEGMENTO_BADGE[segmento].cls,
+                    )}>
+                        {SEGMENTO_BADGE[segmento].label}
+                    </span>
+                )}
 
                 {contato.indicador && (
                     <div className="flex items-center gap-1.5 text-xs text-warning-strong font-bold uppercase tracking-wider mb-2">

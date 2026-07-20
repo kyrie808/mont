@@ -46,6 +46,18 @@ export class RelacionamentoService {
         return data ?? []
     }
 
+    /** Linha do kanban (ritmo: dias sem compra, atraso, próxima esperada) de UM contato.
+     *  Null p/ lead / 0 compras (a view só expõe quem tem total_pedidos>=1 e não arquivado). */
+    async getKanbanRowByContato(contatoId: string): Promise<KanbanRow | null> {
+        const { data, error } = await supabase
+            .from('view_relacionamento_kanban')
+            .select('*')
+            .eq('contato_id', contatoId)
+            .maybeSingle()
+        if (error) throw new Error(`Erro ao carregar ritmo do contato: ${error.message}`)
+        return data
+    }
+
     async getPerfilExtras(contatoId: string): Promise<PerfilExtras | null> {
         const { data, error } = await supabase.rpc('rpc_perfil_extras', {
             p_contato_id: contatoId,
