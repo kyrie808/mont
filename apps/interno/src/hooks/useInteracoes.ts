@@ -41,6 +41,8 @@ export function useRegistrarPontoContato() {
         mutationFn: (input) => interacaoService.criarPontoContato(input),
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
+            // Trigger assistido moveu a coluna do card → refetch do kanban.
+            void queryClient.invalidateQueries({ queryKey: ['relacionamento_kanban'] })
         },
     })
 }
@@ -56,6 +58,7 @@ export function useAtualizarPontoContato() {
             interacaoService.atualizarPontoContato(id, { canal, resultado, observacao, data }),
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
+            void queryClient.invalidateQueries({ queryKey: ['relacionamento_kanban'] })
         },
     })
 }

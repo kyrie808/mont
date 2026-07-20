@@ -8,6 +8,8 @@ function row(overrides: Partial<KanbanRow>): KanbanRow {
         atraso: null,
         arquivado_em: null,
         balde_cheio: false,
+        coluna_efetiva: 'a_contatar',
+        reengajar: false,
         contato_id: 'test-id',
         dias_sem_compra: null,
         intervalo_medio: null,

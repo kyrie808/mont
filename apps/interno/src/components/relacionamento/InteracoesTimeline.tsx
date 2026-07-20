@@ -13,8 +13,8 @@ import { RegistrarContatoForm } from './RegistrarContatoForm'
 
 const RESULTADO_LABEL: Record<string, string> = {
     a_contatar: 'A Contatar',
-    contatado: 'Contatado',
-    em_negociacao: 'Em Negociação',
+    contatado: 'Aguardando Resposta',
+    em_negociacao: 'Em Conversa',
     resolvido: 'Resolvido',
 }
 
