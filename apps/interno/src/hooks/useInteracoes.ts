@@ -32,6 +32,7 @@ interface RegistrarPontoContatoInput {
     resultado: ResultadoPontoContato
     observacao?: string
     data?: string // ISO
+    campanhaId?: string
 }
 
 export function useRegistrarPontoContato() {

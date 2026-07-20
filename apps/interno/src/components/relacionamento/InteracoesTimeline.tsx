@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil, Megaphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { Modal } from '../ui'
 import { useInteracoes, type Interacao } from '../../hooks/useInteracoes'
+import { useCampanhas } from '../../hooks/useCampanhas'
 import { RegistrarContatoForm } from './RegistrarContatoForm'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -114,7 +115,7 @@ function SkeletonTimeline() {
 
 // ─── TimelineItem ─────────────────────────────────────────────────────────────
 
-function TimelineItem({ item, isLast, onEdit }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void }) {
+function TimelineItem({ item, isLast, onEdit, campanhaNome }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void; campanhaNome?: string }) {
     const config = (item.tipo ? TIPO_CONFIG[item.tipo] : null) ?? TIPO_CONFIG_DEFAULT
     const Icon = config.icon
     const relativo = formatRelativo(item.data)
@@ -125,6 +126,11 @@ function TimelineItem({ item, isLast, onEdit }: { item: Interacao; isLast: boole
     const content = (
         <>
             <p className="text-[13px] font-semibold leading-[1.35] text-foreground">{title}</p>
+            {campanhaNome && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium text-primary/90">
+                    <Megaphone className="h-2.5 w-2.5" /> Ofereceu {campanhaNome}
+                </span>
+            )}
             {item.observacao && (
                 <p className={cn(
                     'mt-0.5 text-[11px] leading-[1.4] text-muted-foreground/70',
@@ -179,6 +185,8 @@ function TimelineItem({ item, isLast, onEdit }: { item: Interacao; isLast: boole
 
 export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
     const { data: interacoes, isLoading, error } = useInteracoes(contatoId)
+    const { data: campanhas = [] } = useCampanhas()
+    const campMap = useMemo(() => new Map(campanhas.map((c) => [c.id, c.nome])), [campanhas])
     const [editing, setEditing] = useState<Interacao | null>(null)
 
     if (isLoading) return <SkeletonTimeline />
@@ -211,6 +219,7 @@ export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
                         item={item}
                         isLast={idx === interacoes.length - 1}
                         onEdit={setEditing}
+                        campanhaNome={item.campanha_id ? campMap.get(item.campanha_id) : undefined}
                     />
                 ))}
             </div>

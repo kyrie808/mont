@@ -4,24 +4,28 @@ import { supabase } from '../lib/supabase'
 export interface CampanhaOption {
     id: string
     nome: string
+    tipo: string
 }
 
+/** Contexto de uso: aquisição (cadastro) mostra tipo aquisicao|ambos;
+ *  promoção (kanban) mostra promocao|ambos. */
+export type FiltroCampanha = 'aquisicao' | 'promocao'
+
 /**
- * Campanhas ativas (tabela `campanhas`), ordenadas por nome.
- * Usadas no cadastro de cliente (origem = 'anuncio'). Cadastráveis inline
- * pelo próprio formulário via `criar`.
+ * Campanhas ativas (`campanhas`), opcionalmente filtradas pelo tipo do contexto.
+ * Cadastráveis inline via `criar` (o tipo é derivado do filtro).
  */
-export function useCampanhas() {
+export function useCampanhas(filtro?: FiltroCampanha) {
     const queryClient = useQueryClient()
+    const tiposVisiveis = filtro === 'aquisicao' ? ['aquisicao', 'ambos']
+        : filtro === 'promocao' ? ['promocao', 'ambos'] : null
 
     const query = useQuery<CampanhaOption[]>({
-        queryKey: ['campanhas'],
+        queryKey: ['campanhas', filtro ?? 'todas'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('campanhas')
-                .select('id, nome')
-                .eq('ativo', true)
-                .order('nome')
+            let q = supabase.from('campanhas').select('id, nome, tipo').eq('ativo', true).order('nome')
+            if (tiposVisiveis) q = q.in('tipo', tiposVisiveis)
+            const { data, error } = await q
             if (error) throw error
             return data ?? []
         },
@@ -32,10 +36,11 @@ export function useCampanhas() {
         mutationFn: async (nome: string): Promise<CampanhaOption> => {
             const nomeLimpo = nome.trim()
             if (!nomeLimpo) throw new Error('Informe o nome da campanha')
+            const tipo = filtro === 'promocao' ? 'promocao' : 'aquisicao'
             const { data, error } = await supabase
                 .from('campanhas')
-                .insert({ nome: nomeLimpo })
-                .select('id, nome')
+                .insert({ nome: nomeLimpo, tipo })
+                .select('id, nome, tipo')
                 .single()
             if (error) throw error
             return data
@@ -46,4 +51,70 @@ export function useCampanhas() {
     })
 
     return { ...query, criar }
+}
+
+// ── Participação promocional (contato_campanhas) ────────────────────────────────
+
+export interface ContatoCampanhaEntry {
+    contato_id: string
+    campanha_id: string
+    nome: string
+}
+
+/** Todas as participações promocionais (cliente ↔ campanha), com o nome da campanha. */
+export function useContatoCampanhas() {
+    return useQuery<ContatoCampanhaEntry[]>({
+        queryKey: ['contato_campanhas'],
+        queryFn: async () => {
+            const { data: rows, error } = await supabase
+                .from('contato_campanhas')
+                .select('contato_id, campanha_id')
+            if (error) throw error
+            if (!rows || rows.length === 0) return []
+
+            const ids = [...new Set(rows.map((r) => r.campanha_id))]
+            const { data: camps, error: e2 } = await supabase
+                .from('campanhas')
+                .select('id, nome')
+                .in('id', ids)
+            if (e2) throw e2
+
+            const map = new Map((camps ?? []).map((c) => [c.id, c.nome]))
+            return rows.map((r) => ({ contato_id: r.contato_id, campanha_id: r.campanha_id, nome: map.get(r.campanha_id) ?? '—' }))
+        },
+        staleTime: 1000 * 60,
+    })
+}
+
+interface ParticipacaoInput {
+    contatoId: string
+    campanhaId: string
+}
+
+export function useAplicarCampanha() {
+    const queryClient = useQueryClient()
+    return useMutation<void, Error, ParticipacaoInput>({
+        mutationFn: async ({ contatoId, campanhaId }) => {
+            const { error } = await supabase
+                .from('contato_campanhas')
+                .insert({ contato_id: contatoId, campanha_id: campanhaId })
+            if (error && error.code !== '23505') throw new Error(error.message) // ignora duplicata
+        },
+        onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['contato_campanhas'] }) },
+    })
+}
+
+export function useRemoverCampanha() {
+    const queryClient = useQueryClient()
+    return useMutation<void, Error, ParticipacaoInput>({
+        mutationFn: async ({ contatoId, campanhaId }) => {
+            const { error } = await supabase
+                .from('contato_campanhas')
+                .delete()
+                .eq('contato_id', contatoId)
+                .eq('campanha_id', campanhaId)
+            if (error) throw new Error(error.message)
+        },
+        onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['contato_campanhas'] }) },
+    })
 }
