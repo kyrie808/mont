@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { interacaoService, type Interacao, type Canal, type ResultadoPontoContato } from '../services/interacaoService'
+import { interacaoService, type Interacao, type Canal, type ResultadoPontoContato, type Sentido } from '../services/interacaoService'
 
 export function useInteracoes(contatoId: string | null) {
     return useQuery<Interacao[]>({
@@ -29,7 +29,8 @@ export function useRegistrarFeedback() {
 interface RegistrarPontoContatoInput {
     contatoId: string
     canal: Canal
-    resultado: ResultadoPontoContato | null // null = Aguardando
+    resultado: ResultadoPontoContato | null // saida → null; entrada → resposta
+    sentido?: Sentido // default 'saida'
     observacao?: string
     data?: string // ISO
     campanhaId?: string
@@ -73,4 +74,4 @@ export function useExcluirInteracao() {
     })
 }
 
-export type { Interacao, Canal, ResultadoPontoContato }
+export type { Interacao, Canal, ResultadoPontoContato, Sentido }

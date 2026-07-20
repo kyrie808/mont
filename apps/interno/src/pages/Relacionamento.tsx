@@ -45,16 +45,18 @@ const ABAS: Array<{ value: RelacionamentoAba; label: string }> = [
     { value: 'cobranca', label: 'Cobrança' },
 ]
 
-// Colunas = ciclo de vida do contato (rótulos assistidos; enum inalterado).
-// contatado = "Aguardando resposta"; em_negociacao = "Em conversa".
+// Colunas = ciclo de vida do contato (cadência de follow-up; rótulos assistidos).
+// contatado = "Aguardando resposta"; follow_up = toque vencido; sem_retorno = esgotou.
 const COLUNAS: Array<{ status: RelacionamentoStatus; label: string }> = [
     { status: 'a_contatar', label: 'A Contatar' },
     { status: 'contatado', label: 'Aguardando Resposta' },
+    { status: 'follow_up', label: 'Follow-up' },
     { status: 'em_negociacao', label: 'Em Conversa' },
     { status: 'resolvido', label: 'Resolvido' },
+    { status: 'sem_retorno', label: 'Sem Retorno' },
 ]
 
-// Coluna efetiva exposta pela view (deriva 'contatado' estourado → 'a_contatar').
+// Coluna efetiva exposta pela view (deriva a cadência: contatado → follow_up/sem_retorno).
 // Fallback defensivo para o status cru caso a view ainda não traga o campo.
 function colunaEfetivaDe(card: KanbanRow): RelacionamentoStatus {
     return card.coluna_efetiva ?? card.status_relacionamento ?? 'a_contatar'
@@ -63,15 +65,19 @@ function colunaEfetivaDe(card: KanbanRow): RelacionamentoStatus {
 const BADGE_VARIANT: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'success' | 'default'> = {
     a_contatar: 'warning',
     contatado: 'secondary',
+    follow_up: 'warning',
     em_negociacao: 'default',
     resolvido: 'success',
+    sem_retorno: 'secondary',
 }
 
 const EMPTY_LIMITS: Record<RelacionamentoStatus, number> = {
     a_contatar: CARDS_PER_PAGE,
     contatado: CARDS_PER_PAGE,
+    follow_up: CARDS_PER_PAGE,
     em_negociacao: CARDS_PER_PAGE,
     resolvido: CARDS_PER_PAGE,
+    sem_retorno: CARDS_PER_PAGE,
 }
 
 interface TimelineTarget {
@@ -93,11 +99,17 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
         .map((ct) => ct.tag)
 
     const status = card.coluna_efetiva ?? card.status_relacionamento ?? 'a_contatar'
+    const tentativas = card.tentativas ?? 0
     return (
         <>
-            {card.reengajar && (
+            {status === 'follow_up' && (
                 <div className="mb-1.5 inline-flex items-center gap-1 rounded-full border border-warning-strong/30 bg-warning-strong/10 px-2 py-0.5 text-[10px] font-semibold text-warning-strong">
-                    ignorou · re-contatar
+                    follow-up {Math.min(tentativas + 1, 5)}/5 · vencido
+                </div>
+            )}
+            {status === 'sem_retorno' && (
+                <div className="mb-1.5 inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    sem retorno · {tentativas} toques
                 </div>
             )}
             {cardTags.length > 0 && (
@@ -396,13 +408,17 @@ export function Relacionamento() {
 
     // ── Derived data (preserved) ──────────────────────────────────────────────
     const colunas = useMemo(() => {
-        return COLUNAS.map((coluna) => ({
-            ...coluna,
-            cards: data.filter(
+        return COLUNAS.map((coluna) => {
+            const cards = data.filter(
                 (item): item is KanbanRow & { contato_id: string } =>
                     colunaEfetivaDe(item) === coluna.status && typeof item.contato_id === 'string'
-            ),
-        }))
+            )
+            // Follow-up: mais tentativas (mais perto de esgotar) no topo — fila de triagem.
+            if (coluna.status === 'follow_up') {
+                cards.sort((a, b) => (b.tentativas ?? 0) - (a.tentativas ?? 0))
+            }
+            return { ...coluna, cards }
+        })
     }, [data])
 
     // Mapa contato → coluna EFETIVA (o que o usuário vê): base do drag e do no-op check.

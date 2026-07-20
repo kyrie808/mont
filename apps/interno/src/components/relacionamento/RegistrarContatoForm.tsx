@@ -7,6 +7,7 @@ import {
     useExcluirInteracao,
     type Canal,
     type ResultadoPontoContato,
+    type Sentido,
     type Interacao,
 } from '../../hooks/useInteracoes'
 import { useCampanhas, useAplicarCampanha } from '../../hooks/useCampanhas'
@@ -18,11 +19,15 @@ const CANAL_OPTIONS: Array<{ value: Canal; label: string }> = [
     { value: 'outro', label: 'Outro' },
 ]
 
-// "Aguardando" (default) = ainda não sei se respondeu. "Sem resposta" não é opção
-// manual — é derivada da janela (ver utils/contatoEstado).
-type ResultadoOpcao = 'aguardando' | ResultadoPontoContato
-const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoOpcao; label: string }> = [
-    { value: 'aguardando', label: 'Aguardando' },
+// Direção do registro: eu contatei (saída = tentativa/follow-up) ou o cliente respondeu (entrada).
+const SENTIDO_OPTIONS: Array<{ value: Sentido; label: string }> = [
+    { value: 'saida', label: 'Eu contatei' },
+    { value: 'entrada', label: 'Cliente respondeu' },
+]
+
+// Resposta do cliente (só em entrada). "Aguardando"/"Sem resposta" e a cadência de
+// follow-up são derivados no board — não são opção manual aqui.
+const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoPontoContato; label: string }> = [
     { value: 'respondeu', label: 'Respondeu' },
     { value: 'aceitou', label: 'Aceitou' },
     { value: 'recusou', label: 'Recusou' },
@@ -46,10 +51,11 @@ interface RegistrarContatoFormProps {
 // (PerfilSideSheet), na timeline (InteracoesTimeline) e no perfil (ContatoDetalhe).
 export function RegistrarContatoForm({ contatoId, onClose, interacao }: RegistrarContatoFormProps) {
     const isEdit = !!interacao
+    const [sentido, setSentido] = useState<Sentido>(() => (interacao?.sentido as Sentido) ?? 'saida')
     const [canal, setCanal] = useState<Canal>(() => (interacao?.canal as Canal) ?? 'whatsapp')
-    const [resultado, setResultado] = useState<ResultadoOpcao>(() => {
+    const [resultado, setResultado] = useState<ResultadoPontoContato>(() => {
         const r = interacao?.resultado
-        return r === 'respondeu' || r === 'aceitou' || r === 'recusou' ? r : 'aguardando'
+        return r === 'aceitou' || r === 'recusou' ? r : 'respondeu'
     })
     const [observacao, setObservacao] = useState(() => interacao?.observacao ?? '')
     const [data, setData] = useState(() => (interacao ? isoToLocalDateTime(interacao.data) : nowLocalDateTime()))
@@ -76,21 +82,26 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
         } catch { /* erro exibido via mutError */ }
     }
 
+    const isEntrada = sentido === 'entrada'
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault()
         if (isPending) return
+        // saída = eu contatei (sem resultado; pode levar oferta). entrada = cliente respondeu.
         const payload = {
             contatoId,
             canal,
-            resultado: resultado === 'aguardando' ? null : resultado,
+            sentido,
+            resultado: isEntrada ? resultado : null,
             observacao: observacao.trim() || undefined,
             data: new Date(data).toISOString(),
         }
         if (isEdit && interacao) {
             atualizar.mutate({ id: interacao.id, ...payload }, { onSuccess: onClose })
         } else {
-            criar.mutate({ ...payload, campanhaId: campanhaId || undefined }, { onSuccess: () => {
-                if (campanhaId) aplicarCampanha.mutate({ contatoId, campanhaId }) // resumo/chip
+            const campanha = isEntrada ? '' : campanhaId // oferta só em saída
+            criar.mutate({ ...payload, campanhaId: campanha || undefined }, { onSuccess: () => {
+                if (campanha) aplicarCampanha.mutate({ contatoId, campanhaId: campanha }) // resumo/chip
                 setObservacao('')
                 onClose()
             } })
@@ -104,6 +115,29 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
 
     return (
         <form onSubmit={handleSubmit} className="space-y-3 px-4 py-3">
+            {/* Quem falou? (direção) */}
+            <div className="space-y-1.5">
+                <p className="text-[10.5px] font-semibold text-muted-foreground/60">Quem falou?</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                    {SENTIDO_OPTIONS.map((opt) => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => setSentido(opt.value)}
+                            className={cn(
+                                'rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-50',
+                                sentido === opt.value
+                                    ? 'border-primary/40 bg-primary/15 text-primary'
+                                    : 'border-border bg-foreground/3 text-muted-foreground hover:border-foreground/20 hover:text-foreground',
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Plataforma */}
             <div className="space-y-1.5">
                 <p className="text-[10.5px] font-semibold text-muted-foreground/60">Plataforma</p>
@@ -133,7 +167,8 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
                 />
             </div>
 
-            {/* Resposta */}
+            {/* Resposta — só quando o cliente respondeu (entrada) */}
+            {isEntrada && (
             <div className="space-y-1.5">
                 <p className="text-[10.5px] font-semibold text-muted-foreground/60">Resposta</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -155,9 +190,10 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
                     ))}
                 </div>
             </div>
+            )}
 
-            {/* Campanha/oferta (promoção) — só no registro novo */}
-            {!isEdit && (
+            {/* Campanha/oferta (promoção) — só no registro novo de saída (eu contatei) */}
+            {!isEdit && !isEntrada && (
                 <div className="space-y-1.5">
                     <p className="text-[10.5px] font-semibold text-muted-foreground/60">Campanha/oferta (opcional)</p>
                     {showNovaCampanha ? (
