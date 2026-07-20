@@ -457,8 +457,8 @@ export function TabMarketing({ animKey, periodo }: Props) {
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                                     <MiniStat label="A contatar" value={fmtNum(Number(relFunil.a_contatar ?? 0))} />
-                                    <MiniStat label="Contatado" value={fmtNum(Number(relFunil.contatado ?? 0))} />
-                                    <MiniStat label="Negociando" value={fmtNum(Number(relFunil.em_negociacao ?? 0))} />
+                                    <MiniStat label="Aguardando" value={fmtNum(Number(relFunil.contatado ?? 0))} />
+                                    <MiniStat label="Em conversa" value={fmtNum(Number(relFunil.em_negociacao ?? 0))} />
                                     <MiniStat label="Resolvido" value={fmtNum(Number(relFunil.resolvido ?? 0))} accent="#0a8a0a" />
                                 </div>
                                 {Number(relFunil.whatsapp_incorreto ?? 0) > 0 && (

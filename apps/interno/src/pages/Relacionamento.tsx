@@ -45,12 +45,20 @@ const ABAS: Array<{ value: RelacionamentoAba; label: string }> = [
     { value: 'cobranca', label: 'Cobrança' },
 ]
 
+// Colunas = ciclo de vida do contato (rótulos assistidos; enum inalterado).
+// contatado = "Aguardando resposta"; em_negociacao = "Em conversa".
 const COLUNAS: Array<{ status: RelacionamentoStatus; label: string }> = [
     { status: 'a_contatar', label: 'A Contatar' },
-    { status: 'contatado', label: 'Contatado' },
-    { status: 'em_negociacao', label: 'Em Negociação' },
+    { status: 'contatado', label: 'Aguardando Resposta' },
+    { status: 'em_negociacao', label: 'Em Conversa' },
     { status: 'resolvido', label: 'Resolvido' },
 ]
+
+// Coluna efetiva exposta pela view (deriva 'contatado' estourado → 'a_contatar').
+// Fallback defensivo para o status cru caso a view ainda não traga o campo.
+function colunaEfetivaDe(card: KanbanRow): RelacionamentoStatus {
+    return card.coluna_efetiva ?? card.status_relacionamento ?? 'a_contatar'
+}
 
 const BADGE_VARIANT: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'success' | 'default'> = {
     a_contatar: 'warning',
@@ -84,9 +92,14 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
         .filter((ct) => ct.contato_id === card.contato_id)
         .map((ct) => ct.tag)
 
-    const status = card.status_relacionamento ?? 'a_contatar'
+    const status = card.coluna_efetiva ?? card.status_relacionamento ?? 'a_contatar'
     return (
         <>
+            {card.reengajar && (
+                <div className="mb-1.5 inline-flex items-center gap-1 rounded-full border border-warning-strong/30 bg-warning-strong/10 px-2 py-0.5 text-[10px] font-semibold text-warning-strong">
+                    ignorou · re-contatar
+                </div>
+            )}
             {cardTags.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1">
                     {cardTags.map((tag) => (
@@ -387,16 +400,17 @@ export function Relacionamento() {
             ...coluna,
             cards: data.filter(
                 (item): item is KanbanRow & { contato_id: string } =>
-                    item.status_relacionamento === coluna.status && typeof item.contato_id === 'string'
+                    colunaEfetivaDe(item) === coluna.status && typeof item.contato_id === 'string'
             ),
         }))
     }, [data])
 
+    // Mapa contato → coluna EFETIVA (o que o usuário vê): base do drag e do no-op check.
     const cardStatusMap = useMemo(() => {
         const map = new Map<string, RelacionamentoStatus>()
         for (const card of data) {
-            if (card.contato_id && card.status_relacionamento) {
-                map.set(card.contato_id, card.status_relacionamento)
+            if (card.contato_id) {
+                map.set(card.contato_id, colunaEfetivaDe(card))
             }
         }
         return map
