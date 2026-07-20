@@ -124,3 +124,21 @@ export function useRptAquisicaoFonte() {
         staleTime: STALE_TIME,
     })
 }
+
+/** Esforço de contato (tentativas × resposta) no período. */
+export function useRptRelacionamentoEsforco(periodo: PeriodoRel) {
+    return useQuery({
+        queryKey: ['relatorio', 'relacionamento_esforco', periodoKey(periodo)],
+        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getRelacionamentoEsforco(desde, ate) },
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Funil de trabalho do kanban + base não-alcançável — vitalício. */
+export function useRptRelacionamentoFunil() {
+    return useQuery({
+        queryKey: ['relatorio', 'relacionamento_funil'],
+        queryFn: relatorioService.getRelacionamentoFunil,
+        staleTime: STALE_TIME,
+    })
+}
