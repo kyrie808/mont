@@ -1,7 +1,8 @@
-import { Phone, AlertTriangle, CheckCircle, MinusCircle } from 'lucide-react'
+import { Phone, AlertTriangle, CheckCircle, MinusCircle, Megaphone, X } from 'lucide-react'
 import { cn, formatCurrency, formatDate, formatPhone } from '@mont/shared'
 import { useContato } from '../../hooks/useContatos'
 import { useContatoTags } from '../../hooks/useTags'
+import { useContatoCampanhas, useRemoverCampanha } from '../../hooks/useCampanhas'
 import { usePerfilExtras, useLtvContato, useKanbanRowContato } from '../../hooks/usePerfilSideSheet'
 import { InteracoesTimeline } from './InteracoesTimeline'
 import type { ProdutoRanking } from '../../services/relacionamentoService'
@@ -125,6 +126,8 @@ interface PerfilClienteRicoProps {
 export function PerfilClienteRico({ contatoId, nomeContato, showInteracoes = true }: PerfilClienteRicoProps) {
     const { contato, loading: contatoLoading } = useContato(contatoId)
     const { data: allContatoTags = [], isLoading: tagsLoading } = useContatoTags()
+    const { data: allContatoCampanhas = [] } = useContatoCampanhas()
+    const removerCampanha = useRemoverCampanha()
     const { data: ltv, isLoading: ltvLoading } = useLtvContato(contatoId)
     const { data: extras, isLoading: extrasLoading } = usePerfilExtras(contatoId)
     const { data: ritmo, isLoading: ritmoLoading } = useKanbanRowContato(contatoId)
@@ -134,6 +137,7 @@ export function PerfilClienteRico({ contatoId, nomeContato, showInteracoes = tru
     if (isLoading) return <SkeletonPerfil />
 
     const appliedTags = allContatoTags.filter((ct) => ct.contato_id === contatoId).map((ct) => ct.tag)
+    const campanhas = allContatoCampanhas.filter((cc) => cc.contato_id === contatoId)
     const handleWhatsApp = () => {
         const phone = (contato?.telefone ?? '').replace(/\D/g, '')
         if (phone) window.open(`https://wa.me/55${phone}`, '_blank')
@@ -180,6 +184,32 @@ export function PerfilClienteRico({ contatoId, nomeContato, showInteracoes = tru
                                 {tag.nome}
                             </span>
                         ))}
+                    </div>
+                )}
+                {campanhas.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                        {campanhas.slice(0, 4).map((c) => (
+                            <span
+                                key={c.campanha_id}
+                                className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-foreground"
+                            >
+                                <Megaphone className="h-3 w-3 shrink-0 text-primary/70" />
+                                {c.nome}
+                                <button
+                                    type="button"
+                                    onClick={() => removerCampanha.mutate({ contatoId, campanhaId: c.campanha_id })}
+                                    className="ml-0.5 text-muted-foreground/50 transition-colors hover:text-destructive"
+                                    aria-label={`Remover de ${c.nome}`}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </span>
+                        ))}
+                        {campanhas.length > 4 && (
+                            <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                +{campanhas.length - 4}
+                            </span>
+                        )}
                     </div>
                 )}
             </div>

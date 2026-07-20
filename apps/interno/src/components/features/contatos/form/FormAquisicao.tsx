@@ -19,7 +19,8 @@ const labelClass = 'text-[10px] font-bold text-muted-foreground uppercase tracki
 export function FormAquisicao({ register, errors, setValue }: FormAquisicaoProps) {
     const toast = useToast()
     const { data: fontes = [] } = useFontes()
-    const { data: campanhas = [], criar } = useCampanhas()
+    // Cadastro = campanha de AQUISIÇÃO (anúncio). Criação inline nasce tipo='aquisicao'.
+    const { data: campanhas = [], criar } = useCampanhas('aquisicao')
 
     const [showNovaCampanha, setShowNovaCampanha] = useState(false)
     const [novaCampanha, setNovaCampanha] = useState('')

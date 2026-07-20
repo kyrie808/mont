@@ -990,6 +990,7 @@ export type Database = {
       }
       interacoes: {
         Row: {
+          campanha_id: string | null
           canal: string | null
           contato_id: string
           criado_por: string | null
@@ -1000,6 +1001,7 @@ export type Database = {
           tipo: string | null
         }
         Insert: {
+          campanha_id?: string | null
           canal?: string | null
           contato_id: string
           criado_por?: string | null
@@ -1010,6 +1012,7 @@ export type Database = {
           tipo?: string | null
         }
         Update: {
+          campanha_id?: string | null
           canal?: string | null
           contato_id?: string
           criado_por?: string | null
@@ -1020,6 +1023,20 @@ export type Database = {
           tipo?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "interacoes_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacoes_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
+          },
           {
             foreignKeyName: "interacoes_contato_id_fkey"
             columns: ["contato_id"]
