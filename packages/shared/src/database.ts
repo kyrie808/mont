@@ -64,20 +64,32 @@ export type Database = {
         Row: {
           ativo: boolean
           criado_em: string
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
           id: string
           nome: string
+          tipo: string
         }
         Insert: {
           ativo?: boolean
           criado_em?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
           id?: string
           nome: string
+          tipo?: string
         }
         Update: {
           ativo?: boolean
           criado_em?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
           id?: string
           nome?: string
+          tipo?: string
         }
         Relationships: []
       }
@@ -544,6 +556,81 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "despesas_recorrentes"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      contato_campanhas: {
+        Row: {
+          campanha_id: string
+          contato_id: string
+          criado_em: string
+        }
+        Insert: {
+          campanha_id: string
+          contato_id: string
+          criado_em?: string
+        }
+        Update: {
+          campanha_id?: string
+          contato_id?: string
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contato_campanhas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
           },
         ]
       }
