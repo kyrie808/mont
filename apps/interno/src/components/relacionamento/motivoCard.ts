@@ -16,6 +16,15 @@ export function motivoCard(card: KanbanRow): MotivoInfo | null {
     const aba = card.aba_atual
     if (!aba) return null
 
+    if (aba === 'leads') {
+        return {
+            texto: 'nunca comprou · lead',
+            tooltip: 'Ainda não fez a 1ª compra. Trabalhe a conversão.',
+            corClass: 'text-warning-strong',
+            glyph: null,
+        }
+    }
+
     if (aba === 'cobranca') {
         return {
             texto: 'fiado em aberto',

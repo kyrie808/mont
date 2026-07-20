@@ -3037,7 +3037,7 @@ export type Database = {
       }
     }
     Enums: {
-      enum_relacionamento_aba: "reativacao" | "recompra" | "cobranca"
+      enum_relacionamento_aba: "reativacao" | "recompra" | "cobranca" | "leads"
       enum_relacionamento_status:
         | "a_contatar"
         | "contatado"
@@ -3175,7 +3175,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      enum_relacionamento_aba: ["reativacao", "recompra", "cobranca"],
+      enum_relacionamento_aba: ["reativacao", "recompra", "cobranca", "leads"],
       enum_relacionamento_status: [
         "a_contatar",
         "contatado",

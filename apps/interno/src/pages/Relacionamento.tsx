@@ -39,6 +39,7 @@ import { useContatoTags } from '../hooks/useTags'
 const CARDS_PER_PAGE = 30
 
 const ABAS: Array<{ value: RelacionamentoAba; label: string }> = [
+    { value: 'leads', label: 'Leads' },
     { value: 'reativacao', label: 'Reativação' },
     { value: 'recompra', label: 'Recompra' },
     { value: 'cobranca', label: 'Cobrança' },
@@ -351,7 +352,7 @@ export function Relacionamento() {
     // ── Aba logic (preserved) ─────────────────────────────────────────────────
     const abaInicial = useMemo<RelacionamentoAba>(() => {
         const abaQuery = searchParams.get('aba')
-        if (abaQuery === 'reativacao' || abaQuery === 'recompra' || abaQuery === 'cobranca') {
+        if (abaQuery === 'leads' || abaQuery === 'reativacao' || abaQuery === 'recompra' || abaQuery === 'cobranca') {
             return abaQuery
         }
         const state = location.state as { aba?: RelacionamentoAba } | null
