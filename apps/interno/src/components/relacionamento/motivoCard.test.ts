@@ -9,7 +9,7 @@ function row(overrides: Partial<KanbanRow>): KanbanRow {
         arquivado_em: null,
         balde_cheio: false,
         coluna_efetiva: 'a_contatar',
-        reengajar: false,
+        tentativas: 0,
         contato_id: 'test-id',
         dias_sem_compra: null,
         intervalo_medio: null,

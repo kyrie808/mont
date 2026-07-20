@@ -37,10 +37,10 @@ export function useMoverCard() {
             queryClient.setQueriesData<KanbanRow[]>({ queryKey: RELACIONAMENTO_QUERY_KEY }, (current) => {
                 if (!current) return current
 
-                // Drag manual = override: reflete na coluna efetiva e limpa o selo de reengajar.
+                // Drag manual = override: reflete na coluna efetiva na hora.
                 return current.map((card) =>
                     card.contato_id === contatoId
-                        ? { ...card, status_relacionamento: novoStatus, coluna_efetiva: novoStatus, reengajar: false }
+                        ? { ...card, status_relacionamento: novoStatus, coluna_efetiva: novoStatus }
                         : card
                 )
             })

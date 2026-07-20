@@ -1,12 +1,10 @@
 import { useState, useMemo } from 'react'
-import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil, Megaphone } from 'lucide-react'
+import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil, Megaphone, Reply } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { Modal } from '../ui'
 import { useInteracoes, type Interacao } from '../../hooks/useInteracoes'
 import { useCampanhas } from '../../hooks/useCampanhas'
-import { useRelacionamentoConfig } from '../../hooks/useRelacionamentoConfig'
-import { estadoPontoContato, ESTADO_CONTATO_LABEL } from '../../utils/contatoEstado'
 import { RegistrarContatoForm } from './RegistrarContatoForm'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -14,8 +12,10 @@ import { RegistrarContatoForm } from './RegistrarContatoForm'
 const RESULTADO_LABEL: Record<string, string> = {
     a_contatar: 'A Contatar',
     contatado: 'Aguardando Resposta',
+    follow_up: 'Follow-up',
     em_negociacao: 'Em Conversa',
     resolvido: 'Resolvido',
+    sem_retorno: 'Sem Retorno',
 }
 
 interface TipoConfig {
@@ -31,6 +31,9 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
     tag: { icon: Tag, dotBg: 'bg-blue-400/10', dotBorder: 'border-blue-400/25', iconColor: 'text-blue-400' },
     ponto_contato: { icon: PhoneCall, dotBg: 'bg-emerald-400/10', dotBorder: 'border-emerald-400/25', iconColor: 'text-emerald-400' },
 }
+
+// Beat de entrada (cliente respondeu) tem visual próprio — a conversa "voltou".
+const ENTRADA_CONFIG: TipoConfig = { icon: Reply, dotBg: 'bg-primary/10', dotBorder: 'border-primary/25', iconColor: 'text-primary' }
 
 const TIPO_CONFIG_DEFAULT: TipoConfig = {
     icon: MessageSquare,
@@ -68,7 +71,9 @@ function formatAbsoluto(dateStr: string): string {
     return `${d} · ${t}`
 }
 
-function getEventTitle(item: Interacao, janelaHoras: number): string {
+const RESPOSTA_LABEL: Record<string, string> = { respondeu: 'respondeu', aceitou: 'aceitou', recusou: 'recusou' }
+
+function getEventTitle(item: Interacao): string {
     if (item.tipo === 'movimentacao_kanban') {
         const label = item.resultado ? (RESULTADO_LABEL[item.resultado] ?? item.resultado) : '?'
         return `Movido para ${label}`
@@ -79,9 +84,11 @@ function getEventTitle(item: Interacao, janelaHoras: number): string {
     }
     if (item.tipo === 'ponto_contato') {
         const canalLabel = item.canal ? (CANAL_LABEL[item.canal] ?? item.canal) : null
-        const estado = ESTADO_CONTATO_LABEL[estadoPontoContato(item.resultado, item.data, janelaHoras)]
-        const parts = ['Contato', canalLabel, estado].filter(Boolean)
-        return parts.join(' · ')
+        if (item.sentido === 'entrada') {
+            const resp = item.resultado ? (RESPOSTA_LABEL[item.resultado] ?? 'respondeu') : 'respondeu'
+            return [`Cliente ${resp}`, canalLabel].filter(Boolean).join(' · ')
+        }
+        return ['Contato', canalLabel].filter(Boolean).join(' · ')
     }
     return item.tipo ?? 'Interação'
 }
@@ -110,12 +117,14 @@ function SkeletonTimeline() {
 
 // ─── TimelineItem ─────────────────────────────────────────────────────────────
 
-function TimelineItem({ item, isLast, onEdit, campanhaNome, janelaHoras }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void; campanhaNome?: string; janelaHoras: number }) {
-    const config = (item.tipo ? TIPO_CONFIG[item.tipo] : null) ?? TIPO_CONFIG_DEFAULT
+function TimelineItem({ item, isLast, onEdit, campanhaNome }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void; campanhaNome?: string }) {
+    const config = item.tipo === 'ponto_contato' && item.sentido === 'entrada'
+        ? ENTRADA_CONFIG
+        : (item.tipo ? TIPO_CONFIG[item.tipo] : null) ?? TIPO_CONFIG_DEFAULT
     const Icon = config.icon
     const relativo = formatRelativo(item.data)
     const absoluto = formatAbsoluto(item.data)
-    const title = getEventTitle(item, janelaHoras)
+    const title = getEventTitle(item)
     const editable = item.tipo === 'ponto_contato' && !!onEdit
 
     const content = (
@@ -181,7 +190,6 @@ function TimelineItem({ item, isLast, onEdit, campanhaNome, janelaHoras }: { ite
 export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
     const { data: interacoes, isLoading, error } = useInteracoes(contatoId)
     const { data: campanhas = [] } = useCampanhas()
-    const { janelaRespostaHoras } = useRelacionamentoConfig()
     const campMap = useMemo(() => new Map(campanhas.map((c) => [c.id, c.nome])), [campanhas])
     const [editing, setEditing] = useState<Interacao | null>(null)
 
@@ -216,7 +224,6 @@ export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
                         isLast={idx === interacoes.length - 1}
                         onEdit={setEditing}
                         campanhaNome={item.campanha_id ? campMap.get(item.campanha_id) : undefined}
-                        janelaHoras={janelaRespostaHoras}
                     />
                 ))}
             </div>

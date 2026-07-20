@@ -973,6 +973,7 @@ export type Database = {
           id: string
           observacao: string | null
           resultado: string | null
+          sentido: string
           tipo: string | null
         }
         Insert: {
@@ -984,6 +985,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           resultado?: string | null
+          sentido?: string
           tipo?: string | null
         }
         Update: {
@@ -995,6 +997,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           resultado?: string | null
+          sentido?: string
           tipo?: string | null
         }
         Relationships: [
@@ -2510,12 +2513,12 @@ export type Database = {
           nome: string | null
           primeira_compra: string | null
           proxima_esperada: string | null
-          reengajar: boolean | null
           status_relacionamento:
             | Database["public"]["Enums"]["enum_relacionamento_status"]
             | null
           sumido: boolean | null
           telefone: string | null
+          tentativas: number | null
           total_pedidos: number | null
           ultima_compra: string | null
         }
@@ -3022,6 +3025,8 @@ export type Database = {
         | "contatado"
         | "em_negociacao"
         | "resolvido"
+        | "follow_up"
+        | "sem_retorno"
       purchase_order_payment_status: "paid" | "partial" | "unpaid"
       purchase_order_status: "pending" | "received" | "cancelled"
     }
@@ -3157,6 +3162,8 @@ export const Constants = {
         "contatado",
         "em_negociacao",
         "resolvido",
+        "follow_up",
+        "sem_retorno",
       ],
       purchase_order_payment_status: ["paid", "partial", "unpaid"],
       purchase_order_status: ["pending", "received", "cancelled"],

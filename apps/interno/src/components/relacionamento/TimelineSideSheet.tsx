@@ -9,15 +9,19 @@ import type { RelacionamentoStatus } from '../../hooks/useRelacionamento'
 const RESULTADO_LABEL: Record<string, string> = {
     a_contatar: 'A Contatar',
     contatado: 'Aguardando Resposta',
+    follow_up: 'Follow-up',
     em_negociacao: 'Em Conversa',
     resolvido: 'Resolvido',
+    sem_retorno: 'Sem Retorno',
 }
 
 const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'default' | 'success'> = {
     a_contatar: 'warning',
     contatado: 'secondary',
+    follow_up: 'warning',
     em_negociacao: 'default',
     resolvido: 'success',
+    sem_retorno: 'secondary',
 }
 
 // ─── Grain SVG data URI (fractalNoise, sem blur, apenas textura) ──────────────

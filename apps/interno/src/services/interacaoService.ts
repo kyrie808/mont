@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase'
 
 export type Interacao = Database['public']['Tables']['interacoes']['Row']
 export type Canal = 'google' | 'instagram' | 'whatsapp' | 'outro'
-// Retorno EXPLÍCITO do contato. "Aguardando" e "sem resposta" são derivados (null +
-// janela, ver utils/contatoEstado) — não são valores manuais.
+// Direção do beat: 'saida' = eu contatei (tentativa/follow-up); 'entrada' = o cliente respondeu.
+export type Sentido = 'saida' | 'entrada'
+// Resposta do cliente (só em beats de entrada). "Aguardando"/"Sem resposta" e a cadência
+// de follow-up são DERIVADOS na view (ver view_relacionamento_kanban).
 export type ResultadoPontoContato = 'respondeu' | 'aceitou' | 'recusou'
 
 interface CriarFeedbackInput {
@@ -16,10 +18,11 @@ interface CriarFeedbackInput {
 interface CriarPontoContatoInput {
     contatoId: string
     canal: Canal
-    resultado: ResultadoPontoContato | null // null = "Aguardando" (default)
+    resultado: ResultadoPontoContato | null // saida → null; entrada → respondeu/aceitou/recusou
+    sentido?: Sentido // default 'saida' (eu contatei)
     observacao?: string
     data?: string // ISO; omitido → default now() do banco
-    campanhaId?: string // oferta/campanha apresentada nesse contato (histórico)
+    campanhaId?: string // oferta/campanha apresentada nesse contato (só em saida)
 }
 
 class InteracaoService {
@@ -51,11 +54,12 @@ class InteracaoService {
         }
     }
 
-    async criarPontoContato({ contatoId, canal, resultado, observacao, data, campanhaId }: CriarPontoContatoInput): Promise<void> {
+    async criarPontoContato({ contatoId, canal, resultado, sentido, observacao, data, campanhaId }: CriarPontoContatoInput): Promise<void> {
         const insert: Database['public']['Tables']['interacoes']['Insert'] = {
             contato_id: contatoId,
             tipo: 'ponto_contato',
             canal,
+            sentido: sentido ?? 'saida',
             resultado,
             observacao: observacao ?? null,
             campanha_id: campanhaId ?? null,
@@ -69,12 +73,13 @@ class InteracaoService {
 
     async atualizarPontoContato(
         id: string,
-        { canal, resultado, observacao, data }: Omit<CriarPontoContatoInput, 'contatoId'>,
+        { canal, resultado, sentido, observacao, data }: Omit<CriarPontoContatoInput, 'contatoId'>,
     ): Promise<void> {
         const update: Database['public']['Tables']['interacoes']['Update'] = {
             canal,
             resultado,
             observacao: observacao ?? null,
+            ...(sentido ? { sentido } : {}),
             ...(data ? { data } : {}),
         }
         const { error } = await supabase.from('interacoes').update(update).eq('id', id)
