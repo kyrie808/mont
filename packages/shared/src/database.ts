@@ -3016,6 +3016,7 @@ export type Database = {
         Args: { p_ate?: string; p_desde?: string }
         Returns: {
           aceitou: number
+          aguardando: number
           respondeu: number
           sem_resposta: number
           tentativas: number

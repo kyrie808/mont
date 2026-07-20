@@ -29,7 +29,7 @@ export function useRegistrarFeedback() {
 interface RegistrarPontoContatoInput {
     contatoId: string
     canal: Canal
-    resultado: ResultadoPontoContato
+    resultado: ResultadoPontoContato | null // null = Aguardando
     observacao?: string
     data?: string // ISO
     campanhaId?: string

@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase'
 
 export type Interacao = Database['public']['Tables']['interacoes']['Row']
 export type Canal = 'google' | 'instagram' | 'whatsapp' | 'outro'
-export type ResultadoPontoContato = 'respondeu' | 'sem_resposta' | 'aceitou' | 'recusou'
+// Retorno EXPLÍCITO do contato. "Aguardando" e "sem resposta" são derivados (null +
+// janela, ver utils/contatoEstado) — não são valores manuais.
+export type ResultadoPontoContato = 'respondeu' | 'aceitou' | 'recusou'
 
 interface CriarFeedbackInput {
     contatoId: string
@@ -14,7 +16,7 @@ interface CriarFeedbackInput {
 interface CriarPontoContatoInput {
     contatoId: string
     canal: Canal
-    resultado: ResultadoPontoContato
+    resultado: ResultadoPontoContato | null // null = "Aguardando" (default)
     observacao?: string
     data?: string // ISO; omitido → default now() do banco
     campanhaId?: string // oferta/campanha apresentada nesse contato (histórico)
