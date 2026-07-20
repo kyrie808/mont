@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronDown, Users, Clock, Megaphone, Gift, Tag } from 'lucide-react'
+import { ChevronRight, ChevronDown, Users, Clock, Megaphone, Gift, Tag, PhoneOff } from 'lucide-react'
 import {
     useRptLtvPorCliente, useRptAquisicaoMensal, useRptRankingIndicacoes,
     useRptCampanhas, useRptAquisicaoFonte, useRptPromocoes,
+    useRptRelacionamentoEsforco, useRptRelacionamentoFunil,
 } from '../../hooks/useRelatorios'
 import type { PeriodoRel } from '../../services/relatorioService'
 import { IndicadosDetalhe } from '../dashboard/IndicadosDetalhe'
@@ -55,6 +56,10 @@ export function TabMarketing({ animKey, periodo }: Props) {
     const { data: fontes = [] } = useRptAquisicaoFonte()
     const { data: promocoesRows = [] } = useRptPromocoes(periodo)
     const promocoes = promocoesRows[0]
+    const { data: esforcoRows = [] } = useRptRelacionamentoEsforco(periodo)
+    const esforco = esforcoRows[0]
+    const { data: funilRows = [] } = useRptRelacionamentoFunil()
+    const relFunil = funilRows[0]
 
     const isLoading = l1 || l2
     const isError = e1 || e2
@@ -397,6 +402,76 @@ export function TabMarketing({ animKey, periodo }: Props) {
                         </div>
                     )}
                 </ChartCard>
+            </section>
+
+            {/* 4b. ESFORÇO DE RELACIONAMENTO (contato/resposta + trabalho kanban) ── */}
+            <section className="lg:col-span-12">
+                <Insight
+                    eyebrow="Contato & resposta"
+                    headline={Number(esforco?.tentativas ?? 0) > 0
+                        ? `${fmtNum(Number(esforco?.sem_resposta ?? 0))} de ${fmtNum(Number(esforco?.tentativas ?? 0))} contatos não responderam.`
+                        : `Nenhuma tentativa de contato ${isMes ? 'no mês' : 'registrada'}.`}
+                    sub="Tentativas de falar com o cliente (do kanban) e quantas tiveram resposta."
+                />
+                <div className="grid gap-[14px] lg:grid-cols-2">
+                    {/* Tentativas × resposta (período) */}
+                    <ChartCard padding={16}>
+                        <div className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+                            Tentativas de contato {isMes ? 'no mês' : '(tudo)'}
+                        </div>
+                        {Number(esforco?.tentativas ?? 0) === 0 ? (
+                            <div className="py-2 text-sm text-muted-foreground">
+                                Nenhuma tentativa registrada {isMes ? 'no mês' : 'ainda'}. Registre os contatos no kanban de Relacionamento.
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{ display: 'flex', height: 14, borderRadius: 999, overflow: 'hidden', background: C_MUTED, marginBottom: 12 }}>
+                                    <div style={{ width: `${(Number(esforco?.respondeu ?? 0) / Number(esforco?.tentativas ?? 1)) * 100}%`, background: COL_PRIMARY }} />
+                                    <div style={{ width: `${(Number(esforco?.sem_resposta ?? 0) / Number(esforco?.tentativas ?? 1)) * 100}%`, background: COL_WARNING }} />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                                    <MiniStat label="Tentativas" value={fmtNum(Number(esforco?.tentativas ?? 0))} />
+                                    <MiniStat label="Responderam" value={fmtNum(Number(esforco?.respondeu ?? 0))} accent="#0a8a0a" />
+                                    <MiniStat label="Não responderam" value={fmtNum(Number(esforco?.sem_resposta ?? 0))} accent="#b91c1c" />
+                                </div>
+                            </>
+                        )}
+                    </ChartCard>
+
+                    {/* Trabalho no kanban (vitalício) */}
+                    <ChartCard padding={16}>
+                        <div className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">Trabalho no kanban</div>
+                        {relFunil && (
+                            <>
+                                <div style={{ display: 'flex', height: 14, borderRadius: 999, overflow: 'hidden', background: C_MUTED, marginBottom: 12 }}>
+                                    {([
+                                        { n: Number(relFunil.a_contatar ?? 0), c: '#64748b' },
+                                        { n: Number(relFunil.contatado ?? 0), c: '#3b82f6' },
+                                        { n: Number(relFunil.em_negociacao ?? 0), c: COL_WARNING },
+                                        { n: Number(relFunil.resolvido ?? 0), c: COL_PRIMARY },
+                                    ]).map((s, i) => (
+                                        <div key={i} style={{ width: `${Number(relFunil.total ?? 0) > 0 ? (s.n / Number(relFunil.total)) * 100 : 0}%`, background: s.c }} />
+                                    ))}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                                    <MiniStat label="A contatar" value={fmtNum(Number(relFunil.a_contatar ?? 0))} />
+                                    <MiniStat label="Contatado" value={fmtNum(Number(relFunil.contatado ?? 0))} />
+                                    <MiniStat label="Negociando" value={fmtNum(Number(relFunil.em_negociacao ?? 0))} />
+                                    <MiniStat label="Resolvido" value={fmtNum(Number(relFunil.resolvido ?? 0))} accent="#0a8a0a" />
+                                </div>
+                                {Number(relFunil.whatsapp_incorreto ?? 0) > 0 && (
+                                    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'hsl(var(--destructive) / 0.08)', border: '1px solid hsl(var(--destructive) / 0.3)' }}>
+                                        <PhoneOff size={16} strokeWidth={2.2} style={{ color: '#b91c1c', flexShrink: 0 }} />
+                                        <div className="text-sm text-foreground">
+                                            <span className="font-bold">{fmtNum(Number(relFunil.whatsapp_incorreto ?? 0))} clientes com número errado</span>
+                                            <span className="text-muted-foreground"> — não adianta tentar reativar sem corrigir o WhatsApp.</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </ChartCard>
+                </div>
             </section>
 
             {/* 5. CAMPANHAS + EMBAIXADORES (par de mesma altura) ───────────── */}

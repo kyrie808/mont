@@ -128,4 +128,18 @@ export const relatorioService = {
         return data ?? []
     },
 
+    /** Esforço de contato (tentativas × resposta) no período. */
+    async getRelacionamentoEsforco(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_relacionamento_esforco_periodo'>> {
+        const { data, error } = await supabase.rpc('rpt_relacionamento_esforco_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** Funil de trabalho do kanban + base não-alcançável — vitalício. */
+    async getRelacionamentoFunil(): Promise<Tables<'rpt_relacionamento_funil'>[]> {
+        const { data, error } = await supabase.from('rpt_relacionamento_funil').select('*')
+        if (error) throw error
+        return data ?? []
+    },
+
 }

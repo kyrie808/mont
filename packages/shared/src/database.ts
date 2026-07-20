@@ -2293,6 +2293,17 @@ export type Database = {
         }
         Relationships: []
       }
+      rpt_relacionamento_funil: {
+        Row: {
+          a_contatar: number | null
+          contatado: number | null
+          em_negociacao: number | null
+          resolvido: number | null
+          total: number | null
+          whatsapp_incorreto: number | null
+        }
+        Relationships: []
+      }
       view_contas_a_pagar_dashboard: {
         Row: {
           qtd_pendentes: number | null
@@ -2895,6 +2906,15 @@ export type Database = {
           brindes_valor: number
           desconto_qtd: number
           desconto_total: number
+        }[]
+      }
+      rpt_relacionamento_esforco_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          aceitou: number
+          respondeu: number
+          sem_resposta: number
+          tentativas: number
         }[]
       }
       update_purchase_order_with_items: {
