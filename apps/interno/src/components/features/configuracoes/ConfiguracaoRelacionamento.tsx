@@ -4,11 +4,15 @@ import { Card, Button, Input } from '../../ui'
 interface ConfiguracaoRelacionamentoProps {
     limiarReativacao: number
     setLimiarReativacao: (val: number) => void
+    janelaResposta: number
+    setJanelaResposta: (val: number) => void
 }
 
 export function ConfiguracaoRelacionamento({
     limiarReativacao,
     setLimiarReativacao,
+    janelaResposta,
+    setJanelaResposta,
 }: ConfiguracaoRelacionamentoProps) {
     return (
         <Card>
@@ -57,6 +61,29 @@ export function ConfiguracaoRelacionamento({
                     </div>
                     <p className="mt-1.5 text-xs text-muted-foreground">
                         Dentro do prazo: cliente com 1 compra fica em Recompra (balde cheio, ainda consumindo). Após o prazo sem 2ª compra: migra para Reativação.
+                    </p>
+                </div>
+
+                <div className="mt-5">
+                    <label htmlFor="janela-resposta" className="block text-sm font-medium text-foreground mb-1">
+                        Janela para considerar contato "sem resposta"
+                    </label>
+                    <div className="flex items-stretch gap-1">
+                        <Button variant="outline" size="sm" onClick={() => setJanelaResposta(Math.max(1, janelaResposta - 1))} className="px-2">−</Button>
+                        <Input
+                            id="janela-resposta"
+                            type="number"
+                            min={1}
+                            max={168}
+                            value={janelaResposta}
+                            onChange={(e) => setJanelaResposta(Number(e.target.value))}
+                            className="w-16 text-center"
+                        />
+                        <Button variant="outline" size="sm" onClick={() => setJanelaResposta(Math.min(168, janelaResposta + 1))} className="px-2">+</Button>
+                        <span className="text-sm text-muted-foreground self-center ml-1">horas</span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                        Um contato registrado fica "Aguardando" até esse tempo. Passou sem retorno, vira "Sem resposta" (e o card volta pra fila de re-contato).
                     </p>
                 </div>
             </div>

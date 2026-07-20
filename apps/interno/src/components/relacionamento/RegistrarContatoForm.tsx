@@ -18,9 +18,12 @@ const CANAL_OPTIONS: Array<{ value: Canal; label: string }> = [
     { value: 'outro', label: 'Outro' },
 ]
 
-const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoPontoContato; label: string }> = [
+// "Aguardando" (default) = ainda não sei se respondeu. "Sem resposta" não é opção
+// manual — é derivada da janela (ver utils/contatoEstado).
+type ResultadoOpcao = 'aguardando' | ResultadoPontoContato
+const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoOpcao; label: string }> = [
+    { value: 'aguardando', label: 'Aguardando' },
     { value: 'respondeu', label: 'Respondeu' },
-    { value: 'sem_resposta', label: 'Sem resposta' },
     { value: 'aceitou', label: 'Aceitou' },
     { value: 'recusou', label: 'Recusou' },
 ]
@@ -44,7 +47,10 @@ interface RegistrarContatoFormProps {
 export function RegistrarContatoForm({ contatoId, onClose, interacao }: RegistrarContatoFormProps) {
     const isEdit = !!interacao
     const [canal, setCanal] = useState<Canal>(() => (interacao?.canal as Canal) ?? 'whatsapp')
-    const [resultado, setResultado] = useState<ResultadoPontoContato>(() => (interacao?.resultado as ResultadoPontoContato) ?? 'respondeu')
+    const [resultado, setResultado] = useState<ResultadoOpcao>(() => {
+        const r = interacao?.resultado
+        return r === 'respondeu' || r === 'aceitou' || r === 'recusou' ? r : 'aguardando'
+    })
     const [observacao, setObservacao] = useState(() => interacao?.observacao ?? '')
     const [data, setData] = useState(() => (interacao ? isoToLocalDateTime(interacao.data) : nowLocalDateTime()))
 
@@ -76,7 +82,7 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
         const payload = {
             contatoId,
             canal,
-            resultado,
+            resultado: resultado === 'aguardando' ? null : resultado,
             observacao: observacao.trim() || undefined,
             data: new Date(data).toISOString(),
         }

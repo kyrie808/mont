@@ -35,6 +35,7 @@ export function Configuracoes() {
 
     // Local state for editing
     const [limiarReativacao, setLimiarReativacao] = useState(30)
+    const [janelaResposta, setJanelaResposta] = useState(24)
     const [recompensaValor, setRecompensaValor] = useState(5)
     const [mensagemRecompra, setMensagemRecompra] = useState('')
 
@@ -67,6 +68,7 @@ export function Configuracoes() {
     useEffect(() => {
         if (!loading) {
             setLimiarReativacao(config.relacionamento.limiarReativacao)
+            setJanelaResposta(config.relacionamento.janelaRespostaHoras)
             setRecompensaValor(config.recompensaIndicacao.valor)
             setMensagemRecompra(config.mensagemRecompra)
 
@@ -146,6 +148,7 @@ export function Configuracoes() {
                     valor: {
                         limiar_reativacao: limiarReativacao,
                         multiplicador_sumido: config.relacionamento.multiplicadorSumido,
+                        janela_resposta_horas: janelaResposta,
                     },
                 }, { onConflict: 'chave' }),
                 supabase.from('configuracoes').upsert({
@@ -173,6 +176,7 @@ export function Configuracoes() {
 
     const handleReset = () => {
         setLimiarReativacao(config.relacionamento.limiarReativacao)
+        setJanelaResposta(config.relacionamento.janelaRespostaHoras)
         setRecompensaValor(config.recompensaIndicacao.valor)
         setMensagemRecompra(config.mensagemRecompra)
         ;supabase.from('configuracoes').select('valor').eq('chave', 'locais_partida').maybeSingle()
@@ -186,6 +190,7 @@ export function Configuracoes() {
 
     const hasChanges =
         limiarReativacao !== config.relacionamento.limiarReativacao ||
+        janelaResposta !== config.relacionamento.janelaRespostaHoras ||
         recompensaValor !== config.recompensaIndicacao.valor ||
         mensagemRecompra !== config.mensagemRecompra
 
@@ -200,6 +205,8 @@ export function Configuracoes() {
                             <ConfiguracaoRelacionamento
                                 limiarReativacao={limiarReativacao}
                                 setLimiarReativacao={setLimiarReativacao}
+                                janelaResposta={janelaResposta}
+                                setJanelaResposta={setJanelaResposta}
                             />
 
                             <ConfiguracaoRecompensas

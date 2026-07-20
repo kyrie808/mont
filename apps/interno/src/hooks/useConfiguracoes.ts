@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 interface ConfigRelacionamento {
     limiarReativacao: number
     multiplicadorSumido: number
+    janelaRespostaHoras: number
 }
 
 interface RecompensaIndicacao {
@@ -20,7 +21,7 @@ interface Configuracoes {
 }
 
 const DEFAULT_CONFIG: Configuracoes = {
-    relacionamento: { limiarReativacao: 30, multiplicadorSumido: 1.5 },
+    relacionamento: { limiarReativacao: 30, multiplicadorSumido: 1.5, janelaRespostaHoras: 24 },
     recompensaIndicacao: { tipo: 'desconto', valor: 5 },
     mensagemRecompra: 'Olá {{nome}}! Faz {{dias}} dias que você não compra conosco. Que tal fazer um novo pedido? 🧀',
     taxaEntregaPadrao: 0,
@@ -55,10 +56,11 @@ export function useConfiguracoes(): UseConfiguracoesReturn {
             data?.forEach((item: { chave: string; valor: unknown }) => {
                 switch (item.chave) {
                     case 'relacionamento': {
-                        const val = item.valor as { limiar_reativacao: number; multiplicador_sumido: number }
+                        const val = item.valor as { limiar_reativacao: number; multiplicador_sumido: number; janela_resposta_horas?: number }
                         configObj.relacionamento = {
                             limiarReativacao: val.limiar_reativacao ?? 30,
                             multiplicadorSumido: val.multiplicador_sumido ?? 1.5,
+                            janelaRespostaHoras: val.janela_resposta_horas ?? 24,
                         }
                         break
                     }

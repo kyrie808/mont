@@ -5,6 +5,8 @@ import { cn } from '@mont/shared'
 import { Modal } from '../ui'
 import { useInteracoes, type Interacao } from '../../hooks/useInteracoes'
 import { useCampanhas } from '../../hooks/useCampanhas'
+import { useRelacionamentoConfig } from '../../hooks/useRelacionamentoConfig'
+import { estadoPontoContato, ESTADO_CONTATO_LABEL } from '../../utils/contatoEstado'
 import { RegistrarContatoForm } from './RegistrarContatoForm'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -44,13 +46,6 @@ const CANAL_LABEL: Record<string, string> = {
     outro: 'Outro',
 }
 
-const RESULTADO_PONTO_CONTATO_LABEL: Record<string, string> = {
-    respondeu: 'Respondeu',
-    sem_resposta: 'Sem resposta',
-    aceitou: 'Aceitou',
-    recusou: 'Recusou',
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatRelativo(dateStr: string): string | null {
@@ -73,7 +68,7 @@ function formatAbsoluto(dateStr: string): string {
     return `${d} · ${t}`
 }
 
-function getEventTitle(item: Interacao): string {
+function getEventTitle(item: Interacao, janelaHoras: number): string {
     if (item.tipo === 'movimentacao_kanban') {
         const label = item.resultado ? (RESULTADO_LABEL[item.resultado] ?? item.resultado) : '?'
         return `Movido para ${label}`
@@ -84,8 +79,8 @@ function getEventTitle(item: Interacao): string {
     }
     if (item.tipo === 'ponto_contato') {
         const canalLabel = item.canal ? (CANAL_LABEL[item.canal] ?? item.canal) : null
-        const resultadoLabel = item.resultado ? (RESULTADO_PONTO_CONTATO_LABEL[item.resultado] ?? item.resultado) : null
-        const parts = ['Contato', canalLabel, resultadoLabel].filter(Boolean)
+        const estado = ESTADO_CONTATO_LABEL[estadoPontoContato(item.resultado, item.data, janelaHoras)]
+        const parts = ['Contato', canalLabel, estado].filter(Boolean)
         return parts.join(' · ')
     }
     return item.tipo ?? 'Interação'
@@ -115,12 +110,12 @@ function SkeletonTimeline() {
 
 // ─── TimelineItem ─────────────────────────────────────────────────────────────
 
-function TimelineItem({ item, isLast, onEdit, campanhaNome }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void; campanhaNome?: string }) {
+function TimelineItem({ item, isLast, onEdit, campanhaNome, janelaHoras }: { item: Interacao; isLast: boolean; onEdit?: (item: Interacao) => void; campanhaNome?: string; janelaHoras: number }) {
     const config = (item.tipo ? TIPO_CONFIG[item.tipo] : null) ?? TIPO_CONFIG_DEFAULT
     const Icon = config.icon
     const relativo = formatRelativo(item.data)
     const absoluto = formatAbsoluto(item.data)
-    const title = getEventTitle(item)
+    const title = getEventTitle(item, janelaHoras)
     const editable = item.tipo === 'ponto_contato' && !!onEdit
 
     const content = (
@@ -186,6 +181,7 @@ function TimelineItem({ item, isLast, onEdit, campanhaNome }: { item: Interacao;
 export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
     const { data: interacoes, isLoading, error } = useInteracoes(contatoId)
     const { data: campanhas = [] } = useCampanhas()
+    const { janelaRespostaHoras } = useRelacionamentoConfig()
     const campMap = useMemo(() => new Map(campanhas.map((c) => [c.id, c.nome])), [campanhas])
     const [editing, setEditing] = useState<Interacao | null>(null)
 
@@ -220,6 +216,7 @@ export function InteracoesTimeline({ contatoId }: { contatoId: string }) {
                         isLast={idx === interacoes.length - 1}
                         onEdit={setEditing}
                         campanhaNome={item.campanha_id ? campMap.get(item.campanha_id) : undefined}
+                        janelaHoras={janelaRespostaHoras}
                     />
                 ))}
             </div>

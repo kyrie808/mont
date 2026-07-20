@@ -427,11 +427,13 @@ export function TabMarketing({ animKey, periodo }: Props) {
                             <>
                                 <div style={{ display: 'flex', height: 14, borderRadius: 999, overflow: 'hidden', background: C_MUTED, marginBottom: 12 }}>
                                     <div style={{ width: `${(Number(esforco?.respondeu ?? 0) / Number(esforco?.tentativas ?? 1)) * 100}%`, background: COL_PRIMARY }} />
+                                    <div style={{ width: `${(Number(esforco?.aguardando ?? 0) / Number(esforco?.tentativas ?? 1)) * 100}%`, background: '#64748b' }} />
                                     <div style={{ width: `${(Number(esforco?.sem_resposta ?? 0) / Number(esforco?.tentativas ?? 1)) * 100}%`, background: COL_WARNING }} />
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                                     <MiniStat label="Tentativas" value={fmtNum(Number(esforco?.tentativas ?? 0))} />
                                     <MiniStat label="Responderam" value={fmtNum(Number(esforco?.respondeu ?? 0))} accent="#0a8a0a" />
+                                    <MiniStat label="Aguardando" value={fmtNum(Number(esforco?.aguardando ?? 0))} />
                                     <MiniStat label="Não responderam" value={fmtNum(Number(esforco?.sem_resposta ?? 0))} accent="#b91c1c" />
                                 </div>
                             </>
