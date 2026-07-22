@@ -282,7 +282,8 @@ function DroppableColuna({
         <div
             ref={setNodeRef}
             className={cn(
-                'rounded-2xl border p-2.5 transition-[border-color,background,box-shadow]',
+                // largura fixa no desktop (mantém as colunas confortáveis; o board rola na horizontal)
+                'rounded-2xl border p-2.5 transition-[border-color,background,box-shadow] lg:w-80 lg:shrink-0',
                 isOver
                     ? 'border-primary bg-primary/3 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]'
                     : 'border-border bg-muted'
@@ -615,7 +616,8 @@ export function Relacionamento() {
                             }}
                         >
                             <div
-                                className="grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+                                // mobile: empilha (1 col). desktop: linha com scroll horizontal (Trello-like).
+                                className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:overflow-x-auto lg:pb-3"
                                 onClick={() => setActionCardId(null)}
                             >
                                 {colunas.map((coluna) => {
