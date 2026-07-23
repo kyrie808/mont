@@ -5,6 +5,7 @@ export interface SyncMetaResult {
     ok: boolean
     upserts?: number
     desativadas?: number
+    metricas?: number
     error?: string
 }
 

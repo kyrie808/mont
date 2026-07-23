@@ -118,6 +118,15 @@ export const relatorioService = {
         return data ?? []
     },
 
+    /** ROAS por campanha × mês (Meta): gasto/receita/leads — vitalício; a UI recorta por período. */
+    async getCampanhasRoasMensal(): Promise<Tables<'rpt_campanhas_roas_mensal'>[]> {
+        const { data, error } = await supabase
+            .from('rpt_campanhas_roas_mensal')
+            .select('*')
+        if (error) throw error
+        return data ?? []
+    },
+
     /** Campanhas de PROMOÇÃO (ofertas): participantes/compraram/receita — vitalício. */
     async getCampanhasPromocao(): Promise<Tables<'rpt_campanhas_promocao'>[]> {
         const { data, error } = await supabase

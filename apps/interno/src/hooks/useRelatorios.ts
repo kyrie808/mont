@@ -116,6 +116,15 @@ export function useRptCampanhas() {
     })
 }
 
+/** ROAS por campanha × mês (Meta) — vitalício; a página recorta por período. */
+export function useRptCampanhasRoasMensal() {
+    return useQuery({
+        queryKey: ['relatorio', 'campanhas_roas_mensal'],
+        queryFn: relatorioService.getCampanhasRoasMensal,
+        staleTime: STALE_TIME,
+    })
+}
+
 /** Campanhas de promoção (participantes/compraram/receita) — vitalício. */
 export function useRptCampanhasPromocao() {
     return useQuery({
