@@ -108,12 +108,22 @@ export const relatorioService = {
         return data ?? []
     },
 
-    /** Campanhas com leads/conversão/receita gerada — vitalício. */
+    /** Campanhas de AQUISIÇÃO (anúncio): leads/conversão/receita — vitalício. */
     async getCampanhas(): Promise<Tables<'rpt_campanhas'>[]> {
         const { data, error } = await supabase
             .from('rpt_campanhas')
             .select('*')
             .order('leads', { ascending: false })
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** Campanhas de PROMOÇÃO (ofertas): participantes/compraram/receita — vitalício. */
+    async getCampanhasPromocao(): Promise<Tables<'rpt_campanhas_promocao'>[]> {
+        const { data, error } = await supabase
+            .from('rpt_campanhas_promocao')
+            .select('*')
+            .order('participantes', { ascending: false })
         if (error) throw error
         return data ?? []
     },

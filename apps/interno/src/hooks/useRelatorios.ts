@@ -107,11 +107,20 @@ export function useRptRankingIndicacoes() {
     })
 }
 
-/** Campanhas (leads/conversão/receita) — vitalício. */
+/** Campanhas de aquisição (leads/conversão/receita) — vitalício. */
 export function useRptCampanhas() {
     return useQuery({
         queryKey: ['relatorio', 'campanhas'],
         queryFn: relatorioService.getCampanhas,
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Campanhas de promoção (participantes/compraram/receita) — vitalício. */
+export function useRptCampanhasPromocao() {
+    return useQuery({
+        queryKey: ['relatorio', 'campanhas_promocao'],
+        queryFn: relatorioService.getCampanhasPromocao,
         staleTime: STALE_TIME,
     })
 }
