@@ -1,28 +1,8 @@
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { Badge } from '../ui'
 import { InteracoesTimeline } from './InteracoesTimeline'
+import { StatusRelacionamentoBadge } from './StatusRelacionamentoBadge'
 import type { RelacionamentoStatus } from '../../hooks/useRelacionamento'
-
-// ─── Config ───────────────────────────────────────────────────────────────────
-
-const RESULTADO_LABEL: Record<string, string> = {
-    a_contatar: 'A Contatar',
-    contatado: 'Aguardando Resposta',
-    follow_up: 'Follow-up',
-    em_negociacao: 'Em Conversa',
-    resolvido: 'Resolvido',
-    sem_retorno: 'Sem Retorno',
-}
-
-const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'default' | 'success'> = {
-    a_contatar: 'warning',
-    contatado: 'secondary',
-    follow_up: 'warning',
-    em_negociacao: 'default',
-    resolvido: 'success',
-    sem_retorno: 'secondary',
-}
 
 // ─── Grain SVG data URI (fractalNoise, sem blur, apenas textura) ──────────────
 
@@ -60,9 +40,7 @@ function PanelContent({ onClose, contatoId, nomeContato, statusAtual }: PanelCon
                         {nomeContato}
                     </p>
                     <div className="mt-0.5">
-                        <Badge variant={STATUS_BADGE[statusAtual]} className="px-2 py-0 text-[10px]">
-                            {RESULTADO_LABEL[statusAtual] ?? statusAtual}
-                        </Badge>
+                        <StatusRelacionamentoBadge contatoId={contatoId} fallback={statusAtual} className="px-2 py-0 text-[10px]" />
                     </div>
                 </div>
                 <button

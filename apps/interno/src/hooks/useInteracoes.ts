@@ -42,8 +42,9 @@ export function useRegistrarPontoContato() {
         mutationFn: (input) => interacaoService.criarPontoContato(input),
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
-            // Trigger assistido moveu a coluna do card → refetch do kanban.
+            // Trigger assistido moveu a coluna do card → refetch do kanban (lista + linha do contato).
             void queryClient.invalidateQueries({ queryKey: ['relacionamento_kanban'] })
+            void queryClient.invalidateQueries({ queryKey: ['kanban_row_contato', variables.contatoId] })
         },
     })
 }
@@ -60,6 +61,7 @@ export function useAtualizarPontoContato() {
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
             void queryClient.invalidateQueries({ queryKey: ['relacionamento_kanban'] })
+            void queryClient.invalidateQueries({ queryKey: ['kanban_row_contato', variables.contatoId] })
         },
     })
 }
@@ -70,6 +72,9 @@ export function useExcluirInteracao() {
         mutationFn: ({ id }) => interacaoService.excluirInteracao(id),
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: ['interacoes', variables.contatoId] })
+            // excluir um ponto de contato muda tentativas/coluna → refetch do kanban.
+            void queryClient.invalidateQueries({ queryKey: ['relacionamento_kanban'] })
+            void queryClient.invalidateQueries({ queryKey: ['kanban_row_contato', variables.contatoId] })
         },
     })
 }

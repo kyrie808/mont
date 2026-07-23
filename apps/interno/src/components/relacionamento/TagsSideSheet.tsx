@@ -1,29 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { Badge } from '../ui'
 import { useTags, useContatoTags, useCriarTag, useAplicarTag, useRemoverTag, type Tag } from '../../hooks/useTags'
+import { StatusRelacionamentoBadge } from './StatusRelacionamentoBadge'
 import type { RelacionamentoStatus } from '../../hooks/useRelacionamento'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-
-const RESULTADO_LABEL: Record<string, string> = {
-    a_contatar: 'A Contatar',
-    contatado: 'Aguardando Resposta',
-    follow_up: 'Follow-up',
-    em_negociacao: 'Em Conversa',
-    resolvido: 'Resolvido',
-    sem_retorno: 'Sem Retorno',
-}
-
-const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'default' | 'success'> = {
-    a_contatar: 'warning',
-    contatado: 'secondary',
-    follow_up: 'warning',
-    em_negociacao: 'default',
-    resolvido: 'success',
-    sem_retorno: 'secondary',
-}
 
 const GRAIN_BG =
     `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`
@@ -146,12 +128,7 @@ function TagsPanel({ onClose, contatoId, nomeContato, statusAtual }: PanelProps)
                         {nomeContato}
                     </p>
                     <div className="mt-0.5">
-                        <Badge
-                            variant={STATUS_BADGE[statusAtual]}
-                            className="px-2 py-0 text-[10px]"
-                        >
-                            {RESULTADO_LABEL[statusAtual] ?? statusAtual}
-                        </Badge>
+                        <StatusRelacionamentoBadge contatoId={contatoId} fallback={statusAtual} className="px-2 py-0 text-[10px]" />
                     </div>
                 </div>
                 <button

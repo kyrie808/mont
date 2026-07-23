@@ -54,8 +54,10 @@ export function useMoverCard() {
                 queryClient.setQueryData(queryKey, data)
             }
         },
-        onSettled: async () => {
+        onSettled: async (_data, _error, variables) => {
             await queryClient.invalidateQueries({ queryKey: RELACIONAMENTO_QUERY_KEY })
+            // linha do contato (side-sheet aberto durante o drag acompanha o badge).
+            await queryClient.invalidateQueries({ queryKey: ['kanban_row_contato', variables.contatoId] })
         },
     })
 }
