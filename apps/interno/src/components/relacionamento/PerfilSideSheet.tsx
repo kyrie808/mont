@@ -18,10 +18,12 @@ interface PanelContentProps {
     contatoId: string
     nomeContato: string
     statusAtual: RelacionamentoStatus
+    /** Abre já no formulário de registrar contato (atalho do menu do card). */
+    initialRegistrarContato?: boolean
 }
 
-function PanelContent({ onClose, contatoId, nomeContato, statusAtual }: PanelContentProps) {
-    const [showPontoContato, setShowPontoContato] = useState(false)
+function PanelContent({ onClose, contatoId, nomeContato, statusAtual, initialRegistrarContato }: PanelContentProps) {
+    const [showPontoContato, setShowPontoContato] = useState(initialRegistrarContato ?? false)
     const inicial = nomeContato.trim()[0]?.toUpperCase() ?? '?'
 
     return (
@@ -88,6 +90,7 @@ export interface PerfilSideSheetProps {
     contatoId: string
     nomeContato: string
     statusAtual: RelacionamentoStatus
+    initialRegistrarContato?: boolean
 }
 
 export function PerfilSideSheet({ isOpen, onClose, ...rest }: PerfilSideSheetProps) {
