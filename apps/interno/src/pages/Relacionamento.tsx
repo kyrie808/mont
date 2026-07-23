@@ -88,6 +88,8 @@ interface TimelineTarget {
 
 interface PerfilTarget extends TimelineTarget {
     kanbanRow: KanbanRow
+    /** Abre o side-sheet já no formulário de registrar contato (atalho do menu). */
+    registrarDireto?: boolean
 }
 
 // ─── Card content (shared between SortableCard and OverlayCard) ───────────────
@@ -150,11 +152,13 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
 // ─── ActionBar ────────────────────────────────────────────────────────────────
 
 function ActionBar({
+    onRegistrarClick,
     onTimelineClick,
     onFeedbackClick,
     onTagsClick,
     onPerfilClick,
 }: {
+    onRegistrarClick: () => void
     onTimelineClick: () => void
     onFeedbackClick: () => void
     onTagsClick: () => void
@@ -168,6 +172,14 @@ function ActionBar({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
         >
+            <button
+                type="button"
+                onClick={onRegistrarClick}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+                <Phone className="h-3.5 w-3.5 shrink-0" />
+                Registrar contato
+            </button>
             <button
                 type="button"
                 onClick={onTimelineClick}
@@ -212,6 +224,7 @@ function SortableCard({
     card,
     showActions,
     onCardClick,
+    onRegistrarClick,
     onTimelineClick,
     onFeedbackClick,
     onTagsClick,
@@ -220,6 +233,7 @@ function SortableCard({
     card: KanbanRow & { contato_id: string }
     showActions: boolean
     onCardClick: () => void
+    onRegistrarClick: () => void
     onTimelineClick: () => void
     onFeedbackClick: () => void
     onTagsClick: () => void
@@ -250,6 +264,7 @@ function SortableCard({
                 <CardBody card={card} />
                 {showActions && !isDragging && (
                     <ActionBar
+                        onRegistrarClick={onRegistrarClick}
                         onTimelineClick={onTimelineClick}
                         onFeedbackClick={onFeedbackClick}
                         onTagsClick={onTagsClick}
@@ -539,6 +554,21 @@ export function Relacionamento() {
         })
     }
 
+    // Atalho: abre o perfil já no formulário de registrar contato.
+    const handleOpenRegistrar = (card: KanbanRow & { contato_id: string }) => {
+        setActionCardId(null)
+        setTimelineTarget(null)
+        setFeedbackTarget(null)
+        setTagsTarget(null)
+        setPerfilTarget({
+            contatoId: card.contato_id,
+            nomeContato: card.nome ?? 'Sem nome',
+            statusAtual: colunaEfetivaDe(card),
+            kanbanRow: card,
+            registrarDireto: true,
+        })
+    }
+
     const activeCard = useMemo(() => {
         if (!activeCardId) return null
         return data.find(
@@ -643,6 +673,7 @@ export function Relacionamento() {
                                                             card={card}
                                                             showActions={actionCardId === card.contato_id}
                                                             onCardClick={() => handleCardClick(card)}
+                                                            onRegistrarClick={() => handleOpenRegistrar(card)}
                                                             onTimelineClick={() => handleOpenTimeline(card)}
                                                             onFeedbackClick={() => handleOpenFeedback(card)}
                                                             onTagsClick={() => handleOpenTags(card)}
@@ -724,6 +755,7 @@ export function Relacionamento() {
                     contatoId={perfilTarget.contatoId}
                     nomeContato={perfilTarget.nomeContato}
                     statusAtual={perfilTarget.statusAtual}
+                    initialRegistrarContato={perfilTarget.registrarDireto}
                 />
             )}
 
