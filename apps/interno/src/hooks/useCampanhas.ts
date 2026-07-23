@@ -65,6 +65,8 @@ export function useSincronizarCampanhasMeta() {
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ['campanhas'] })
             void queryClient.invalidateQueries({ queryKey: ['relatorio', 'campanhas'] })
+            void queryClient.invalidateQueries({ queryKey: ['relatorio', 'campanhas_roas_mensal'] })
+            void queryClient.invalidateQueries({ queryKey: ['relatorio', 'campanhas_metricas_diarias'] })
         },
     })
 }

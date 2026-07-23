@@ -1,7 +1,8 @@
 // Edge Function: meta-ads-sync
-// Sincroniza as campanhas de TRÁFEGO direto da Meta (Marketing API) → upsert em `campanhas`.
-// Fase 1 da integração Meta: traz identidade das campanhas (id/nome/objetivo/status).
-// Gasto/insights ficam para a Fase 2.
+// Sincroniza as campanhas de TRÁFEGO direto da Meta (Marketing API).
+// Fase 1: identidade das campanhas (id/nome/objetivo/status) → upsert em `campanhas`.
+// Fase 2: insights diários (gasto/impressões/cliques) → upsert em `campanha_meta_metricas`
+//         (série temporal, fonte do ROAS).
 //
 // Invocação:
 //   - cron (pg_cron + pg_net) 1x/dia — header x-cron-secret == env CRON_SECRET; OU
@@ -121,5 +122,53 @@ Deno.serve(async (req: Request) => {
     if (!error) desativadas = count ?? 0
   }
 
-  return json({ ok: true, upserts, desativadas, total_meta: campaigns.length }, 200)
+  // ── Fase 2: insights diários (gasto) por campanha ──────────────────────────
+  // Série temporal → fonte do ROAS. Mapa meta_campaign_id → campanha_id (já upsertadas).
+  const { data: mapRows } = await admin
+    .from('campanhas')
+    .select('id, meta_campaign_id')
+    .eq('origem_campanha', 'meta')
+  const idByMeta = new Map<string, string>()
+  for (const r of mapRows ?? []) {
+    if (r.meta_campaign_id) idByMeta.set(r.meta_campaign_id, r.id)
+  }
+
+  interface InsightRow { spend?: string; impressions?: string; clicks?: string; date_start?: string }
+  const metricas: Array<{
+    campanha_id: string; dia: string; gasto: number; impressoes: number; cliques: number; sync_em: string
+  }> = []
+
+  for (const c of campaigns) {
+    const campanhaId = idByMeta.get(c.id)
+    if (!campanhaId) continue
+    const insUrl = `https://graph.facebook.com/${GRAPH_VERSION}/${c.id}/insights`
+      + `?fields=spend,impressions,clicks&time_increment=1&date_preset=maximum&limit=500`
+      + `&access_token=${encodeURIComponent(token)}`
+    try {
+      const res = await fetch(insUrl)
+      const body = await res.json()
+      if (!res.ok) continue
+      for (const row of (body?.data ?? []) as InsightRow[]) {
+        if (!row.date_start) continue
+        metricas.push({
+          campanha_id: campanhaId,
+          dia: row.date_start,
+          gasto: Number(row.spend ?? 0),
+          impressoes: parseInt(row.impressions ?? '0', 10),
+          cliques: parseInt(row.clicks ?? '0', 10),
+          sync_em: agora,
+        })
+      }
+    } catch { /* pula essa campanha; não derruba o sync */ }
+  }
+
+  let metricas_upserts = 0
+  if (metricas.length > 0) {
+    const { error, count } = await admin
+      .from('campanha_meta_metricas')
+      .upsert(metricas, { onConflict: 'campanha_id,dia', count: 'exact' })
+    if (!error) metricas_upserts = count ?? metricas.length
+  }
+
+  return json({ ok: true, upserts, desativadas, total_meta: campaigns.length, metricas: metricas_upserts }, 200)
 })

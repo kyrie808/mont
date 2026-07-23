@@ -35,6 +35,62 @@ export type Database = {
         }
         Relationships: []
       }
+      campanha_meta_metricas: {
+        Row: {
+          campanha_id: string
+          cliques: number
+          dia: string
+          gasto: number
+          impressoes: number
+          sync_em: string
+        }
+        Insert: {
+          campanha_id: string
+          cliques?: number
+          dia: string
+          gasto?: number
+          impressoes?: number
+          sync_em?: string
+        }
+        Update: {
+          campanha_id?: string
+          cliques?: number
+          dia?: string
+          gasto?: number
+          impressoes?: number
+          sync_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanha_meta_metricas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanha_meta_metricas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "campanha_meta_metricas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_promocao"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "campanha_meta_metricas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_roas_mensal"
+            referencedColumns: ["campanha_id"]
+          },
+        ]
+      }
       campanhas: {
         Row: {
           ativo: boolean
@@ -541,6 +597,13 @@ export type Database = {
             referencedColumns: ["campanha_id"]
           },
           {
+            foreignKeyName: "contas_a_pagar_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_roas_mensal"
+            referencedColumns: ["campanha_id"]
+          },
+          {
             foreignKeyName: "contas_a_pagar_plano_conta_id_fkey"
             columns: ["plano_conta_id"]
             isOneToOne: false
@@ -592,6 +655,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "rpt_campanhas_promocao"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_roas_mensal"
             referencedColumns: ["campanha_id"]
           },
           {
@@ -835,6 +905,13 @@ export type Database = {
             referencedColumns: ["campanha_id"]
           },
           {
+            foreignKeyName: "contatos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_roas_mensal"
+            referencedColumns: ["campanha_id"]
+          },
+          {
             foreignKeyName: "contatos_fonte_fkey"
             columns: ["fonte"]
             isOneToOne: false
@@ -1056,6 +1133,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "rpt_campanhas_promocao"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "interacoes_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_roas_mensal"
             referencedColumns: ["campanha_id"]
           },
           {
@@ -2306,6 +2390,22 @@ export type Database = {
           participantes: number | null
           receita_gerada: number | null
           tipo: string | null
+        }
+        Relationships: []
+      }
+      rpt_campanhas_roas_mensal: {
+        Row: {
+          ano: number | null
+          campanha_id: string | null
+          cliques: number | null
+          converteram: number | null
+          gasto: number | null
+          impressoes: number | null
+          leads: number | null
+          mes: number | null
+          meta_status: string | null
+          nome: string | null
+          receita: number | null
         }
         Relationships: []
       }
