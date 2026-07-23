@@ -6,6 +6,8 @@ interface ConfiguracaoRelacionamentoProps {
     setLimiarReativacao: (val: number) => void
     janelaResposta: number
     setJanelaResposta: (val: number) => void
+    cooldownRecusa: number
+    setCooldownRecusa: (val: number) => void
 }
 
 export function ConfiguracaoRelacionamento({
@@ -13,6 +15,8 @@ export function ConfiguracaoRelacionamento({
     setLimiarReativacao,
     janelaResposta,
     setJanelaResposta,
+    cooldownRecusa,
+    setCooldownRecusa,
 }: ConfiguracaoRelacionamentoProps) {
     return (
         <Card>
@@ -84,6 +88,29 @@ export function ConfiguracaoRelacionamento({
                     </div>
                     <p className="mt-1.5 text-xs text-muted-foreground">
                         Um contato registrado fica "Aguardando" até esse tempo. Passou sem retorno, vira "Sem resposta" (e o card volta pra fila de re-contato).
+                    </p>
+                </div>
+
+                <div className="mt-5">
+                    <label htmlFor="cooldown-recusa" className="block text-sm font-medium text-foreground mb-1">
+                        Descanso após recusa (quarentena antes de reofertar)
+                    </label>
+                    <div className="flex items-stretch gap-1">
+                        <Button variant="outline" size="sm" onClick={() => setCooldownRecusa(Math.max(1, cooldownRecusa - 1))} className="px-2">−</Button>
+                        <Input
+                            id="cooldown-recusa"
+                            type="number"
+                            min={1}
+                            max={180}
+                            value={cooldownRecusa}
+                            onChange={(e) => setCooldownRecusa(Number(e.target.value))}
+                            className="w-16 text-center"
+                        />
+                        <Button variant="outline" size="sm" onClick={() => setCooldownRecusa(Math.min(180, cooldownRecusa + 1))} className="px-2">+</Button>
+                        <span className="text-sm text-muted-foreground self-center ml-1">dias</span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                        Quando o cliente recusa uma oferta, o card descansa na coluna "Recusou" por esse tempo. Depois volta para "A Contatar" (pode reofertar) — evita insistir logo após um não.
                     </p>
                 </div>
             </div>
