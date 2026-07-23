@@ -498,7 +498,7 @@ export function Relacionamento() {
         setTimelineTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
-            statusAtual: card.status_relacionamento ?? 'a_contatar',
+            statusAtual: colunaEfetivaDe(card),
         })
     }
 
@@ -510,7 +510,7 @@ export function Relacionamento() {
         setFeedbackTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
-            statusAtual: card.status_relacionamento ?? 'a_contatar',
+            statusAtual: colunaEfetivaDe(card),
         })
     }
 
@@ -522,7 +522,7 @@ export function Relacionamento() {
         setTagsTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
-            statusAtual: card.status_relacionamento ?? 'a_contatar',
+            statusAtual: colunaEfetivaDe(card),
         })
     }
 
@@ -534,7 +534,7 @@ export function Relacionamento() {
         setPerfilTarget({
             contatoId: card.contato_id,
             nomeContato: card.nome ?? 'Sem nome',
-            statusAtual: card.status_relacionamento ?? 'a_contatar',
+            statusAtual: colunaEfetivaDe(card),
             kanbanRow: card,
         })
     }

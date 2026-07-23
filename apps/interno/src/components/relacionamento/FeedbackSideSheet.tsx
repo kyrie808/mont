@@ -1,29 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { Badge } from '../ui'
 import { useRegistrarFeedback, type Canal } from '../../hooks/useInteracoes'
+import { StatusRelacionamentoBadge } from './StatusRelacionamentoBadge'
 import type { RelacionamentoStatus } from '../../hooks/useRelacionamento'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-
-const RESULTADO_LABEL: Record<string, string> = {
-    a_contatar: 'A Contatar',
-    contatado: 'Aguardando Resposta',
-    follow_up: 'Follow-up',
-    em_negociacao: 'Em Conversa',
-    resolvido: 'Resolvido',
-    sem_retorno: 'Sem Retorno',
-}
-
-const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'default' | 'success'> = {
-    a_contatar: 'warning',
-    contatado: 'secondary',
-    follow_up: 'warning',
-    em_negociacao: 'default',
-    resolvido: 'success',
-    sem_retorno: 'secondary',
-}
 
 const CANAL_OPTIONS: Array<{ value: Canal; label: string }> = [
     { value: 'whatsapp', label: 'WhatsApp' },
@@ -134,12 +116,7 @@ export function FeedbackSideSheet({ isOpen, onClose, contatoId, nomeContato, sta
                             {nomeContato}
                         </p>
                         <div className="mt-0.5">
-                            <Badge
-                                variant={STATUS_BADGE[statusAtual]}
-                                className="px-2 py-0 text-[10px]"
-                            >
-                                {RESULTADO_LABEL[statusAtual] ?? statusAtual}
-                            </Badge>
+                            <StatusRelacionamentoBadge contatoId={contatoId} fallback={statusAtual} className="px-2 py-0 text-[10px]" />
                         </div>
                     </div>
                     <button
