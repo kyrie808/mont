@@ -43,7 +43,12 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           id: string
+          meta_campaign_id: string | null
+          meta_objetivo: string | null
+          meta_status: string | null
+          meta_sync_em: string | null
           nome: string
+          origem_campanha: string
           tipo: string
         }
         Insert: {
@@ -53,7 +58,12 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          meta_campaign_id?: string | null
+          meta_objetivo?: string | null
+          meta_status?: string | null
+          meta_sync_em?: string | null
           nome: string
+          origem_campanha?: string
           tipo?: string
         }
         Update: {
@@ -63,7 +73,12 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          meta_campaign_id?: string | null
+          meta_objetivo?: string | null
+          meta_status?: string | null
+          meta_sync_em?: string | null
           nome?: string
+          origem_campanha?: string
           tipo?: string
         }
         Relationships: []
@@ -2273,7 +2288,11 @@ export type Database = {
           campanha_id: string | null
           converteram: number | null
           leads: number | null
+          meta_campaign_id: string | null
+          meta_objetivo: string | null
+          meta_status: string | null
           nome: string | null
+          origem_campanha: string | null
           receita_gerada: number | null
         }
         Relationships: []

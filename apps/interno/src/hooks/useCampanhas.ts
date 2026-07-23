@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { campanhaService } from '../services/campanhaService'
 
 export interface CampanhaOption {
     id: string
@@ -12,19 +13,22 @@ export interface CampanhaOption {
 export type FiltroCampanha = 'aquisicao' | 'promocao'
 
 /**
- * Campanhas ativas (`campanhas`), opcionalmente filtradas pelo tipo do contexto.
- * Cadastráveis inline via `criar` (o tipo é derivado do filtro).
+ * Campanhas ativas (`campanhas`), opcionalmente filtradas pelo tipo do contexto e pela
+ * origem. Tráfego vem da Meta (`origem: 'meta'`, não cadastrável à mão); promoção é
+ * interna (`origem: 'interna'`, cadastrável inline via `criar`).
  */
-export function useCampanhas(filtro?: FiltroCampanha) {
+export function useCampanhas(filtro?: FiltroCampanha, opts?: { origem?: 'interna' | 'meta' }) {
     const queryClient = useQueryClient()
+    const origem = opts?.origem
     const tiposVisiveis = filtro === 'aquisicao' ? ['aquisicao', 'ambos']
         : filtro === 'promocao' ? ['promocao', 'ambos'] : null
 
     const query = useQuery<CampanhaOption[]>({
-        queryKey: ['campanhas', filtro ?? 'todas'],
+        queryKey: ['campanhas', filtro ?? 'todas', origem ?? 'qq'],
         queryFn: async () => {
             let q = supabase.from('campanhas').select('id, nome, tipo').eq('ativo', true).order('nome')
             if (tiposVisiveis) q = q.in('tipo', tiposVisiveis)
+            if (origem) q = q.eq('origem_campanha', origem)
             const { data, error } = await q
             if (error) throw error
             return data ?? []
@@ -51,6 +55,18 @@ export function useCampanhas(filtro?: FiltroCampanha) {
     })
 
     return { ...query, criar }
+}
+
+/** Dispara o sync das campanhas de tráfego da Meta e revalida as listas. */
+export function useSincronizarCampanhasMeta() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => campanhaService.sincronizarMeta(),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ['campanhas'] })
+            void queryClient.invalidateQueries({ queryKey: ['relatorio', 'campanhas'] })
+        },
+    })
 }
 
 // ── Participação promocional (contato_campanhas) ────────────────────────────────

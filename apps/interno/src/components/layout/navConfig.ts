@@ -14,6 +14,7 @@ import {
     Receipt,
     Settings,
     BarChart3,
+    Megaphone,
     Plus,
     type LucideIcon,
 } from 'lucide-react'
@@ -50,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
         items: [
             { label: 'Ranking',           path: '/ranking',        icon: Trophy },
             { label: 'Relatórios',        path: '/relatorios',     icon: BarChart3 },
+            { label: 'Campanhas',         path: '/campanhas',      icon: Megaphone },
             { label: 'Relacionamento',    path: '/relacionamento', icon: RefreshCw },
             { label: 'Estoque',           path: '/estoque',        icon: Snowflake },
             { label: 'Produtos',          path: '/produtos',       icon: Package },

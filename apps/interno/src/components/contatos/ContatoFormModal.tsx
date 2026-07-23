@@ -164,7 +164,7 @@ export function ContatoFormModal({
                         <FormIdentidade register={register} errors={errors} />
                         <FormClassificacao register={register} errors={errors} tipoValue={tipoValue} />
                         {origemValue === 'anuncio' && (
-                            <FormAquisicao register={register} errors={errors} setValue={setValue} />
+                            <FormAquisicao register={register} errors={errors} />
                         )}
                         {origemValue === 'indicacao' && (
                             <div ref={dropdownRef}>

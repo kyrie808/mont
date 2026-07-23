@@ -64,7 +64,7 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
     const [campanhaId, setCampanhaId] = useState('')
     const [showNovaCampanha, setShowNovaCampanha] = useState(false)
     const [novaCampanha, setNovaCampanha] = useState('')
-    const { data: campanhasPromo = [], criar: criarCampanha } = useCampanhas('promocao')
+    const { data: campanhasPromo = [], criar: criarCampanha } = useCampanhas('promocao', { origem: 'interna' })
     const aplicarCampanha = useAplicarCampanha()
 
     const criar = useRegistrarPontoContato()
