@@ -53,6 +53,7 @@ const COLUNAS: Array<{ status: RelacionamentoStatus; label: string }> = [
     { status: 'follow_up', label: 'Follow-up' },
     { status: 'em_negociacao', label: 'Em Conversa' },
     { status: 'resolvido', label: 'Resolvido' },
+    { status: 'recusou', label: 'Recusou' },
     { status: 'sem_retorno', label: 'Sem Retorno' },
 ]
 
@@ -68,6 +69,7 @@ const BADGE_VARIANT: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'suc
     follow_up: 'warning',
     em_negociacao: 'default',
     resolvido: 'success',
+    recusou: 'secondary',
     sem_retorno: 'secondary',
 }
 
@@ -77,6 +79,7 @@ const EMPTY_LIMITS: Record<RelacionamentoStatus, number> = {
     follow_up: CARDS_PER_PAGE,
     em_negociacao: CARDS_PER_PAGE,
     resolvido: CARDS_PER_PAGE,
+    recusou: CARDS_PER_PAGE,
     sem_retorno: CARDS_PER_PAGE,
 }
 
@@ -112,6 +115,16 @@ function CardBody({ card }: { card: KanbanRow & { contato_id: string } }) {
             {status === 'sem_retorno' && (
                 <div className="mb-1.5 inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                     sem retorno · {tentativas} toques
+                </div>
+            )}
+            {status === 'recusou' && (
+                <div className="mb-1.5 inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    recusou · reofertar em {card.recusa_dias_restantes ?? 0}d
+                </div>
+            )}
+            {status === 'a_contatar' && card.status_relacionamento === 'recusou' && (
+                <div className="mb-1.5 inline-flex items-center gap-1 rounded-full border border-warning-strong/30 bg-warning-strong/10 px-2 py-0.5 text-[10px] font-semibold text-warning-strong">
+                    recusou antes · pode reofertar
                 </div>
             )}
             {cardTags.length > 0 && (

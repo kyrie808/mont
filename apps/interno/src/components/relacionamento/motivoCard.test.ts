@@ -10,6 +10,7 @@ function row(overrides: Partial<KanbanRow>): KanbanRow {
         balde_cheio: false,
         coluna_efetiva: 'a_contatar',
         tentativas: 0,
+        recusa_dias_restantes: null,
         contato_id: 'test-id',
         dias_sem_compra: null,
         intervalo_medio: null,

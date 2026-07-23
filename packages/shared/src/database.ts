@@ -2513,6 +2513,7 @@ export type Database = {
           nome: string | null
           primeira_compra: string | null
           proxima_esperada: string | null
+          recusa_dias_restantes: number | null
           status_relacionamento:
             | Database["public"]["Enums"]["enum_relacionamento_status"]
             | null
@@ -3027,6 +3028,7 @@ export type Database = {
         | "resolvido"
         | "follow_up"
         | "sem_retorno"
+        | "recusou"
       purchase_order_payment_status: "paid" | "partial" | "unpaid"
       purchase_order_status: "pending" | "received" | "cancelled"
     }
@@ -3164,6 +3166,7 @@ export const Constants = {
         "resolvido",
         "follow_up",
         "sem_retorno",
+        "recusou",
       ],
       purchase_order_payment_status: ["paid", "partial", "unpaid"],
       purchase_order_status: ["pending", "received", "cancelled"],

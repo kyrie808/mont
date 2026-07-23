@@ -13,6 +13,7 @@ const RESULTADO_LABEL: Record<string, string> = {
     follow_up: 'Follow-up',
     em_negociacao: 'Em Conversa',
     resolvido: 'Resolvido',
+    recusou: 'Recusou',
     sem_retorno: 'Sem Retorno',
 }
 
@@ -22,6 +23,7 @@ const STATUS_BADGE: Record<RelacionamentoStatus, 'warning' | 'secondary' | 'defa
     follow_up: 'warning',
     em_negociacao: 'default',
     resolvido: 'success',
+    recusou: 'secondary',
     sem_retorno: 'secondary',
 }
 

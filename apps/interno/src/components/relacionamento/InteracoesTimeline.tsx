@@ -15,6 +15,7 @@ const RESULTADO_LABEL: Record<string, string> = {
     follow_up: 'Follow-up',
     em_negociacao: 'Em Conversa',
     resolvido: 'Resolvido',
+    recusou: 'Recusou',
     sem_retorno: 'Sem Retorno',
 }
 
