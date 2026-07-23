@@ -118,6 +118,9 @@ function AreaChartSvg({ data, labels, currentIndex, width, height = 170, color =
     const yTicks = y.ticks(3)
     const curr = currentIndex ?? n - 1
     const gid = `area-${animKey}`
+    // Afinar rótulos do eixo X quando há muitos pontos (ex.: série diária ~30 dias),
+    // pra não virar sopa de letrinha. O tooltip continua usando labels[i] cheio.
+    const labelStep = Math.max(1, Math.ceil(n / 8))
 
     const onMove = (e: React.MouseEvent) => {
         const rect = svgRef.current?.getBoundingClientRect()
@@ -144,10 +147,15 @@ function AreaChartSvg({ data, labels, currentIndex, width, height = 170, color =
                     <AreaClosed data={data} x={(_d, i) => x(i)} y={(d) => y(d)} yScale={y} curve={curveMonotoneX} fill={`url(#${gid})`} />
                     <LinePath data={data} x={(_d, i) => x(i)} y={(d) => y(d)} curve={curveMonotoneX} stroke={color} strokeWidth={2.5} />
                 </g>
-                {labels.map((l, i) => (
-                    <text key={i} x={x(i)} y={height - 6} textAnchor="middle" fontSize="9" fontWeight="600"
-                          fill={i === (tooltipData?.i ?? curr) ? C_FG : C_MUTED_FG} fontFamily={C_MONO}>{l}</text>
-                ))}
+                {labels.map((l, i) => {
+                    const hovered = i === tooltipData?.i
+                    // Mostra 1 a cada labelStep + o último + o ponto em hover.
+                    if (!(i % labelStep === 0 || i === n - 1 || hovered)) return null
+                    return (
+                        <text key={i} x={x(i)} y={height - 6} textAnchor="middle" fontSize="9" fontWeight="600"
+                              fill={i === (tooltipData?.i ?? curr) ? C_FG : C_MUTED_FG} fontFamily={C_MONO}>{l}</text>
+                    )
+                })}
                 {tooltipData ? (
                     <>
                         <Line from={{ x: tooltipLeft ?? 0, y: padT }} to={{ x: tooltipLeft ?? 0, y: height - padB }} stroke={C_MUTED_FG} strokeWidth={1} strokeDasharray="3 3" />

@@ -3,7 +3,7 @@ import { RefreshCw, Megaphone, Radio, ChevronLeft, ChevronRight } from 'lucide-r
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { useToast } from '../components/ui/Toast'
-import { useRptCampanhasRoasMensal, useRptCampanhasPromocao } from '../hooks/useRelatorios'
+import { useRptCampanhasRoasMensal, useRptCampanhasPromocao, useCampanhasMetricasDiarias } from '../hooks/useRelatorios'
 import { useSincronizarCampanhasMeta } from '../hooks/useCampanhas'
 import { Insight, ChartCard, EmptyState, fmtBRL, fmtNum, MES_ABBREV } from '../components/relatorios/RelatoriosUI'
 import { AreaChart, C_FG, C_MUTED, C_MUTED_FG, COL_PRIMARY } from '../components/relatorios/Charts'
@@ -53,6 +53,7 @@ export function Campanhas() {
     const [periodo, setPeriodo] = useState<Periodo>({ tipo: 'geral' })
 
     const { data: roasRows = [], isLoading } = useRptCampanhasRoasMensal()
+    const { data: metricasDiarias = [] } = useCampanhasMetricasDiarias()
     const { data: promocoes = [] } = useRptCampanhasPromocao()
     const sync = useSincronizarCampanhasMeta()
 
@@ -86,24 +87,39 @@ export function Campanhas() {
         const totGasto = trafego.reduce((s, c) => s + c.gasto, 0)
         const totReceita = trafego.reduce((s, c) => s + c.receita, 0)
 
-        // Tendência de gasto: agregada por mês (todos os meses, vitalício).
-        const mesMap = new Map<string, { ano: number; mes: number; gasto: number }>()
-        for (const r of roasRows) {
-            if (r.ano == null || r.mes == null) continue
-            const k = `${r.ano}-${String(r.mes).padStart(2, '0')}`
-            const acc = mesMap.get(k) ?? { ano: r.ano, mes: r.mes, gasto: 0 }
-            acc.gasto += Number(r.gasto ?? 0)
-            mesMap.set(k, acc)
+        // Tendência de gasto:
+        //   • Mês  → dia a dia do mês selecionado (dias 1..último, 0 quando sem gasto);
+        //   • Geral → mês a mês (todos os meses).
+        let trend: number[]
+        let trendLabels: string[]
+        let trendCurrent = -1
+        if (periodo.tipo === 'mes') {
+            const dias = new Date(periodo.ano, periodo.mes, 0).getDate()
+            const porDia = new Array<number>(dias).fill(0)
+            for (const m of metricasDiarias) {
+                const [a, mm, dd] = m.dia.split('-').map(Number)
+                if (a === periodo.ano && mm === periodo.mes && dd >= 1 && dd <= dias) {
+                    porDia[dd - 1] += m.gasto
+                }
+            }
+            trend = porDia
+            trendLabels = porDia.map((_, i) => String(i + 1))
+        } else {
+            const mesMap = new Map<string, { ano: number; mes: number; gasto: number }>()
+            for (const r of roasRows) {
+                if (r.ano == null || r.mes == null) continue
+                const k = `${r.ano}-${String(r.mes).padStart(2, '0')}`
+                const acc = mesMap.get(k) ?? { ano: r.ano, mes: r.mes, gasto: 0 }
+                acc.gasto += Number(r.gasto ?? 0)
+                mesMap.set(k, acc)
+            }
+            const serie = [...mesMap.values()].sort((a, b) => a.ano - b.ano || a.mes - b.mes).slice(-12)
+            trend = serie.map(s => s.gasto)
+            trendLabels = serie.map(s => MES_ABBREV[s.mes - 1] ?? '')
         }
-        const serie = [...mesMap.values()].sort((a, b) => a.ano - b.ano || a.mes - b.mes).slice(-12)
-        const trend = serie.map(s => s.gasto)
-        const trendLabels = serie.map(s => MES_ABBREV[s.mes - 1] ?? '')
-        const trendCurrent = periodo.tipo === 'mes'
-            ? serie.findIndex(s => s.ano === periodo.ano && s.mes === periodo.mes)
-            : -1
 
         return { trafego, totGasto, totReceita, trend, trendLabels, trendCurrent }
-    }, [roasRows, periodo])
+    }, [roasRows, metricasDiarias, periodo])
 
     const roasGeral = totGasto > 0 && totReceita > 0 ? totReceita / totGasto : null
     const isMes = periodo.tipo === 'mes'
@@ -232,7 +248,12 @@ export function Campanhas() {
                     {/* TENDÊNCIA DE GASTO ─────────────────────────────────────── */}
                     {trend.some(v => v > 0) && (
                         <section className="lg:col-span-12">
-                            <Insight eyebrow="Investimento no tempo" headline="Quanto foi pra anúncio, mês a mês." />
+                            <Insight
+                                eyebrow="Investimento no tempo"
+                                headline={isMes
+                                    ? `Quanto foi pra anúncio, dia a dia em ${MES_ABBREV[periodo.mes - 1]}.`
+                                    : 'Quanto foi pra anúncio, mês a mês.'}
+                            />
                             <ChartCard padding={16}>
                                 <AreaChart
                                     data={trend}

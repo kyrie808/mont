@@ -116,6 +116,15 @@ export function useRptCampanhas() {
     })
 }
 
+/** Gasto diário das campanhas Meta — para a tendência dia-a-dia no modo Mês. */
+export function useCampanhasMetricasDiarias() {
+    return useQuery({
+        queryKey: ['relatorio', 'campanhas_metricas_diarias'],
+        queryFn: relatorioService.getMetricasDiarias,
+        staleTime: STALE_TIME,
+    })
+}
+
 /** ROAS por campanha × mês (Meta) — vitalício; a página recorta por período. */
 export function useRptCampanhasRoasMensal() {
     return useQuery({

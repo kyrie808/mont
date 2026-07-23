@@ -118,6 +118,15 @@ export const relatorioService = {
         return data ?? []
     },
 
+    /** Gasto diário das campanhas Meta (para a tendência dia-a-dia no modo Mês). */
+    async getMetricasDiarias(): Promise<Array<{ dia: string; gasto: number }>> {
+        const { data, error } = await supabase
+            .from('campanha_meta_metricas')
+            .select('dia, gasto')
+        if (error) throw error
+        return (data ?? []).map((r) => ({ dia: r.dia, gasto: Number(r.gasto ?? 0) }))
+    },
+
     /** ROAS por campanha × mês (Meta): gasto/receita/leads — vitalício; a UI recorta por período. */
     async getCampanhasRoasMensal(): Promise<Tables<'rpt_campanhas_roas_mensal'>[]> {
         const { data, error } = await supabase
