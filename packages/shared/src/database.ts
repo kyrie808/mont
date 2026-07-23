@@ -519,6 +519,13 @@ export type Database = {
             referencedColumns: ["campanha_id"]
           },
           {
+            foreignKeyName: "contas_a_pagar_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_promocao"
+            referencedColumns: ["campanha_id"]
+          },
+          {
             foreignKeyName: "contas_a_pagar_plano_conta_id_fkey"
             columns: ["plano_conta_id"]
             isOneToOne: false
@@ -563,6 +570,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_promocao"
             referencedColumns: ["campanha_id"]
           },
           {
@@ -799,6 +813,13 @@ export type Database = {
             referencedColumns: ["campanha_id"]
           },
           {
+            foreignKeyName: "contatos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_promocao"
+            referencedColumns: ["campanha_id"]
+          },
+          {
             foreignKeyName: "contatos_fonte_fkey"
             columns: ["fonte"]
             isOneToOne: false
@@ -1013,6 +1034,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "rpt_campanhas"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "interacoes_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_campanhas_promocao"
             referencedColumns: ["campanha_id"]
           },
           {
@@ -2247,6 +2275,18 @@ export type Database = {
           leads: number | null
           nome: string | null
           receita_gerada: number | null
+        }
+        Relationships: []
+      }
+      rpt_campanhas_promocao: {
+        Row: {
+          ativo: boolean | null
+          campanha_id: string | null
+          compraram: number | null
+          nome: string | null
+          participantes: number | null
+          receita_gerada: number | null
+          tipo: string | null
         }
         Relationships: []
       }

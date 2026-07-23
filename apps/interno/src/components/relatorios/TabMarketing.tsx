@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronDown, Users, Clock, Megaphone, Gift, Tag, PhoneOff } from 'lucide-react'
 import {
     useRptLtvPorCliente, useRptAquisicaoMensal, useRptRankingIndicacoes,
-    useRptCampanhas, useRptAquisicaoFonte, useRptPromocoes,
+    useRptCampanhas, useRptCampanhasPromocao, useRptAquisicaoFonte, useRptPromocoes,
     useRptRelacionamentoEsforco, useRptRelacionamentoFunil,
 } from '../../hooks/useRelatorios'
 import type { PeriodoRel } from '../../services/relatorioService'
@@ -53,6 +53,7 @@ export function TabMarketing({ animKey, periodo }: Props) {
     const { data: aquisicao = [], isLoading: l2, isError: e2 } = useRptAquisicaoMensal()
     const { data: indicadores = [] } = useRptRankingIndicacoes()
     const { data: campanhas = [] } = useRptCampanhas()
+    const { data: promocoesCamp = [] } = useRptCampanhasPromocao()
     const { data: fontes = [] } = useRptAquisicaoFonte()
     const { data: promocoesRows = [] } = useRptPromocoes(periodo)
     const promocoes = promocoesRows[0]
@@ -481,7 +482,7 @@ export function TabMarketing({ animKey, periodo }: Props) {
                 <Insight
                     eyebrow="Campanhas de anúncio"
                     headline={campanhas.length > 0 ? `${fmtNum(campanhas.length)} campanhas cadastradas.` : 'Nenhuma campanha ainda.'}
-                    sub="Quantos contatos cada campanha trouxe e quantos compraram."
+                    sub="De onde o lead veio: quantos contatos cada anúncio trouxe e quantos compraram."
                 />
                 <ChartCard padding={0} className="lg:flex-1">
                     {campanhas.length === 0 ? (
@@ -566,6 +567,47 @@ export function TabMarketing({ animKey, periodo }: Props) {
                             </div>
                         )
                     })}
+                </ChartCard>
+            </section>
+
+            {/* 5b. AÇÕES PROMOCIONAIS (ofertas feitas a clientes) ──────────── */}
+            <section className="lg:col-span-12">
+                <Insight
+                    eyebrow="Ações promocionais"
+                    headline={promocoesCamp.length > 0 ? `${fmtNum(promocoesCamp.length)} ${promocoesCamp.length === 1 ? 'oferta ativa' : 'ofertas'} pra recompra.` : 'Nenhuma oferta ainda.'}
+                    sub="Ofertas enviadas a clientes: quantos participaram e quantos compraram depois."
+                />
+                <ChartCard padding={0}>
+                    {promocoesCamp.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                            <Megaphone size={20} style={{ opacity: 0.4, marginBottom: 6, display: 'inline-block' }} /><br />
+                            Ofereça uma campanha no kanban (Registrar contato → Campanha/oferta).
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderBottom: '1px solid hsl(var(--border))' }}>
+                                <span className={colHead} style={{ flex: 1 }}>Campanha</span>
+                                <span className={colHead} style={{ width: 74, textAlign: 'right' }}>Participaram</span>
+                                <span className={colHead} style={{ width: 66, textAlign: 'right' }}>Compraram</span>
+                                <span className={colHead} style={{ width: 66, textAlign: 'right' }}>Receita</span>
+                            </div>
+                            {promocoesCamp.map((c, i) => (
+                                <div key={c.campanha_id ?? i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px',
+                                    borderBottom: i === promocoesCamp.length - 1 ? 'none' : '1px solid hsl(var(--border))',
+                                }}>
+                                    <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: 999, background: c.ativo ? COL_PRIMARY : C_MUTED_FG }} />
+                                    <span className="text-sm font-bold text-foreground" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</span>
+                                    <span className="font-mono text-sm font-semibold tabular-nums text-muted-foreground" style={{ width: 74, textAlign: 'right' }}>{fmtNum(c.participantes ?? 0)}</span>
+                                    <span className="font-mono text-sm font-bold tabular-nums" style={{ width: 66, textAlign: 'right', color: (c.compraram ?? 0) > 0 ? '#0a8a0a' : C_MUTED_FG }}>{fmtNum(c.compraram ?? 0)}</span>
+                                    <span className="font-mono text-sm font-bold tabular-nums text-foreground" style={{ width: 66, textAlign: 'right' }}>{fmtBRL(Number(c.receita_gerada ?? 0))}</span>
+                                </div>
+                            ))}
+                            <div style={{ padding: '9px 14px', borderTop: '1px solid hsl(var(--border))' }}>
+                                <span className="text-xs text-muted-foreground">Receita = compras a partir da entrada na campanha (produto, sem frete).</span>
+                            </div>
+                        </>
+                    )}
                 </ChartCard>
             </section>
 
