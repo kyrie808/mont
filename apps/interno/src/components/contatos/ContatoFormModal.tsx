@@ -6,9 +6,12 @@ import { contatoSchema, type ContatoFormData } from '../../schemas/contato'
 import { useContatos } from '../../hooks/useContatos'
 import { useToast } from '../ui/Toast'
 import { useCep } from '../../hooks/useCep'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
 import type { DomainContato, CreateContato, IndicadorRef } from '../../types/domain'
 
-// Sub-components
+// Desktop v2 (mobile fica com os sub-componentes abaixo — sagrado)
+import { ContatoFormDesktop } from './ContatoFormDesktop'
+// Sub-components (mobile)
 import { FormIdentidade } from '../features/contatos/form/FormIdentidade'
 import { FormClassificacao } from '../features/contatos/form/FormClassificacao'
 import { FormAquisicao } from '../features/contatos/form/FormAquisicao'
@@ -29,6 +32,7 @@ export function ContatoFormModal({
     onSuccess,
 }: ContatoFormModalProps) {
     const isEditing = !!contato
+    const isDesktop = useIsDesktop()
     const toast = useToast()
     const { createContato, updateContato, searchContatos } = useContatos()
     const { fetchCep, loading: loadingCep } = useCep()
@@ -38,6 +42,8 @@ export function ContatoFormModal({
     const [selectedIndicador, setSelectedIndicador] = useState<IndicadorRef | null>(null)
     const [showIndicadorDropdown, setShowIndicadorDropdown] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    // 'again' = "Salvar e novo" (só desktop/criar): salva e reabre limpo, mantendo a campanha.
+    const submitModeRef = useRef<'close' | 'again'>('close')
 
     const {
         register,
@@ -149,56 +155,111 @@ export function ContatoFormModal({
             if (result) {
                 toast.success(isEditing ? 'Contato atualizado!' : 'Contato criado!')
                 onSuccess?.(result)
-                onClose()
+
+                if (submitModeRef.current === 'again' && !isEditing) {
+                    // Metralhadora de cadastro: preserva a campanha (origem/fonte/campanha/tipo/status),
+                    // limpa o resto, mantém o modal aberto e volta o foco pro Nome.
+                    reset({
+                        nome: '', apelido: '', telefone: '',
+                        tipo: formDataKeyed.tipo, status: formDataKeyed.status,
+                        origem: formDataKeyed.origem, subtipo: formDataKeyed.subtipo ?? null,
+                        fonte: formDataKeyed.fonte ?? null, campanha_id: formDataKeyed.campanha_id ?? null,
+                        indicado_por_id: null, endereco: null, bairro: null, observacoes: null,
+                        cep: '', logradouro: '', numero: '', complemento: '', cidade: '', uf: '',
+                    } as any)
+                    setSelectedIndicador(null)
+                    setIndicadorSearch('')
+                    submitModeRef.current = 'close'
+                    setTimeout(() => setFocus('nome'), 50)
+                } else {
+                    onClose()
+                }
             }
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Erro ao salvar contato')
         }
     }
 
+    const handleSelectIndicador = (c: DomainContato) => {
+        setSelectedIndicador({ id: c.id, nome: c.nome, telefone: c.telefone })
+        setValue('indicado_por_id', c.id)
+        setShowIndicadorDropdown(false)
+    }
+    const handleClearIndicador = () => {
+        setSelectedIndicador(null)
+        setValue('indicado_por_id', null)
+    }
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar Contato' : 'Novo Contato'} size="4xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar Contato' : 'Novo Contato'} size={isDesktop ? '5xl' : '4xl'}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                        <FormIdentidade register={register} errors={errors} />
-                        <FormClassificacao register={register} errors={errors} tipoValue={tipoValue} />
-                        {origemValue === 'anuncio' && (
-                            <FormAquisicao register={register} errors={errors} />
-                        )}
-                        {origemValue === 'indicacao' && (
-                            <div ref={dropdownRef}>
-                                <FormIndicacao 
-                                    selectedIndicador={selectedIndicador}
-                                    handleClearIndicador={() => { setSelectedIndicador(null); setValue('indicado_por_id', null); }}
-                                    indicadorSearch={indicadorSearch}
-                                    setIndicadorSearch={setIndicadorSearch}
-                                    showIndicadorDropdown={showIndicadorDropdown}
-                                    indicadorResults={indicadorResults}
-                                    handleSelectIndicador={(c) => { setSelectedIndicador({ id: c.id, nome: c.nome, telefone: c.telefone }); setValue('indicado_por_id', c.id); setShowIndicadorDropdown(false); }}
-                                />
+                {isDesktop ? (
+                    /* DESKTOP (≥lg) — modal v2 */
+                    <ContatoFormDesktop
+                        register={register}
+                        errors={errors}
+                        setValue={setValue}
+                        tipoValue={tipoValue}
+                        origemValue={origemValue}
+                        loadingCep={loadingCep}
+                        isEditing={isEditing}
+                        isSubmitting={isSubmitting}
+                        onCancel={onClose}
+                        submitModeRef={submitModeRef}
+                        dropdownRef={dropdownRef}
+                        selectedIndicador={selectedIndicador}
+                        indicadorSearch={indicadorSearch}
+                        setIndicadorSearch={setIndicadorSearch}
+                        showIndicadorDropdown={showIndicadorDropdown}
+                        indicadorResults={indicadorResults}
+                        onClearIndicador={handleClearIndicador}
+                        onSelectIndicador={handleSelectIndicador}
+                    />
+                ) : (
+                    /* MOBILE (<lg) — layout original, intocado (sagrado) */
+                    <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="space-y-6">
+                                <FormIdentidade register={register} errors={errors} />
+                                <FormClassificacao register={register} errors={errors} tipoValue={tipoValue} />
+                                {origemValue === 'anuncio' && (
+                                    <FormAquisicao register={register} errors={errors} />
+                                )}
+                                {origemValue === 'indicacao' && (
+                                    <div ref={dropdownRef}>
+                                        <FormIndicacao
+                                            selectedIndicador={selectedIndicador}
+                                            handleClearIndicador={handleClearIndicador}
+                                            indicadorSearch={indicadorSearch}
+                                            setIndicadorSearch={setIndicadorSearch}
+                                            showIndicadorDropdown={showIndicadorDropdown}
+                                            indicadorResults={indicadorResults}
+                                            handleSelectIndicador={handleSelectIndicador}
+                                        />
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    <div className="space-y-6">
-                        <FormEndereco register={register} errors={errors} loadingCep={loadingCep} />
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Observações</label>
-                            <textarea
-                                className="flex min-h-[120px] w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-hidden"
-                                {...register('observacoes')}
-                            />
+                            <div className="space-y-6">
+                                <FormEndereco register={register} errors={errors} loadingCep={loadingCep} />
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Observações</label>
+                                    <textarea
+                                        className="flex min-h-[120px] w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-hidden"
+                                        {...register('observacoes')}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                <ModalActions>
-                    <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-                    <Button type="submit" isLoading={isSubmitting} variant="primary">
-                        {isEditing ? 'Salvar Alterações' : 'Criar Contato'}
-                    </Button>
-                </ModalActions>
+                        <ModalActions>
+                            <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+                            <Button type="submit" isLoading={isSubmitting} variant="primary">
+                                {isEditing ? 'Salvar Alterações' : 'Criar Contato'}
+                            </Button>
+                        </ModalActions>
+                    </>
+                )}
             </form>
         </Modal>
     )
