@@ -5,6 +5,7 @@ import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card, PageSkeleton, Modal, ModalActions, Button, Input, EmptyState } from '../components/ui'
 import { KpiCard } from '../components/dashboard/KpiCard'
+import { KpiCardDesktop } from '../components/dashboard/KpiCardDesktop'
 import { cn } from '@mont/shared'
 import { useProdutos } from '../hooks/useProdutos'
 import { useToast } from '../components/ui/Toast'
@@ -12,6 +13,20 @@ import { EstoqueDataGrid, estoqueStatus, type EstoqueStatus } from '../component
 import type { DomainProduto } from '../types/domain'
 
 type EstoqueFiltro = 'todos' | 'negativos' | 'baixo' | 'zerados'
+
+// Filtros (reusados no branch mobile e no desktop).
+const FILTROS = [
+    { id: 'todos', label: 'Todos', icon: Filter },
+    { id: 'negativos', label: 'Negativos', icon: AlertTriangle },
+    { id: 'baixo', label: 'Baixo', icon: AlertTriangle },
+    { id: 'zerados', label: 'Zerados', icon: Package },
+] as const
+
+// inputBase v2 do Design System (§4) — mesmo dos modais.
+const inputBase =
+    'flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background ' +
+    'placeholder:text-muted-foreground/50 focus-visible:outline-hidden focus-visible:ring-2 ' +
+    'focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
 
 const STATUS_LABEL: Record<EstoqueStatus, { label: string; cls: string }> = {
     negativo: { label: 'Negativo', cls: 'bg-destructive/10 text-destructive border-destructive/20' },
@@ -90,8 +105,8 @@ export function Estoque() {
 
                     {!loading && (
                         <>
-                            {/* KPIs */}
-                            <div className="grid grid-cols-3 gap-3">
+                            {/* KPIs — MOBILE (<lg): compact (intocado) */}
+                            <div className="grid grid-cols-3 gap-3 lg:hidden">
                                 <KpiCard title="Produtos" value={produtos.length.toString()} progress={100} trend="Ativos" icon={Package} variant="compact" />
                                 <KpiCard
                                     title="Negativos"
@@ -113,8 +128,25 @@ export function Estoque() {
                                 />
                             </div>
 
-                            {/* Busca + filtros */}
-                            <div className="space-y-4">
+                            {/* KPIs — DESKTOP (≥lg): padrão v2 (igual Fluxo/Dashboard) */}
+                            <div className="hidden lg:grid lg:grid-cols-3 lg:gap-4">
+                                <KpiCardDesktop title="Produtos" value={produtos.length.toString()} subtitle="Ativos no catálogo" />
+                                <KpiCardDesktop
+                                    title="Negativos"
+                                    value={negativosCount.toString()}
+                                    subtitle={negativosCount > 0 ? 'Toque para filtrar' : 'Nenhum negativo'}
+                                    onClick={() => setFiltro('negativos')}
+                                />
+                                <KpiCardDesktop
+                                    title="Baixo estoque"
+                                    value={baixoCount.toString()}
+                                    subtitle={baixoCount > 0 ? 'Toque para filtrar' : 'Tudo acima do mínimo'}
+                                    onClick={() => setFiltro('baixo')}
+                                />
+                            </div>
+
+                            {/* Busca + filtros — MOBILE (<lg): intocado */}
+                            <div className="space-y-4 lg:hidden">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
@@ -127,12 +159,7 @@ export function Estoque() {
                                     />
                                 </div>
                                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                                    {([
-                                        { id: 'todos', label: 'Todos', icon: Filter },
-                                        { id: 'negativos', label: 'Negativos', icon: AlertTriangle },
-                                        { id: 'baixo', label: 'Baixo', icon: AlertTriangle },
-                                        { id: 'zerados', label: 'Zerados', icon: Package },
-                                    ] as const).map((btn) => {
+                                    {FILTROS.map((btn) => {
                                         const Icon = btn.icon
                                         const isSelected = filtro === btn.id
                                         return (
@@ -144,6 +171,42 @@ export function Estoque() {
                                                     isSelected
                                                         ? "bg-foreground text-background border-foreground shadow-card"
                                                         : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                                                )}
+                                            >
+                                                <Icon className="w-3.5 h-3.5" />
+                                                {btn.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Busca + filtros — DESKTOP (≥lg): toolbar em linha, sem scroll */}
+                            <div className="hidden lg:flex lg:items-center lg:gap-3">
+                                <div className="relative flex-1 lg:max-w-sm">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar produto ou código..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={cn(inputBase, 'h-11 pl-10 pr-4 text-sm')}
+                                        aria-label="Buscar no estoque"
+                                    />
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {FILTROS.map((btn) => {
+                                        const Icon = btn.icon
+                                        const isSelected = filtro === btn.id
+                                        return (
+                                            <button
+                                                key={btn.id}
+                                                onClick={() => setFiltro(btn.id)}
+                                                className={cn(
+                                                    "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold whitespace-nowrap transition-colors",
+                                                    isSelected
+                                                        ? "bg-foreground text-background border-foreground"
+                                                        : "bg-card text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground"
                                                 )}
                                             >
                                                 <Icon className="w-3.5 h-3.5" />
