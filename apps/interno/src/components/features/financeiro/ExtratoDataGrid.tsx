@@ -17,6 +17,7 @@ import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { formatCurrency, cn } from '@mont/shared'
 import { format } from 'date-fns'
 import type { ExtratoItem } from '@mont/shared'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 // A view_extrato_mensal usa tipo ∈ {entrada, saida, transferencia} (NÃO receita/despesa).
 function TipoBadge({ tipo }: { tipo: ExtratoItem['tipo'] }) {
@@ -31,6 +32,7 @@ interface ExtratoDataGridProps {
 
 export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'data', desc: true }])
+    const [colSizing, setColSizing] = useColumnSizing('grid-extrato')
 
     // Abre o comprovante (repasse) por signed URL — aba já aberta síncrono, navega após o await.
     const verComprovante = useCallback(async (path: string) => {
@@ -47,6 +49,8 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
     const columns = useMemo<ColumnDef<ExtratoItem>[]>(() => [
         {
             accessorKey: 'data',
+            size: 120,
+            minSize: 100,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Data" />,
             cell: ({ row }) => (
                 <span className="text-muted-foreground whitespace-nowrap tabular-nums">
@@ -58,6 +62,8 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
         {
             id: 'descricao',
             accessorFn: (i) => i.descricao ?? '',
+            size: 320,
+            minSize: 200,
             enableSorting: false,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Descrição" />,
             cell: ({ row }) => (
@@ -114,8 +120,10 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
     const table = useReactTable({
         data: extrato,
         columns,
-        state: { sorting },
+        state: { sorting, columnSizing: colSizing },
         onSortingChange: setSorting,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         // id da view pode repetir entre origens (e ser null) → prefixa origem e cai no
         // índice quando não há id, garantindo unicidade estável da linha.
         getRowId: (i, index) => (i.id ? `${i.origem ?? 'x'}:${i.id}` : `row-${index}`),
@@ -129,10 +137,10 @@ export function ExtratoDataGrid({ extrato }: ExtratoDataGridProps) {
         <DataGrid
             table={table}
             recordCount={extrato.length}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />

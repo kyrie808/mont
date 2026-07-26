@@ -19,6 +19,7 @@ import { formatDate, formatCurrency, cn } from '@mont/shared'
 import { FORMA_PAGAMENTO_LABELS } from '@/constants'
 import { getVendaBadgeStatus } from '@/utils/vendaBadge'
 import type { DomainVenda } from '@/types/domain'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 function EntregaBadge({ status }: { status: DomainVenda['status'] }) {
     if (status === 'entregue') return <span className={cn(badgeBase, 'bg-success/10 text-success border-success/20')}>Entregue</span>
@@ -50,11 +51,14 @@ interface VendasDataGridProps {
 export function VendasDataGrid({ vendas, onDeleteClick }: VendasDataGridProps) {
     const navigate = useNavigate()
     const [sorting, setSorting] = useState<SortingState>([{ id: 'data', desc: true }])
+    const [colSizing, setColSizing] = useColumnSizing('grid-vendas')
 
     const columns = useMemo<ColumnDef<DomainVenda>[]>(() => [
         {
             id: 'cliente',
             accessorFn: (v) => v.contato?.nome ?? 'Cliente Não Identificado',
+            size: 260,
+            minSize: 180,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Cliente" />,
             cell: ({ row }) => (
                 <div className="min-w-0">
@@ -100,6 +104,9 @@ export function VendasDataGrid({ vendas, onDeleteClick }: VendasDataGridProps) {
         {
             id: 'acoes',
             enableSorting: false,
+            enableResizing: false,
+            size: 56,
+            minSize: 56,
             header: () => <span className="sr-only">Ações</span>,
             cell: ({ row }) => (
                 row.original.status !== 'cancelada' && row.original.origem !== 'catalogo' ? (
@@ -121,8 +128,10 @@ export function VendasDataGrid({ vendas, onDeleteClick }: VendasDataGridProps) {
     const table = useReactTable({
         data: vendas,
         columns,
-        state: { sorting },
+        state: { sorting, columnSizing: colSizing },
         onSortingChange: setSorting,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         getRowId: (v) => v.id,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -135,11 +144,11 @@ export function VendasDataGrid({ vendas, onDeleteClick }: VendasDataGridProps) {
             table={table}
             recordCount={vendas.length}
             onRowClick={(v) => navigate(`/vendas/${v.id}`)}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
             tableClassNames={{ bodyRow: 'cursor-pointer' }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />
