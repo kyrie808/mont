@@ -16,22 +16,14 @@ import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
 import { cn } from '@mont/shared'
 import type { DomainProduto } from '@/types/domain'
+import { estoqueStatus, ESTOQUE_STATUS_BADGE, type EstoqueStatus } from '@/utils/estoqueStatus'
 
-export type EstoqueStatus = 'negativo' | 'zerado' | 'baixo' | 'ok'
-
-export function estoqueStatus(p: DomainProduto): EstoqueStatus {
-    const atual = p.estoqueAtual ?? 0
-    if (atual < 0) return 'negativo'
-    if (atual === 0) return 'zerado'
-    if (atual <= (p.estoqueMinimo ?? 0)) return 'baixo'
-    return 'ok'
-}
+// Re-export: fonte única em utils/estoqueStatus (mantém imports antigos deste módulo).
+export { estoqueStatus, type EstoqueStatus }
 
 function StatusBadge({ status }: { status: EstoqueStatus }) {
-    if (status === 'negativo') return <span className={cn(badgeBase, 'bg-destructive/10 text-destructive border-destructive/20')}>Negativo</span>
-    if (status === 'zerado') return <span className={cn(badgeBase, 'bg-muted text-muted-foreground border-border')}>Zerado</span>
-    if (status === 'baixo') return <span className={cn(badgeBase, 'bg-warning/10 text-warning-strong border-warning/20')}>Baixo</span>
-    return <span className={cn(badgeBase, 'bg-success/10 text-success border-success/20')}>OK</span>
+    const { label, cls } = ESTOQUE_STATUS_BADGE[status]
+    return <span className={cn(badgeBase, cls)}>{label}</span>
 }
 
 interface EstoqueDataGridProps {

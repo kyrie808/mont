@@ -9,7 +9,8 @@ import { KpiCardDesktop } from '../components/dashboard/KpiCardDesktop'
 import { cn } from '@mont/shared'
 import { useProdutos } from '../hooks/useProdutos'
 import { useToast } from '../components/ui/Toast'
-import { EstoqueDataGrid, estoqueStatus, type EstoqueStatus } from '../components/features/estoque/EstoqueDataGrid'
+import { EstoqueDataGrid } from '../components/features/estoque/EstoqueDataGrid'
+import { estoqueStatus, ESTOQUE_STATUS_BADGE } from '../utils/estoqueStatus'
 import type { DomainProduto } from '../types/domain'
 
 type EstoqueFiltro = 'todos' | 'negativos' | 'baixo' | 'zerados'
@@ -27,13 +28,6 @@ const inputBase =
     'flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background ' +
     'placeholder:text-muted-foreground/50 focus-visible:outline-hidden focus-visible:ring-2 ' +
     'focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
-
-const STATUS_LABEL: Record<EstoqueStatus, { label: string; cls: string }> = {
-    negativo: { label: 'Negativo', cls: 'bg-destructive/10 text-destructive border-destructive/20' },
-    zerado: { label: 'Zerado', cls: 'bg-muted text-muted-foreground border-border' },
-    baixo: { label: 'Baixo', cls: 'bg-warning/10 text-warning-strong border-warning/20' },
-    ok: { label: 'OK', cls: 'bg-success/10 text-success border-success/20' },
-}
 
 export function Estoque() {
     const { openDrawer } = useNavigationStore()
@@ -237,8 +231,8 @@ export function Estoque() {
                                                             <h3 className="font-bold text-foreground truncate">{produto.nome}</h3>
                                                             <div className="text-xs text-muted-foreground font-mono">#{produto.codigo}</div>
                                                             <div className="flex items-center gap-2 mt-1.5">
-                                                                <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium", STATUS_LABEL[st].cls)}>
-                                                                    {STATUS_LABEL[st].label}
+                                                                <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium", ESTOQUE_STATUS_BADGE[st].cls)}>
+                                                                    {ESTOQUE_STATUS_BADGE[st].label}
                                                                 </span>
                                                                 <span className="text-[11px] text-muted-foreground">mín: {produto.estoqueMinimo ?? 0}</span>
                                                             </div>

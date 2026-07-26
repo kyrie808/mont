@@ -15,6 +15,7 @@ import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagina
 import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { formatCurrency, cn } from '@mont/shared'
 import type { DomainProduto } from '@/types/domain'
+import { estoqueStatus, ESTOQUE_STATUS_BADGE } from '@/utils/estoqueStatus'
 
 // Mesma regra de margem da página (calcularMargem): (preco - custo) / preco.
 function margemPct(preco: number, custo: number): number {
@@ -22,14 +23,12 @@ function margemPct(preco: number, custo: number): number {
     return ((preco - custo) / preco) * 100
 }
 
+// Mostra o saldo numérico, colorido pela MESMA regra/cores da página Estoque
+// (negativo = vermelho, zerado = neutro, baixo = amarelo, ok = verde). Inativo = neutro.
 function EstoqueBadge({ produto }: { produto: DomainProduto }) {
-    if (!produto.ativo) {
-        return <span className={cn(badgeBase, 'bg-muted text-muted-foreground border-border')}>{produto.estoqueAtual}</span>
-    }
-    const baixo = produto.estoqueAtual <= produto.estoqueMinimo
-    const cls = baixo
-        ? 'bg-warning/10 text-warning-strong border-warning/20'
-        : 'bg-success/10 text-success border-success/20'
+    const cls = produto.ativo
+        ? ESTOQUE_STATUS_BADGE[estoqueStatus(produto)].cls
+        : 'bg-muted text-muted-foreground border-border'
     return (
         <span className={cn(badgeBase, cls)} title={`Mínimo: ${produto.estoqueMinimo}`}>
             {produto.estoqueAtual}

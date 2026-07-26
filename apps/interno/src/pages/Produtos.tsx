@@ -5,13 +5,21 @@ import {
     Package,
     Plus,
     AlertTriangle,
+    Search,
     X
 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card, PageSkeleton, Modal, ModalActions, Button } from '../components/ui'
 import { KpiCard } from '../components/dashboard/KpiCard'
+import { KpiCardDesktop } from '../components/dashboard/KpiCardDesktop'
 import { cn } from '@mont/shared'
+
+// inputBase v2 do Design System (§4) — mesmo da toolbar do Estoque.
+const inputBase =
+    'flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background ' +
+    'placeholder:text-muted-foreground/50 focus-visible:outline-hidden focus-visible:ring-2 ' +
+    'focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
 import { useProdutos } from '../hooks/useProdutos'
 import { useToast } from '../components/ui/Toast'
 import { formatCurrency } from '@mont/shared'
@@ -31,17 +39,31 @@ export function Produtos() {
     const secaoOptions = secoes.map((s) => ({ value: s.id, label: s.nome }))
 
     // Filters
+    // `?filtro=baixo_estoque` continua vivo só pro atalho mobile (KPI que o Gilmar já usa).
     const filterBaixoEstoque = searchParams.get('filtro') === 'baixo_estoque'
+    // Busca (desktop) por nome/código — no mobile o campo não existe, então fica vazio (sem efeito).
+    const [searchTerm, setSearchTerm] = useState('')
 
     const filteredProdutos = useMemo(() => {
-        if (!filterBaixoEstoque) return produtos
+        let result = produtos
 
-        return produtos.filter(p => {
-            const atual = p.estoqueAtual || 0
-            const minimo = p.estoqueMinimo || 10
-            return atual <= minimo && p.ativo
-        })
-    }, [produtos, filterBaixoEstoque])
+        if (filterBaixoEstoque) {
+            result = result.filter(p => {
+                const atual = p.estoqueAtual || 0
+                const minimo = p.estoqueMinimo || 10
+                return atual <= minimo && p.ativo
+            })
+        }
+
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase()
+            result = result.filter(p =>
+                p.nome.toLowerCase().includes(term) ||
+                p.codigo.toLowerCase().includes(term)
+            )
+        }
+        return result
+    }, [produtos, filterBaixoEstoque, searchTerm])
 
     const clearFilter = () => {
         setSearchParams(prev => {
@@ -115,6 +137,9 @@ export function Produtos() {
         const minimo = p.estoqueMinimo || 10
         return atual <= minimo && p.ativo
     }).length
+    // KPIs de cadastro (desktop) — estoque é preocupação do /estoque, não do cadastro.
+    const combosCount = produtos.filter(p => p.ehCombo).length
+    const foraCatalogoCount = produtos.filter(p => p.ativo && !p.visivelCatalogo).length
 
     // Custo de um combo = soma do custo dos componentes × quantidade (não digitado).
     const custoComponentes = (comps: { componenteId: string; quantidade: number }[]) =>
@@ -422,7 +447,8 @@ export function Produtos() {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {/* KPIs — MOBILE (<lg): intocado (mantém "Baixo Estoque" que o Gilmar usa) */}
+                            <div className="grid grid-cols-2 gap-3 lg:hidden">
                                 <KpiCard
                                     title="Ativos"
                                     value={produtosAtivos.toString()}
@@ -440,6 +466,28 @@ export function Produtos() {
                                     onClick={() => setSearchParams({ filtro: 'baixo_estoque' })}
                                     className="cursor-pointer"
                                 />
+                            </div>
+
+                            {/* KPIs — DESKTOP (≥lg): cadastro (estoque vive no /estoque) */}
+                            <div className="hidden lg:grid lg:grid-cols-3 lg:gap-4">
+                                <KpiCardDesktop title="Ativos" value={produtosAtivos.toString()} subtitle="Produtos à venda" />
+                                <KpiCardDesktop title="Combos" value={combosCount.toString()} subtitle={combosCount > 0 ? 'Montados por componentes' : 'Nenhum combo'} />
+                                <KpiCardDesktop title="Fora do catálogo" value={foraCatalogoCount.toString()} subtitle={foraCatalogoCount > 0 ? 'Ativos, ocultos da vitrine' : 'Todos na vitrine'} />
+                            </div>
+
+                            {/* Busca — DESKTOP (≥lg): toolbar em linha (mobile não tem busca) */}
+                            <div className="hidden lg:flex lg:items-center lg:gap-3">
+                                <div className="relative flex-1 lg:max-w-sm">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar produto ou código..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={cn(inputBase, 'h-11 pl-10 pr-4 text-sm')}
+                                        aria-label="Buscar produtos"
+                                    />
+                                </div>
                             </div>
 
                             {/* MOBILE (<lg): grade de cards — intocada (mobile sagrado) */}
