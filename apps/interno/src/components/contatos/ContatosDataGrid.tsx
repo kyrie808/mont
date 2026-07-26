@@ -19,10 +19,16 @@ import { formatCurrency, formatDate, cn } from '@mont/shared'
 import type { DomainContato } from '@/types/domain'
 import type { ContatoResumo } from '@/hooks/useContatosResumo'
 import { classificarContato, SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
+import { origemBadge } from '@/utils/origemContato'
 
 function SegmentoBadge({ segmento }: { segmento: SegmentoCliente }) {
     const s = SEGMENTO_BADGE[segmento]
     return <span className={cn(badgeBase, s.cls)}>{s.label}</span>
+}
+
+function OrigemBadge({ origem, fonte }: { origem: string; fonte?: string | null }) {
+    const o = origemBadge(origem, fonte)
+    return <span className={cn(badgeBase, o.cls)}>{o.label}</span>
 }
 
 function TipoBadge({ tipo }: { tipo: DomainContato['tipo'] }) {
@@ -73,6 +79,12 @@ export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
             accessorKey: 'tipo',
             header: ({ column }) => <DataGridColumnHeader column={column} title="Tipo" />,
             cell: ({ row }) => <TipoBadge tipo={row.original.tipo} />,
+        },
+        {
+            id: 'origem',
+            accessorFn: (c) => origemBadge(c.origem, c.fonte).label,
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Origem" />,
+            cell: ({ row }) => <OrigemBadge origem={row.original.origem} fonte={row.original.fonte} />,
         },
         {
             id: 'segmento',

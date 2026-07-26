@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatRelativeDate } from '@mont/shared'
 import type { DomainContato } from '../../types/domain'
 import type { SegmentoCliente } from '../../utils/segmentoCliente'
+import { origemBadge } from '../../utils/origemContato'
 import { cn } from '@mont/shared'
 
 interface ContatoCardProps {
@@ -115,6 +116,16 @@ export function ContatoCard({ contato, onClick, segmento }: ContatoCardProps) {
                         {relativeDate.toUpperCase()}
                     </span>
                 </div>
+
+                {/* Origem Badge (de onde o cliente veio) */}
+                {(() => {
+                    const o = origemBadge(contato.origem, contato.fonte)
+                    return (
+                        <span className={cn('px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide', o.cls)}>
+                            {o.label}
+                        </span>
+                    )
+                })()}
             </div>
 
             {/* Action Footer */}

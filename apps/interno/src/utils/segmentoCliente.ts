@@ -3,8 +3,9 @@ import type { ContatoResumo } from '../hooks/useContatosResumo'
 
 /**
  * Segmento de ciclo de vida do contato — baldes EXCLUSIVOS (cada contato cai em
- * exatamente um). Derivado do comportamento de compra (view `ranking_compras`),
- * não do campo `contatos.status` (que virou ruído). Ver plano/decisão 15/07/2026.
+ * exatamente um). Derivado das compras ENTREGUES (view `contato_compras_resumo`, inclui
+ * fiado — "comprou" = recebeu), não do campo `contatos.status` (que virou ruído).
+ * Ver plano/decisão 15/07/2026; fonte corrigida p/ entregas 26/07/2026 (fiado ≠ lead).
  */
 export type SegmentoCliente = 'lead' | 'cliente' | 'vip' | 'inativo' | 'fornecedor'
 
