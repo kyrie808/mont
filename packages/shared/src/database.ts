@@ -333,6 +333,13 @@ export type Database = {
             foreignKeyName: "cat_pedidos_contato_id_fkey"
             columns: ["contato_id"]
             isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "cat_pedidos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
             referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
@@ -668,6 +675,13 @@ export type Database = {
             foreignKeyName: "contato_campanhas_contato_id_fkey"
             columns: ["contato_id"]
             isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "contato_campanhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
             referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
@@ -725,6 +739,13 @@ export type Database = {
           tag_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contato_tags_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
           {
             foreignKeyName: "contato_tags_contato_id_fkey"
             columns: ["contato_id"]
@@ -917,6 +938,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fontes"
             referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "contatos_indicado_por_id_fkey"
+            columns: ["indicado_por_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
           },
           {
             foreignKeyName: "contatos_indicado_por_id_fkey"
@@ -1141,6 +1169,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rpt_campanhas_roas_mensal"
             referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
           },
           {
             foreignKeyName: "interacoes_contato_id_fkey"
@@ -1422,6 +1457,13 @@ export type Database = {
           venda_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "meta_eventos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
           {
             foreignKeyName: "meta_eventos_contato_id_fkey"
             columns: ["contato_id"]
@@ -1991,6 +2033,13 @@ export type Database = {
             foreignKeyName: "purchase_orders_fornecedor_id_fkey"
             columns: ["fornecedor_id"]
             isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
             referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
@@ -2226,6 +2275,13 @@ export type Database = {
             foreignKeyName: "vendas_contato_id_fkey"
             columns: ["contato_id"]
             isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "vendas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
             referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
@@ -2282,6 +2338,15 @@ export type Database = {
       }
     }
     Views: {
+      contato_compras_resumo: {
+        Row: {
+          contato_id: string | null
+          total_compras: number | null
+          total_gasto: number | null
+          ultima_compra: string | null
+        }
+        Relationships: []
+      }
       crm_view_monthly_sales: {
         Row: {
           ano: number | null
