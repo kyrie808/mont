@@ -1,7 +1,7 @@
 import type { MutableRefObject, ReactNode, RefObject } from 'react'
 import type { UseFormRegister, FieldErrors, UseFormSetValue } from 'react-hook-form'
 import {
-    User, Target, Megaphone, Users, MapPin, FileText, UserPlus,
+    User, Target, Megaphone, Users, MapPin, FileText,
     Search, X, ChevronDown, Loader2,
 } from 'lucide-react'
 import { cn, formatPhone } from '@mont/shared'
@@ -88,23 +88,10 @@ export function ContatoFormDesktop({
     const isB2B = tipoValue === 'B2B'
 
     return (
-        <div className="space-y-6">
-            {/* Header de contexto */}
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                    <UserPlus size={22} />
-                </div>
-                <div>
-                    <h4 className="font-bold text-foreground">{isEditing ? 'Editar contato' : 'Novo contato'}</h4>
-                    <p className="text-xs text-muted-foreground">
-                        {isEditing ? 'Atualize os dados do contato.' : 'Preencha os dados do lead ou cliente.'}
-                    </p>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8">
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-6">
                 {/* ── COLUNA ESQUERDA ─────────────────────────────────────── */}
-                <div className="space-y-6">
+                <div className="space-y-5">
                     {/* Identidade */}
                     <div className="space-y-3">
                         <Eyebrow icon={User}>Identidade</Eyebrow>
@@ -273,7 +260,7 @@ export function ContatoFormDesktop({
                 </div>
 
                 {/* ── COLUNA DIREITA ──────────────────────────────────────── */}
-                <div className="space-y-6">
+                <div className="space-y-5">
                     {/* Endereço */}
                     <div className="space-y-3">
                         <Eyebrow icon={MapPin}>Endereço</Eyebrow>
@@ -321,7 +308,7 @@ export function ContatoFormDesktop({
                         <Eyebrow icon={FileText}>Observações</Eyebrow>
                         <textarea
                             {...register('observacoes')}
-                            className={cn(inputBase, 'min-h-[120px] px-3 py-2 text-sm resize-none')}
+                            className={cn(inputBase, 'min-h-[96px] px-3 py-2 text-sm resize-none')}
                             placeholder="Notas internas sobre o contato…"
                         />
                     </div>
