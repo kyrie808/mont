@@ -10,7 +10,11 @@ export function useSecoes() {
         queryFn: () => secaoService.listSecoes(),
     })
 
-    const invalidate = () => queryClient.invalidateQueries({ queryKey: ['secoes'] })
+    const invalidate = () => {
+        queryClient.invalidateQueries({ queryKey: ['secoes'] })
+        // Excluir seção faz ON DELETE SET NULL → produtos viram órfãos.
+        queryClient.invalidateQueries({ queryKey: ['produtos-orfaos'] })
+    }
 
     const createMutation = useMutation({
         mutationFn: (input: { nome: string }) => secaoService.createSecao(input),
@@ -63,6 +67,8 @@ export function useSecaoItens(secaoId: string | undefined) {
         queryClient.invalidateQueries({ queryKey: ['secao-itens', secaoId] })
         // contagem na sidebar depende disto
         queryClient.invalidateQueries({ queryKey: ['secoes'] })
+        // remover item zera secao_id → o produto vira órfão
+        queryClient.invalidateQueries({ queryKey: ['produtos-orfaos'] })
     }
 
     const removeMutation = useMutation({
@@ -86,4 +92,13 @@ export function useSecaoItens(secaoId: string | undefined) {
         removeItem,
         reorderItens,
     }
+}
+
+/** Produtos visíveis no catálogo mas sem seção (aparecem em nenhuma aba). */
+export function useProdutosOrfaos() {
+    const { data } = useQuery({
+        queryKey: ['produtos-orfaos'],
+        queryFn: () => secaoService.listOrfaos(),
+    })
+    return data ?? []
 }
