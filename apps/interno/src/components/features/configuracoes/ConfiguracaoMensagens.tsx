@@ -1,15 +1,36 @@
-import { MessageSquare } from 'lucide-react'
-import { Card } from '../../ui'
+import { useEffect, useState } from 'react'
+import { MessageSquare, Save } from 'lucide-react'
+import { Card, Button } from '../../ui'
+import { useToast } from '../../ui/Toast'
+import { configuracoesService } from '../../../services/configuracoesService'
 
-interface ConfiguracaoMensagensProps {
-    mensagemRecompra: string
-    setMensagemRecompra: (val: string) => void
+interface Props {
+    initial: string
+    onSaved?: () => void
 }
 
-export function ConfiguracaoMensagens({
-    mensagemRecompra,
-    setMensagemRecompra
-}: ConfiguracaoMensagensProps) {
+export function ConfiguracaoMensagens({ initial, onSaved }: Props) {
+    const toast = useToast()
+    const [mensagemRecompra, setMensagemRecompra] = useState(initial)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => { setMensagemRecompra(initial) }, [initial])
+
+    const dirty = mensagemRecompra !== initial
+
+    const salvar = async () => {
+        setSaving(true)
+        try {
+            await configuracoesService.salvarMensagem(mensagemRecompra)
+            toast.success('Mensagem salva!')
+            onSaved?.()
+        } catch {
+            toast.error('Erro ao salvar mensagem')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <Card>
             <div className="p-6">
@@ -52,6 +73,12 @@ export function ConfiguracaoMensagens({
                         </p>
                     </div>
                 )}
+
+                <div className="mt-6 flex justify-end">
+                    <Button variant="primary" leftIcon={<Save className="h-4 w-4" />} onClick={salvar} isLoading={saving} disabled={!dirty}>
+                        Salvar
+                    </Button>
+                </div>
             </div>
         </Card>
     )

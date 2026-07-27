@@ -1,15 +1,36 @@
-import { DollarSign, Info } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { DollarSign, Info, Save } from 'lucide-react'
 import { Card, Button, Input } from '../../ui'
+import { useToast } from '../../ui/Toast'
+import { configuracoesService } from '../../../services/configuracoesService'
 
-interface ConfiguracaoRecompensasProps {
-    recompensaValor: number
-    setRecompensaValor: (val: number) => void
+interface Props {
+    initial: number
+    onSaved?: () => void
 }
 
-export function ConfiguracaoRecompensas({
-    recompensaValor,
-    setRecompensaValor
-}: ConfiguracaoRecompensasProps) {
+export function ConfiguracaoRecompensas({ initial, onSaved }: Props) {
+    const toast = useToast()
+    const [recompensaValor, setRecompensaValor] = useState(initial)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => { setRecompensaValor(initial) }, [initial])
+
+    const dirty = recompensaValor !== initial
+
+    const salvar = async () => {
+        setSaving(true)
+        try {
+            await configuracoesService.salvarRecompensa(recompensaValor)
+            toast.success('Recompensa salva!')
+            onSaved?.()
+        } catch {
+            toast.error('Erro ao salvar recompensa')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <Card>
             <div className="p-6">
@@ -57,6 +78,12 @@ export function ConfiguracaoRecompensas({
                     <p>
                         Indicação só conta como convertida quando o indicado faz sua primeira compra.
                     </p>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <Button variant="primary" leftIcon={<Save className="h-4 w-4" />} onClick={salvar} isLoading={saving} disabled={!dirty}>
+                        Salvar
+                    </Button>
                 </div>
             </div>
         </Card>

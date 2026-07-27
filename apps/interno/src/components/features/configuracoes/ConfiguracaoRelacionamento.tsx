@@ -1,23 +1,50 @@
-import { RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { RefreshCw, Save } from 'lucide-react'
 import { Card, Button, Input } from '../../ui'
+import { useToast } from '../../ui/Toast'
+import { configuracoesService } from '../../../services/configuracoesService'
 
-interface ConfiguracaoRelacionamentoProps {
-    limiarReativacao: number
-    setLimiarReativacao: (val: number) => void
-    janelaResposta: number
-    setJanelaResposta: (val: number) => void
-    cooldownRecusa: number
-    setCooldownRecusa: (val: number) => void
+interface Props {
+    initial: { limiarReativacao: number; janelaRespostaHoras: number; cooldownRecusaDias: number }
+    onSaved?: () => void
 }
 
-export function ConfiguracaoRelacionamento({
-    limiarReativacao,
-    setLimiarReativacao,
-    janelaResposta,
-    setJanelaResposta,
-    cooldownRecusa,
-    setCooldownRecusa,
-}: ConfiguracaoRelacionamentoProps) {
+export function ConfiguracaoRelacionamento({ initial, onSaved }: Props) {
+    const toast = useToast()
+    const [limiarReativacao, setLimiarReativacao] = useState(initial.limiarReativacao)
+    const [janelaResposta, setJanelaResposta] = useState(initial.janelaRespostaHoras)
+    const [cooldownRecusa, setCooldownRecusa] = useState(initial.cooldownRecusaDias)
+    const [saving, setSaving] = useState(false)
+
+    // Re-semeia quando o config carrega/atualiza.
+    useEffect(() => {
+        setLimiarReativacao(initial.limiarReativacao)
+        setJanelaResposta(initial.janelaRespostaHoras)
+        setCooldownRecusa(initial.cooldownRecusaDias)
+    }, [initial.limiarReativacao, initial.janelaRespostaHoras, initial.cooldownRecusaDias])
+
+    const dirty =
+        limiarReativacao !== initial.limiarReativacao ||
+        janelaResposta !== initial.janelaRespostaHoras ||
+        cooldownRecusa !== initial.cooldownRecusaDias
+
+    const salvar = async () => {
+        setSaving(true)
+        try {
+            await configuracoesService.salvarRelacionamento({
+                limiarReativacao,
+                janelaRespostaHoras: janelaResposta,
+                cooldownRecusaDias: cooldownRecusa,
+            })
+            toast.success('Relacionamento salvo!')
+            onSaved?.()
+        } catch {
+            toast.error('Erro ao salvar relacionamento')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <Card>
             <div className="p-6">
@@ -112,6 +139,12 @@ export function ConfiguracaoRelacionamento({
                     <p className="mt-1.5 text-xs text-muted-foreground">
                         Quando o cliente recusa uma oferta, o card descansa na coluna "Recusou" por esse tempo. Depois volta para "A Contatar" (pode reofertar) — evita insistir logo após um não.
                     </p>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <Button variant="primary" leftIcon={<Save className="h-4 w-4" />} onClick={salvar} isLoading={saving} disabled={!dirty}>
+                        Salvar
+                    </Button>
                 </div>
             </div>
         </Card>

@@ -1,19 +1,12 @@
-import { useState, useEffect } from 'react'
-import {
-    Save,
-    RefreshCw
-} from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { RefreshCw, DollarSign, MessageSquare, Truck, MapPin, ExternalLink, type LucideIcon } from 'lucide-react'
+import { cn } from '@mont/shared'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Button, PageSkeleton } from '../components/ui'
+import { PageSkeleton } from '../components/ui'
 import { useConfiguracoes } from '../hooks/useConfiguracoes'
-import { useToast } from '../components/ui/Toast'
-import { supabase } from '../lib/supabase'
-import { getCoordinates } from '../utils/geocoding'
-import { useCep } from '../hooks/useCep'
-import type { Json } from '@mont/shared'
 
-// Sub-components
+// Sub-components (cada bloco se auto-salva; persistência via configuracoesService)
 import { ConfiguracaoRelacionamento } from '../components/features/configuracoes/ConfiguracaoRelacionamento'
 import { ConfiguracaoRecompensas } from '../components/features/configuracoes/ConfiguracaoRecompensas'
 import { ConfiguracaoMensagens } from '../components/features/configuracoes/ConfiguracaoMensagens'
@@ -21,250 +14,98 @@ import { ConfiguracaoLocalizacao } from '../components/features/configuracoes/Co
 import { ConfiguracaoLinks } from '../components/features/configuracoes/ConfiguracaoLinks'
 import { ConfiguracaoFrete } from '../components/features/configuracoes/ConfiguracaoFrete'
 
-interface LocalPartida {
-    id: string
-    nome: string
-    endereco: string
-    lat: number
-    lng: number
+type SecaoId = 'relacionamento' | 'recompensas' | 'mensagens' | 'frete' | 'locais' | 'atalhos'
+
+const SECOES: { id: SecaoId; label: string; icon: LucideIcon }[] = [
+    { id: 'relacionamento', label: 'Relacionamento', icon: RefreshCw },
+    { id: 'recompensas', label: 'Recompensas', icon: DollarSign },
+    { id: 'mensagens', label: 'Mensagem de recompra', icon: MessageSquare },
+    { id: 'frete', label: 'Frete por distância', icon: Truck },
+    { id: 'locais', label: 'Locais de partida', icon: MapPin },
+    { id: 'atalhos', label: 'Atalhos', icon: ExternalLink },
+]
+
+function SectionHeader({ children }: { children: ReactNode }) {
+    return (
+        <h2 className="text-xs font-black uppercase tracking-[0.18em] text-muted-foreground pt-2">
+            {children}
+        </h2>
+    )
 }
 
 export function Configuracoes() {
-    const toast = useToast()
     const { config, loading, refetch } = useConfiguracoes()
+    const [ativa, setAtiva] = useState<SecaoId>('relacionamento')
 
-    // Local state for editing
-    const [limiarReativacao, setLimiarReativacao] = useState(30)
-    const [janelaResposta, setJanelaResposta] = useState(24)
-    const [cooldownRecusa, setCooldownRecusa] = useState(30)
-    const [recompensaValor, setRecompensaValor] = useState(5)
-    const [mensagemRecompra, setMensagemRecompra] = useState('')
-
-    // Locais de Partida State
-    const [locais, setLocais] = useState<LocalPartida[]>([])
-    const [novoLocalNome, setNovoLocalNome] = useState('')
-    const [novoLocalEndereco, setNovoLocalEndereco] = useState('')
-    const [addingLocal, setAddingLocal] = useState(false)
-
-    const { fetchCep } = useCep()
-
-    const handleEnderecoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value
-        setNovoLocalEndereco(value)
-
-        const cleanValue = value.replace(/\D/g, '')
-        if (cleanValue.length === 8) {
-            const addressData = await fetchCep(cleanValue)
-            if (addressData) {
-                const fullAddress = `${addressData.street}, , ${addressData.neighborhood}, ${addressData.city} - ${addressData.state}`
-                setNovoLocalEndereco(fullAddress)
-                toast.success('Endereço completado pelo CEP!')
-            }
+    // Reusado nos dois ramos (mobile empilha tudo; desktop mostra a seção ativa).
+    const renderSecao = (id: SecaoId): ReactNode => {
+        switch (id) {
+            case 'relacionamento': return <ConfiguracaoRelacionamento initial={config.relacionamento} onSaved={refetch} />
+            case 'recompensas': return <ConfiguracaoRecompensas initial={config.recompensaIndicacao.valor} onSaved={refetch} />
+            case 'mensagens': return <ConfiguracaoMensagens initial={config.mensagemRecompra} onSaved={refetch} />
+            case 'frete': return <ConfiguracaoFrete />
+            case 'locais': return <ConfiguracaoLocalizacao />
+            case 'atalhos': return <ConfiguracaoLinks />
         }
     }
-
-    const [saving, setSaving] = useState(false)
-
-    // Sync with config when loaded
-    useEffect(() => {
-        if (!loading) {
-            setLimiarReativacao(config.relacionamento.limiarReativacao)
-            setJanelaResposta(config.relacionamento.janelaRespostaHoras)
-            setCooldownRecusa(config.relacionamento.cooldownRecusaDias)
-            setRecompensaValor(config.recompensaIndicacao.valor)
-            setMensagemRecompra(config.mensagemRecompra)
-
-            ;supabase.from('configuracoes')
-                .select('valor')
-                .eq('chave', 'locais_partida')
-                .maybeSingle()
-                .then(({ data }) => {
-                    if (data?.valor && Array.isArray(data.valor)) {
-                        setLocais(data.valor as unknown as LocalPartida[])
-                    }
-                })
-        }
-    }, [config, loading])
-
-    const handleAddLocal = async () => {
-        if (!novoLocalNome || !novoLocalEndereco) {
-            toast.error('Preencha nome e endereço')
-            return
-        }
-
-        setAddingLocal(true)
-        try {
-            const coords = await getCoordinates(novoLocalEndereco)
-            if (!coords) {
-                toast.error('Endereço não encontrado')
-                return
-            }
-
-            const novoLocal: LocalPartida = {
-                id: crypto.randomUUID(),
-                nome: novoLocalNome,
-                endereco: novoLocalEndereco,
-                lat: coords.lat,
-                lng: coords.lng
-            }
-
-            const updatedLocais = [...locais, novoLocal]
-            setLocais(updatedLocais)
-
-            await supabase.from('configuracoes').upsert({
-                chave: 'locais_partida',
-                valor: updatedLocais as unknown as Json
-            }, { onConflict: 'chave' })
-
-            setNovoLocalNome('')
-            setNovoLocalEndereco('')
-            toast.success('Local adicionado e salvo!')
-        } catch (_error) {
-            toast.error('Erro ao adicionar local. Tente novamente.')
-        } finally {
-            setAddingLocal(false)
-        }
-    }
-
-    const handleRemoveLocal = async (id: string) => {
-        const updatedLocais = locais.filter(l => l.id !== id)
-        setLocais(updatedLocais)
-
-        try {
-            await supabase.from('configuracoes').upsert({
-                chave: 'locais_partida',
-                valor: updatedLocais as unknown as Json
-            }, { onConflict: 'chave' })
-            toast.success('Local removido!')
-        } catch (_error) {
-            toast.error('Erro ao remover local. Tente novamente.')
-        }
-    }
-
-    const handleSave = async () => {
-        setSaving(true)
-        try {
-            await Promise.all([
-                supabase.from('configuracoes').upsert({
-                    chave: 'relacionamento',
-                    valor: {
-                        limiar_reativacao: limiarReativacao,
-                        multiplicador_sumido: config.relacionamento.multiplicadorSumido,
-                        janela_resposta_horas: janelaResposta,
-                        cooldown_recusa_dias: cooldownRecusa,
-                    },
-                }, { onConflict: 'chave' }),
-                supabase.from('configuracoes').upsert({
-                    chave: 'recompensa_indicacao',
-                    valor: { tipo: 'desconto', valor: recompensaValor },
-                }, { onConflict: 'chave' }),
-                supabase.from('configuracoes').upsert({
-                    chave: 'mensagem_recompra',
-                    valor: { texto: mensagemRecompra },
-                }, { onConflict: 'chave' }),
-                supabase.from('configuracoes').upsert({
-                    chave: 'locais_partida',
-                    valor: locais as unknown as Json
-                }, { onConflict: 'chave' })
-            ])
-
-            await refetch()
-            toast.success('Configurações salvas!')
-        } catch (_err) {
-            toast.error('Erro ao salvar configurações. Tente novamente.')
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    const handleReset = () => {
-        setLimiarReativacao(config.relacionamento.limiarReativacao)
-        setJanelaResposta(config.relacionamento.janelaRespostaHoras)
-        setCooldownRecusa(config.relacionamento.cooldownRecusaDias)
-        setRecompensaValor(config.recompensaIndicacao.valor)
-        setMensagemRecompra(config.mensagemRecompra)
-        ;supabase.from('configuracoes').select('valor').eq('chave', 'locais_partida').maybeSingle()
-            .then(({ data }) => {
-                if (data?.valor && Array.isArray(data.valor)) {
-                    setLocais(data.valor as unknown as LocalPartida[])
-                }
-            })
-        toast.info('Alterações descartadas')
-    }
-
-    const hasChanges =
-        limiarReativacao !== config.relacionamento.limiarReativacao ||
-        janelaResposta !== config.relacionamento.janelaRespostaHoras ||
-        cooldownRecusa !== config.relacionamento.cooldownRecusaDias ||
-        recompensaValor !== config.recompensaIndicacao.valor ||
-        mensagemRecompra !== config.mensagemRecompra
 
     return (
         <>
             <Header title="Configurações" showBack centerTitle />
-                <PageContainer className="pt-0 pb-24 bg-transparent px-4">
-                    {loading && <PageSkeleton rows={5} showHeader showCards />}
+            <PageContainer className="pt-0 pb-24 bg-transparent px-4">
+                {loading && <PageSkeleton rows={5} showHeader showCards />}
 
-                    {!loading && (
-                        <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 text-foreground">
-                            <ConfiguracaoRelacionamento
-                                limiarReativacao={limiarReativacao}
-                                setLimiarReativacao={setLimiarReativacao}
-                                janelaResposta={janelaResposta}
-                                setJanelaResposta={setJanelaResposta}
-                                cooldownRecusa={cooldownRecusa}
-                                setCooldownRecusa={setCooldownRecusa}
-                            />
+                {!loading && (
+                    <>
+                        {/* MOBILE (<lg): pilha de cards com grupos — intocado */}
+                        <div className="space-y-4 text-foreground lg:hidden">
+                            <SectionHeader>Relacionamento &amp; recompensas</SectionHeader>
+                            <div className="space-y-6">
+                                {renderSecao('relacionamento')}
+                                {renderSecao('recompensas')}
+                            </div>
+                            <SectionHeader>Entregas &amp; frete</SectionHeader>
+                            <div className="space-y-6">
+                                {renderSecao('frete')}
+                                {renderSecao('locais')}
+                            </div>
+                            <SectionHeader>Mensagens</SectionHeader>
+                            {renderSecao('mensagens')}
+                            <SectionHeader>Atalhos</SectionHeader>
+                            {renderSecao('atalhos')}
+                        </div>
 
-                            <ConfiguracaoRecompensas
-                                recompensaValor={recompensaValor}
-                                setRecompensaValor={setRecompensaValor}
-                            />
+                        {/* DESKTOP (≥lg): 2 painéis (nav + conteúdo contido) */}
+                        <div className="hidden lg:flex lg:gap-8 text-foreground pt-2">
+                            <nav className="w-60 shrink-0 space-y-1">
+                                {SECOES.map((s) => {
+                                    const Icon = s.icon
+                                    const selected = ativa === s.id
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => setAtiva(s.id)}
+                                            className={cn(
+                                                'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                                                selected
+                                                    ? 'bg-primary/10 text-primary'
+                                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                            )}
+                                        >
+                                            <Icon className="h-4 w-4 shrink-0" />
+                                            <span className="truncate">{s.label}</span>
+                                        </button>
+                                    )
+                                })}
+                            </nav>
 
-                            <ConfiguracaoMensagens
-                                mensagemRecompra={mensagemRecompra}
-                                setMensagemRecompra={setMensagemRecompra}
-                            />
-
-                            <ConfiguracaoLocalizacao
-                                locais={locais}
-                                handleRemoveLocal={handleRemoveLocal}
-                                novoLocalNome={novoLocalNome}
-                                setNovoLocalNome={setNovoLocalNome}
-                                novoLocalEndereco={novoLocalEndereco}
-                                handleEnderecoChange={handleEnderecoChange}
-                                handleAddLocal={handleAddLocal}
-                                addingLocal={addingLocal}
-                            />
-
-                            <ConfiguracaoLinks />
-
-                            <ConfiguracaoFrete />
-
-                            <div className="flex gap-3 lg:col-span-2">
-                                <Button
-                                    variant="secondary"
-                                    className="flex-1"
-                                    leftIcon={<RefreshCw className="h-4 w-4" />}
-                                    onClick={handleReset}
-                                    disabled={!hasChanges || saving}
-                                >
-                                    Descartar
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    className="flex-1"
-                                    leftIcon={<Save className="h-4 w-4" />}
-                                    onClick={handleSave}
-                                    isLoading={saving}
-                                    disabled={!hasChanges}
-                                >
-                                    Salvar
-                                </Button>
+                            <div className="min-w-0 max-w-2xl flex-1">
+                                {renderSecao(ativa)}
                             </div>
                         </div>
-                    )}
-                </PageContainer>
+                    </>
+                )}
+            </PageContainer>
         </>
     )
 }

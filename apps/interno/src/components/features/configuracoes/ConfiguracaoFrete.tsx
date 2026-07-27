@@ -1,26 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Truck, Plus, Trash2, Save } from 'lucide-react'
 import { Card, Input, Button } from '../../ui'
-import { supabase } from '../../../lib/supabase'
 import { useToast } from '../../ui/Toast'
-import type { Json } from '@mont/shared'
-
-interface FreteFaixa { ateKm: number; valorPorKm?: number; valorFixo?: number }
-interface FreteConfig {
-    modo: 'progressivo' | 'taxa_faixa' | 'valor_fixo'
-    origem: { lat: number; lng: number; label?: string; cep?: string }
-    faixas: FreteFaixa[]
-    foraDoAlcance: 'a_combinar'
-}
-
-const DEFAULT_CONFIG: FreteConfig = {
-    modo: 'valor_fixo',
-    origem: { lat: -23.7205964, lng: -46.524444, label: 'Cozinha — Montanhão/SBC', cep: '09784-410' },
-    faixas: [
-        { ateKm: 30, valorFixo: 5 },
-    ],
-    foraDoAlcance: 'a_combinar',
-}
+import { configuracoesService, FRETE_CONFIG_DEFAULT, type FreteConfig, type FreteFaixa } from '../../../services/configuracoesService'
 
 const num = (v: string) => {
     const n = parseFloat(v)
@@ -29,16 +11,15 @@ const num = (v: string) => {
 
 export function ConfiguracaoFrete() {
     const toast = useToast()
-    const [config, setConfig] = useState<FreteConfig>(DEFAULT_CONFIG)
+    const [config, setConfig] = useState<FreteConfig>(FRETE_CONFIG_DEFAULT)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
-        supabase.from('configuracoes').select('valor').eq('chave', 'frete_config').maybeSingle()
-            .then(({ data }) => {
-                if (data?.valor) setConfig(data.valor as unknown as FreteConfig)
-                setLoading(false)
-            })
+        configuracoesService.getFrete()
+            .then(setConfig)
+            .catch(() => { /* usa o default */ })
+            .finally(() => setLoading(false))
     }, [])
 
     const updateFaixa = (i: number, patch: Partial<FreteFaixa>) =>
@@ -57,9 +38,7 @@ export function ConfiguracaoFrete() {
                     ? { ateKm: f.ateKm, valorFixo: f.valorFixo ?? 0 }
                     : { ateKm: f.ateKm, valorPorKm: f.valorPorKm ?? 0 })
             const ordered: FreteConfig = { ...config, faixas }
-            const { error } = await supabase.from('configuracoes')
-                .upsert({ chave: 'frete_config', valor: ordered as unknown as Json }, { onConflict: 'chave' })
-            if (error) throw error
+            await configuracoesService.salvarFrete(ordered)
             setConfig(ordered)
             toast.success('Frete salvo!')
         } catch {
