@@ -16,6 +16,7 @@ import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { formatCurrency, cn } from '@mont/shared'
 import type { DomainProduto } from '@/types/domain'
 import { estoqueStatus, ESTOQUE_STATUS_BADGE } from '@/utils/estoqueStatus'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 // Mesma regra de margem da página (calcularMargem): (preco - custo) / preco.
 function margemPct(preco: number, custo: number): number {
@@ -43,10 +44,13 @@ interface ProdutosDataGridProps {
 
 export function ProdutosDataGrid({ produtos, onEdit }: ProdutosDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
+    const [colSizing, setColSizing] = useColumnSizing('grid-produtos')
 
     const columns = useMemo<ColumnDef<DomainProduto>[]>(() => [
         {
             accessorKey: 'nome',
+            size: 300,
+            minSize: 200,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Produto" />,
             cell: ({ row }) => {
                 const p = row.original
@@ -110,8 +114,10 @@ export function ProdutosDataGrid({ produtos, onEdit }: ProdutosDataGridProps) {
     const table = useReactTable({
         data: produtos,
         columns,
-        state: { sorting },
+        state: { sorting, columnSizing: colSizing },
         onSortingChange: setSorting,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         getRowId: (p) => p.id,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -124,11 +130,11 @@ export function ProdutosDataGrid({ produtos, onEdit }: ProdutosDataGridProps) {
             table={table}
             recordCount={produtos.length}
             onRowClick={(p) => onEdit(p)}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
             tableClassNames={{ bodyRow: 'cursor-pointer' }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />

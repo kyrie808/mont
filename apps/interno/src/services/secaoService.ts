@@ -27,6 +27,12 @@ export interface SecaoItem {
     imagem_url: string | null
 }
 
+/** Produto "órfão": visível no catálogo mas sem seção → não aparece em nenhuma aba. */
+export interface ProdutoOrfao {
+    id: string
+    nome: string
+}
+
 // Shapes das queries com embeds (PostgREST) — tipadas localmente p/ evitar `any`.
 interface SecaoComCountRow extends Secao {
     produtos: { count: number }[]
@@ -141,6 +147,20 @@ export class SecaoService {
     async removeItem(produtoId: string): Promise<void> {
         const { error } = await supabase.from('produtos').update({ secao_id: null }).eq('id', produtoId)
         if (error) throw error
+    }
+
+    /** Produtos visíveis no catálogo mas sem seção — aparecem em nenhuma aba da vitrine. */
+    async listOrfaos(): Promise<ProdutoOrfao[]> {
+        const { data, error } = await supabase
+            .from('produtos')
+            .select('id, nome')
+            .eq('ativo', true)
+            .eq('visivel_catalogo', true)
+            .is('secao_id', null)
+            .order('nome', { ascending: true })
+
+        if (error) throw error
+        return (data ?? []) as ProdutoOrfao[]
     }
 
     async reorderItens(produtoIds: string[]): Promise<void> {

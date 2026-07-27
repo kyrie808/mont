@@ -15,6 +15,8 @@ export function useProdutos(includeInactive: boolean = false) {
         mutationFn: (data: CreateProduto) => produtoService.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['produtos'] })
+            // seção/visibilidade do produto muda o conjunto de órfãos do Catálogo
+            queryClient.invalidateQueries({ queryKey: ['produtos-orfaos'] })
         }
     })
 
@@ -23,6 +25,7 @@ export function useProdutos(includeInactive: boolean = false) {
             produtoService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['produtos'] })
+            queryClient.invalidateQueries({ queryKey: ['produtos-orfaos'] })
         }
     })
 
