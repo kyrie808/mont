@@ -15,6 +15,7 @@ import { formatCurrency, formatDate } from '@mont/shared'
 import { WidgetSkeleton } from '../components/ui'
 import { ProductNicknamesModal } from '../components/features/purchase-orders/ProductNicknamesModal'
 import { KpiCard } from '../components/dashboard/KpiCard'
+import { KpiCardDesktop } from '../components/dashboard/KpiCardDesktop'
 
 // Mapa de tradução e estilo para paymentStatus
 const PAYMENT_STATUS_MAP: Record<PurchaseOrderPaymentStatus, { label: string; variant: 'danger' | 'warning' | 'success' }> = {
@@ -98,7 +99,8 @@ export function PedidosCompra() {
                 />
 
                 <PageContainer className="pt-6! px-4 pb-24">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    {/* KPIs — MOBILE/TABLET (<lg): intocado */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 lg:hidden">
                         <KpiCard
                             title="Total Pedido"
                             value={formatCurrency(kpis.totalPedido)}
@@ -133,6 +135,21 @@ export function PedidosCompra() {
                                 ? Math.round((kpis.totalPago / kpis.totalPedido) * 100)
                                 : 0}% Quitado`}
                             trendColor="green"
+                        />
+                    </div>
+
+                    {/* KPIs — DESKTOP (≥lg): padrão v2 */}
+                    <div className="hidden lg:grid lg:grid-cols-3 lg:gap-4 mb-6">
+                        <KpiCardDesktop title="Total Pedido" value={formatCurrency(kpis.totalPedido)} subtitle="Total bruto (sem cancelados)" />
+                        <KpiCardDesktop
+                            title="Valor em Aberto"
+                            value={formatCurrency(kpis.totalAberto)}
+                            subtitle={`${kpis.totalPedido > 0 ? Math.round((kpis.totalAberto / kpis.totalPedido) * 100) : 0}% pendente`}
+                        />
+                        <KpiCardDesktop
+                            title="Valor Pago"
+                            value={formatCurrency(kpis.totalPago)}
+                            subtitle={`${kpis.totalPedido > 0 ? Math.round((kpis.totalPago / kpis.totalPedido) * 100) : 0}% quitado`}
                         />
                     </div>
 
