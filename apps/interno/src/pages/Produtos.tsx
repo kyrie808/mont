@@ -545,7 +545,7 @@ export function Produtos() {
                         isOpen={isCreateModalOpen}
                         onClose={() => setIsCreateModalOpen(false)}
                         title="Novo Produto"
-                        size={isDesktop ? '4xl' : 'lg'}
+                        size={isDesktop ? '5xl' : 'lg'}
                     >
                         <div className="space-y-4">
                             <FieldsComponent
@@ -601,7 +601,7 @@ export function Produtos() {
                         isOpen={!!editingProduto}
                         onClose={handleCloseEdit}
                         title="Editar Produto"
-                        size={isDesktop ? '4xl' : 'lg'}
+                        size={isDesktop ? '5xl' : 'lg'}
                     >
                         <div className="space-y-4">
                             <FieldsComponent
