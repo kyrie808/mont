@@ -172,7 +172,7 @@ export function Catalogo() {
                             size="sm"
                             variant="secondary"
                             className="shrink-0"
-                            onClick={() => navigate('/produtos')}
+                            onClick={() => navigate(`/produtos?edit=${orfaos[0].id}`)}
                         >
                             Resolver no cadastro
                         </Button>

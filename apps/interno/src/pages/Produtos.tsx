@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import {
@@ -192,6 +192,21 @@ export function Produtos() {
     const handleCloseEdit = () => {
         setEditingProduto(null)
     }
+
+    // Deep-link `?edit=<id>` (ex.: "Resolver no cadastro" do aviso de órfãos no Catálogo):
+    // abre direto o modal de edição do produto e limpa o param pra não reabrir.
+    useEffect(() => {
+        const editId = searchParams.get('edit')
+        if (!editId || produtos.length === 0) return
+        const alvo = produtos.find((p) => p.id === editId)
+        if (alvo) handleOpenEdit(alvo)
+        setSearchParams((prev) => {
+            prev.delete('edit')
+            return prev
+        }, { replace: true })
+        // handleOpenEdit é recriado a cada render (não-memoizado) — excluído de propósito.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams, produtos])
 
     const handleOpenCreate = () => {
         setNewNome('')
