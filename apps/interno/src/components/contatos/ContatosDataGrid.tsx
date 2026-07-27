@@ -20,11 +20,17 @@ import type { DomainContato } from '@/types/domain'
 import type { ContatoResumo } from '@/hooks/useContatosResumo'
 import { classificarContato, SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
 import { origemBadge } from '@/utils/origemContato'
+import { temperaturaCliente, TEMPERATURA_BADGE, TEMPERATURA_ORDEM, type RitmoCliente } from '@/utils/temperaturaCliente'
 import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 function SegmentoBadge({ segmento }: { segmento: SegmentoCliente }) {
     const s = SEGMENTO_BADGE[segmento]
     return <span className={cn(badgeBase, s.cls)}>{s.label}</span>
+}
+
+function TemperaturaBadge({ ritmo }: { ritmo: RitmoCliente | undefined }) {
+    const t = TEMPERATURA_BADGE[temperaturaCliente(ritmo).estado]
+    return <span className={cn(badgeBase, t.cls)}>{t.label}</span>
 }
 
 function OrigemBadge({ origem, fonte }: { origem: string; fonte?: string | null }) {
@@ -51,9 +57,10 @@ function abrirWhatsapp(telefone: string) {
 interface ContatosDataGridProps {
     contatos: DomainContato[]
     resumo: ReadonlyMap<string, ContatoResumo>
+    ritmo: ReadonlyMap<string, RitmoCliente>
 }
 
-export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
+export function ContatosDataGrid({ contatos, resumo, ritmo }: ContatosDataGridProps) {
     const navigate = useNavigate()
     const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
     const [colSizing, setColSizing] = useColumnSizing('grid-contatos')
@@ -95,6 +102,13 @@ export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
             accessorFn: (c) => SEGMENTO_BADGE[classificarContato(c, resumo.get(c.id))].label,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Segmento" />,
             cell: ({ row }) => <SegmentoBadge segmento={classificarContato(row.original, resumo.get(row.original.id))} />,
+        },
+        {
+            id: 'temperatura',
+            // ordena frio→morno→quente→novo (mais acionável primeiro)
+            accessorFn: (c) => TEMPERATURA_ORDEM[temperaturaCliente(ritmo.get(c.id)).estado],
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Temperatura" />,
+            cell: ({ row }) => <TemperaturaBadge ritmo={ritmo.get(row.original.id)} />,
         },
         {
             id: 'compras',
@@ -158,7 +172,7 @@ export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
             ),
             meta: { headerClassName: 'w-12', cellClassName: 'w-12' },
         },
-    ], [resumo])
+    ], [resumo, ritmo])
 
     const table = useReactTable({
         data: contatos,
