@@ -37,6 +37,21 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'warning' | 'defaul
     vencido: { label: 'Vencido', variant: 'danger' },
 }
 
+// Filtros de status — reusados no ramo mobile e no desktop.
+const FILTROS = [
+    { id: 'todos', label: 'Todas', icon: Filter },
+    { id: 'vencidas', label: 'Vencidas', icon: AlertCircle },
+    { id: 'pendentes', label: 'Pendentes', icon: Clock },
+    { id: 'parciais', label: 'Parciais', icon: CalendarDays },
+    { id: 'pagas', label: 'Pagas', icon: CheckCircle2 },
+] as const
+
+// inputBase v2 do Design System (§4) — mesmo da toolbar do Estoque.
+const inputBase =
+    'flex w-full rounded-xl border border-input bg-background text-foreground ring-offset-background ' +
+    'placeholder:text-muted-foreground/50 focus-visible:outline-hidden focus-visible:ring-2 ' +
+    'focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+
 export function ContasAPagar() {
     const { contasAPagar, loading, createContaAPagar, criarObrigacaoParcelada, updateContaAPagar, deleteContaAPagar, isDeleting, registrarPagamento, refetch } = useContasAPagar()
     const { recorrentes, createRecorrente, updateRecorrente, deleteRecorrente, gerarDoMes } = useDespesasRecorrentes()
@@ -302,8 +317,8 @@ export function ContasAPagar() {
                     </div>
                 )}
 
-                {/* Search & Filters */}
-                <div className="space-y-4">
+                {/* Busca + filtros — MOBILE (<lg): intocado */}
+                <div className="space-y-4 lg:hidden">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
@@ -317,13 +332,7 @@ export function ContasAPagar() {
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                        {([
-                            { id: 'todos', label: 'Todas', icon: Filter },
-                            { id: 'vencidas', label: 'Vencidas', icon: AlertCircle },
-                            { id: 'pendentes', label: 'Pendentes', icon: Clock },
-                            { id: 'parciais', label: 'Parciais', icon: CalendarDays },
-                            { id: 'pagas', label: 'Pagas', icon: CheckCircle2 },
-                        ] as const).map((btn) => {
+                        {FILTROS.map((btn) => {
                             const Icon = btn.icon
                             const isSelected = filter === btn.id
                             return (
@@ -335,6 +344,42 @@ export function ContasAPagar() {
                                         isSelected
                                             ? "bg-foreground text-background border-foreground shadow-card"
                                             : "bg-card text-muted-foreground border-border hover:border-foreground/30"
+                                    )}
+                                >
+                                    <Icon className="w-3.5 h-3.5" />
+                                    {btn.label}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Busca + filtros — DESKTOP (≥lg): toolbar em linha, sem scroll */}
+                <div className="hidden lg:flex lg:items-center lg:gap-3">
+                    <div className="relative flex-1 lg:max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Buscar credor, descrição ou referência..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className={cn(inputBase, 'h-11 pl-10 pr-4 text-sm')}
+                            aria-label="Buscar despesas"
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {FILTROS.map((btn) => {
+                            const Icon = btn.icon
+                            const isSelected = filter === btn.id
+                            return (
+                                <button
+                                    key={btn.id}
+                                    onClick={() => setFilter(btn.id)}
+                                    className={cn(
+                                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold whitespace-nowrap transition-colors",
+                                        isSelected
+                                            ? "bg-foreground text-background border-foreground"
+                                            : "bg-card text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground"
                                     )}
                                 >
                                     <Icon className="w-3.5 h-3.5" />
