@@ -19,6 +19,7 @@ import { Button } from '@/components/ui'
 import { formatCurrency, formatDate, cn } from '@mont/shared'
 import type { DomainPurchaseOrderWithItems, PurchaseOrderStatus, PurchaseOrderPaymentStatus } from '@/types/domain'
 import { PurchaseOrderDetail } from './PurchaseOrderDetail'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 function RecebimentoBadge({ status }: { status: PurchaseOrderStatus }) {
     if (status === 'received') return <span className={cn(badgeBase, 'bg-success/10 text-success border-success/20')}>Recebido</span>
@@ -43,11 +44,15 @@ interface PedidosCompraDataGridProps {
 export function PedidosCompraDataGrid({ orders, onEdit, onDeletePayment, onConfirmReceipt, onQuitar }: PedidosCompraDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'orderDate', desc: true }])
     const [expanded, setExpanded] = useState<ExpandedState>({})
+    const [colSizing, setColSizing] = useColumnSizing('grid-pedidos-compra')
 
     const columns = useMemo<ColumnDef<DomainPurchaseOrderWithItems>[]>(() => [
         {
             id: 'expander',
             enableSorting: false,
+            enableResizing: false,
+            size: 40,
+            minSize: 40,
             header: () => <span className="sr-only">Expandir</span>,
             cell: ({ row }) => (
                 <span className="flex items-center justify-center text-muted-foreground">
@@ -64,6 +69,8 @@ export function PedidosCompraDataGrid({ orders, onEdit, onDeletePayment, onConfi
         {
             id: 'fornecedor',
             accessorFn: (o) => o.fornecedor?.nome ?? 'Fornecedor não informado',
+            size: 240,
+            minSize: 160,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Fornecedor" />,
             cell: ({ row }) => (
                 <span className="font-semibold text-foreground truncate">{row.original.fornecedor?.nome ?? 'Fornecedor não informado'}</span>
@@ -104,6 +111,9 @@ export function PedidosCompraDataGrid({ orders, onEdit, onDeletePayment, onConfi
         {
             id: 'acoes',
             enableSorting: false,
+            enableResizing: false,
+            size: 56,
+            minSize: 56,
             header: () => <span className="sr-only">Ações</span>,
             cell: ({ row }) => (
                 <Button
@@ -137,9 +147,11 @@ export function PedidosCompraDataGrid({ orders, onEdit, onDeletePayment, onConfi
     const table = useReactTable({
         data: orders,
         columns,
-        state: { sorting, expanded },
+        state: { sorting, expanded, columnSizing: colSizing },
         onSortingChange: setSorting,
         onExpandedChange: setExpanded,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         getRowCanExpand: () => true,
         getRowId: (o) => o.id,
         getCoreRowModel: getCoreRowModel(),
@@ -157,11 +169,11 @@ export function PedidosCompraDataGrid({ orders, onEdit, onDeletePayment, onConfi
                 const map = typeof prev === 'boolean' ? {} : prev
                 return { ...map, [o.id]: !map[o.id] }
             })}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
             tableClassNames={{ bodyRow: 'cursor-pointer' }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />

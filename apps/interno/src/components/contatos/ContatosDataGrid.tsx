@@ -20,6 +20,7 @@ import type { DomainContato } from '@/types/domain'
 import type { ContatoResumo } from '@/hooks/useContatosResumo'
 import { classificarContato, SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
 import { origemBadge } from '@/utils/origemContato'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 function SegmentoBadge({ segmento }: { segmento: SegmentoCliente }) {
     const s = SEGMENTO_BADGE[segmento]
@@ -55,10 +56,13 @@ interface ContatosDataGridProps {
 export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
     const navigate = useNavigate()
     const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
+    const [colSizing, setColSizing] = useColumnSizing('grid-contatos')
 
     const columns = useMemo<ColumnDef<DomainContato>[]>(() => [
         {
             accessorKey: 'nome',
+            size: 240,
+            minSize: 180,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Cliente" />,
             cell: ({ row }) => (
                 <div className="min-w-0">
@@ -137,6 +141,9 @@ export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
         {
             id: 'acoes',
             enableSorting: false,
+            enableResizing: false,
+            size: 56,
+            minSize: 56,
             header: () => <span className="sr-only">Ações</span>,
             cell: ({ row }) => (
                 <Button
@@ -156,8 +163,10 @@ export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
     const table = useReactTable({
         data: contatos,
         columns,
-        state: { sorting },
+        state: { sorting, columnSizing: colSizing },
         onSortingChange: setSorting,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         getRowId: (c) => c.id,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -170,11 +179,11 @@ export function ContatosDataGrid({ contatos, resumo }: ContatosDataGridProps) {
             table={table}
             recordCount={contatos.length}
             onRowClick={(c) => navigate(`/contatos/${c.id}`)}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
             tableClassNames={{ bodyRow: 'cursor-pointer' }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />

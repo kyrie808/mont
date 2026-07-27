@@ -56,6 +56,17 @@ function DataGridColumnHeaderInner<TData, TValue>({
   const canPin = column.getCanPin()
   const canResize = column.getCanResize()
 
+  // Alinhamento do título derivado do meta.headerClassName, pra o cabeçalho ficar
+  // SOBRE os valores (colunas numéricas usam text-right nas células).
+  const headerMetaClass = column.columnDef.meta?.headerClassName ?? ""
+  const alignEnd = /\btext-(right|end)\b/.test(headerMetaClass)
+  const alignCenter = /\btext-center\b/.test(headerMetaClass)
+  const justifyClass = alignEnd
+    ? "justify-end"
+    : alignCenter
+      ? "justify-center"
+      : ""
+
   const columnIndex = columnOrder.indexOf(column.id)
   const canMoveLeft = columnIndex > 0
   const canMoveRight = columnIndex < columnOrder.length - 1
@@ -71,12 +82,14 @@ function DataGridColumnHeaderInner<TData, TValue>({
   }
 
   const headerLabelClassName = cn(
-    "text-secondary-foreground/80 inline-flex h-full items-center gap-1.5 font-normal [&_svg]:opacity-60 text-[0.8125rem] leading-[calc(1.125/0.8125)] [&_svg]:size-3.5",
+    "text-secondary-foreground/80 h-full items-center gap-1.5 font-normal [&_svg]:opacity-60 text-[0.8125rem] leading-[calc(1.125/0.8125)] [&_svg]:size-3.5",
+    justifyClass ? `flex w-full ${justifyClass}` : "inline-flex",
     className
   )
 
   const headerButtonClassName = cn(
-    "text-secondary-foreground/80 hover:bg-secondary data-[state=open]:bg-secondary hover:text-foreground data-[state=open]:text-foreground -ms-2 px-2 font-normal h-6 rounded-lg",
+    "text-secondary-foreground/80 hover:bg-secondary data-[state=open]:bg-secondary hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-lg",
+    alignEnd ? "-me-2" : "-ms-2",
     className
   )
 
@@ -313,7 +326,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
 
   if (canSort || (props.tableLayout?.columnsResizable && canResize)) {
     return (
-      <div className="flex h-full items-center">
+      <div className={cn("flex h-full items-center", justifyClass)}>
         <Button
           variant="ghost"
           className={headerButtonClassName}

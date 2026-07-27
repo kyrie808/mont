@@ -17,6 +17,7 @@ import { Button } from '@/components/ui'
 import { cn } from '@mont/shared'
 import type { DomainProduto } from '@/types/domain'
 import { estoqueStatus, ESTOQUE_STATUS_BADGE, type EstoqueStatus } from '@/utils/estoqueStatus'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 // Re-export: fonte única em utils/estoqueStatus (mantém imports antigos deste módulo).
 export { estoqueStatus, type EstoqueStatus }
@@ -33,11 +34,14 @@ interface EstoqueDataGridProps {
 
 export function EstoqueDataGrid({ produtos, onAjustar }: EstoqueDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'atual', desc: false }])
+    const [colSizing, setColSizing] = useColumnSizing('grid-estoque')
 
     const columns = useMemo<ColumnDef<DomainProduto>[]>(() => [
         {
             id: 'produto',
             accessorFn: (p) => p.nome,
+            size: 300,
+            minSize: 200,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Produto" />,
             cell: ({ row }) => (
                 <div className="min-w-0">
@@ -72,6 +76,9 @@ export function EstoqueDataGrid({ produtos, onAjustar }: EstoqueDataGridProps) {
         {
             id: 'acoes',
             enableSorting: false,
+            enableResizing: false,
+            size: 120,
+            minSize: 120,
             header: () => <span className="sr-only">Ações</span>,
             cell: ({ row }) => (
                 <Button
@@ -91,8 +98,10 @@ export function EstoqueDataGrid({ produtos, onAjustar }: EstoqueDataGridProps) {
     const table = useReactTable({
         data: produtos,
         columns,
-        state: { sorting },
+        state: { sorting, columnSizing: colSizing },
         onSortingChange: setSorting,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         getRowId: (p) => p.id,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -104,10 +113,10 @@ export function EstoqueDataGrid({ produtos, onAjustar }: EstoqueDataGridProps) {
         <DataGrid
             table={table}
             recordCount={produtos.length}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />

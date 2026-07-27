@@ -16,6 +16,7 @@ import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
 import { formatCurrency, formatDate, cn } from '@mont/shared'
 import type { ContaAPagarEnriched } from '@/services/contasAPagarService'
+import { useColumnSizing } from '@/hooks/useColumnSizing'
 
 function StatusBadge({ status, diasAtraso }: { status: string; diasAtraso: number }) {
     const atraso = diasAtraso > 0 ? ` (${diasAtraso}d)` : ''
@@ -34,11 +35,14 @@ interface ContasAPagarDataGridProps {
 
 export function ContasAPagarDataGrid({ contas, onPay, onEdit, onDelete }: ContasAPagarDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'data_vencimento', desc: false }])
+    const [colSizing, setColSizing] = useColumnSizing('grid-contas-a-pagar')
 
     const columns = useMemo<ColumnDef<ContaAPagarEnriched>[]>(() => [
         {
             id: 'credor',
             accessorFn: (c) => c.credor,
+            size: 260,
+            minSize: 180,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Credor" />,
             cell: ({ row }) => (
                 <div className="min-w-0">
@@ -103,6 +107,9 @@ export function ContasAPagarDataGrid({ contas, onPay, onEdit, onDelete }: Contas
         {
             id: 'acoes',
             enableSorting: false,
+            enableResizing: false,
+            size: 200,
+            minSize: 200,
             header: () => <span className="sr-only">Ações</span>,
             cell: ({ row }) => (
                 <div className="flex items-center justify-end gap-1">
@@ -144,8 +151,10 @@ export function ContasAPagarDataGrid({ contas, onPay, onEdit, onDelete }: Contas
     const table = useReactTable({
         data: contas,
         columns,
-        state: { sorting },
+        state: { sorting, columnSizing: colSizing },
         onSortingChange: setSorting,
+        onColumnSizingChange: setColSizing,
+        defaultColumn: { minSize: 80 },
         getRowId: (c) => c.id,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -157,10 +166,10 @@ export function ContasAPagarDataGrid({ contas, onPay, onEdit, onDelete }: Contas
         <DataGrid
             table={table}
             recordCount={contas.length}
-            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false }}
+            tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
         >
             <div className="space-y-3">
-                <DataGridContainer>
+                <DataGridContainer className="overflow-x-auto">
                     <DataGridTable />
                 </DataGridContainer>
                 <DataGridPagination />
