@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, LayoutList, PackageSearch } from 'lucide-react'
+import { Plus, LayoutList, PackageSearch, AlertTriangle } from 'lucide-react'
 import {
     DndContext,
     PointerSensor,
@@ -15,7 +15,7 @@ import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button, Spinner, EmptyState, ConfirmDialog } from '../components/ui'
 import { useToast } from '../components/ui/Toast'
-import { useSecoes, useSecaoItens } from '../hooks/useSecoes'
+import { useSecoes, useSecaoItens, useProdutosOrfaos } from '../hooks/useSecoes'
 import type { SecaoComContagem, SecaoItem } from '../services/secaoService'
 import type { Secao } from '@mont/shared'
 import { SortableSecaoRow } from '../components/features/catalogo/SortableSecaoRow'
@@ -27,6 +27,7 @@ export function Catalogo() {
     const navigate = useNavigate()
     const toast = useToast()
     const { secoes, loading, createSecao, updateSecao, deleteSecao, reorderSecoes } = useSecoes()
+    const orfaos = useProdutosOrfaos()
 
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [orderedSecoes, setOrderedSecoes] = useState<SecaoComContagem[]>([])
@@ -150,6 +151,33 @@ export function Catalogo() {
                     </button>{' '}
                     (campo "Seção da vitrine"); aqui você define a ordem deles dentro da aba.
                 </p>
+
+                {orfaos.length > 0 && (
+                    <div className="mb-4 flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-2 text-warning-strong">
+                            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                            <p className="text-sm">
+                                <span className="font-bold">
+                                    {orfaos.length} produto{orfaos.length > 1 ? 's' : ''} sem seção
+                                </span>{' '}
+                                — visível no catálogo mas em nenhuma aba:{' '}
+                                <span className="font-semibold">
+                                    {orfaos.slice(0, 6).map((o) => o.nome).join(', ')}
+                                    {orfaos.length > 6 ? ` e mais ${orfaos.length - 6}` : ''}
+                                </span>
+                                .
+                            </p>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="shrink-0"
+                            onClick={() => navigate('/produtos')}
+                        >
+                            Resolver no cadastro
+                        </Button>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="flex min-h-[40vh] items-center justify-center">
