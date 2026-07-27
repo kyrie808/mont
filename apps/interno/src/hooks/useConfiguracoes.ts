@@ -69,9 +69,12 @@ export function useConfiguracoes(): UseConfiguracoesReturn {
                     case 'recompensa_indicacao':
                         configObj.recompensaIndicacao = item.valor as unknown as RecompensaIndicacao
                         break
-                    case 'mensagem_recompra':
-                        configObj.mensagemRecompra = (item.valor as unknown as { texto: string }).texto || DEFAULT_CONFIG.mensagemRecompra
+                    case 'mensagem_recompra': {
+                        // Tolerante a `texto` (canônico) e `template` (legado) — evita cair no default.
+                        const v = item.valor as unknown as { texto?: string; template?: string }
+                        configObj.mensagemRecompra = v.texto || v.template || DEFAULT_CONFIG.mensagemRecompra
                         break
+                    }
                     case 'taxa_entrega_padrao':
                         configObj.taxaEntregaPadrao = (item.valor as unknown as { valor: number }).valor || 0
                         break
