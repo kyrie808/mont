@@ -26,8 +26,10 @@ import { formatCurrency } from '@mont/shared'
 import { produtoService } from '../services/produtoService'
 import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
 import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFields'
+import { ProdutoFormDesktop } from '../components/features/produtos/ProdutoFormDesktop'
 import { ProdutosDataGrid } from '../components/features/produtos/ProdutosDataGrid'
 import { useSecoes } from '../hooks/useSecoes'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 
 
 export function Produtos() {
@@ -37,6 +39,9 @@ export function Produtos() {
     const { produtos, loading, createProduto, updateProduto } = useProdutos(true)
     const { secoes } = useSecoes()
     const secaoOptions = secoes.map((s) => ({ value: s.id, label: s.nome }))
+    const isDesktop = useIsDesktop()
+    // Desktop v2 (2 colunas tokenizadas) × mobile sagrado (ProdutoFormFields, cores cruas).
+    const FieldsComponent = isDesktop ? ProdutoFormDesktop : ProdutoFormFields
 
     // Filters
     // `?filtro=baixo_estoque` continua vivo só pro atalho mobile (KPI que o Gilmar já usa).
@@ -540,10 +545,10 @@ export function Produtos() {
                         isOpen={isCreateModalOpen}
                         onClose={() => setIsCreateModalOpen(false)}
                         title="Novo Produto"
-                        size="lg"
+                        size={isDesktop ? '4xl' : 'lg'}
                     >
                         <div className="space-y-4">
-                            <ProdutoFormFields
+                            <FieldsComponent
                                 mode="create"
                                 values={{
                                     nome: newNome, codigo: newCodigo, apelido: newApelido, subtitulo: newSubtitulo,
@@ -596,10 +601,10 @@ export function Produtos() {
                         isOpen={!!editingProduto}
                         onClose={handleCloseEdit}
                         title="Editar Produto"
-                        size="lg"
+                        size={isDesktop ? '4xl' : 'lg'}
                     >
                         <div className="space-y-4">
-                            <ProdutoFormFields
+                            <FieldsComponent
                                 mode="edit"
                                 values={{
                                     nome: editNome, codigo: editCodigo, apelido: editApelido, subtitulo: editSubtitulo,
