@@ -6,6 +6,7 @@ import { Input } from '../../ui/Input'
 // import { Select } from '../../ui/Select'
 import { useProdutos } from '../../../hooks/useProdutos'
 import { useContatos } from '../../../hooks/useContatos'
+import { useToast } from '../../ui/Toast'
 import type { CreatePurchaseOrder, UpdatePurchaseOrder, CreatePurchaseOrderItem, DomainPurchaseOrderWithItems } from '../../../types/domain'
 import { formatCurrency } from '@mont/shared'
 
@@ -19,6 +20,7 @@ interface PurchaseOrderFormProps {
 export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: PurchaseOrderFormProps) {
     const { produtos } = useProdutos()
     const { contatos } = useContatos({ filtros: { tipo: 'FORNECEDOR', status: 'todos', origem: 'todos', busca: '' } })
+    const toast = useToast()
     const [loading, setLoading] = useState(false)
 
     // Header State
@@ -98,15 +100,15 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (items.length === 0) {
-            alert('Adicione pelo menos um item ao pedido.')
+            toast.error('Adicione pelo menos um item ao pedido.')
             return
         }
         if (items.some(i => !i.product_id || i.quantity <= 0)) {
-            alert('Preencha todos os campos dos itens corretamente.')
+            toast.error('Preencha todos os campos dos itens corretamente.')
             return
         }
         if (!fornecedorId) {
-            alert('Selecione um fornecedor.')
+            toast.error('Selecione um fornecedor.')
             return
         }
 
@@ -133,8 +135,8 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                 amountPaid: amountPaid
             } as CreatePurchaseOrder, mappedItems)
             onClose()
-        } catch {
-            alert('Erro ao salvar pedido.')
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Erro ao salvar pedido.')
         } finally {
             setLoading(false)
         }
