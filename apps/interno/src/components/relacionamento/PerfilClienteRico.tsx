@@ -5,6 +5,7 @@ import { useContatoTags } from '../../hooks/useTags'
 import { useContatoCampanhas, useRemoverCampanha } from '../../hooks/useCampanhas'
 import { usePerfilExtras, useLtvContato, useKanbanRowContato } from '../../hooks/usePerfilSideSheet'
 import { InteracoesTimeline } from './InteracoesTimeline'
+import { TermometroCliente } from './TermometroCliente'
 import type { ProdutoRanking } from '../../services/relacionamentoService'
 
 // Painel RICO do cliente — tags · ritmo · financeiro · fiado · última compra · produtos ·
@@ -217,6 +218,9 @@ export function PerfilClienteRico({ contatoId, nomeContato, showInteracoes = tru
             {/* Ritmo */}
             <div>
                 <SectionLabel>Ritmo</SectionLabel>
+                <div className="mb-2">
+                    <TermometroCliente ritmo={ritmo} />
+                </div>
                 <div className="space-y-0.5">
                     <DataRow label="Dias sem compra" value={ritmo?.dias_sem_compra != null ? `${ritmo.dias_sem_compra} dias` : null} />
                     <DataRow label="Atraso" value={ritmo?.atraso != null && ritmo.atraso > 0 ? `${ritmo.atraso} dias` : null} />

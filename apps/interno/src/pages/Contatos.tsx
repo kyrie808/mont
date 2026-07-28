@@ -9,6 +9,7 @@ import { EmptyState, PageSkeleton, Pagination, paginateArray } from '../componen
 import { ContatoCard, ContatoFormModal, ContactStoryFilter, ContatosFilterTabs, ContatosDataGrid } from '../components/contatos'
 import { useContatos } from '../hooks/useContatos'
 import { useContatosResumo } from '../hooks/useContatosResumo'
+import { useContatosRitmo } from '../hooks/useContatosRitmo'
 import { useDebounce } from '../hooks/useDebounce'
 import { classificarContato, type SegmentoCliente } from '../utils/segmentoCliente'
 
@@ -42,6 +43,7 @@ export function Contatos() {
     }, [showSearch])
 
     const resumo = useContatosResumo()
+    const ritmo = useContatosRitmo()
 
     // Carrega todos (a busca segue server-side); o filtro de segmento é client-side.
     const { contatos, loading, error, refetch } = useContatos({
@@ -229,6 +231,7 @@ export function Contatos() {
                                             contato={contato}
                                             nomeIndicador={contato.indicador?.nome}
                                             segmento={segmentoDe.get(contato.id)}
+                                            ritmo={ritmo.get(contato.id)}
                                         />
                                     ))}
                                     <Pagination
@@ -241,7 +244,7 @@ export function Contatos() {
 
                                 {/* DESKTOP (≥lg): data grid denso — sort + paginação próprios sobre o conjunto filtrado inteiro */}
                                 <div className="hidden lg:block">
-                                    <ContatosDataGrid contatos={filteredContatos} resumo={resumo} />
+                                    <ContatosDataGrid contatos={filteredContatos} resumo={resumo} ritmo={ritmo} />
                                 </div>
                             </>
                         ) : (

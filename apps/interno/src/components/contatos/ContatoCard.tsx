@@ -4,6 +4,7 @@ import { formatRelativeDate } from '@mont/shared'
 import type { DomainContato } from '../../types/domain'
 import type { SegmentoCliente } from '../../utils/segmentoCliente'
 import { origemBadge } from '../../utils/origemContato'
+import { temperaturaCliente, TEMPERATURA_BADGE, type RitmoCliente } from '../../utils/temperaturaCliente'
 import { cn } from '@mont/shared'
 
 interface ContatoCardProps {
@@ -13,9 +14,11 @@ interface ContatoCardProps {
     nivelEmoji?: string
     /** Segmento derivado do comportamento (funil). Se ausente, cai em 'cliente'. */
     segmento?: SegmentoCliente
+    /** Ritmo (kanban row) p/ o termômetro. Ausente/sem ritmo → não mostra o chip. */
+    ritmo?: RitmoCliente
 }
 
-export function ContatoCard({ contato, onClick, segmento }: ContatoCardProps) {
+export function ContatoCard({ contato, onClick, segmento, ritmo }: ContatoCardProps) {
     const navigate = useNavigate()
 
     const handleClick = () => {
@@ -123,6 +126,18 @@ export function ContatoCard({ contato, onClick, segmento }: ContatoCardProps) {
                     return (
                         <span className={cn('px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide', o.cls)}>
                             {o.label}
+                        </span>
+                    )
+                })()}
+
+                {/* Termômetro (só quando há ritmo medível — ≥2 compras) */}
+                {(() => {
+                    const { estado } = temperaturaCliente(ritmo)
+                    if (estado === 'novo') return null
+                    const t = TEMPERATURA_BADGE[estado]
+                    return (
+                        <span className={cn('px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide', t.cls)}>
+                            {t.label}
                         </span>
                     )
                 })()}
