@@ -28,6 +28,8 @@ import { isMesEmCurso } from '../utils/calculations'
 import { AlertasFinanceiroWidget } from '@/components/dashboard/AlertasFinanceiroWidget'
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel'
 import { useAlertasContasAPagar } from '@/hooks/useAlertasContasAPagar'
+import { useClientesEsfriando } from '@/hooks/useClientesEsfriando'
+import { useConfiguracoes } from '@/hooks/useConfiguracoes'
 
 import { TopIndicadoresWidget } from '@/components/dashboard/TopIndicadoresWidget'
 import { UltimasVendasWidget } from '@/components/dashboard/UltimasVendasWidget'
@@ -45,6 +47,8 @@ export function Dashboard() {
 
     const { data: metrics, isLoading: isLoadingMetrics, refetch } = useDashboardMetrics(month, year)
     const { alertas: aPagarAlertas, count: countPagar, refetch: refetchPagar } = useAlertasContasAPagar()
+    const { alertas: esfriando, count: countEsfriando, refetch: refetchEsfriando } = useClientesEsfriando()
+    const { config: configApp } = useConfiguracoes()
     const [lucroData, setLucroData] = useState({ lucro_bruto: 0, receita_bruta: 0, lucro_liquido: 0, margem_liquida_pct: 0 })
     const [liquidadoData, setLiquidadoData] = useState({ vendas_liquidadas: 0, total_liquidado: 0 })
     const [aReceberGlobal, setAReceberGlobal] = useState({ total_a_receber: 0, total_contatos_abertos: 0, a_receber_mes: 0 })
@@ -99,13 +103,13 @@ export function Dashboard() {
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true)
-        await Promise.all([refetch(), refetchPagar()])
+        await Promise.all([refetch(), refetchPagar(), refetchEsfriando()])
         setIsRefreshing(false)
-    }, [refetch, refetchPagar])
+    }, [refetch, refetchPagar, refetchEsfriando])
 
     const aReceberAlertas = metrics?.financial?.alertas_financeiros ?? []
-    // Badge do sino = contas a pagar (vencendo/vencidas) + recebíveis atrasados.
-    const totalAlerts = countPagar + aReceberAlertas.length
+    // Badge do sino = contas a pagar (vencendo/vencidas) + recebíveis atrasados + clientes esfriando.
+    const totalAlerts = countPagar + aReceberAlertas.length + countEsfriando
 
     return (
         <>
@@ -136,6 +140,8 @@ export function Dashboard() {
                 onClose={() => setNotifOpen(false)}
                 aPagar={aPagarAlertas}
                 aReceber={aReceberAlertas}
+                esfriando={esfriando}
+                mensagemRecompra={configApp.mensagemRecompra}
                 onRefresh={handleRefresh}
                 refreshing={isRefreshing}
             />
