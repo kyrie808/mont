@@ -14,6 +14,7 @@ import { ProductList } from '../components/features/vendas/NovaVenda/ProductList
 import { CartSidebar } from '../components/features/vendas/NovaVenda/CartSidebar'
 import { CheckoutSidebar } from '../components/features/vendas/NovaVenda/CheckoutSidebar'
 import { WizardProgress } from '../components/features/vendas/NovaVenda/WizardProgress'
+import { NovaVendaPOS } from '../components/features/vendas/NovaVenda/pos/NovaVendaPOS'
 import { User, ShoppingBag, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '../components/ui'
 import type { VendaFormData } from '../schemas/venda'
@@ -204,6 +205,8 @@ export function NovaVenda() {
 
     return (
         <>
+            {/* Mobile: wizard de 3 passos (intocado). `contents` = wrapper transparente no fluxo mobile; some no desktop. */}
+            <div className="contents lg:hidden">
             <Header
                     title={isEditing ? `Editar Venda #${id?.slice(0, 8)}` : 'Nova Venda'}
                     showBack
@@ -336,7 +339,23 @@ export function NovaVenda() {
                         />
                     </aside>
                 </div>
+            </div>
 
+            {/* Desktop: PDV de tela única (layout Adega, tema Mont). O componente é `hidden lg:flex` + `fixed inset-0 lg:left-64`. */}
+            <NovaVendaPOS
+                produtos={produtos}
+                loading={loadingProdutos}
+                cart={cart}
+                cartTotal={cartTotal}
+                selectedContato={selectedContato}
+                onSelectContato={setSelectedContato}
+                getQuantity={getCartQuantity}
+                onAdd={handleAddToCart}
+                onUpdateQuantity={handleUpdateQuantity}
+                onClear={clearCart}
+                onConfirm={handleConfirmSale}
+                isEditing={isEditing}
+            />
         </>
     )
 }
