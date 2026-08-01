@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
-    Wallet, X, Calendar, Gift, Truck, Store, Tag,
+    Wallet, X, Calendar, Gift, Truck, Store,
     Clock, QrCode, Banknote, CreditCard, DollarSign, User, ChevronRight,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -198,56 +198,56 @@ export function FinalizarVendaDrawer({
     const canConfirm = !isSubmitting && !(isPayNow && !contaId)
 
     // Detalhes da Entrega (reutilizado pelo tipo Entrega e pelo sub-toggle de Fiado/Brinde).
+    // Padrão limpo do DS: label acima + input minimalista, sem boxes preenchidos.
     const deliveryFields = (
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <Truck className="size-5" />
-                    <span className="text-sm font-medium">Frete</span>
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Taxa de Entrega</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                        <input
+                            type="number"
+                            step="0.50"
+                            min="0"
+                            {...register('taxa_entrega', { valueAsNumber: true })}
+                            className={cn(
+                                'h-11 w-full rounded-xl border bg-background pl-10 pr-3 text-sm font-semibold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                                taxaEntregaValue > 0 ? 'border-primary/40 text-primary' : 'border-input text-foreground',
+                            )}
+                            placeholder="0,00"
+                        />
+                    </div>
                 </div>
-                <div className="relative w-28">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                    <input
-                        type="number"
-                        step="0.50"
-                        min="0"
-                        {...register('taxa_entrega', { valueAsNumber: true })}
-                        className={cn(
-                            'w-full rounded-lg border bg-background py-2 pl-9 pr-2 text-right text-sm font-bold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-                            taxaEntregaValue > 0 ? 'border-primary/40 text-primary' : 'border-border text-foreground',
-                        )}
-                        placeholder="0,00"
-                    />
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Entregador</label>
+                    <select
+                        value={entregadorId ?? ''}
+                        onChange={(e) => setValue('entregador_id', e.target.value || null)}
+                        className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <option value="">Selecione…</option>
+                        {entregadores.map((ent) => (
+                            <option key={ent.id} value={ent.id}>{ent.nome}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
             <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Entregador</label>
-                <select
-                    value={entregadorId ?? ''}
-                    onChange={(e) => setValue('entregador_id', e.target.value || null)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                    <option value="">Selecione o entregador…</option>
-                    {entregadores.map((ent) => (
-                        <option key={ent.id} value={ent.id}>{ent.nome}</option>
-                    ))}
-                </select>
-            </div>
-            <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Observação para o entregador</label>
+                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Observação para o entregador</label>
                 <textarea
                     {...register('observacao_entregador')}
                     rows={2}
-                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground/60"
+                    className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground/60"
                     placeholder="Ex: Aguardar confirmação de pagamento para entregar."
                 />
             </div>
-            <label className="flex cursor-pointer select-none items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2.5">
+            <label className="flex cursor-pointer select-none items-center gap-2.5">
                 <input
                     type="checkbox"
                     checked={!!dinheiroNaEntrega}
                     onChange={(e) => setValue('dinheiro_na_entrega', e.target.checked)}
-                    className="size-4 rounded border-border accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                    className="size-4 rounded border-input accent-primary focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
             </label>
@@ -531,12 +531,9 @@ export function FinalizarVendaDrawer({
 
                         {/* Desconto (R$) — todos menos Brinde */}
                         {tipoVenda !== 'brinde' && (
-                            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Tag className="size-5" />
-                                    <span className="text-sm font-medium">Desconto</span>
-                                </div>
-                                <div className="relative w-28">
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Desconto (R$)</label>
+                                <div className="relative w-44">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
                                     <input
                                         type="number"
@@ -545,8 +542,8 @@ export function FinalizarVendaDrawer({
                                         max={total}
                                         {...register('desconto', { valueAsNumber: true })}
                                         className={cn(
-                                            'w-full rounded-lg border bg-background py-2 pl-9 pr-2 text-right text-sm font-bold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-                                            descontoValue > 0 ? 'border-success/40 text-success' : 'border-border text-foreground',
+                                            'h-11 w-full rounded-xl border bg-background pl-10 pr-3 text-sm font-semibold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                                            descontoValue > 0 ? 'border-success/40 text-success' : 'border-input text-foreground',
                                         )}
                                         placeholder="0,00"
                                     />
