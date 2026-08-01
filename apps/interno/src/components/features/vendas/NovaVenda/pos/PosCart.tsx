@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { ShoppingCart, Trash2, Minus, Plus, User, Search, ChevronRight } from 'lucide-react'
 import { cn, formatCurrency, formatPhone } from '@mont/shared'
-import { Modal } from '../../../../ui'
 import { ClientSelector } from '../ClientSelector'
 import type { CartItem } from '../../../../../stores/useCartStore'
 import type { DomainContato } from '../../../../../types/domain'
@@ -20,8 +19,35 @@ interface PosCartProps {
 // itens (scroll) → rodapé fixo com Total + "Ir para pagamento".
 export function PosCart({ items, total, selectedContato, onSelectContato, onUpdateQuantity, onClear, onCheckout }: PosCartProps) {
     const [clienteOpen, setClienteOpen] = useState(false)
+    const triggerRef = useRef<HTMLButtonElement>(null)
+    const dropdownRef = useRef<HTMLDivElement>(null)
+    // Ancora o dropdown com posição `fixed` calculada do gatilho — escapa do overflow-hidden do card.
+    const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
     const totalItens = items.reduce((acc, i) => acc + i.quantidade, 0)
     const podeAvancar = items.length > 0 && !!selectedContato
+
+    const openCliente = useCallback(() => {
+        const rect = triggerRef.current?.getBoundingClientRect()
+        if (rect) setAnchor({ top: rect.bottom + 8, left: rect.left, width: rect.width })
+        setClienteOpen(true)
+    }, [])
+
+    // Fecha o dropdown em click-outside / Esc.
+    useEffect(() => {
+        if (!clienteOpen) return
+        const onDown = (e: MouseEvent) => {
+            const t = e.target as Node
+            if (dropdownRef.current?.contains(t) || triggerRef.current?.contains(t)) return
+            setClienteOpen(false)
+        }
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setClienteOpen(false) }
+        document.addEventListener('mousedown', onDown)
+        document.addEventListener('keydown', onKey)
+        return () => {
+            document.removeEventListener('mousedown', onDown)
+            document.removeEventListener('keydown', onKey)
+        }
+    }, [clienteOpen])
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card">
@@ -29,8 +55,9 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
             <div className="shrink-0 border-b border-border bg-muted/40 p-4">
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cliente</p>
                 <button
+                    ref={triggerRef}
                     type="button"
-                    onClick={() => setClienteOpen(true)}
+                    onClick={() => (clienteOpen ? setClienteOpen(false) : openCliente())}
                     className="group flex w-full items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted"
                 >
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -41,11 +68,29 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                             {selectedContato ? selectedContato.nome : 'Consumidor não selecionado'}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
-                            {selectedContato ? formatPhone(selectedContato.telefone) : 'Toque para escolher o cliente'}
+                            {selectedContato ? formatPhone(selectedContato.telefone) : 'Toque para identificar'}
                         </p>
                     </div>
                     <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
                 </button>
+
+                {/* Dropdown inline de seleção de cliente (reusa o ClientSelector) */}
+                {clienteOpen && anchor && (
+                    <div
+                        ref={dropdownRef}
+                        style={{ position: 'fixed', top: anchor.top, left: anchor.left, width: anchor.width }}
+                        className="z-9999 rounded-xl border border-border bg-card p-3 shadow-elevated"
+                    >
+                        <p className="mb-2 text-sm font-semibold text-foreground">Selecionar Cliente</p>
+                        <ClientSelector
+                            selectedContato={selectedContato}
+                            onSelect={(c) => {
+                                onSelectContato(c)
+                                if (c) setClienteOpen(false)
+                            }}
+                        />
+                    </div>
+                )}
 
                 <div className="mt-4 flex items-end justify-between">
                     <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
@@ -140,17 +185,6 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                     )}
                 </button>
             </div>
-
-            {/* Modal de seleção de cliente (reusa o ClientSelector) */}
-            <Modal isOpen={clienteOpen} onClose={() => setClienteOpen(false)} title="Cliente" size="md">
-                <ClientSelector
-                    selectedContato={selectedContato}
-                    onSelect={(c) => {
-                        onSelectContato(c)
-                        if (c) setClienteOpen(false)
-                    }}
-                />
-            </Modal>
         </div>
     )
 }

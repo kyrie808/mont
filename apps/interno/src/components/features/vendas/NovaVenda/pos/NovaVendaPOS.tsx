@@ -2,10 +2,9 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Search, ShoppingBag } from 'lucide-react'
 import { cn } from '@mont/shared'
-import { Drawer } from '../../../../ui'
 import { PosProductGrid } from './PosProductGrid'
 import { PosCart } from './PosCart'
-import { CheckoutSidebar } from '../CheckoutSidebar'
+import { FinalizarVendaDrawer, type PagamentoImediato } from './FinalizarVendaDrawer'
 import type { DomainProduto, DomainContato } from '../../../../../types/domain'
 import type { CartItem } from '../../../../../stores/useCartStore'
 import type { VendaFormData } from '../../../../../schemas/venda'
@@ -41,7 +40,7 @@ interface NovaVendaPOSProps {
     onAdd: (produto: DomainProduto) => void
     onUpdateQuantity: (produtoId: string, delta: number) => void
     onClear: () => void
-    onConfirm: (data: VendaFormData) => Promise<void>
+    onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato) => Promise<void>
     isEditing: boolean
 }
 
@@ -140,19 +139,17 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                 />
             </div>
 
-            {/* Pagamento no Drawer (reusa CheckoutSidebar) */}
-            {pagamentoOpen && (
-                <Drawer isOpen={pagamentoOpen} onClose={() => setPagamentoOpen(false)} title="Pagamento" subtitle={selectedContato?.nome}>
-                    <CheckoutSidebar
-                        onBack={() => setPagamentoOpen(false)}
-                        onConfirm={onConfirm}
-                        total={cartTotal}
-                        contatoId={selectedContato?.id || ''}
-                        contatoNome={selectedContato?.nome || ''}
-                        items={cart.map((i) => ({ produto_id: i.produto_id, quantidade: i.quantidade, preco_unitario: i.preco_unitario, subtotal: i.subtotal }))}
-                    />
-                </Drawer>
-            )}
+            {/* Finalizar Venda — side sheet 2 colunas (layout Adega, tema Mont) */}
+            <FinalizarVendaDrawer
+                isOpen={pagamentoOpen}
+                onClose={() => setPagamentoOpen(false)}
+                onConfirm={onConfirm}
+                cart={cart}
+                total={cartTotal}
+                contatoId={selectedContato?.id || ''}
+                contatoNome={selectedContato?.nome || ''}
+                contatoTelefone={selectedContato?.telefone}
+            />
         </div>
     )
 }

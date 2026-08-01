@@ -15,6 +15,8 @@ import { CartSidebar } from '../components/features/vendas/NovaVenda/CartSidebar
 import { CheckoutSidebar } from '../components/features/vendas/NovaVenda/CheckoutSidebar'
 import { WizardProgress } from '../components/features/vendas/NovaVenda/WizardProgress'
 import { NovaVendaPOS } from '../components/features/vendas/NovaVenda/pos/NovaVendaPOS'
+import type { PagamentoImediato } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
+import { vendaService } from '../services/vendaService'
 import { User, ShoppingBag, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '../components/ui'
 import type { VendaFormData } from '../schemas/venda'
@@ -141,7 +143,7 @@ export function NovaVenda() {
     }
 
 
-    const handleConfirmSale = useCallback(async (data: VendaFormData) => {
+    const handleConfirmSale = useCallback(async (data: VendaFormData, pagamento?: PagamentoImediato) => {
         // Pré-check de conexão: sem isto, um submit offline ficava travado/perdido
         // em silêncio. Avisa claramente e nem tenta gravar (carrinho preservado).
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -173,7 +175,19 @@ export function NovaVenda() {
 
         try {
             const venda = await createVenda(vendaData, idempotencyKey)
-            toast.success('Venda realizada com sucesso!')
+            // Quita na hora (opcional): paga o saldo total com o método + conta escolhidos no checkout.
+            // Se falhar, a venda já existe (recuperável pelo Quitar no perfil) — não perde a venda.
+            if (pagamento) {
+                try {
+                    await vendaService.quitarVenda(venda.id, pagamento.metodo, pagamento.contaId)
+                    toast.success('Venda registrada e quitada!')
+                } catch (payErr) {
+                    console.error('[NovaVenda] venda criada mas o pagamento falhou:', payErr)
+                    toast.error('Venda criada, mas o pagamento não foi registrado — quite pelo perfil da venda.')
+                }
+            } else {
+                toast.success('Venda realizada com sucesso!')
+            }
             clearCart()
             setCurrentStep(0)
             navigate(`/vendas/${venda.id}`)
