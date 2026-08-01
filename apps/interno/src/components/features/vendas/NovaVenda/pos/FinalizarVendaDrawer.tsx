@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
-    Wallet, X, ShoppingCart, Calendar, Gift, Truck, Store, Tag,
+    Wallet, X, Calendar, Gift, Truck, Store, Tag,
     Clock, QrCode, Banknote, CreditCard, DollarSign, User, ChevronRight,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -30,15 +30,18 @@ interface FinalizarVendaDrawerProps {
     contatoTelefone?: string | null
 }
 
-// Intenção da venda (o enum real do Mont). A forma real de recebimento é resolvida no bloco Pagamento.
-const SALE_TYPES = [
-    { id: 'venda', label: 'Venda', icon: ShoppingCart },
+// Tipo de venda = eixo primário (divulgação progressiva). Balcão/Entrega são a MESMA intenção
+// (`forma_pagamento='venda'`), diferindo só pela entrega; Fiado/Brinde são os outros intents.
+type TipoVenda = 'balcao' | 'entrega' | 'fiado' | 'brinde'
+
+const TIPOS: { id: TipoVenda; label: string; icon: typeof Store }[] = [
+    { id: 'balcao', label: 'Balcão', icon: Store },
+    { id: 'entrega', label: 'Entrega', icon: Truck },
     { id: 'fiado', label: 'Fiado', icon: Calendar },
     { id: 'brinde', label: 'Brinde', icon: Gift },
-] as const
+]
 
-// Opções de recebimento (só quando a intenção é "venda"):
-// "depois" = deixa em aberto (comporta como hoje); pix/dinheiro/cartao = quita na hora.
+// Recebimento (só p/ Balcão/Entrega): "depois" = deixa em aberto; pix/dinheiro/cartao = quita na hora.
 const RECEBIMENTOS = [
     { id: 'depois', label: 'Receber depois', icon: Clock },
     { id: 'pix', label: 'PIX', icon: QrCode },
@@ -59,8 +62,9 @@ export function FinalizarVendaDrawer({
     contatoTelefone,
 }: FinalizarVendaDrawerProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [tipoVenda, setTipoVenda] = useState<TipoVenda>('balcao')
     const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrega'>('retirada')
-    // Recebimento na hora (só p/ intenção "venda").
+    // Recebimento na hora (só p/ Balcão/Entrega).
     const [recebimento, setRecebimento] = useState<Recebimento>('depois')
     const [contaId, setContaId] = useState('')
     const [valorRecebido, setValorRecebido] = useState(0)
@@ -109,12 +113,44 @@ export function FinalizarVendaDrawer({
     // Produto com piso 0 (espelha o clamp da RPC) + frete.
     const totalGeral = Math.max(total - descontoValue, 0) + taxaEntregaValue
 
-    const isPayNow = formaPagamento === 'venda' && recebimento !== 'depois'
+    const podePagarAgora = tipoVenda === 'balcao' || tipoVenda === 'entrega'
+    const isPayNow = podePagarAgora && recebimento !== 'depois'
     const troco = recebimento === 'dinheiro' && valorRecebido > totalGeral ? valorRecebido - totalGeral : 0
 
-    // Reset ao (re)abrir ou trocar o cliente/itens.
+    // Zera os campos de entrega (usado ao voltar p/ retirada / trocar de tipo).
+    const limparEntrega = () => {
+        setValue('taxa_entrega', 0)
+        setValue('entregador_id', null)
+        setValue('observacao_entregador', '')
+        setValue('dinheiro_na_entrega', false)
+    }
+
+    // Troca de tipo de venda → ajusta intenção (forma_pagamento) + entrega + zera pagar-agora.
+    const selecionarTipo = (t: TipoVenda) => {
+        setTipoVenda(t)
+        setRecebimento('depois')
+        setContaId('')
+        setValorRecebido(0)
+        if (t === 'entrega') {
+            setValue('forma_pagamento', 'venda')
+            setTipoEntrega('entrega')
+        } else {
+            setValue('forma_pagamento', t === 'balcao' ? 'venda' : t)
+            setTipoEntrega('retirada')
+            limparEntrega()
+        }
+    }
+
+    // Sub-toggle Retirada/Entrega (dentro de Fiado/Brinde e refletido no tipo Entrega).
+    const selecionarEntrega = (tipo: 'retirada' | 'entrega') => {
+        setTipoEntrega(tipo)
+        if (tipo === 'retirada') limparEntrega()
+    }
+
+    // Reset ao (re)abrir ou trocar o cliente.
     useEffect(() => {
         if (!isOpen) return
+        setTipoVenda('balcao')
         setTipoEntrega('retirada')
         setRecebimento('depois')
         setContaId('')
@@ -136,15 +172,6 @@ export function FinalizarVendaDrawer({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, contatoId])
 
-    // Sair de "venda" (p/ fiado/brinde) zera o recebimento na hora.
-    useEffect(() => {
-        if (formaPagamento !== 'venda') {
-            setRecebimento('depois')
-            setContaId('')
-            setValorRecebido(0)
-        }
-    }, [formaPagamento])
-
     // Fiado calcula vencimento automático (30 dias).
     useEffect(() => {
         if (formaPagamento === 'fiado') {
@@ -153,16 +180,6 @@ export function FinalizarVendaDrawer({
             setValue('data_prevista_pagamento', null)
         }
     }, [formaPagamento, setValue])
-
-    const handleTipoEntrega = (tipo: 'retirada' | 'entrega') => {
-        setTipoEntrega(tipo)
-        if (tipo === 'retirada') {
-            setValue('taxa_entrega', 0)
-            setValue('entregador_id', null)
-            setValue('observacao_entregador', '')
-            setValue('dinheiro_na_entrega', false)
-        }
-    }
 
     const onSubmit = async (data: VendaFormData) => {
         const pagamento: PagamentoImediato | undefined = isPayNow
@@ -179,6 +196,171 @@ export function FinalizarVendaDrawer({
     }
 
     const canConfirm = !isSubmitting && !(isPayNow && !contaId)
+
+    // Detalhes da Entrega (reutilizado pelo tipo Entrega e pelo sub-toggle de Fiado/Brinde).
+    const deliveryFields = (
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <Truck className="size-5" />
+                    <span className="text-sm font-medium">Frete</span>
+                </div>
+                <div className="relative w-28">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                    <input
+                        type="number"
+                        step="0.50"
+                        min="0"
+                        {...register('taxa_entrega', { valueAsNumber: true })}
+                        className={cn(
+                            'w-full rounded-lg border bg-background py-2 pl-9 pr-2 text-right text-sm font-bold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                            taxaEntregaValue > 0 ? 'border-primary/40 text-primary' : 'border-border text-foreground',
+                        )}
+                        placeholder="0,00"
+                    />
+                </div>
+            </div>
+            <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Entregador</label>
+                <select
+                    value={entregadorId ?? ''}
+                    onChange={(e) => setValue('entregador_id', e.target.value || null)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <option value="">Selecione o entregador…</option>
+                    {entregadores.map((ent) => (
+                        <option key={ent.id} value={ent.id}>{ent.nome}</option>
+                    ))}
+                </select>
+            </div>
+            <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Observação para o entregador</label>
+                <textarea
+                    {...register('observacao_entregador')}
+                    rows={2}
+                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground/60"
+                    placeholder="Ex: Aguardar confirmação de pagamento para entregar."
+                />
+            </div>
+            <label className="flex cursor-pointer select-none items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2.5">
+                <input
+                    type="checkbox"
+                    checked={!!dinheiroNaEntrega}
+                    onChange={(e) => setValue('dinheiro_na_entrega', e.target.checked)}
+                    className="size-4 rounded border-border accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
+            </label>
+        </div>
+    )
+
+    // Sub-toggle Retirada/Entrega (Fiado/Brinde).
+    const entregaSubToggle = (
+        <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+                {([
+                    { id: 'retirada', label: 'Retirada', icon: Store },
+                    { id: 'entrega', label: 'Entrega', icon: Truck },
+                ] as const).map((opt) => {
+                    const Icon = opt.icon
+                    const isSelected = tipoEntrega === opt.id
+                    return (
+                        <button
+                            key={opt.id}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => selecionarEntrega(opt.id)}
+                            className={cn(
+                                'flex items-center justify-center gap-2 rounded-xl border p-2.5 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                                isSelected
+                                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
+                                    : 'border-border bg-background text-muted-foreground hover:bg-muted',
+                            )}
+                        >
+                            <Icon className="size-4" />
+                            <span className="text-xs font-bold uppercase tracking-wider">{opt.label}</span>
+                        </button>
+                    )
+                })}
+            </div>
+            {tipoEntrega === 'entrega' && deliveryFields}
+        </div>
+    )
+
+    // Bloco de pagamento (Balcão/Entrega): receber depois OU quitar na hora.
+    const paymentBlock = (
+        <div className="space-y-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pagamento</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {RECEBIMENTOS.map((opt) => {
+                    const Icon = opt.icon
+                    const isSelected = recebimento === opt.id
+                    return (
+                        <button
+                            key={opt.id}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => setRecebimento(opt.id)}
+                            className={cn(
+                                'flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                                isSelected
+                                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
+                                    : 'border-border bg-background text-muted-foreground hover:bg-muted',
+                            )}
+                        >
+                            <Icon className="size-5" />
+                            <span className="text-center text-[10px] font-bold uppercase leading-tight tracking-wider">{opt.label}</span>
+                        </button>
+                    )
+                })}
+            </div>
+
+            {isPayNow && (
+                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Conta de destino</label>
+                        <select
+                            value={contaId}
+                            onChange={(e) => setContaId(e.target.value)}
+                            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <option value="">Selecione a conta…</option>
+                            {contasAtivas.map((ct) => (
+                                <option key={ct.id} value={ct.id}>{ct.nome}</option>
+                            ))}
+                        </select>
+                        {!contaId && (
+                            <p className="mt-1 text-[11px] font-medium text-warning-strong">Escolha a conta que recebeu o dinheiro.</p>
+                        )}
+                    </div>
+
+                    {recebimento === 'dinheiro' && (
+                        <div>
+                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Valor recebido</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-success" />
+                                <input
+                                    type="number"
+                                    step="0.50"
+                                    min="0"
+                                    value={valorRecebido || ''}
+                                    onChange={(e) => setValorRecebido(Number(e.target.value))}
+                                    className="w-full rounded-lg border border-success/30 bg-background pl-9 pr-3 py-2 text-sm font-bold tabular-nums text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                                    placeholder="0,00"
+                                />
+                            </div>
+                            {troco > 0 && (
+                                <div className="mt-2 flex items-center justify-between rounded-lg border border-success/30 bg-success/10 px-3 py-2">
+                                    <span className="text-sm font-medium text-success">Troco</span>
+                                    <span className="text-base font-bold tabular-nums text-success">{formatCurrency(troco)}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
 
     if (!isOpen) return null
 
@@ -266,19 +448,19 @@ export function FinalizarVendaDrawer({
                             </div>
                         </div>
 
-                        {/* Tipo de Venda (intenção) */}
+                        {/* Tipo de Venda (eixo primário) */}
                         <div className="space-y-3">
                             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo de Venda</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {SALE_TYPES.map((type) => {
-                                    const Icon = type.icon
-                                    const isSelected = formaPagamento === type.id
+                            <div className="grid grid-cols-4 gap-2">
+                                {TIPOS.map((tipo) => {
+                                    const Icon = tipo.icon
+                                    const isSelected = tipoVenda === tipo.id
                                     return (
                                         <button
-                                            key={type.id}
+                                            key={tipo.id}
                                             type="button"
                                             aria-pressed={isSelected}
-                                            onClick={() => setValue('forma_pagamento', type.id as VendaFormData['forma_pagamento'])}
+                                            onClick={() => selecionarTipo(tipo.id)}
                                             className={cn(
                                                 'flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                                                 isSelected
@@ -287,225 +469,90 @@ export function FinalizarVendaDrawer({
                                             )}
                                         >
                                             <Icon className="size-5" />
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">{type.label}</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider">{tipo.label}</span>
                                         </button>
                                     )
                                 })}
                             </div>
                         </div>
 
-                        {/* Pagamento (só p/ Venda): receber depois OU quitar na hora */}
-                        {formaPagamento === 'venda' && (
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pagamento</label>
-                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                    {RECEBIMENTOS.map((opt) => {
-                                        const Icon = opt.icon
-                                        const isSelected = recebimento === opt.id
-                                        return (
-                                            <button
-                                                key={opt.id}
-                                                type="button"
-                                                aria-pressed={isSelected}
-                                                onClick={() => setRecebimento(opt.id)}
-                                                className={cn(
-                                                    'flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-                                                    isSelected
-                                                        ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
-                                                        : 'border-border bg-background text-muted-foreground hover:bg-muted',
-                                                )}
-                                            >
-                                                <Icon className="size-5" />
-                                                <span className="text-center text-[10px] font-bold uppercase leading-tight tracking-wider">{opt.label}</span>
-                                            </button>
-                                        )
-                                    })}
-                                </div>
+                        {/* Divulgação progressiva: só o bloco do tipo ativo */}
+                        {tipoVenda === 'balcao' && paymentBlock}
 
-                                {isPayNow && (
-                                    <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div>
-                                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Conta de destino</label>
-                                            <select
-                                                value={contaId}
-                                                onChange={(e) => setContaId(e.target.value)}
-                                                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-                                            >
-                                                <option value="">Selecione a conta…</option>
-                                                {contasAtivas.map((ct) => (
-                                                    <option key={ct.id} value={ct.id}>{ct.nome}</option>
-                                                ))}
-                                            </select>
-                                            {!contaId && (
-                                                <p className="mt-1 text-[11px] font-medium text-warning-strong">Escolha a conta que recebeu o dinheiro.</p>
-                                            )}
-                                        </div>
-
-                                        {recebimento === 'dinheiro' && (
-                                            <div>
-                                                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Valor recebido</label>
-                                                <div className="relative">
-                                                    <DollarSign className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-success" />
-                                                    <input
-                                                        type="number"
-                                                        step="0.50"
-                                                        min="0"
-                                                        value={valorRecebido || ''}
-                                                        onChange={(e) => setValorRecebido(Number(e.target.value))}
-                                                        className="w-full rounded-lg border border-success/30 bg-background pl-9 pr-3 py-2 text-sm font-bold tabular-nums text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-                                                        placeholder="0,00"
-                                                    />
-                                                </div>
-                                                {troco > 0 && (
-                                                    <div className="mt-2 flex items-center justify-between rounded-lg border border-success/30 bg-success/10 px-3 py-2">
-                                                        <span className="text-sm font-medium text-success">Troco</span>
-                                                        <span className="text-base font-bold tabular-nums text-success">{formatCurrency(troco)}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Fiado: vencimento */}
-                        {formaPagamento === 'fiado' && (
-                            <div className="space-y-2 rounded-xl border border-warning-strong/30 bg-warning-strong/10 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <label className="block text-sm font-medium text-warning-strong">Data de Vencimento</label>
-                                <input
-                                    type="date"
-                                    {...register('data_prevista_pagamento')}
-                                    className={cn(
-                                        'w-full rounded-lg border bg-background px-3 py-2 text-foreground outline-hidden focus-visible:ring-2',
-                                        errors.data_prevista_pagamento
-                                            ? 'border-destructive focus-visible:ring-destructive'
-                                            : 'border-warning-strong/30 focus-visible:ring-warning-strong',
-                                    )}
-                                />
-                                {errors.data_prevista_pagamento && (
-                                    <span className="text-[10px] font-bold text-destructive">{errors.data_prevista_pagamento.message}</span>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Brinde: sem pagamento */}
-                        {formaPagamento === 'brinde' && (
-                            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4 text-muted-foreground animate-in fade-in slide-in-from-top-2 duration-200">
-                                <Gift className="size-5 shrink-0 text-primary" />
-                                <p className="text-sm">Brinde não recebe pagamento — sai como cortesia (não entra no faturamento).</p>
-                            </div>
-                        )}
-
-                        {/* Desconto (R$) */}
-                        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Tag className="size-5" />
-                                <span className="text-sm font-medium">Desconto</span>
-                            </div>
-                            <div className="relative w-28">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                                <input
-                                    type="number"
-                                    step="0.50"
-                                    min="0"
-                                    max={total}
-                                    {...register('desconto', { valueAsNumber: true })}
-                                    className={cn(
-                                        'w-full rounded-lg border bg-background py-2 pl-9 pr-2 text-right text-sm font-bold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-                                        descontoValue > 0 ? 'border-success/40 text-success' : 'border-border text-foreground',
-                                    )}
-                                    placeholder="0,00"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Entrega: Retirada x Entrega */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Entrega</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {([
-                                    { id: 'retirada', label: 'Retirada', icon: Store },
-                                    { id: 'entrega', label: 'Entrega', icon: Truck },
-                                ] as const).map((opt) => {
-                                    const Icon = opt.icon
-                                    const isSelected = tipoEntrega === opt.id
-                                    return (
-                                        <button
-                                            key={opt.id}
-                                            type="button"
-                                            aria-pressed={isSelected}
-                                            onClick={() => handleTipoEntrega(opt.id)}
-                                            className={cn(
-                                                'flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-                                                isSelected
-                                                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
-                                                    : 'border-border bg-background text-muted-foreground hover:bg-muted',
-                                            )}
-                                        >
-                                            <Icon className="size-5" />
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">{opt.label}</span>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-
-                            {tipoEntrega === 'entrega' && (
-                                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Truck className="size-5" />
-                                            <span className="text-sm font-medium">Frete</span>
-                                        </div>
-                                        <div className="relative w-28">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                                            <input
-                                                type="number"
-                                                step="0.50"
-                                                min="0"
-                                                {...register('taxa_entrega', { valueAsNumber: true })}
-                                                className={cn(
-                                                    'w-full rounded-lg border bg-background py-2 pl-9 pr-2 text-right text-sm font-bold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-                                                    taxaEntregaValue > 0 ? 'border-primary/40 text-primary' : 'border-border text-foreground',
-                                                )}
-                                                placeholder="0,00"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Entregador</label>
-                                        <select
-                                            value={entregadorId ?? ''}
-                                            onChange={(e) => setValue('entregador_id', e.target.value || null)}
-                                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-                                        >
-                                            <option value="">Selecione o entregador…</option>
-                                            {entregadores.map((ent) => (
-                                                <option key={ent.id} value={ent.id}>{ent.nome}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Observação para o entregador</label>
-                                        <textarea
-                                            {...register('observacao_entregador')}
-                                            rows={2}
-                                            className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground/60"
-                                            placeholder="Ex: Aguardar confirmação de pagamento para entregar."
-                                        />
-                                    </div>
-                                    <label className="flex cursor-pointer select-none items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2.5">
-                                        <input
-                                            type="checkbox"
-                                            checked={!!dinheiroNaEntrega}
-                                            onChange={(e) => setValue('dinheiro_na_entrega', e.target.checked)}
-                                            className="size-4 rounded border-border accent-primary focus-visible:ring-2 focus-visible:ring-ring"
-                                        />
-                                        <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
+                        {tipoVenda === 'entrega' && (
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                                        <Truck className="size-4" /> Detalhes da Entrega
                                     </label>
+                                    {deliveryFields}
                                 </div>
-                            )}
-                        </div>
+                                {paymentBlock}
+                            </div>
+                        )}
+
+                        {tipoVenda === 'fiado' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-2 rounded-xl border border-warning-strong/30 bg-warning-strong/10 p-4">
+                                    <label className="block text-sm font-medium text-warning-strong">Data de Vencimento</label>
+                                    <input
+                                        type="date"
+                                        {...register('data_prevista_pagamento')}
+                                        className={cn(
+                                            'w-full rounded-lg border bg-background px-3 py-2 text-foreground outline-hidden focus-visible:ring-2',
+                                            errors.data_prevista_pagamento
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : 'border-warning-strong/30 focus-visible:ring-warning-strong',
+                                        )}
+                                    />
+                                    {errors.data_prevista_pagamento && (
+                                        <span className="text-[10px] font-bold text-destructive">{errors.data_prevista_pagamento.message}</span>
+                                    )}
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como vai receber?</label>
+                                    {entregaSubToggle}
+                                </div>
+                            </div>
+                        )}
+
+                        {tipoVenda === 'brinde' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4 text-muted-foreground">
+                                    <Gift className="size-5 shrink-0 text-primary" />
+                                    <p className="text-sm">Brinde não recebe pagamento — sai como cortesia (não entra no faturamento).</p>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Como vai entregar?</label>
+                                    {entregaSubToggle}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Desconto (R$) — todos menos Brinde */}
+                        {tipoVenda !== 'brinde' && (
+                            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Tag className="size-5" />
+                                    <span className="text-sm font-medium">Desconto</span>
+                                </div>
+                                <div className="relative w-28">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.50"
+                                        min="0"
+                                        max={total}
+                                        {...register('desconto', { valueAsNumber: true })}
+                                        className={cn(
+                                            'w-full rounded-lg border bg-background py-2 pl-9 pr-2 text-right text-sm font-bold tabular-nums outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                                            descontoValue > 0 ? 'border-success/40 text-success' : 'border-border text-foreground',
+                                        )}
+                                        placeholder="0,00"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Observações */}
                         <div className="space-y-1.5">
