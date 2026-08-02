@@ -7,6 +7,7 @@ import { useContatos } from '../../hooks/useContatos'
 import { useToast } from '../ui/Toast'
 import { useCep } from '../../hooks/useCep'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { mesclarValoresContato } from '../../utils/contatoForm'
 import type { DomainContato, CreateContato, IndicadorRef } from '../../types/domain'
 
 // Desktop v2 (mobile fica com os sub-componentes abaixo — sagrado)
@@ -134,8 +135,9 @@ export function ContatoFormModal({
 
     const onSubmit = async (data: ContatoFormData) => {
         try {
-            const rawValues = getValues()
-            const formDataKeyed = { ...data, ...rawValues }
+            // O cru entra só para preservar campos fora do schema; o parseado vence
+            // em tudo que ele possui — inverter desfaz o `.transform()` do telefone.
+            const formDataKeyed = mesclarValoresContato(data, getValues())
             // Aquisição só vale para origem = 'anuncio'; zera nos demais casos.
             const isAnuncio = formDataKeyed.origem === 'anuncio'
             const cleanPayload: CreateContato = {

@@ -828,6 +828,7 @@ export type Database = {
           status_relacionamento: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo: string | null
           telefone: string
+          telefone_norm: string | null
           tipo: string
           uf: string | null
           ultimo_contato: string | null
@@ -863,6 +864,7 @@ export type Database = {
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
           telefone: string
+          telefone_norm?: string | null
           tipo: string
           uf?: string | null
           ultimo_contato?: string | null
@@ -898,6 +900,7 @@ export type Database = {
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
           telefone?: string
+          telefone_norm?: string | null
           tipo?: string
           uf?: string | null
           ultimo_contato?: string | null
@@ -3011,6 +3014,10 @@ export type Database = {
       }
       fn_capitalize_name: { Args: { nome: string }; Returns: string }
       fn_count_words: { Args: { texto: string }; Returns: number }
+      fn_estoque_aplica_venda: {
+        Args: { p_sinal: number; p_venda_id: string }
+        Returns: undefined
+      }
       fn_mover_card_relacionamento: {
         Args: {
           p_contato_id: string

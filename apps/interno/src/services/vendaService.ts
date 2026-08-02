@@ -3,6 +3,7 @@ import type { VendaUpdate } from '@mont/shared'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
 import { toDomainVenda, type VendaRowWithRelations } from './mappers'
 import { isToday } from 'date-fns'
+import { filtroBuscaContato } from '../utils/telefone'
 
 /**
  * Sincroniza alterações da tabela `vendas` → `cat_pedidos`.
@@ -72,10 +73,10 @@ export const vendaService = {
         }
 
         if (term) {
-            query = query.or(
-                `nome.ilike.%${term}%,apelido.ilike.%${term}%,telefone.ilike.%${term}%`,
-                { referencedTable: 'contato' },
-            )
+            // Mesmo filtro da busca de Clientes: telefone casa contra `telefone_norm`,
+            // então achar a venda por número independe da máscara digitada.
+            const filtro = filtroBuscaContato(term)
+            if (filtro) query = query.or(filtro, { referencedTable: 'contato' })
         }
 
         if (includePending && (startDate || endDate)) {
