@@ -185,8 +185,10 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
                     <Input
                         label="Telefone"
                         value={quickPhone}
-                        onChange={(e) => setQuickPhone(e.target.value)}
+                        onChange={(e) => setQuickPhone(formatPhone(e.target.value))}
                         placeholder="(11) 99999-9999"
+                        maxLength={15}
+                        inputMode="numeric"
                     />
                 </div>
                 <ModalActions>

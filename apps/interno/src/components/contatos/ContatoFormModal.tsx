@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { formatPhone } from '@mont/shared'
 import { Modal, ModalActions, Button } from '../ui'
 import { contatoSchema, type ContatoFormData } from '../../schemas/contato'
 import { useContatos } from '../../hooks/useContatos'
@@ -90,6 +91,8 @@ export function ContatoFormModal({
         if (isOpen && contato) {
             reset({
                 ...contato,
+                // Vem do banco como dígitos puros; abre o campo já mascarado.
+                telefone: formatPhone(contato.telefone),
                 indicado_por_id: contato.indicadoPorId,
                 fonte: contato.fonte ?? null,
                 campanha_id: contato.campanhaId ?? null,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MapPin, Fingerprint, ChevronDown, Phone, Mail, Copy } from 'lucide-react'
-import { cn } from '@mont/shared'
+import { cn, formatPhone } from '@mont/shared'
 import { useToast } from '../../../../components/ui/Toast'
 import type { DomainContato } from '../../../../types/domain'
 
@@ -128,7 +128,7 @@ export function ContatoIntel({ contato }: { contato: DomainContato }) {
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Mobile Uplink</p>
                                         {contato.telefone ? (
-                                            <p className="text-sm font-mono text-foreground tracking-wider">{contato.telefone}</p>
+                                            <p className="text-sm font-mono text-foreground tracking-wider">{formatPhone(contato.telefone)}</p>
                                         ) : (
                                             <div className="flex items-center gap-2">
                                                 <p className="text-sm font-mono text-muted-foreground italic">sem telefone</p>

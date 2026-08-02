@@ -11,18 +11,22 @@ export function formatCurrency(value: number): string {
 
 /**
  * Formatar telefone para exibição
- * Input: 11999999999 -> Output: (11) 99999-9999
- * Suporta entrada parcial para uso em inputs com máscara
+ * Celular (11 dígitos): 11969791012 -> (11) 96979-1012
+ * Fixo    (10 dígitos): 1133334444  -> (11) 3333-4444
+ *
+ * Suporta entrada parcial para uso em inputs com máscara. Ao digitar um
+ * celular o valor passa por `(11) 9697-9101` no 10º dígito e só vira
+ * `(11) 96979-1012` no 11º — só dá para distinguir fixo de celular ali.
  */
 export function formatPhone(phone: string): string {
-    const cleaned = phone.replace(/\D/g, '')
+    const cleaned = phone.replace(/\D/g, '').slice(0, 11)
 
     if (cleaned.length <= 2) {
         return cleaned
-    } else if (cleaned.length <= 7) {
+    } else if (cleaned.length <= 6) {
         return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    } else if (cleaned.length <= 11) {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+    } else if (cleaned.length <= 10) {
+        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`
     }
 
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`

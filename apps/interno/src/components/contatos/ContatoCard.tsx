@@ -1,6 +1,6 @@
 import { User, Store, Calendar, MessageCircle, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { formatRelativeDate } from '@mont/shared'
+import { formatRelativeDate, formatPhone } from '@mont/shared'
 import type { DomainContato } from '../../types/domain'
 import type { SegmentoCliente } from '../../utils/segmentoCliente'
 import { origemBadge } from '../../utils/origemContato'
@@ -89,7 +89,7 @@ export function ContatoCard({ contato, onClick, segmento, ritmo }: ContatoCardPr
                     {/* Phone Number */}
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Phone className="size-3.5" />
-                        <span className="text-sm font-medium">{contato.telefone}</span>
+                        <span className="text-sm font-medium">{formatPhone(contato.telefone)}</span>
                     </div>
                 </div>
 
