@@ -70,6 +70,8 @@ export function useIndicacoes(): UseIndicacoesReturn {
                 .from('vendas')
                 .select('contato_id, id')
                 .eq('status', 'entregue')
+                // Brinde não é compra — mesma régua de `contato_compras_resumo`.
+                .neq('forma_pagamento', 'brinde')
 
             if (vendasError) throw vendasError
 
@@ -106,8 +108,11 @@ export function useIndicacoes(): UseIndicacoesReturn {
                     primeiraCompra: i.ultimo_contato,
                 }))
 
+                // Convertido = comprou de verdade. A coluna `status` é carimbada no
+                // cadastro e dava 100% de conversão (83/83) contra 79 reais — e a
+                // recompensa do embaixador abaixo sai desta contagem.
                 const indicacoesConvertidas = indicadosList.filter(
-                    (i) => i.status === 'cliente'
+                    (i) => (comprasPorContato.get(i.id) || 0) > 0
                 ).length
 
                 // R$5 per converted referral (configurable in future)

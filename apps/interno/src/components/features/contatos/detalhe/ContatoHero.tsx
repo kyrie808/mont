@@ -49,8 +49,11 @@ export function ContatoHero({ contato, nivel, segmento, onEdit }: ContatoHeroPro
                     )}>
                         <AvatarIcon className="h-12 w-12 text-white drop-shadow-md" />
                     </div>
-                    {/* Verified Badge - Only for active 'Cliente' */}
-                    {contato.status === 'cliente' && (
+                    {/* Selo de verificado: quem comprou de verdade (Cliente/VIP).
+                        Lia a coluna `contatos.status`, carimbada no cadastro e
+                        divergente do comportamento em 39 contatos — dava o absurdo
+                        de o selo abaixo dizer CLIENTE e este não aparecer. */}
+                    {(segmento === 'cliente' || segmento === 'vip') && (
                         <div className="absolute bottom-0 right-0 bg-primary p-1.5 rounded-full border-[3px] border-background shadow-md z-10" title="Cliente Verificado">
                             <BadgeCheck className="h-4 w-4 text-primary-foreground" />
                         </div>
