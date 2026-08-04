@@ -6,7 +6,7 @@ import { useCartStore } from '../stores/useCartStore'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
 import { useContatos } from '../hooks/useContatos'
-import type { DomainProduto } from '../types/domain'
+import type { DomainProduto, CreateVenda } from '../types/domain'
 import { formatCurrency } from '@mont/shared'
 
 import { ClientSelector } from '../components/features/vendas/NovaVenda/ClientSelector'
@@ -15,7 +15,7 @@ import { CartSidebar } from '../components/features/vendas/NovaVenda/CartSidebar
 import { CheckoutSidebar } from '../components/features/vendas/NovaVenda/CheckoutSidebar'
 import { WizardProgress } from '../components/features/vendas/NovaVenda/WizardProgress'
 import { NovaVendaPOS } from '../components/features/vendas/NovaVenda/pos/NovaVendaPOS'
-import type { PagamentoImediato } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
+import type { PagamentoImediato, OpcoesEntrega } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
 import { vendaService } from '../services/vendaService'
 import { User, ShoppingBag, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '../components/ui'
@@ -143,7 +143,7 @@ export function NovaVenda() {
     }
 
 
-    const handleConfirmSale = useCallback(async (data: VendaFormData, pagamento?: PagamentoImediato) => {
+    const handleConfirmSale = useCallback(async (data: VendaFormData, pagamento?: PagamentoImediato, opcoes?: OpcoesEntrega) => {
         // Pré-check de conexão: sem isto, um submit offline ficava travado/perdido
         // em silêncio. Avisa claramente e nem tenta gravar (carrinho preservado).
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -154,6 +154,11 @@ export function NovaVenda() {
         // Chave de idempotência do checkout atual: persistida no carrinho, faz o
         // backend deduplicar reenvios (sinal fraco) e cliques duplos no mesmo id.
         const idempotencyKey = ensureIdempotencyKey()
+
+        // Retirada/Balcão: o produto já saiu com o cliente, então a venda não é
+        // uma entrega pendente. Nasce entregue e o cliente deixa de ser Lead no
+        // ato. Entrega de verdade continua 'pendente' até ser marcada.
+        const status: CreateVenda['status'] = opcoes?.entregaImediata ? 'entregue' : 'pendente'
 
         const vendaData = {
             contatoId: data.contato_id || selectedContato?.id || '',
@@ -171,6 +176,7 @@ export function NovaVenda() {
             observacaoEntregador: data.observacao_entregador ?? null,
             dinheiroNaEntrega: data.dinheiro_na_entrega ?? false,
             desconto: data.desconto ?? 0,
+            status,
         }
 
         try {

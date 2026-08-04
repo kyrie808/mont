@@ -7,10 +7,11 @@ import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
 import { useEntregadores } from '../../../../hooks/useEntregadores'
 import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
+import type { OpcoesEntrega } from './pos/FinalizarVendaDrawer'
 
 interface CheckoutSidebarProps {
     onBack: () => void
-    onConfirm: (data: VendaFormData) => Promise<void>
+    onConfirm: (data: VendaFormData, pagamento?: undefined, opcoes?: OpcoesEntrega) => Promise<void>
     total: number
     contatoId: string
     contatoNome: string
@@ -112,7 +113,7 @@ export function CheckoutSidebar({
     const onSubmit = async (data: VendaFormData) => {
         try {
             setIsSubmitting(true)
-            await onConfirm(data)
+            await onConfirm(data, undefined, { entregaImediata: tipoEntrega === 'retirada' })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
         } finally {

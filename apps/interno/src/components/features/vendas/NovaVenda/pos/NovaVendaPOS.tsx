@@ -4,7 +4,7 @@ import { ChevronLeft, Search, ShoppingBag } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { PosProductGrid } from './PosProductGrid'
 import { PosCart } from './PosCart'
-import { FinalizarVendaDrawer, type PagamentoImediato } from './FinalizarVendaDrawer'
+import { FinalizarVendaDrawer, type PagamentoImediato, type OpcoesEntrega } from './FinalizarVendaDrawer'
 import type { DomainProduto, DomainContato } from '../../../../../types/domain'
 import type { CartItem } from '../../../../../stores/useCartStore'
 import type { VendaFormData } from '../../../../../schemas/venda'
@@ -40,7 +40,7 @@ interface NovaVendaPOSProps {
     onAdd: (produto: DomainProduto) => void
     onUpdateQuantity: (produtoId: string, delta: number) => void
     onClear: () => void
-    onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato) => Promise<void>
+    onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato, opcoes?: OpcoesEntrega) => Promise<void>
     isEditing: boolean
 }
 

@@ -801,6 +801,7 @@ export type Database = {
         Row: {
           ad_referral: Json | null
           apelido: string | null
+          apelido_norm: string | null
           arquivado_em: string | null
           atualizado_em: string
           bairro: string | null
@@ -821,6 +822,7 @@ export type Database = {
           logradouro: string | null
           longitude: number | null
           nome: string
+          nome_norm: string | null
           numero: string | null
           observacoes: string | null
           origem: string
@@ -828,6 +830,7 @@ export type Database = {
           status_relacionamento: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo: string | null
           telefone: string
+          telefone_norm: string | null
           tipo: string
           uf: string | null
           ultimo_contato: string | null
@@ -836,6 +839,7 @@ export type Database = {
         Insert: {
           ad_referral?: Json | null
           apelido?: string | null
+          apelido_norm?: string | null
           arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
@@ -856,6 +860,7 @@ export type Database = {
           logradouro?: string | null
           longitude?: number | null
           nome: string
+          nome_norm?: string | null
           numero?: string | null
           observacoes?: string | null
           origem?: string
@@ -863,6 +868,7 @@ export type Database = {
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
           telefone: string
+          telefone_norm?: string | null
           tipo: string
           uf?: string | null
           ultimo_contato?: string | null
@@ -871,6 +877,7 @@ export type Database = {
         Update: {
           ad_referral?: Json | null
           apelido?: string | null
+          apelido_norm?: string | null
           arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
@@ -891,6 +898,7 @@ export type Database = {
           logradouro?: string | null
           longitude?: number | null
           nome?: string
+          nome_norm?: string | null
           numero?: string | null
           observacoes?: string | null
           origem?: string
@@ -898,6 +906,7 @@ export type Database = {
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
           telefone?: string
+          telefone_norm?: string | null
           tipo?: string
           uf?: string | null
           ultimo_contato?: string | null
@@ -2939,6 +2948,7 @@ export type Database = {
           p_idempotency_key: string
           p_itens: Json
           p_observacao_entregador?: string
+          p_status?: string
           p_taxa_entrega: number
         }
         Returns: string
@@ -3009,8 +3019,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_brinde_lanca_despesa: {
+        Args: { p_venda_id: string }
+        Returns: undefined
+      }
       fn_capitalize_name: { Args: { nome: string }; Returns: string }
       fn_count_words: { Args: { texto: string }; Returns: number }
+      fn_estoque_aplica_venda: {
+        Args: { p_sinal: number; p_venda_id: string }
+        Returns: undefined
+      }
       fn_mover_card_relacionamento: {
         Args: {
           p_contato_id: string

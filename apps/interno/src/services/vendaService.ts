@@ -139,6 +139,9 @@ export const vendaService = {
             p_observacao_entregador: data.observacaoEntregador ?? undefined,
             p_dinheiro_na_entrega: data.dinheiroNaEntrega ?? false,
             p_desconto: data.desconto ?? 0,
+            // Retirada nasce 'entregue' — a baixa de estoque (e a despesa, se
+            // brinde) sai dos gatilhos de `itens_venda`/`vendas` no banco.
+            p_status: data.status ?? 'pendente',
         })
         if (error) throw error
         if (!vendaId) throw new Error('criar_venda não retornou o id da venda')

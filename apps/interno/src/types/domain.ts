@@ -166,9 +166,15 @@ export interface CreateVenda {
     dinheiroNaEntrega?: boolean
     // Desconto em R$ sobre o produto.
     desconto?: number
+    // Retirada (Balcão) já sai entregue: o produto foi embora com o cliente e a
+    // venda não é uma entrega a fazer. Ausente = 'pendente' (entrega pendente).
+    status?: Extract<VendaStatus, 'pendente' | 'entregue'>
 }
 
-export type UpdateVenda = Partial<Omit<CreateVenda, 'itens'>> & {
+// `status` sai do Omit porque na criação ele é restrito a pendente/entregue,
+// enquanto a edição também aceita 'cancelada'. Sem o Omit, a interseção dos dois
+// tipos elimina 'cancelada' e cancelar venda para de compilar.
+export type UpdateVenda = Partial<Omit<CreateVenda, 'itens' | 'status'>> & {
     status?: VendaStatus
     pago?: boolean
 }

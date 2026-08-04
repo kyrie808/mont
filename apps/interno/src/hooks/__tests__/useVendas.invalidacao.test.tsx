@@ -37,9 +37,11 @@ function wrapper({ children }: { children: ReactNode }) {
 
 /** Todas as chaves passadas ao `invalidateQueries` até agora, achatadas. */
 function chavesInvalidadas(): string[] {
-    return invalidateSpy.mock.calls
-        .map(([arg]) => (arg as { queryKey?: unknown[] } | undefined)?.queryKey?.[0])
-        .filter((k): k is string => typeof k === 'string')
+    return invalidateSpy.mock.calls.flatMap((chamada: unknown[]) => {
+        const filtro = chamada[0] as { queryKey?: unknown[] } | undefined
+        const chave = filtro?.queryKey?.[0]
+        return typeof chave === 'string' ? [chave] : []
+    })
 }
 
 beforeEach(() => {
