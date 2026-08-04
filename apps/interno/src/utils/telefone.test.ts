@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { formatPhone } from '@mont/shared'
-import { normalizarTelefone, filtroBuscaContato } from './telefone'
+import { normalizarTelefone, filtroBuscaContato, isBuscaExata } from './telefone'
 
 /**
  * `formatPhone` é a máscara única: usada tanto no input (enquanto digita)
@@ -69,8 +69,8 @@ describe('filtroBuscaContato', () => {
 
     it('busca por nome não gera cláusula de telefone', () => {
         const filtro = filtroBuscaContato('Beth')
-        expect(filtro).toContain('nome.ilike.%Beth%')
-        expect(filtro).toContain('apelido.ilike.%Beth%')
+        expect(filtro).toContain('nome_norm.ilike.%Beth%')
+        expect(filtro).toContain('apelido_norm.ilike.%Beth%')
         expect(filtro).not.toContain('telefone_norm')
     })
 
@@ -94,24 +94,24 @@ describe('filtroBuscaContato', () => {
 describe('filtroBuscaContato — espaço no fim ativa palavra exata', () => {
     it('SEM espaço no fim busca por pedaço (Claudete, Claudia… entram)', () => {
         const filtro = filtroBuscaContato('Clau')
-        expect(filtro).toContain('nome.ilike.%Clau%')
-        expect(filtro).toContain('apelido.ilike.%Clau%')
+        expect(filtro).toContain('nome_norm.ilike.%Clau%')
+        expect(filtro).toContain('apelido_norm.ilike.%Clau%')
         expect(filtro).not.toContain('imatch')
     })
 
     it('COM espaço no fim exige a palavra inteira', () => {
         const filtro = filtroBuscaContato('Clau ')
-        expect(filtro).toContain('nome.imatch.\\yClau\\y')
-        expect(filtro).toContain('apelido.imatch.\\yClau\\y')
+        expect(filtro).toContain('nome_norm.imatch.\\yClau\\y')
+        expect(filtro).toContain('apelido_norm.imatch.\\yClau\\y')
         expect(filtro).not.toContain('ilike')
     })
 
     it('vários espaços no fim continuam significando exato', () => {
-        expect(filtroBuscaContato('Clau   ')).toContain('nome.imatch.\\yClau\\y')
+        expect(filtroBuscaContato('Clau   ')).toContain('nome_norm.imatch.\\yClau\\y')
     })
 
     it('multi-palavra vira frase ancorada', () => {
-        expect(filtroBuscaContato('Maria Clau ')).toContain('nome.imatch.\\yMaria Clau\\y')
+        expect(filtroBuscaContato('Maria Clau ')).toContain('nome_norm.imatch.\\yMaria Clau\\y')
     })
 
     it('telefone com espaço no fim exige o número completo e idêntico', () => {
@@ -135,7 +135,7 @@ describe('filtroBuscaContato — espaço no fim ativa palavra exata', () => {
 
     it('escapa metacaractere de regex para não virar curinga', () => {
         const filtro = filtroBuscaContato('Ana+ ')
-        expect(filtro).toContain('nome.imatch.\\yAna\\+\\y')
+        expect(filtro).toContain('nome_norm.imatch.\\yAna\\+\\y')
     })
 
     it('mantém a sanitização do .or() também no modo exato', () => {
@@ -144,5 +144,70 @@ describe('filtroBuscaContato — espaço no fim ativa palavra exata', () => {
         expect(filtro).not.toContain('_c')
         expect(filtro).not.toContain(',d')
         expect(filtro).not.toContain(')e')
+    })
+})
+
+/**
+ * Acento não pode separar cliente de quem procura por ele.
+ * 140 dos 807 contatos têm acento no nome (17%). A busca casa contra
+ * `nome_norm`/`apelido_norm` — colunas geradas com `normalize(NFD)` no banco,
+ * espelho exato do `stripAccents` aplicado aqui no termo.
+ */
+describe('filtroBuscaContato — acento é irrelevante', () => {
+    it('com e sem acento produzem O MESMO filtro (modo exato)', () => {
+        expect(filtroBuscaContato('Cláudia ')).toBe(filtroBuscaContato('Claudia '))
+        expect(filtroBuscaContato('Cláudia ')).toContain('nome_norm.imatch.\\yClaudia\\y')
+    })
+
+    it('com e sem acento produzem O MESMO filtro (modo pedaço)', () => {
+        expect(filtroBuscaContato('Antônio')).toBe(filtroBuscaContato('Antonio'))
+        expect(filtroBuscaContato('Antônio')).toContain('nome_norm.ilike.%Antonio%')
+    })
+
+    it('normaliza acento em qualquer posição da palavra', () => {
+        expect(filtroBuscaContato('Mendonça ')).toContain('nome_norm.imatch.\\yMendonca\\y')
+        expect(filtroBuscaContato('Thaís')).toContain('nome_norm.ilike.%Thais%')
+        expect(filtroBuscaContato('Ainoã')).toContain('nome_norm.ilike.%Ainoa%')
+        expect(filtroBuscaContato('Écio')).toContain('nome_norm.ilike.%Ecio%')
+    })
+
+    it('nunca mira as colunas cruas — só as normalizadas', () => {
+        for (const termo of ['Ana', 'Ana ', 'Cláudia', 'Cláudia ']) {
+            const filtro = filtroBuscaContato(termo)
+            expect(filtro).not.toMatch(/(^|,)nome\./)
+            expect(filtro).not.toMatch(/(^|,)apelido\./)
+        }
+    })
+})
+
+/**
+ * Regra que a barra de busca usa pra mostrar o chip "palavra exata".
+ * Fica aqui pra UI e filtro nunca discordarem sobre o que ativa o modo.
+ */
+describe('isBuscaExata', () => {
+    it('true só quando há conteúdo E espaço no fim', () => {
+        expect(isBuscaExata('Clau ')).toBe(true)
+        expect(isBuscaExata('Maria Clau ')).toBe(true)
+        expect(isBuscaExata('Clau   ')).toBe(true)
+    })
+
+    it('false sem espaço no fim', () => {
+        expect(isBuscaExata('Clau')).toBe(false)
+        expect(isBuscaExata('Maria Clau')).toBe(false)
+    })
+
+    it('false quando só há espaço em branco', () => {
+        expect(isBuscaExata('')).toBe(false)
+        expect(isBuscaExata(' ')).toBe(false)
+        expect(isBuscaExata('   ')).toBe(false)
+    })
+
+    it('concorda com o filtro: chip aceso ⇔ filtro em modo exato', () => {
+        for (const termo of ['Clau ', 'Clau', 'Ana ', '   ', 'Cláudia ']) {
+            const filtro = filtroBuscaContato(termo)
+            if (filtro) {
+                expect(filtro.includes('imatch')).toBe(isBuscaExata(termo))
+            }
+        }
     })
 })

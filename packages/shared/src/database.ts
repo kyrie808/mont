@@ -801,6 +801,7 @@ export type Database = {
         Row: {
           ad_referral: Json | null
           apelido: string | null
+          apelido_norm: string | null
           arquivado_em: string | null
           atualizado_em: string
           bairro: string | null
@@ -821,6 +822,7 @@ export type Database = {
           logradouro: string | null
           longitude: number | null
           nome: string
+          nome_norm: string | null
           numero: string | null
           observacoes: string | null
           origem: string
@@ -837,6 +839,7 @@ export type Database = {
         Insert: {
           ad_referral?: Json | null
           apelido?: string | null
+          apelido_norm?: string | null
           arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
@@ -857,6 +860,7 @@ export type Database = {
           logradouro?: string | null
           longitude?: number | null
           nome: string
+          nome_norm?: string | null
           numero?: string | null
           observacoes?: string | null
           origem?: string
@@ -873,6 +877,7 @@ export type Database = {
         Update: {
           ad_referral?: Json | null
           apelido?: string | null
+          apelido_norm?: string | null
           arquivado_em?: string | null
           atualizado_em?: string
           bairro?: string | null
@@ -893,6 +898,7 @@ export type Database = {
           logradouro?: string | null
           longitude?: number | null
           nome?: string
+          nome_norm?: string | null
           numero?: string | null
           observacoes?: string | null
           origem?: string
