@@ -15,6 +15,10 @@ declare module 'react/jsx-dev-runtime' {
 }
 
 declare global {
+  // Injetado pelo Vite (define) no build. Identifica a versão do bundle em
+  // execução — comparada com /version.json em src/hooks/useVersionGuard.ts.
+  const __BUILD_ID__: string
+
   namespace React {
     namespace JSX {
       interface IntrinsicElements extends ThreeElements {}

@@ -4,9 +4,12 @@ import { NavigationDrawer } from './NavigationDrawer'
 import { SidebarNav } from './SidebarNav'
 import { ToastContainer } from '../ui/Toast'
 import { useNavigationStore } from '@/stores/useNavigationStore'
+import { useVersionGuard } from '@/hooks/useVersionGuard'
 
 export function AppLayout() {
   const { isDrawerOpen, closeDrawer } = useNavigationStore()
+  // Puxa build novo quando houver, em momento seguro (nunca no meio de uma venda).
+  useVersionGuard()
 
   return (
     <div className="min-h-dvh bg-background text-foreground font-display antialiased transition-colors">
