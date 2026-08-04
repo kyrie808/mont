@@ -11,27 +11,48 @@ export function normalizarTelefone(raw: string | null | undefined): string {
     return cleanPhone(raw)
 }
 
-/** Remove o que quebraria o `.or()` do PostgREST (curingas e separadores). */
+/**
+ * Remove o que quebraria o `.or()` do PostgREST (curingas e separadores).
+ * NÃO apara as pontas: o espaço no fim é sinal do usuário, não ruído.
+ */
 function sanitizarTermo(termo: string): string {
-    return termo.replace(/[%_,()]/g, '').trim()
+    return termo.replace(/[%_,()"]/g, '')
+}
+
+/** Neutraliza metacaracteres POSIX para que o termo seja casado como literal. */
+function escaparRegex(termo: string): string {
+    return termo.replace(/[\\^$.|?*+[\]{}]/g, '\\$&')
 }
 
 /**
  * Monta o filtro `.or()` de busca de contato por nome, apelido ou telefone.
  *
- * O trecho de telefone casa contra `telefone_norm` (dígitos), nunca contra o
- * texto cru: assim `(11) 96979-1012`, `11 96979-1012` e `11969791012` acham
- * o mesmo cliente, independente de como ele foi salvo ou digitado.
+ * Telefone casa sempre contra `telefone_norm` (dígitos), nunca contra o texto
+ * cru: `(11) 96979-1012`, `11 96979-1012` e `11969791012` acham o mesmo
+ * cliente, independente de como foi salvo ou digitado.
+ *
+ * **Espaço no fim = palavra exata.** Digitar o espaço significa "acabou a
+ * palavra, quero ESSA palavra": `'Clau'` traz Claudete/Claudia/Claudiana,
+ * `'Clau '` traz só quem tem "Clau" como palavra inteira. No telefone a mesma
+ * ideia vira número completo e idêntico em vez de pedaço do número.
  */
 export function filtroBuscaContato(termo: string): string {
-    const safe = sanitizarTermo(termo)
+    const bruto = sanitizarTermo(termo)
+    const exato = /\s$/.test(bruto) && bruto.trim() !== ''
+    const safe = bruto.trim()
     if (!safe) return ''
 
-    const partes = [`nome.ilike.%${safe}%`, `apelido.ilike.%${safe}%`]
-
     const digitos = safe.replace(/\D/g, '')
-    if (digitos.length >= 3) {
-        partes.push(`telefone_norm.ilike.%${digitos}%`)
+    const partes: string[] = []
+
+    if (exato) {
+        // `\y` = âncora de palavra do Postgres; `imatch` = operador `~*`.
+        const rx = `\\y${escaparRegex(safe)}\\y`
+        partes.push(`nome.imatch.${rx}`, `apelido.imatch.${rx}`)
+        if (digitos.length >= 3) partes.push(`telefone_norm.eq.${digitos}`)
+    } else {
+        partes.push(`nome.ilike.%${safe}%`, `apelido.ilike.%${safe}%`)
+        if (digitos.length >= 3) partes.push(`telefone_norm.ilike.%${digitos}%`)
     }
 
     return partes.join(',')

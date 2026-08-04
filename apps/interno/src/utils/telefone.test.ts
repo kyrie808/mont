@@ -85,3 +85,64 @@ describe('filtroBuscaContato', () => {
         expect(filtroBuscaContato('   ')).toBe('')
     })
 })
+
+/**
+ * Espaço no fim = "acabou a palavra, quero ESSA palavra".
+ * Sem espaço a busca segue por pedaço (comportamento antigo, intacto).
+ * Em produção: 'Clau' acha 9 contatos por substring, 1 por palavra exata.
+ */
+describe('filtroBuscaContato — espaço no fim ativa palavra exata', () => {
+    it('SEM espaço no fim busca por pedaço (Claudete, Claudia… entram)', () => {
+        const filtro = filtroBuscaContato('Clau')
+        expect(filtro).toContain('nome.ilike.%Clau%')
+        expect(filtro).toContain('apelido.ilike.%Clau%')
+        expect(filtro).not.toContain('imatch')
+    })
+
+    it('COM espaço no fim exige a palavra inteira', () => {
+        const filtro = filtroBuscaContato('Clau ')
+        expect(filtro).toContain('nome.imatch.\\yClau\\y')
+        expect(filtro).toContain('apelido.imatch.\\yClau\\y')
+        expect(filtro).not.toContain('ilike')
+    })
+
+    it('vários espaços no fim continuam significando exato', () => {
+        expect(filtroBuscaContato('Clau   ')).toContain('nome.imatch.\\yClau\\y')
+    })
+
+    it('multi-palavra vira frase ancorada', () => {
+        expect(filtroBuscaContato('Maria Clau ')).toContain('nome.imatch.\\yMaria Clau\\y')
+    })
+
+    it('telefone com espaço no fim exige o número completo e idêntico', () => {
+        const filtro = filtroBuscaContato('11969791012 ')
+        expect(filtro).toContain('telefone_norm.eq.11969791012')
+        expect(filtro).not.toContain('telefone_norm.ilike')
+    })
+
+    it('telefone sem espaço continua casando pedaço do número', () => {
+        const filtro = filtroBuscaContato('969791012')
+        expect(filtro).toContain('telefone_norm.ilike.%969791012%')
+        expect(filtro).not.toContain('telefone_norm.eq')
+    })
+
+    it('só espaços não vira busca exata de nada — devolve filtro vazio', () => {
+        // Regressão: se isto devolvesse filtro, o join !inner de vendas
+        // esconderia vendas sem contato sem aplicar filtro nenhum.
+        expect(filtroBuscaContato('   ')).toBe('')
+        expect(filtroBuscaContato(' ')).toBe('')
+    })
+
+    it('escapa metacaractere de regex para não virar curinga', () => {
+        const filtro = filtroBuscaContato('Ana+ ')
+        expect(filtro).toContain('nome.imatch.\\yAna\\+\\y')
+    })
+
+    it('mantém a sanitização do .or() também no modo exato', () => {
+        const filtro = filtroBuscaContato('a%b_c,d)e( ')
+        expect(filtro).not.toContain('%b')
+        expect(filtro).not.toContain('_c')
+        expect(filtro).not.toContain(',d')
+        expect(filtro).not.toContain(')e')
+    })
+})

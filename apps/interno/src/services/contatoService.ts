@@ -23,10 +23,8 @@ export class ContatoService {
             `)
             .order('criado_em', { ascending: false })
 
-        if (query) {
-            const filtro = filtroBuscaContato(query)
-            if (filtro) builder = builder.or(filtro)
-        }
+        const filtroContato = filtroBuscaContato(query)
+        if (filtroContato) builder = builder.or(filtroContato)
         if (tipo && tipo !== 'todos') {
             builder = builder.eq('tipo', tipo)
         }

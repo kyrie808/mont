@@ -52,8 +52,11 @@ export const vendaService = {
         // Busca por cliente = inner join no contato + ilike (substring), igual à busca
         // de Clientes. NÃO usar vendas.fts: a coluna gerada só indexa id+observações,
         // nunca o nome do cliente (coluna gerada não referencia contatos).
-        const term = search ? search.replace(/[%_]/g, '').trim() : ''
-        const contatoEmbed = term ? 'contato:contatos!inner' : 'contato:contatos'
+        // O filtro é montado ANTES do embed: quem decide o `!inner` é ele, não o
+        // termo cru. Amarrar no termo faria uma busca só de espaços virar inner
+        // join sem filtro nenhum, escondendo vendas sem contato.
+        const filtroContato = filtroBuscaContato(search ?? '')
+        const contatoEmbed = filtroContato ? 'contato:contatos!inner' : 'contato:contatos'
         let query = supabase
             .from('vendas')
             .select(`
@@ -72,11 +75,10 @@ export const vendaService = {
             query = query.neq('origem', 'catalogo')
         }
 
-        if (term) {
-            // Mesmo filtro da busca de Clientes: telefone casa contra `telefone_norm`,
-            // então achar a venda por número independe da máscara digitada.
-            const filtro = filtroBuscaContato(term)
-            if (filtro) query = query.or(filtro, { referencedTable: 'contato' })
+        if (filtroContato) {
+            // Mesmo filtro da busca de Clientes: telefone casa contra `telefone_norm`
+            // e espaço no fim significa palavra exata.
+            query = query.or(filtroContato, { referencedTable: 'contato' })
         }
 
         if (includePending && (startDate || endDate)) {
