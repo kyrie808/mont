@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   UserPlus
 } from 'lucide-react'
+import { formatPhone } from '@mont/shared'
 import { useToast } from '../components/ui/Toast'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
@@ -170,7 +171,7 @@ export function CatalogoPendentes() {
                 >
                   <div>
                     <p className="font-medium text-foreground">{contato.nome}</p>
-                    <p className="text-xs text-muted-foreground">{contato.telefone}</p>
+                    <p className="text-xs text-muted-foreground">{formatPhone(contato.telefone)}</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <Badge variant="success" className="cursor-pointer">Selecionar</Badge>

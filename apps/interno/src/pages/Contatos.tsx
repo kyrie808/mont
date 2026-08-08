@@ -6,6 +6,8 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EmptyState, PageSkeleton, Pagination, paginateArray } from '../components/ui'
+import { Badge } from '@/components/ui/Badge'
+import { isBuscaExata } from '../utils/telefone'
 import { ContatoCard, ContatoFormModal, ContactStoryFilter, ContatosFilterTabs, ContatosDataGrid } from '../components/contatos'
 import { useContatos } from '../hooks/useContatos'
 import { useContatosResumo } from '../hooks/useContatosResumo'
@@ -149,13 +151,22 @@ export function Contatos() {
                                 ref={searchInputRef}
                                 type="text"
                                 placeholder="Buscar por nome, apelido ou telefone..."
-                                className="pl-10"
+                                className={isBuscaExata(searchTerm) ? 'pl-10 pr-32' : 'pl-10'}
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value)
                                     setCurrentPage(1)
                                 }}
                             />
+                            {/* Espaço no fim = palavra exata. Sem o chip o resultado encolhe sem explicação. */}
+                            {isBuscaExata(searchTerm) && (
+                                <Badge
+                                    variant="secondary"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none font-normal"
+                                >
+                                    palavra exata
+                                </Badge>
+                            )}
                         </div>
                     </div>
                 </div>

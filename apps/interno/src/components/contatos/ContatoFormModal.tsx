@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { formatPhone } from '@mont/shared'
 import { Modal, ModalActions, Button } from '../ui'
 import { contatoSchema, type ContatoFormData } from '../../schemas/contato'
 import { useContatos } from '../../hooks/useContatos'
 import { useToast } from '../ui/Toast'
 import { useCep } from '../../hooks/useCep'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { mesclarValoresContato } from '../../utils/contatoForm'
 import type { DomainContato, CreateContato, IndicadorRef } from '../../types/domain'
 
 // Desktop v2 (mobile fica com os sub-componentes abaixo — sagrado)
@@ -89,6 +91,8 @@ export function ContatoFormModal({
         if (isOpen && contato) {
             reset({
                 ...contato,
+                // Vem do banco como dígitos puros; abre o campo já mascarado.
+                telefone: formatPhone(contato.telefone),
                 indicado_por_id: contato.indicadoPorId,
                 fonte: contato.fonte ?? null,
                 campanha_id: contato.campanhaId ?? null,
@@ -134,8 +138,9 @@ export function ContatoFormModal({
 
     const onSubmit = async (data: ContatoFormData) => {
         try {
-            const rawValues = getValues()
-            const formDataKeyed = { ...data, ...rawValues }
+            // O cru entra só para preservar campos fora do schema; o parseado vence
+            // em tudo que ele possui — inverter desfaz o `.transform()` do telefone.
+            const formDataKeyed = mesclarValoresContato(data, getValues())
             // Aquisição só vale para origem = 'anuncio'; zera nos demais casos.
             const isAnuncio = formDataKeyed.origem === 'anuncio'
             const cleanPayload: CreateContato = {

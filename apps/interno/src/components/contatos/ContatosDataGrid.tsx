@@ -15,7 +15,7 @@ import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-colu
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
 import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
-import { formatCurrency, formatDate, cn } from '@mont/shared'
+import { formatCurrency, formatDate, formatPhone, cn } from '@mont/shared'
 import type { DomainContato } from '@/types/domain'
 import type { ContatoResumo } from '@/hooks/useContatosResumo'
 import { classificarContato, SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
@@ -84,7 +84,7 @@ export function ContatosDataGrid({ contatos, resumo, ritmo }: ContatosDataGridPr
             accessorKey: 'telefone',
             enableSorting: false,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Telefone" />,
-            cell: ({ row }) => <span className="text-muted-foreground whitespace-nowrap">{row.original.telefone}</span>,
+            cell: ({ row }) => <span className="text-muted-foreground whitespace-nowrap">{formatPhone(row.original.telefone)}</span>,
         },
         {
             accessorKey: 'tipo',

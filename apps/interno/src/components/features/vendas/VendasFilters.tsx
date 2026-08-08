@@ -1,6 +1,7 @@
 import { Search, Truck, DollarSign, Plus } from 'lucide-react'
 import { Badge, Button } from '../../../components/ui'
 import { VendasFilterTabs } from './VendasFilterTabs'
+import { isBuscaExata } from '../../../utils/telefone'
 
 
 interface VendasFiltersProps {
@@ -46,10 +47,19 @@ export function VendasFilters({
                 <input
                     type="text"
                     placeholder="Buscar por cliente…"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-2 focus:ring-ring shadow-card transition-colors"
+                    className={`w-full pl-10 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-2 focus:ring-ring shadow-card transition-colors ${isBuscaExata(searchTerm) ? 'pr-32' : 'pr-4'}`}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                {/* Espaço no fim = palavra exata. Sem o chip o resultado encolhe sem explicação. */}
+                {isBuscaExata(searchTerm) && (
+                    <Badge
+                        variant="secondary"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none font-normal"
+                    >
+                        palavra exata
+                    </Badge>
+                )}
             </div>
 
             {/* DESKTOP (≥lg): dois segmented controls independentes (Entrega + Pagamento) */}
