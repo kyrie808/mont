@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { cleanPhone } from '@mont/shared'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -114,10 +115,14 @@ export async function PATCH(
         // Get or create contato pelo telefone
         let contatoId: string | null = null
 
+        // O telefone é a identidade do contato: busca e grava sempre normalizado,
+        // senão a mesma pessoa entra de novo só por causa da máscara.
+        const telefoneNorm = cleanPhone(data.telefone_cliente ?? '')
+
         const { data: contatoExistente, error: contatoError } = await supabaseAdmin
             .from('contatos')
             .select('id')
-            .eq('telefone', data.telefone_cliente)
+            .eq('telefone_norm', telefoneNorm)
             .maybeSingle()
 
         if (contatoExistente) {
@@ -137,7 +142,7 @@ export async function PATCH(
                 .from('contatos')
                 .insert({
                     nome: data.nome_cliente,
-                    telefone: data.telefone_cliente,
+                    telefone: telefoneNorm,
                     tipo: 'B2C',
                     origem: 'catalogo',
                     status: 'cliente',

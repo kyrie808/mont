@@ -1,4 +1,5 @@
 import { User } from 'lucide-react'
+import { formatPhone } from '@mont/shared'
 import { Input } from '@/components/ui'
 import type { UseFormRegister, FieldErrors } from 'react-hook-form'
 import type { ContatoFormData } from '@/schemas/contato'
@@ -9,6 +10,8 @@ interface FormIdentidadeProps {
 }
 
 export function FormIdentidade({ register, errors }: FormIdentidadeProps) {
+    const telefoneField = register('telefone')
+
     return (
         <div className="space-y-4">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -32,7 +35,15 @@ export function FormIdentidade({ register, errors }: FormIdentidadeProps) {
                         label="TELEFONE *"
                         error={errors.telefone?.message}
                         className="bg-muted/50 border-black/20 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        {...register('telefone')}
+                        placeholder="(11) 91234-5678"
+                        maxLength={15}
+                        inputMode="numeric"
+                        {...telefoneField}
+                        onChange={(e) => {
+                            // Formata enquanto digita; o schema/serviço limpam de volta na gravação.
+                            e.target.value = formatPhone(e.target.value)
+                            telefoneField.onChange(e)
+                        }}
                     />
                 </div>
             </div>

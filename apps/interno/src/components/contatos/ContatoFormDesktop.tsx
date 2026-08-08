@@ -86,6 +86,7 @@ export function ContatoFormDesktop({
     const { data: fontes = [] } = useFontes()
     const { data: campanhas = [] } = useCampanhas('aquisicao', { origem: 'meta' })
     const isB2B = tipoValue === 'B2B'
+    const telefoneField = register('telefone')
 
     return (
         <div className="space-y-4">
@@ -110,10 +111,17 @@ export function ContatoFormDesktop({
                             </Field>
                             <Field label="Telefone" required error={errors.telefone?.message}>
                                 <input
-                                    {...register('telefone')}
+                                    {...telefoneField}
+                                    onChange={(e) => {
+                                        // Formata enquanto digita; o schema/serviço limpam de volta na gravação.
+                                        e.target.value = formatPhone(e.target.value)
+                                        telefoneField.onChange(e)
+                                    }}
+                                    maxLength={15}
+                                    inputMode="numeric"
                                     className={cn(inputBase, fieldH, 'font-mono',
                                         errors.telefone && 'border-destructive focus-visible:ring-destructive')}
-                                    placeholder="11 91234-5678"
+                                    placeholder="(11) 91234-5678"
                                 />
                             </Field>
                         </div>

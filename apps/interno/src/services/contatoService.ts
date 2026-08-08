@@ -6,6 +6,7 @@ import type {
 import type { DomainContato, CreateContato, UpdateContato } from '../types/domain'
 import { getCoordinates } from '../utils/geocoding'
 import { toDomainContato } from './mappers'
+import { filtroBuscaContato, normalizarTelefone } from '../utils/telefone'
 
 export class ContatoService {
     /* CRUD */
@@ -22,10 +23,8 @@ export class ContatoService {
             `)
             .order('criado_em', { ascending: false })
 
-        if (query) {
-            const term = query.replace(/[%_]/g, '')
-            builder = builder.or(`nome.ilike.%${term}%,telefone.ilike.%${term}%,apelido.ilike.%${term}%`)
-        }
+        const filtroContato = filtroBuscaContato(query)
+        if (filtroContato) builder = builder.or(filtroContato)
         if (tipo && tipo !== 'todos') {
             builder = builder.eq('tipo', tipo)
         }
@@ -73,7 +72,8 @@ export class ContatoService {
         const dbInsert: ContatoInsert = {
             nome: data.nome,
             apelido: data.apelido || null,
-            telefone: data.telefone,
+            // Portão único de escrita: o telefone entra normalizado venha de onde vier.
+            telefone: normalizarTelefone(data.telefone),
             tipo: data.tipo as NonNullable<ContatoInsert['tipo']>,
             subtipo: data.subtipo,
             status: data.status as NonNullable<ContatoInsert['status']>,
@@ -120,6 +120,9 @@ export class ContatoService {
             .single()
 
         if (error) {
+            const duplicado = await this.mensagemTelefoneDuplicado(error, dbInsert.telefone)
+            if (duplicado) throw new Error(duplicado)
+
             console.error('Erro ao criar contato:', error)
             throw new Error(`Erro ao criar contato: ${error.message}`)
         }
@@ -127,11 +130,35 @@ export class ContatoService {
         return toDomainContato(created)
     }
 
+    /**
+     * O índice único `contatos_telefone_norm_key` garante um contato por telefone.
+     * Quando ele barra uma gravação, o operador precisa saber QUEM já tem aquele
+     * número — não ver um erro cru do Postgres.
+     */
+    private async mensagemTelefoneDuplicado(
+        error: { code?: string; message?: string },
+        telefone: string | null | undefined,
+    ): Promise<string | null> {
+        const violouUnicidade =
+            error.code === '23505' && (error.message ?? '').includes('telefone')
+        if (!violouUnicidade) return null
+
+        const { data: existente } = await supabase
+            .from('contatos')
+            .select('nome')
+            .eq('telefone_norm', normalizarTelefone(telefone))
+            .maybeSingle()
+
+        return existente
+            ? `Este WhatsApp já está cadastrado para "${existente.nome}".`
+            : 'Este WhatsApp já está cadastrado para outro contato.'
+    }
+
     async update(id: string, data: UpdateContato): Promise<DomainContato> {
         const dbUpdate: ContatoUpdate = {}
         if (data.nome !== undefined) dbUpdate.nome = data.nome
         if (data.apelido !== undefined) dbUpdate.apelido = data.apelido
-        if (data.telefone !== undefined) dbUpdate.telefone = data.telefone
+        if (data.telefone !== undefined) dbUpdate.telefone = normalizarTelefone(data.telefone)
         if (data.tipo !== undefined) dbUpdate.tipo = data.tipo as NonNullable<ContatoUpdate['tipo']>
         if (data.subtipo !== undefined) dbUpdate.subtipo = data.subtipo
         if (data.status !== undefined) dbUpdate.status = data.status as NonNullable<ContatoUpdate['status']>
@@ -178,6 +205,9 @@ export class ContatoService {
             .single()
 
         if (error) {
+            const duplicado = await this.mensagemTelefoneDuplicado(error, dbUpdate.telefone)
+            if (duplicado) throw new Error(duplicado)
+
             console.error('Erro ao atualizar contato:', error)
             throw new Error(`Erro ao atualizar contato: ${error.message}`)
         }

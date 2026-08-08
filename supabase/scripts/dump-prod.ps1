@@ -6,6 +6,12 @@
 # stderr (e as vezes timeout); e falhas transientes de conexao ao pooler geravam
 # arquivos 0-byte. Correcoes: DO_NOT_TRACK desliga a telemetria; cada dump roda
 # com retry + backoff e so e aceito com exit=0 E arquivo nao-vazio.
+#
+# Correcao (ago/2026): a checagem de tamanho era instantanea e dava falso
+# negativo -- o processo do CLI ja saiu, mas o tamanho na entrada de diretorio
+# do NTFS ainda nao aparecia. Um dump de 258 KB valido foi reprovado nas 3
+# tentativas e o arquivo bom quase foi apagado. Agora o tamanho e lido ate
+# ESTABILIZAR (Get-TamanhoEstavel) e o descarte so acontece em 0-byte real.
 
 $ErrorActionPreference = "Stop"
 
@@ -20,6 +26,43 @@ $maxRetries = 3
 
 if (!(Test-Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+}
+
+# Le o tamanho do arquivo esperando ele ESTABILIZAR.
+#
+# Por que nao um (Get-Item).Length direto: o processo do CLI ja saiu, mas o
+# tamanho na entrada de diretorio do NTFS pode demorar a aparecer. Uma leitura
+# instantanea via 0 num dump valido -- em 03/08/2026 isso reprovou um dump de
+# 258 KB perfeito nas 3 tentativas e ainda tentou apagar o arquivo bom.
+#
+# Criterio: duas leituras consecutivas iguais e maiores que zero. Sai assim que
+# estabiliza (custa ~250ms no caminho feliz); so gasta o timeout inteiro quando
+# o arquivo e realmente 0-byte.
+function Get-TamanhoEstavel {
+    param(
+        [string] $File,
+        [int]    $TimeoutSeconds = 15
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $anterior = -1
+
+    while ((Get-Date) -lt $deadline) {
+        $atual = 0
+        if (Test-Path -LiteralPath $File) {
+            $atual = (Get-Item -LiteralPath $File).Length
+        }
+
+        if ($atual -gt 0 -and $atual -eq $anterior) {
+            return $atual
+        }
+
+        $anterior = $atual
+        Start-Sleep -Milliseconds 250
+    }
+
+    if ($anterior -gt 0) { return $anterior }
+    return 0
 }
 
 # Roda um `supabase db dump` com retry. Valida por exit code E tamanho do arquivo
@@ -42,7 +85,13 @@ function Invoke-Dump {
         $code = $LASTEXITCODE
         $ErrorActionPreference = $prev
 
-        $size = if (Test-Path $File) { (Get-Item $File).Length } else { 0 }
+        # So espera o arquivo estabilizar se o CLI saiu bem; falha real nao paga o timeout.
+        $size = 0
+        if ($code -eq 0) {
+            $size = Get-TamanhoEstavel -File $File
+        } elseif (Test-Path -LiteralPath $File) {
+            $size = (Get-Item -LiteralPath $File).Length
+        }
 
         if ($code -eq 0 -and $size -gt 0) {
             Write-Host "  [OK] $([math]::Round($size / 1KB, 1)) KB" -ForegroundColor Green
@@ -50,7 +99,11 @@ function Invoke-Dump {
         }
 
         Write-Host "  [FALHA] exit=$code size=$size (tentativa $attempt)" -ForegroundColor Red
-        if (Test-Path $File) { Remove-Item $File -Force }   # descarta 0-byte
+        # Descarta SO o 0-byte. Nunca apagar arquivo com conteudo: se um dump valido
+        # for reprovado por outro motivo, ele fica no disco para inspecao manual.
+        if ($size -eq 0 -and (Test-Path -LiteralPath $File)) {
+            Remove-Item -LiteralPath $File -Force
+        }
         if ($attempt -lt $maxRetries) {
             Start-Sleep -Seconds ($attempt * 4)             # backoff: 4s, 8s
         }
