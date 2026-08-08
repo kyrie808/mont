@@ -59,7 +59,12 @@ export function calcularMargem(preco: number, custo: number): number {
 }
 
 /**
- * Calcula estatísticas de indicações para um contato
+ * Calcula estatísticas de indicações para um contato.
+ *
+ * "Convertido" vem da COMPRA, não da coluna `contatos.status`: aquela é carimbada
+ * no cadastro e não acompanha o comportamento (na produção dava 100% de conversão
+ * — 83 de 83 —, e a recompensa do embaixador sai daí). Compra = venda entregue e
+ * não-brinde, a mesma régua de `contato_compras_resumo` e do segmento.
  */
 export function calcularEstatisticasIndicacao(
     indicadorId: string,
@@ -67,12 +72,17 @@ export function calcularEstatisticasIndicacao(
     todasVendas: Venda[]
 ) {
     const indicados = todosContatos.filter(c => c.indicado_por_id === indicadorId)
-
-    const indicacoesConvertidas = indicados.filter(c => c.status === 'cliente').length
+    const idsIndicados = new Set(indicados.map(c => c.id))
 
     const vendasDosIndicados = todasVendas.filter(v =>
-        indicados.some(c => c.id === v.contato_id && c.status === 'cliente')
+        v.contato_id != null &&
+        idsIndicados.has(v.contato_id) &&
+        v.status === 'entregue' &&
+        v.forma_pagamento !== 'brinde'
     )
+
+    const idsQueCompraram = new Set(vendasDosIndicados.map(v => v.contato_id))
+    const indicacoesConvertidas = idsQueCompraram.size
 
     const totalComprasIndicados = calcularFaturamento(vendasDosIndicados)
 

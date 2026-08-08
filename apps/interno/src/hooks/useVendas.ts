@@ -43,6 +43,15 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] })
     }
 
+    // O selo Lead/Cliente/VIP sai da view `contato_compras_resumo` (vendas
+    // ENTREGUES não-brinde). Criar, editar, entregar, cancelar ou excluir venda
+    // muda esse resumo — sem invalidar, o selo só corrigia com F5 (staleTime de
+    // 15min + refetchOnWindowFocus desligado). Pagamento NÃO entra: o resumo
+    // ignora `pago` de propósito (fiado entregue já é cliente).
+    const invalidarSegmento = () => {
+        queryClient.invalidateQueries({ queryKey: ['contatos-resumo'] })
+    }
+
     const { data, isLoading, error, refetch } = useQuery({
         queryKey,
         queryFn: async () => {
@@ -80,6 +89,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] })
             queryClient.invalidateQueries({ queryKey: ['produtos'] })
+            invalidarSegmento()
         },
         onError: (e) => { console.error('[createVenda] falha ao criar venda:', e) },
     })
@@ -90,6 +100,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['venda', variables.id] })
             queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] })
+            invalidarSegmento()
         }
     })
 
@@ -98,6 +109,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
             vendaService.updateVenda(id, { status }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
+            invalidarSegmento()
         }
     })
 
@@ -114,6 +126,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             invalidarCaixa()
+            invalidarSegmento()
         }
     })
 
@@ -122,6 +135,7 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         onSuccess: (_data, id) => {
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['venda', id] })
+            invalidarSegmento()
         }
     })
 

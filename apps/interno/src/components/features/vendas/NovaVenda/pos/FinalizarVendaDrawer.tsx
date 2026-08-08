@@ -19,10 +19,20 @@ export interface PagamentoImediato {
     contaId: string
 }
 
+/**
+ * Como o produto sai. Retirada (Balcão e o padrão de Fiado/Brinde) = o cliente
+ * leva na hora, então a venda nasce ENTREGUE — não é uma entrega a fazer, e sem
+ * isso o cliente seguia marcado como Lead depois de já ter comprado.
+ * Entrega = alguém ainda precisa levar → 'pendente', como sempre foi.
+ */
+export interface OpcoesEntrega {
+    entregaImediata: boolean
+}
+
 interface FinalizarVendaDrawerProps {
     isOpen: boolean
     onClose: () => void
-    onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato) => Promise<void>
+    onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato, opcoes?: OpcoesEntrega) => Promise<void>
     cart: CartItem[]
     total: number // subtotal dos produtos (cartTotal)
     contatoId: string
@@ -187,7 +197,7 @@ export function FinalizarVendaDrawer({
             : undefined
         try {
             setIsSubmitting(true)
-            await onConfirm(data, pagamento)
+            await onConfirm(data, pagamento, { entregaImediata: tipoEntrega === 'retirada' })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
         } finally {

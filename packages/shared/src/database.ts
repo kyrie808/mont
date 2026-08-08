@@ -2948,6 +2948,7 @@ export type Database = {
           p_idempotency_key: string
           p_itens: Json
           p_observacao_entregador?: string
+          p_status?: string
           p_taxa_entrega: number
         }
         Returns: string
@@ -3016,6 +3017,10 @@ export type Database = {
           p_produto_id: string
           p_quantidade: number
         }
+        Returns: undefined
+      }
+      fn_brinde_lanca_despesa: {
+        Args: { p_venda_id: string }
         Returns: undefined
       }
       fn_capitalize_name: { Args: { nome: string }; Returns: string }
