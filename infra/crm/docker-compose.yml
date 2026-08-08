@@ -1,0 +1,177 @@
+# Infra local do CRM Inteligente (Fase 1 — ingestão WhatsApp).
+#
+# Sobe n8n + Evolution API (Baileys) + Postgres + Redis. NÃO substitui nada da Mont:
+# o Supabase de produção continua sendo a memória e o Mont Interno a fonte da verdade.
+#
+# Rodar:  docker compose -f infra/crm/docker-compose.yml up -d
+# Parar:  docker compose -f infra/crm/docker-compose.yml down       (dados persistem)
+# Zerar:  docker compose -f infra/crm/docker-compose.yml down -v    (APAGA a sessão do WhatsApp)
+#
+# ⚠️ VERSÕES FIXAS DE PROPÓSITO. Há histórico documentado de o objeto `referral`
+#    (que carrega o ctwa_clid dos anúncios) sumir do webhook entre versões da Evolution.
+#    Não trocar para `latest` nem subir versão sem reteste do referral.
+#
+# ⚠️ Nenhuma porta é exposta na rede — tudo em 127.0.0.1. O webhook Evolution→n8n
+#    trafega dentro da rede do Docker (http://n8n:5678), então NÃO é preciso túnel público.
+
+name: mont-crm
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    container_name: mont-crm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: evolution
+      TZ: America/Sao_Paulo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    ports:
+      - "127.0.0.1:5433:5432" # 5433 pra não colidir com o Postgres do Supabase CLI
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: mont-crm-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: mont-crm-evolution
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    environment:
+      SERVER_URL: http://localhost:8080
+      TZ: America/Sao_Paulo
+      LANGUAGE: pt-BR
+
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+
+      # `DATABASE_URL` é o que o Prisma usa no deploy_database.sh; `DATABASE_CONNECTION_URI`
+      # é o que a aplicação lê. Precisa das DUAS apontando pro mesmo lugar.
+      DATABASE_PROVIDER: postgresql
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: mont_crm
+
+      # Guardamos o mínimo aqui: a memória é o Supabase. HISTORIC=false evita que o
+      # history sync do Baileys despeje anos de conversa antiga no pareamento — e
+      # histórico antigo não traz o referral do anúncio de qualquer jeito.
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_LABELS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: mont_crm
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      CACHE_LOCAL_ENABLED: "false"
+
+      # Webhook global desligado: cada instância aponta o seu (configurado via API).
+      WEBHOOK_GLOBAL_ENABLED: "false"
+
+      # Só o que interessa. MESSAGES_SET (carga de histórico) fica FALSE de propósito —
+      # ligado, ele inunda o ingestor com mensagens velhas sem atribuição.
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
+      WEBHOOK_EVENTS_MESSAGES_SET: "false"
+      WEBHOOK_EVENTS_MESSAGES_EDITED: "false"
+      WEBHOOK_EVENTS_MESSAGES_UPDATE: "false"
+      WEBHOOK_EVENTS_MESSAGES_DELETE: "false"
+      WEBHOOK_EVENTS_SEND_MESSAGE: "false"
+      WEBHOOK_EVENTS_SEND_MESSAGE_UPDATE: "false"
+      WEBHOOK_EVENTS_CONTACTS_SET: "false"
+      WEBHOOK_EVENTS_CONTACTS_UPSERT: "false"
+      WEBHOOK_EVENTS_CONTACTS_UPDATE: "false"
+      WEBHOOK_EVENTS_PRESENCE_UPDATE: "false"
+      WEBHOOK_EVENTS_CHATS_SET: "false"
+      WEBHOOK_EVENTS_CHATS_UPSERT: "false"
+      WEBHOOK_EVENTS_CHATS_UPDATE: "false"
+      WEBHOOK_EVENTS_CHATS_DELETE: "false"
+      WEBHOOK_EVENTS_GROUPS_UPSERT: "false"
+      WEBHOOK_EVENTS_GROUPS_UPDATE: "false"
+      WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE: "false"
+      WEBHOOK_EVENTS_LABELS_EDIT: "false"
+      WEBHOOK_EVENTS_LABELS_ASSOCIATION: "false"
+      WEBHOOK_EVENTS_CALL: "false"
+
+      # Nome que aparece em "Aparelhos conectados" no celular do Gilmar.
+      CONFIG_SESSION_PHONE_CLIENT: Mont CRM
+      CONFIG_SESSION_PHONE_NAME: Chrome
+
+      DEL_INSTANCE: "false"
+      QRCODE_LIMIT: "30"
+      TELEMETRY_ENABLED: "false" # conversa de cliente não vai pra telemetria de terceiro
+      LOG_LEVEL: ERROR,WARN,INFO,WEBHOOKS
+      LOG_BAILEYS: error
+
+  n8n:
+    image: n8nio/n8n:2.33.7
+    container_name: mont-crm-n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      TZ: America/Sao_Paulo
+      GENERIC_TIMEZONE: America/Sao_Paulo
+
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+
+      # Criptografa as credenciais salvas. Se mudar, TODAS as credenciais do n8n
+      # viram lixo ilegível. Nasce no .env e não se troca.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_SURVEY_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+
+volumes:
+  postgres_data:
+  redis_data:
+  evolution_instances: # sessão do WhatsApp mora aqui — `down -v` obriga a parear de novo
+  n8n_data:

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_users: {
@@ -831,6 +856,7 @@ export type Database = {
           subtipo: string | null
           telefone: string
           telefone_norm: string | null
+          telefone_wa: string | null
           tipo: string
           uf: string | null
           ultimo_contato: string | null
@@ -869,6 +895,7 @@ export type Database = {
           subtipo?: string | null
           telefone: string
           telefone_norm?: string | null
+          telefone_wa?: string | null
           tipo: string
           uf?: string | null
           ultimo_contato?: string | null
@@ -907,6 +934,7 @@ export type Database = {
           subtipo?: string | null
           telefone?: string
           telefone_norm?: string | null
+          telefone_wa?: string | null
           tipo?: string
           uf?: string | null
           ultimo_contato?: string | null
@@ -1120,6 +1148,7 @@ export type Database = {
           contato_id: string
           criado_por: string | null
           data: string
+          gerado_por_ia: boolean
           id: string
           observacao: string | null
           resultado: string | null
@@ -1132,6 +1161,7 @@ export type Database = {
           contato_id: string
           criado_por?: string | null
           data?: string
+          gerado_por_ia?: boolean
           id?: string
           observacao?: string | null
           resultado?: string | null
@@ -1144,6 +1174,7 @@ export type Database = {
           contato_id?: string
           criado_por?: string | null
           data?: string
+          gerado_por_ia?: boolean
           id?: string
           observacao?: string | null
           resultado?: string | null
@@ -1412,6 +1443,128 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mensagens_whatsapp: {
+        Row: {
+          contato_id: string | null
+          conteudo: string | null
+          criado_em: string
+          direcao: string
+          enviada_em: string
+          id: string
+          message_id: string
+          payload: Json
+          processado_em: string | null
+          referral: Json | null
+          telefone_wa: string
+          tipo_midia: string
+        }
+        Insert: {
+          contato_id?: string | null
+          conteudo?: string | null
+          criado_em?: string
+          direcao: string
+          enviada_em: string
+          id?: string
+          message_id: string
+          payload: Json
+          processado_em?: string | null
+          referral?: Json | null
+          telefone_wa: string
+          tipo_midia?: string
+        }
+        Update: {
+          contato_id?: string | null
+          conteudo?: string | null
+          criado_em?: string
+          direcao?: string
+          enviada_em?: string
+          id?: string
+          message_id?: string
+          payload?: Json
+          processado_em?: string | null
+          referral?: Json | null
+          telefone_wa?: string
+          tipo_midia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "mensagens_whatsapp_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+        ]
+      }
+      meta_anuncios: {
+        Row: {
+          ad_id: string
+          adset_id: string | null
+          campaign_id: string
+          nome: string | null
+          status: string | null
+          sync_em: string
+        }
+        Insert: {
+          ad_id: string
+          adset_id?: string | null
+          campaign_id: string
+          nome?: string | null
+          status?: string | null
+          sync_em?: string
+        }
+        Update: {
+          ad_id?: string
+          adset_id?: string | null
+          campaign_id?: string
+          nome?: string | null
+          status?: string | null
+          sync_em?: string
+        }
+        Relationships: []
       }
       meta_eventos: {
         Row: {
@@ -3038,6 +3191,7 @@ export type Database = {
         Returns: undefined
       }
       fn_slugify: { Args: { p: string }; Returns: string }
+      fn_telefone_wa: { Args: { p_telefone: string }; Returns: string }
       gerar_despesas_recorrentes: {
         Args: { p_competencia: string }
         Returns: number
@@ -3398,6 +3552,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca", "leads"],
