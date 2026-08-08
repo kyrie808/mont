@@ -78,16 +78,19 @@ services:
       DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/evolution?schema=public
       DATABASE_CONNECTION_CLIENT_NAME: mont_crm
 
-      # Guardamos o mínimo aqui: a memória é o Supabase. HISTORIC=false evita que o
-      # history sync do Baileys despeje anos de conversa antiga no pareamento — e
-      # histórico antigo não traz o referral do anúncio de qualquer jeito.
+      # HISTORIC=true: queremos o histórico deste número. Ele é a base de contexto do
+      # CRM (não dá pra perfilar cliente sem conversa passada) e é a ÚNICA chance de
+      # atribuição retroativa — o history sync entrega o proto da mensagem COM
+      # `contextInfo`, então uma conversa antiga vinda de anúncio pode trazer o
+      # externalAdReply. O /chat/findMessages não traz (issue #975); o sync pode.
+      # O número não é antigo e o volume é pequeno, então o custo é baixo.
       DATABASE_SAVE_DATA_INSTANCE: "true"
       DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
       DATABASE_SAVE_MESSAGE_UPDATE: "false"
       DATABASE_SAVE_DATA_CONTACTS: "true"
       DATABASE_SAVE_DATA_CHATS: "true"
       DATABASE_SAVE_DATA_LABELS: "false"
-      DATABASE_SAVE_DATA_HISTORIC: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "true"
 
       CACHE_REDIS_ENABLED: "true"
       CACHE_REDIS_URI: redis://redis:6379/6
@@ -98,12 +101,14 @@ services:
       # Webhook global desligado: cada instância aponta o seu (configurado via API).
       WEBHOOK_GLOBAL_ENABLED: "false"
 
-      # Só o que interessa. MESSAGES_SET (carga de histórico) fica FALSE de propósito —
-      # ligado, ele inunda o ingestor com mensagens velhas sem atribuição.
+      # MESSAGES_SET é a carga de histórico do pareamento — ligado de propósito, é por
+      # ele que o passado do número entra no CRM.
+      # ⚠️ Chega em LOTE (array de mensagens num payload só): o ingestor precisa tratar
+      # N mensagens por request, não uma. A idempotência por `message_id` cobre o resto.
       WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
       WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
       WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
-      WEBHOOK_EVENTS_MESSAGES_SET: "false"
+      WEBHOOK_EVENTS_MESSAGES_SET: "true"
       WEBHOOK_EVENTS_MESSAGES_EDITED: "false"
       WEBHOOK_EVENTS_MESSAGES_UPDATE: "false"
       WEBHOOK_EVENTS_MESSAGES_DELETE: "false"

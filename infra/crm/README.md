@@ -50,20 +50,58 @@ Escolhas verificadas nesta versão:
   responde `mont_crm`, que só existe no nosso compose.
 - **`DATABASE_URL` *e* `DATABASE_CONNECTION_URI`** — o `deploy_database.sh` usa a primeira
   (Prisma), a aplicação usa a segunda. Faltando uma, ou a migration ou o app quebra.
-- **`DATABASE_SAVE_DATA_HISTORIC=false` + `WEBHOOK_EVENTS_MESSAGES_SET=false`** — no
-  pareamento o Baileys faz history sync e despejaria anos de conversa no ingestor. Histórico
-  antigo não traz atribuição de anúncio de qualquer forma
-  ([issue #975](https://github.com/EvolutionAPI/evolution-api/issues/975)), então só atrapalha.
+- **`DATABASE_SAVE_DATA_HISTORIC=true` + `WEBHOOK_EVENTS_MESSAGES_SET=true`** — queremos o
+  histórico. Dois motivos: (a) o CRM precisa de conversa passada pra ter o que perfilar;
+  (b) é a única chance de **atribuição retroativa** — o history sync entrega o proto da
+  mensagem com `contextInfo`, então uma conversa antiga vinda de anúncio pode carregar o
+  `externalAdReply`. É diferente do `/chat/findMessages`, que não devolve esses campos
+  ([issue #975](https://github.com/EvolutionAPI/evolution-api/issues/975)).
+  ⚠️ `MESSAGES_SET` chega em **lote** — o ingestor trata N mensagens por request.
+  Ao criar a instância, passar `syncFullHistory: true` pra puxar a janela cheia.
 - **`TELEMETRY_ENABLED=false`** — conversa de cliente não vai pra telemetria de terceiro.
+
+## Evolution API (Node) ou Evolution Go?
+
+Os dois são da **Evolution Foundation** e os dois estão vivos. Não é um substituindo o outro —
+são dois motores irmãos. Estado em 07/08/2026:
+
+| | evolution-api (Node/**Baileys**) | evolution-go (Go/**whatsmeow**) |
+|---|---|---|
+| Criado | jun/2023 | **mar/2026** |
+| Último push | 14/07/2026 | 03/07/2026 |
+| Stars | 9.235 | 602 |
+| Issues abertas | 177 | 93 |
+| Commits no `main` | anos de história | **19** |
+
+O Go é mais novo, mais leve e mais rápido — e o `whatsmeow` é uma base melhor que o Baileys.
+Para esta fase, mesmo assim, **ficamos no Node**:
+
+1. **A atribuição é o projeto inteiro.** O `whatsmeow` tem `ContextInfo_ExternalAdReplyInfo`
+   no protobuf, mas não há evidência de que o evolution-go **exponha** isso no webhook — e
+   esse é exatamente o tipo de bug que o Node tem documentado (#2645, #975). Trocar um risco
+   conhecido por um risco não medido, na única coisa que não pode falhar, é mau negócio.
+2. **93 issues abertas em 4 meses de vida** com 19 commits no main: ainda está assentando.
+3. **Performance não é o nosso gargalo.** São dezenas de mensagens por dia, não milhares.
+
+Reavaliar depois que o portão 1A passar. Se o referral do Node se provar quebrado, o Go entra
+como plano C — ao lado do patch no `dist/main.js` da #2645.
 
 ## Passos manuais (uma vez)
 
-1. **n8n**: abrir http://localhost:5678 e criar a conta de dono.
-2. **Chave de API do n8n**: Settings → n8n API → Create an API key. Guardar em `infra/crm/.env`
-   como `N8N_API_KEY` e registrar no MCP (`n8n-mcp`), que é como o agente cria os workflows.
+1. ~~**n8n**: criar a conta de dono~~ — feito.
+2. ~~**Chave de API do n8n**~~ — feito; está em `infra/crm/.env` e registrada no MCP `n8n-mcp`.
 3. **Parear o WhatsApp**: só na Etapa 3, combinando janela com o Gilmar. Número **principal**,
-   como dispositivo vinculado. Aparece no celular dele como **"Mont CRM"** em
-   *Aparelhos conectados*. Fase 1 **não envia mensagem nenhuma** — só lê.
+   como dispositivo vinculado, com `syncFullHistory: true` na criação da instância. Aparece
+   no celular dele como **"Mont CRM"** em *Aparelhos conectados*.
+   Fase 1 **não envia mensagem nenhuma** — só lê.
+
+## Community nodes do n8n: não precisamos (ainda)
+
+O `n8n-nodes-evolution-api` / `n8n-nodes-evolution-go` servem pra **enviar** mensagem e
+gerenciar instância. Na Fase 1 o n8n só recebe webhook (nó nativo), chama a Edge Function
+(HTTP Request) e conversa com Supabase/LLM — nada disso precisa de node de terceiro.
+Gerenciamento de instância e QR sai por HTTP puro contra a Evolution.
+Reavaliar na Fase 2, quando entrar envio.
 
 ## Comandos
 
