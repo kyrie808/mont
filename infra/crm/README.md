@@ -148,6 +148,44 @@ from mensagens_whatsapp where referral is not null order by enviada_em desc;
 
 Dados sintéticos do teste removidos; base restaurada ao baseline.
 
+## O workflow n8n (W1)
+
+**`W1 — Ingestor WhatsApp (Evolution → Supabase)`** — id `WziyzoCqtb8Btexe`, ativo.
+Dois nós, de propósito: o n8n não interpreta nada, só transporta.
+
+```
+Webhook (POST /webhook/evolution) ──► HTTP Request ──► whatsapp-ingestor
+```
+
+- O nó Webhook envelopa o payload em `body`/`headers`/`query`, por isso o HTTP Request
+  manda `{{ JSON.stringify($json.body) }}` — o corpo **cru** da Evolution.
+- `responseMode: lastNode` de propósito: se o ingestor falhar, o erro volta pra
+  Evolution, que reentrega com backoff (`WEBHOOK_RETRY_MAX_ATTEMPTS=10`). Responder
+  "Immediately" devolveria 200 e perderia a mensagem em silêncio.
+- O segredo é uma **credencial `httpHeaderAuth`** do n8n (`Ingestor Mont`), criptografada
+  com o `N8N_ENCRYPTION_KEY` — não fica em texto plano dentro do nó.
+
+**URL que a Evolution deve chamar** (roda dentro da rede do Docker, não use `localhost`):
+
+```
+http://n8n:5678/webhook/evolution
+```
+
+Verificado ponta a ponta: POST no webhook do n8n → linha em `mensagens_whatsapp` com o
+payload completo. O caminho de FALHA (ingestor 500 → n8n propaga → Evolution reentrega)
+está desenhado mas **ainda não foi exercitado** — vale forçar um erro antes do cutover.
+
+## MCP: os dois são coisas diferentes
+
+O n8n 2.33 traz um **Instance-level MCP** nativo (Settings → Instance-level MCP). Ele
+expõe *workflows como ferramentas* pra uma IA **executar** — não serve pra construir
+workflow. Quem constrói é o [`czlonkowski/n8n-mcp`](https://github.com/czlonkowski/n8n-mcp),
+registrado no escopo local do projeto.
+
+⚠️ Esse MCP bloqueia `localhost` por proteção SSRF. Precisa de
+`WEBHOOK_SECURITY_MODE=moderate` (libera localhost, mantém IPs privados e metadata de
+nuvem bloqueados). Nunca `permissive`.
+
 ## Community nodes do n8n: não precisamos (ainda)
 
 O `n8n-nodes-evolution-api` / `n8n-nodes-evolution-go` servem pra **enviar** mensagem e
