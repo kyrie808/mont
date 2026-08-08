@@ -15,13 +15,15 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
-  normalizePhone,
   splitName,
   normalizeCity,
   normalizeState,
   normalizeZip,
   hashField,
 } from '../../../packages/shared/src/metaNormalize.ts'
+// `normalizePhone` mora em whatsapp.ts porque depende da forma canônica do WhatsApp:
+// a Meta só casa a pessoa se o telefone for hasheado no formato que o aparelho usa.
+import { normalizePhone } from '../../../packages/shared/src/whatsapp.ts'
 
 const GRAPH_VERSION = 'v21.0'
 const MAX_TENTATIVAS = 5

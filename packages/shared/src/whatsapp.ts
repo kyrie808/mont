@@ -16,8 +16,8 @@
  * gerada `contatos.telefone_wa`. Se as duas divergirem, o ingestor casa um contato
  * que o banco considera outro — e nascem duplicatas. Mudou uma, muda a outra.
  *
- * NÃO confundir com `normalizePhone` (metaNormalize), que serve pro hash da Meta e
- * trata o número de 10 dígitos de forma diferente — lá é outro sistema, outra regra.
+ * É também a base do `normalizePhone` logo abaixo (hash da Meta), para que banco,
+ * WhatsApp e CAPI enxerguem a mesma pessoa no mesmo formato.
  */
 export function telefoneWa(raw: string | null | undefined): string | null {
     if (!raw) return null
@@ -41,6 +41,52 @@ export function telefoneWa(raw: string | null | undefined): string | null {
     // 8 dígitos começando em 6-9 = celular antigo, cadastrado antes do 9º dígito.
     // Começando em 2-5 é telefone fixo, que não existe no WhatsApp.
     if (nac.length === 10) return /^[6-9]/.test(assinante) ? `55${ddd}9${assinante}` : null
+
+    return null
+}
+
+/**
+ * Telefone BR → dígitos com DDI 55 pro hash da Meta CAPI, no MESMO formato que o
+ * WhatsApp usa.
+ *
+ * Mora aqui, e não em `metaNormalize.ts`, porque depende de `telefoneWa` — e é
+ * exatamente essa dependência que é o ponto: a Meta casa a pessoa pelo hash do
+ * telefone, então mandar um formato que o aparelho dela não usa faz o evento não
+ * casar e o Event Match Quality cair sem avisar.
+ *
+ * O bug que isso corrige: um celular antigo cadastrado com 10 dígitos
+ * (`1181234567`) saía como `551181234567`, mas o WhatsApp da pessoa é
+ * `5511981234567` — faltava recompor o 9º dígito. 15 contatos da base nessa
+ * situação, 1 evento já enviado torto.
+ *
+ * Fixo (assinante em 2-5) NÃO ganha o 9: não tem WhatsApp, mas o número existe e
+ * segue sendo E.164 válido pra Meta tentar casar por ele.
+ *
+ * Placeholder (`0000000000`, `999999924`) vira `null` de propósito — hash de número
+ * inventado não casa com ninguém e só suja a qualidade do match.
+ */
+export function normalizePhone(raw: string | null | undefined): string | null {
+    if (!raw) return null
+    const digits = raw.replace(/\D/g, '')
+    if (!digits) return null
+
+    // Celular: forma canônica de 13 dígitos, idêntica à do banco e à do WhatsApp.
+    const celular = telefoneWa(digits)
+    if (celular) return celular
+
+    // Fixo nacional: DDD válido + 8 dígitos começando em 2-5.
+    const nacional =
+        (digits.length === 12 || digits.length === 13) && digits.startsWith('55')
+            ? digits.slice(2)
+            : digits
+
+    if (
+        nacional.length === 10 &&
+        /^(1[1-9]|[2-9][0-9])$/.test(nacional.slice(0, 2)) &&
+        /^[2-5]/.test(nacional.slice(2))
+    ) {
+        return `55${nacional}`
+    }
 
     return null
 }

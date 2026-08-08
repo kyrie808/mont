@@ -21,7 +21,6 @@ export { isValidPhone } from './validators'
 // Meta CAPI — normalização/hash das chaves de match
 export {
     stripAccents,
-    normalizePhone,
     splitName,
     normalizeCity,
     normalizeState,
@@ -31,8 +30,10 @@ export {
 } from './metaNormalize'
 
 // WhatsApp — chave canônica + parsing do webhook da Evolution
+// `normalizePhone` (hash da Meta) mora aqui porque depende de `telefoneWa`.
 export {
     telefoneWa,
+    normalizePhone,
     telefoneWaDeJid,
     isJidIgnorado,
     extrairReferral,
