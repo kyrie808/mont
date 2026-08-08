@@ -95,6 +95,59 @@ como plano C — ao lado do patch no `dist/main.js` da #2645.
    no celular dele como **"Mont CRM"** em *Aparelhos conectados*.
    Fase 1 **não envia mensagem nenhuma** — só lê.
 
+## O ingestor (W1)
+
+Edge Function `whatsapp-ingestor` (código em `supabase/functions/whatsapp-ingestor/`).
+O n8n recebe o webhook da Evolution e repassa o corpo cru para:
+
+```
+POST https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-ingestor
+     x-ingestor-secret: <INGESTOR_SECRET de infra/crm/.env>
+```
+
+Autentica por segredo compartilhado, não por JWT (`--no-verify-jwt`): é o padrão de
+receptor de webhook e evita distribuir a anon key pro n8n. O segredo tem 32 bytes.
+
+### Modo sombra vs ativo
+
+Controlado pelo secret `INGESTOR_MODO` (**default `sombra`**; qualquer valor diferente
+de `ativo` é tratado como sombra):
+
+| | `sombra` | `ativo` |
+|---|---|---|
+| grava `mensagens_whatsapp` | sim | sim |
+| casa/cria `contatos` | **não** | sim |
+| captura `ctwa_clid` no contato | **não** | sim |
+| dispara CAPI / move Kanban | **não** | sim |
+
+Trocar: `npx supabase secrets set INGESTOR_MODO=ativo` (leva ~10s pra valer).
+
+**Rodar em sombra primeiro não é excesso de cuidado** — é o que resolve o portão 1A.
+A função fica no número real capturando payload cru até cair um clique de anúncio de
+verdade, e enquanto isso a base de 810 contatos não corre risco nenhum. Só depois de
+olhar o que caiu em `mensagens_whatsapp` é que faz sentido virar `ativo`.
+
+Consulta que decide o portão:
+
+```sql
+select message_id, telefone_wa, referral, enviada_em
+from mensagens_whatsapp where referral is not null order by enviada_em desc;
+```
+
+### Verificação já feita (07/08, contra produção)
+
+| Caso | Resultado |
+|---|---|
+| POST sem o segredo | HTTP 401 |
+| Mensagem normal | `gravadas: 1` |
+| Mesma mensagem de novo | `gravadas: 0` (idempotente por `message_id`) |
+| Lote de histórico com 1 grupo | `recebidas: 3, gravadas: 2, ignoradas: 1` |
+| Mensagem de anúncio | `com_referral: 1`, clid e `sourceId` no jsonb |
+| Sombra não encosta em nada | contatos 810→810, eventos 250→250, interações 212→212 |
+| **Modo ativo, lead de anúncio** | contato criado com `ctwa_clid`; `meta_eventos` com **`action_source='business_messaging'`** e clid preenchido — contra os 250 eventos antigos, todos `physical_store` com clid nulo |
+
+Dados sintéticos do teste removidos; base restaurada ao baseline.
+
 ## Community nodes do n8n: não precisamos (ainda)
 
 O `n8n-nodes-evolution-api` / `n8n-nodes-evolution-go` servem pra **enviar** mensagem e
