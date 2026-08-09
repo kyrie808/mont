@@ -1,6 +1,36 @@
 import { describe, it, expect } from 'vitest'
 import { formatPhone } from '@mont/shared'
-import { normalizarTelefone, filtroBuscaContato, isBuscaExata } from './telefone'
+import { normalizarTelefone, filtroBuscaContato, isBuscaExata, isCelularValido } from './telefone'
+
+/**
+ * Regressão do duplicado da "Vilma" (08/08/2026): o mesmo cliente entrou duas
+ * vezes porque o número foi digitado sem o 9 e a validação aceitava 10 dígitos.
+ * `telefone_norm` compara strings de dígitos, então 10 ≠ 11 e o índice único
+ * não colidia.
+ */
+describe('isCelularValido', () => {
+    it('REGRESSÃO: rejeita o número da Vilma sem o 9', () => {
+        expect(isCelularValido('1155522314')).toBe(false)
+        expect(isCelularValido('(11) 5552-2314')).toBe(false)
+    })
+
+    it('aceita o número correto da Vilma, com ou sem máscara', () => {
+        expect(isCelularValido('11955522314')).toBe(true)
+        expect(isCelularValido('(11) 95552-2314')).toBe(true)
+    })
+
+    it('rejeita fixo, número curto e código do país colado', () => {
+        expect(isCelularValido('1133334444')).toBe(false)
+        expect(isCelularValido('999999995')).toBe(false)
+        expect(isCelularValido('5511955522314')).toBe(false)
+    })
+
+    it('trata vazio e nulo como inválidos, sem estourar', () => {
+        expect(isCelularValido('')).toBe(false)
+        expect(isCelularValido(null)).toBe(false)
+        expect(isCelularValido(undefined)).toBe(false)
+    })
+})
 
 /**
  * `formatPhone` é a máscara única: usada tanto no input (enquanto digita)
