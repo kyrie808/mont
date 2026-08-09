@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store, Tag } from 'lucide-react'
+import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store, Tag, Clock } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
@@ -34,9 +34,19 @@ export function CheckoutSidebar({
     items
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
-    // Retirada (default) x Entrega. Só na Entrega atribuímos um entregador — a venda
-    // cai no app dele. Retirada mantém entregador_id nulo (não vai pra ninguém).
-    const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrega'>('retirada')
+    /*
+     * Três situações reais, que antes estavam coladas em duas:
+     *
+     *   retirada       — o cliente levou agora. Nasce ENTREGUE.
+     *   entrego_depois — vendeu, mas o produto ainda está com ele (rota da UPA:
+     *                    vende para vários, separa no carro e entrega em seguida).
+     *                    Nasce PENDENTE e vira o romaneio dele na aba Pendente.
+     *   entrega        — um entregador leva. Nasce PENDENTE, com frete e atribuição.
+     *
+     * Só 'entrega' atribui entregador — nos outros dois `entregador_id` fica nulo
+     * (a venda não vai para o app de ninguém).
+     */
+    const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrego_depois' | 'entrega'>('retirada')
     const { entregadores } = useEntregadores()
 
     const {
@@ -90,10 +100,11 @@ export function CheckoutSidebar({
         })
     }, [contatoId, items, reset])
 
-    // Alternar Retirada/Entrega. Retirada zera a atribuição e a nota do entregador.
-    const handleTipoEntrega = (tipo: 'retirada' | 'entrega') => {
+    // Tudo que não é 'entrega' zera frete, atribuição e nota do entregador —
+    // "Entrego depois" é o próprio Gilmar levando, não tem entregador nem frete.
+    const handleTipoEntrega = (tipo: 'retirada' | 'entrego_depois' | 'entrega') => {
         setTipoEntrega(tipo)
-        if (tipo === 'retirada') {
+        if (tipo !== 'entrega') {
             setValue('taxa_entrega', 0)
             setValue('entregador_id', null)
             setValue('observacao_entregador', '')
@@ -227,14 +238,15 @@ export function CheckoutSidebar({
                     </div>
                 </div>
 
-                {/* Método de entrega: Retirada x Entrega (atribui entregador) */}
+                {/* Método de entrega: Retirada x Entrego depois x Entrega (atribui entregador) */}
                 <div className="space-y-3">
                     <label className="text-sm font-medium text-foreground">
                         Entrega
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         {([
                             { id: 'retirada', label: 'Retirada', icon: Store },
+                            { id: 'entrego_depois', label: 'Entrego depois', icon: Clock },
                             { id: 'entrega', label: 'Entrega', icon: Truck },
                         ] as const).map((opt) => {
                             const Icon = opt.icon
@@ -246,14 +258,16 @@ export function CheckoutSidebar({
                                     aria-pressed={isSelected}
                                     onClick={() => handleTipoEntrega(opt.id)}
                                     className={cn(
-                                        "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                        // min-h fixo: em 3 colunas "Entrego depois" quebra em duas linhas
+                                        // e sem isto os três botões ficariam de alturas diferentes.
+                                        "flex flex-col items-center justify-center min-h-[74px] p-3 rounded-xl border transition-all gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                                         isSelected
                                             ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
                                             : "border-border bg-background text-muted-foreground hover:bg-muted"
                                     )}
                                 >
-                                    <Icon className="w-5 h-5" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">{opt.label}</span>
+                                    <Icon className="w-5 h-5 shrink-0" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight">{opt.label}</span>
                                 </button>
                             )
                         })}

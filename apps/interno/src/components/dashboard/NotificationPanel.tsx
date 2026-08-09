@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, MessageCircle, BellOff, ChevronRight, Snowflake } from 'lucide-react'
+import { RefreshCw, MessageCircle, BellOff, ChevronRight, Snowflake, Clock } from 'lucide-react'
 import { Drawer } from '../ui/Drawer'
 import { formatCurrency, formatPhone, cn } from '@mont/shared'
 import type { AlertaContaAPagar, StatusVencimento } from '@/hooks/useAlertasContasAPagar'
 import type { ClienteEsfriando } from '@/hooks/useClientesEsfriando'
+import type { VendaAEntregar } from '@/hooks/useVendasAEntregar'
 import type { RawFinanceiroAlerta } from '@/services/dashboardService'
 
 interface NotificationPanelProps {
@@ -12,6 +13,7 @@ interface NotificationPanelProps {
     aPagar: AlertaContaAPagar[]
     aReceber: RawFinanceiroAlerta[]
     esfriando: ClienteEsfriando[]
+    aEntregar: VendaAEntregar[]
     /** Template de recompra (Configurações) p/ o botão "Contatar". */
     mensagemRecompra?: string
     onRefresh: () => void
@@ -47,9 +49,9 @@ function ResumoCell({ label, valor, valueClass }: { label: string; valor: number
 
 const MENSAGEM_RECOMPRA_FALLBACK = 'Oi {{nome}}! Faz {{dias}} dias que você não compra com a gente 🧀 Bora repor o pão de queijo?'
 
-export function NotificationPanel({ isOpen, onClose, aPagar, aReceber, esfriando, mensagemRecompra, onRefresh, refreshing }: NotificationPanelProps) {
+export function NotificationPanel({ isOpen, onClose, aPagar, aReceber, esfriando, aEntregar, mensagemRecompra, onRefresh, refreshing }: NotificationPanelProps) {
     const navigate = useNavigate()
-    const total = aPagar.length + aReceber.length + esfriando.length
+    const total = aPagar.length + aReceber.length + esfriando.length + aEntregar.length
 
     const totalVencido = aPagar.filter(a => a.status === 'vencido').reduce((s, a) => s + a.valor, 0)
     const totalAVencer = aPagar.filter(a => a.status !== 'vencido').reduce((s, a) => s + a.valor, 0)
@@ -71,6 +73,13 @@ export function NotificationPanel({ isOpen, onClose, aPagar, aReceber, esfriando
     const irParaPerfil = (contatoId: string) => {
         onClose()
         navigate(`/contatos/${contatoId}`)
+    }
+
+    // A venda parada sai daqui por uma das duas portas — entregar ou cancelar —
+    // e as duas moram no detalhe dela.
+    const irParaVenda = (vendaId: string) => {
+        onClose()
+        navigate(`/vendas/${vendaId}`)
     }
 
     // "Contatar" um cliente esfriando: usa a Mensagem de Recompra configurada (interpola nome/dias).
@@ -125,6 +134,42 @@ export function NotificationPanel({ isOpen, onClose, aPagar, aReceber, esfriando
                             Atualizar
                         </button>
                     </div>
+
+                    {/* A entregar — venda que ficou pendente tempo demais. Vem primeiro:
+                        é a única seção sobre trabalho não terminado hoje, e enquanto a
+                        venda fica parada quem comprou segue aparecendo como Lead. */}
+                    {aEntregar.length > 0 && (
+                        <section className="mt-2">
+                            <h3 className="px-4 pb-1 pt-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                A entregar
+                            </h3>
+                            <div className="divide-y divide-border border-y border-border">
+                                {aEntregar.map((v) => (
+                                    <button
+                                        key={v.venda_id}
+                                        type="button"
+                                        onClick={() => irParaVenda(v.venda_id)}
+                                        className="relative flex w-full items-start gap-3 py-3 pl-5 pr-3 text-left transition-colors hover:bg-muted"
+                                    >
+                                        <span aria-hidden className="absolute left-2 top-3 bottom-3 w-0.5 rounded-full bg-warning-strong" />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-baseline justify-between gap-2">
+                                                <p className="truncate text-sm font-semibold text-foreground">{v.nome}</p>
+                                                <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">{formatCurrency(v.total)}</span>
+                                            </div>
+                                            <div className="mt-0.5 flex items-center justify-between gap-2">
+                                                <span className="inline-flex items-center gap-1 text-xs text-warning-strong">
+                                                    <Clock className="h-3.5 w-3.5" />
+                                                    parada há {v.dias_parada} {v.dias_parada === 1 ? 'dia' : 'dias'}
+                                                </span>
+                                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* Contas a pagar */}
                     {aPagar.length > 0 && (
