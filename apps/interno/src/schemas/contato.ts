@@ -1,5 +1,6 @@
 ﻿import { z } from 'zod'
-import { cleanPhone, isValidPhone } from '@mont/shared'
+import { cleanPhone } from '@mont/shared'
+import { isCelularValido, TELEFONE_INVALIDO_MSG } from '../utils/telefone'
 
 // Schema de validação para contato
 export const contatoSchema = z.object({
@@ -11,7 +12,7 @@ export const contatoSchema = z.object({
     telefone: z
         .string()
         .min(1, 'Telefone é obrigatório')
-        .refine((val) => isValidPhone(val), 'Telefone inválido')
+        .refine(isCelularValido, TELEFONE_INVALIDO_MSG)
         .transform((val) => cleanPhone(val)),
     tipo: z.enum(['B2C', 'B2B', 'FORNECEDOR']),
     subtipo: z.string().optional().nullable(),

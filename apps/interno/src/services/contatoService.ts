@@ -6,7 +6,12 @@ import type {
 import type { DomainContato, CreateContato, UpdateContato } from '../types/domain'
 import { getCoordinates } from '../utils/geocoding'
 import { toDomainContato } from './mappers'
-import { filtroBuscaContato, normalizarTelefone } from '../utils/telefone'
+import {
+    filtroBuscaContato,
+    normalizarTelefone,
+    isCelularValido,
+    TELEFONE_INVALIDO_MSG,
+} from '../utils/telefone'
 
 export class ContatoService {
     /* CRUD */
@@ -69,6 +74,12 @@ export class ContatoService {
     }
 
     async create(data: CreateContato): Promise<DomainContato> {
+        // Último portão antes do banco. O schema Zod e o cadastro rápido já
+        // barram antes, com mensagem melhor; isto existe para o dia em que
+        // aparecer um terceiro caminho de criação que esqueça de validar —
+        // foi exatamente assim que o cadastro rápido virou o furo da "Vilma".
+        if (!isCelularValido(data.telefone)) throw new Error(TELEFONE_INVALIDO_MSG)
+
         const dbInsert: ContatoInsert = {
             nome: data.nome,
             apelido: data.apelido || null,
@@ -158,7 +169,14 @@ export class ContatoService {
         const dbUpdate: ContatoUpdate = {}
         if (data.nome !== undefined) dbUpdate.nome = data.nome
         if (data.apelido !== undefined) dbUpdate.apelido = data.apelido
-        if (data.telefone !== undefined) dbUpdate.telefone = normalizarTelefone(data.telefone)
+        // Só valida quando o telefone está sendo alterado. Há 28 contatos antigos
+        // fora do padrão (placeholders tipo 1199998888, uns poucos fixos reais);
+        // exigir 11 dígitos sempre travaria editar o ENDEREÇO deles, que nada tem
+        // a ver. Mexeu no número, tem que sair no padrão.
+        if (data.telefone !== undefined) {
+            if (!isCelularValido(data.telefone)) throw new Error(TELEFONE_INVALIDO_MSG)
+            dbUpdate.telefone = normalizarTelefone(data.telefone)
+        }
         if (data.tipo !== undefined) dbUpdate.tipo = data.tipo as NonNullable<ContatoUpdate['tipo']>
         if (data.subtipo !== undefined) dbUpdate.subtipo = data.subtipo
         if (data.status !== undefined) dbUpdate.status = data.status as NonNullable<ContatoUpdate['status']>

@@ -5,7 +5,7 @@ import { useContatos } from '../../../../hooks/useContatos'
 import { useClientesSugeridos } from '../../../../hooks/useClientesSugeridos'
 import { useToast } from '../../../../components/ui/Toast'
 import { formatPhone } from '@mont/shared'
-import { normalizarTelefone } from '../../../../utils/telefone'
+import { normalizarTelefone, isCelularValido, TELEFONE_INVALIDO_MSG } from '../../../../utils/telefone'
 import type { DomainContato } from '../../../../types/domain'
 
 interface ClientSelectorProps {
@@ -55,6 +55,13 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
     const handleQuickAdd = async () => {
         if (!quickName || !quickPhone) {
             toast.error('Preencha nome e telefone')
+            return
+        }
+
+        // Mesma regra do cadastro completo. Este atalho passava direto: foi por
+        // aqui que a "Vilma" nasceu duplicada (número sem o 9), 40s antes da venda.
+        if (!isCelularValido(quickPhone)) {
+            toast.error(TELEFONE_INVALIDO_MSG)
             return
         }
 
