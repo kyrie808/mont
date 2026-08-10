@@ -30,6 +30,7 @@ import { NotificationPanel } from '@/components/dashboard/NotificationPanel'
 import { useAlertasContasAPagar } from '@/hooks/useAlertasContasAPagar'
 import { useClientesEsfriando } from '@/hooks/useClientesEsfriando'
 import { useVendasAEntregar } from '@/hooks/useVendasAEntregar'
+import { useAlertaCapi } from '@/hooks/useAlertaCapi'
 import { useConfiguracoes } from '@/hooks/useConfiguracoes'
 
 import { TopIndicadoresWidget } from '@/components/dashboard/TopIndicadoresWidget'
@@ -50,6 +51,7 @@ export function Dashboard() {
     const { alertas: aPagarAlertas, count: countPagar, refetch: refetchPagar } = useAlertasContasAPagar()
     const { alertas: esfriando, count: countEsfriando, refetch: refetchEsfriando } = useClientesEsfriando()
     const { alertas: aEntregar, count: countAEntregar, refetch: refetchAEntregar } = useVendasAEntregar()
+    const { alerta: alertaCapi, count: countCapi, refetch: refetchCapi } = useAlertaCapi()
     const { config: configApp } = useConfiguracoes()
     const [lucroData, setLucroData] = useState({ lucro_bruto: 0, receita_bruta: 0, lucro_liquido: 0, margem_liquida_pct: 0 })
     const [liquidadoData, setLiquidadoData] = useState({ vendas_liquidadas: 0, total_liquidado: 0 })
@@ -105,14 +107,14 @@ export function Dashboard() {
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true)
-        await Promise.all([refetch(), refetchPagar(), refetchEsfriando(), refetchAEntregar()])
+        await Promise.all([refetch(), refetchPagar(), refetchEsfriando(), refetchAEntregar(), refetchCapi()])
         setIsRefreshing(false)
-    }, [refetch, refetchPagar, refetchEsfriando, refetchAEntregar])
+    }, [refetch, refetchPagar, refetchEsfriando, refetchAEntregar, refetchCapi])
 
     const aReceberAlertas = metrics?.financial?.alertas_financeiros ?? []
     // Badge do sino = contas a pagar (vencendo/vencidas) + recebíveis atrasados
-    // + clientes esfriando + vendas paradas sem entregar.
-    const totalAlerts = countPagar + aReceberAlertas.length + countEsfriando + countAEntregar
+    // + clientes esfriando + vendas paradas sem entregar + fila da Meta parada.
+    const totalAlerts = countPagar + aReceberAlertas.length + countEsfriando + countAEntregar + countCapi
 
     return (
         <>
@@ -145,6 +147,7 @@ export function Dashboard() {
                 aReceber={aReceberAlertas}
                 esfriando={esfriando}
                 aEntregar={aEntregar}
+                capi={alertaCapi}
                 mensagemRecompra={configApp.mensagemRecompra}
                 onRefresh={handleRefresh}
                 refreshing={isRefreshing}
