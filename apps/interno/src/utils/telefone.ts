@@ -11,6 +11,29 @@ export function normalizarTelefone(raw: string | null | undefined): string {
     return cleanPhone(raw)
 }
 
+/** Mensagem única de telefone fora do padrão — igual em todo canto que valida. */
+export const TELEFONE_INVALIDO_MSG =
+    'O WhatsApp precisa ter 11 dígitos com o DDD (ex.: 11 95552-2314). Confira se não faltou o 9.'
+
+/**
+ * `true` quando o telefone está no padrão de celular brasileiro: DDD + 9 dígitos.
+ *
+ * **Por que 11 exatos, e não "10 ou 11".** Em 08/08/2026 um cliente foi
+ * cadastrado duas vezes: "Vilma Margarete" com `11955522314` e "Vilma" com
+ * `1155522314` — o mesmo número sem o 9. O índice único de `telefone_norm`
+ * compara strings de dígitos, então 10 ≠ 11 e as duas passaram.
+ *
+ * Não dá pra consertar inserindo o 9 sozinho: a parte local `5552-2314` começa
+ * com 5, exatamente o formato de um fixo de São Paulo. Um palpite do tipo "põe o
+ * 9 quando parecer celular" erraria este caso, e "põe o 9 em todo número de 10
+ * dígitos" corromperia os fixos de verdade. Como 96,5% da base é celular e o
+ * contato serve pra falar no WhatsApp, exigir o formato é mais honesto que
+ * adivinhar — o operador corrige na hora, com o cliente na frente.
+ */
+export function isCelularValido(raw: string | null | undefined): boolean {
+    return normalizarTelefone(raw).length === 11
+}
+
 /**
  * Remove o que quebraria o `.or()` do PostgREST (curingas e separadores).
  * NÃO apara as pontas: o espaço no fim é sinal do usuário, não ruído.

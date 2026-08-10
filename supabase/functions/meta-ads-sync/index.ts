@@ -3,6 +3,11 @@
 // Fase 1: identidade das campanhas (id/nome/objetivo/status) → upsert em `campanhas`.
 // Fase 2: insights diários (gasto/impressões/cliques) → upsert em `campanha_meta_metricas`
 //         (série temporal, fonte do ROAS).
+// Fase 3: mapa anúncio → campanha → upsert em `meta_anuncios`.
+//         O referral do Click-to-WhatsApp traz `source_id`, que é o id do ANÚNCIO;
+//         `campanhas.meta_campaign_id` é nível campanha. Sem esse dicionário, o lead
+//         que chega pelo anúncio não tem como preencher `contatos.campanha_id` — e o
+//         ROAS por campanha continua cego mesmo com o ctwa_clid capturado.
 //
 // Invocação:
 //   - cron (pg_cron + pg_net) 1x/dia — header x-cron-secret == env CRON_SECRET; OU
@@ -170,5 +175,66 @@ Deno.serve(async (req: Request) => {
     if (!error) metricas_upserts = count ?? metricas.length
   }
 
-  return json({ ok: true, upserts, desativadas, total_meta: campaigns.length, metricas: metricas_upserts }, 200)
+  // ── Fase 3: mapa anúncio → campanha ────────────────────────────────────────
+  // Alimenta `meta_anuncios`, que o whatsapp-ingestor consulta pra traduzir o
+  // `source_id` do referral CTWA em campanha do Mont.
+  interface MetaAd {
+    id: string
+    name?: string | null
+    adset_id?: string | null
+    campaign_id?: string | null
+    effective_status?: string | null
+  }
+
+  const ads: MetaAd[] = []
+  try {
+    let next: string | null =
+      `https://graph.facebook.com/${GRAPH_VERSION}/${accountId}/ads`
+      + `?fields=id,name,adset_id,campaign_id,effective_status&limit=500`
+      + `&access_token=${encodeURIComponent(token)}`
+
+    // Anúncio se multiplica mais rápido que campanha (hoje 15 pra 3), então aqui
+    // vale paginar. Teto de 10 páginas pra nunca virar loop infinito.
+    for (let pagina = 0; next && pagina < 10; pagina++) {
+      const res = await fetch(next)
+      const body = await res.json()
+      if (!res.ok) break
+      for (const a of (body?.data ?? []) as MetaAd[]) ads.push(a)
+      next = body?.paging?.next ?? null
+    }
+  } catch { /* não derruba o sync: campanhas e métricas já foram gravadas */ }
+
+  let anuncios_upserts = 0
+  if (ads.length > 0) {
+    // Anúncio sem campanha não serve de dicionário — e `campaign_id` é NOT NULL.
+    const linhas = ads
+      .filter((a) => a.campaign_id)
+      .map((a) => ({
+        ad_id: a.id,
+        adset_id: a.adset_id ?? null,
+        campaign_id: a.campaign_id!,
+        nome: a.name ?? null,
+        status: a.effective_status ?? null,
+        sync_em: agora,
+      }))
+
+    if (linhas.length > 0) {
+      const { error, count } = await admin
+        .from('meta_anuncios')
+        .upsert(linhas, { onConflict: 'ad_id', count: 'exact' })
+      if (!error) anuncios_upserts = count ?? linhas.length
+    }
+  }
+
+  // Anúncio que sai do ar NÃO é removido daqui de propósito: um clique antigo pode
+  // chegar depois, e sem a linha o lead perderia o vínculo com a campanha.
+
+  return json({
+    ok: true,
+    upserts,
+    desativadas,
+    total_meta: campaigns.length,
+    metricas: metricas_upserts,
+    anuncios: anuncios_upserts,
+  }, 200)
 })
