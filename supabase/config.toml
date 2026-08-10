@@ -375,6 +375,28 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# ── Funções invocadas por máquina, não por usuário ────────────────────────────
+# Estas três NÃO passam pelo verify_jwt do gateway porque quem as chama não tem
+# JWT: o pg_cron dispara via pg_net (só com `x-cron-secret`, lido do Vault) e o
+# n8n chama o ingestor com `x-ingestor-secret`. Cada uma valida a própria
+# credencial no código — isso NÃO é afrouxar segurança, é trocar o portão do
+# gateway por um portão que entende o chamador.
+#
+# ⚠️ Declarado aqui de propósito. `supabase functions deploy` sem esta entrada
+# aplica o default `verify_jwt = true` e QUEBRA o cron em silêncio: o gateway
+# passa a devolver 401 UNAUTHORIZED_NO_AUTH_HEADER antes da função rodar, e
+# nada no cron.job_run_details acusa (o job "sucede" porque o pg_net só
+# enfileira). Foi exatamente o que aconteceu em 10/08/2026 ao redeployar as
+# duas funções da Meta.
+[functions.meta-ads-sync]
+verify_jwt = false
+
+[functions.meta-capi-worker]
+verify_jwt = false
+
+[functions.whatsapp-ingestor]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
