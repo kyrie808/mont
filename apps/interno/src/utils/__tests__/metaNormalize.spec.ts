@@ -7,6 +7,7 @@ import {
     normalizeZip,
     sha256Hex,
     hashField,
+    telefoneWa,
 } from '@mont/shared'
 
 /**
@@ -35,6 +36,41 @@ describe('normalizePhone (BR → DDI 55)', () => {
         expect(normalizePhone('')).toBeNull()
         expect(normalizePhone(null)).toBeNull()
         expect(normalizePhone('abc')).toBeNull()
+    })
+})
+
+/**
+ * Regressão: o hash do telefone precisa sair no MESMO formato que o WhatsApp usa,
+ * senão a Meta não casa o evento com a pessoa e o Event Match Quality cai calado.
+ *
+ * O bug: `normalizePhone` só prefixava `55` em número de 10 dígitos, sem recompor
+ * o 9º dígito. Um celular antigo cadastrado como `1181234567` ia pra Meta como
+ * `551181234567`, mas o WhatsApp dessa pessoa é `5511981234567` — nunca casava.
+ * 15 contatos da base nessa situação (1 evento já enviado torto).
+ */
+describe('normalizePhone — paridade com o formato do WhatsApp', () => {
+    it('celular antigo de 10 dígitos recompõe o 9º dígito', () => {
+        expect(normalizePhone('1181234567')).toBe('5511981234567')
+        expect(normalizePhone('1161234567')).toBe('5511961234567')
+    })
+
+    it('concorda com telefoneWa em todo celular — são a mesma pessoa', () => {
+        for (const entrada of ['11910049290', '(11) 96979-1012', '1181234567', '5511910049290']) {
+            expect(normalizePhone(entrada)).toBe(telefoneWa(entrada))
+        }
+    })
+
+    it('fixo NÃO ganha 9º dígito — continua E.164 válido', () => {
+        // Casos reais: Amanda (4 vendas) e Cira (1 venda). Fixo não tem WhatsApp,
+        // mas o número existe e a Meta ainda pode casar por ele.
+        expect(normalizePhone('1148041265')).toBe('551148041265')
+        expect(normalizePhone('1143359605')).toBe('551143359605')
+    })
+
+    it('placeholder não vira hash — mandar lixo só suja o match', () => {
+        expect(normalizePhone('0000000000')).toBeNull() // "Mont Massas"
+        expect(normalizePhone('999999924')).toBeNull() // 9 dígitos
+        expect(normalizePhone('1101010101')).toBeNull() // assinante começa em 0
     })
 })
 

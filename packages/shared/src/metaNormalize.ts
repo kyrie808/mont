@@ -4,23 +4,16 @@
  * por unit tests no interno (jsdom). Spec Meta: trim → lowercase → SHA-256 hex.
  *
  * `crypto.subtle` é global tanto no Deno quanto no Node 20+ (usado no Vitest).
+ *
+ * ⚠️ `normalizePhone` NÃO mora aqui — mora em `whatsapp.ts`, porque depende da forma
+ * canônica `telefoneWa` (a Meta precisa do telefone no mesmo formato que o WhatsApp
+ * usa, senão o match falha). Este arquivo é mantido SEM imports relativos de
+ * propósito: a Edge Function o importa direto por caminho, e o Deno exigiria
+ * extensão `.ts` explícita — que o tsconfig do catálogo não aceita.
  */
 
 export function stripAccents(s: string): string {
     return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
-}
-
-/**
- * Telefone BR → dígitos com DDI 55.
- * 10/11 dígitos = número nacional (DDD + linha) → prepende 55.
- * 12/13 dígitos = já tem DDI → mantém. Isso evita confundir DDD 55 (RS) com o DDI 55.
- */
-export function normalizePhone(raw: string | null | undefined): string | null {
-    if (!raw) return null
-    const digits = raw.replace(/\D/g, '')
-    if (!digits) return null
-    if (digits.length === 10 || digits.length === 11) return `55${digits}`
-    return digits
 }
 
 /** nome → { fn: primeiro token, ln: resto }, lowercase, sem acento/pontuação. */

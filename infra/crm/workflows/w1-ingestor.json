@@ -1,0 +1,72 @@
+{
+  "name": "W1 — Ingestor WhatsApp (Evolution → Supabase)",
+  "nodes": [
+    {
+      "id": "webhook-evolution",
+      "name": "Webhook Evolution",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evolution",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson"
+      },
+      "notes": "Recebe MESSAGES_UPSERT e MESSAGES_SET da Evolution. responseMode=lastNode de proposito: se o ingestor falhar, o erro volta pra Evolution, que reentrega com backoff. Responder 'Immediately' perderia a mensagem calado.",
+      "webhookId": "d8cbea70-a194-4e87-9f9c-be7cd1f07a1b"
+    },
+    {
+      "id": "post-ingestor",
+      "name": "POST whatsapp-ingestor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-ingestor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "Repassa o corpo CRU. O n8n nao interpreta nada: toda a regra mora na Edge Function, versionada no repo. $json.body porque o no Webhook envelopa o payload em body/headers/query."
+    }
+  ],
+  "connections": {
+    "Webhook Evolution": {
+      "main": [
+        [
+          {
+            "node": "POST whatsapp-ingestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
