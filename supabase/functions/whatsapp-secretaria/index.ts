@@ -26,6 +26,7 @@ import {
   calcularTempoDigitacaoMs,
   type MensagemDaConversa,
 } from '../../../packages/shared/src/secretaria.ts'
+import { telefoneWaDeJid } from '../../../packages/shared/src/whatsapp.ts'
 
 // Contexto suficiente para entender o assunto sem inflar o prompt.
 const MAX_MENSAGENS_CONTEXTO = 30
@@ -162,8 +163,17 @@ Deno.serve(async (req: Request) => {
   )
 
   try {
-    const telefoneWa = typeof body.telefone_wa === 'string' ? body.telefone_wa : ''
-    if (!telefoneWa) return json({ error: 'telefone_wa é obrigatório' }, 400)
+    // Aceita `jid` cru além de `telefone_wa` para que o n8n NUNCA precise canonicalizar
+    // telefone num nó Code. Foi assim que este projeto perdeu um cliente: a regra ganhou
+    // uma terceira cópia dentro de um workflow, nasceu com um regex errado e descartou o
+    // Denivaldo (DDD 35, formato legado de 12 dígitos) em silêncio. A regra é uma só, e
+    // mora em packages/shared.
+    const jid = typeof body.jid === 'string' ? body.jid : ''
+    const telefoneWa = typeof body.telefone_wa === 'string' && body.telefone_wa
+      ? body.telefone_wa
+      : (jid ? telefoneWaDeJid(jid) ?? '' : '')
+
+    if (!telefoneWa) return json({ error: 'telefone_wa ou jid válido é obrigatório', jid }, 400)
 
     if (body.acao === 'contexto') {
       const modo = lerModo()
