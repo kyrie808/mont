@@ -48,6 +48,24 @@
         }
       },
       "notes": "Repassa o corpo CRU. O n8n nao interpreta nada: toda a regra mora na Edge Function, versionada no repo. $json.body porque o no Webhook envelopa o payload em body/headers/query."
+    },
+    {
+      "id": "chamar-secretaria",
+      "name": "Acionar secretária",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [520, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/secretaria",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $('Webhook Evolution').item.json.body }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "EM SERIE, depois do ingestor — nao em paralelo. Duas razoes:\n\n1. A ingestao e o que nao pode ser perdido. Se ela falhar, a cadeia para aqui e o erro volta pra Evolution, que reentrega. A secretaria nem chega a ser acionada, o que esta certo: sem mensagem gravada nao ha o que responder.\n\n2. onError=continueRegularOutput de proposito: uma falha da secretaria NAO pode fazer a Evolution reentregar, porque reentrega significaria mandar a MESMA mensagem pro cliente duas vezes. Melhor a secretaria perder um turno que o cliente receber resposta dobrada."
     }
   ],
   "connections": {
@@ -56,6 +74,17 @@
         [
           {
             "node": "POST whatsapp-ingestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST whatsapp-ingestor": {
+      "main": [
+        [
+          {
+            "node": "Acionar secretária",
             "type": "main",
             "index": 0
           }
