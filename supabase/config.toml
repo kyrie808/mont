@@ -397,6 +397,9 @@ verify_jwt = false
 [functions.whatsapp-ingestor]
 verify_jwt = false
 
+[functions.whatsapp-analista]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

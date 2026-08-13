@@ -1451,7 +1451,9 @@ export type Database = {
           criado_em: string
           direcao: string
           enviada_em: string
+          historico: boolean
           id: string
+          lid: string | null
           message_id: string
           payload: Json
           processado_em: string | null
@@ -1465,7 +1467,9 @@ export type Database = {
           criado_em?: string
           direcao: string
           enviada_em: string
+          historico?: boolean
           id?: string
+          lid?: string | null
           message_id: string
           payload: Json
           processado_em?: string | null
@@ -1479,7 +1483,9 @@ export type Database = {
           criado_em?: string
           direcao?: string
           enviada_em?: string
+          historico?: boolean
           id?: string
+          lid?: string | null
           message_id?: string
           payload?: Json
           processado_em?: string | null
@@ -2498,6 +2504,27 @@ export type Database = {
           },
         ]
       }
+      wa_lid_map: {
+        Row: {
+          lid: string
+          metodo: string
+          resolvido_em: string
+          telefone_wa: string
+        }
+        Insert: {
+          lid: string
+          metodo?: string
+          resolvido_em?: string
+          telefone_wa: string
+        }
+        Update: {
+          lid?: string
+          metodo?: string
+          resolvido_em?: string
+          telefone_wa?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       contato_compras_resumo: {
@@ -3190,6 +3217,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_purgar_conteudo_whatsapp: {
+        Args: { p_meses?: number }
+        Returns: number
+      }
       fn_slugify: { Args: { p: string }; Returns: string }
       fn_telefone_wa: { Args: { p_telefone: string }; Returns: string }
       gerar_despesas_recorrentes: {
@@ -3301,6 +3332,14 @@ export type Database = {
           total_pontos: number
           ultima_compra: string
         }[]
+      }
+      rpc_registrar_interacao_ia: {
+        Args: {
+          p_message_ids: string[]
+          p_payload: Json
+          p_telefone_wa: string
+        }
+        Returns: string
       }
       rpc_total_a_receber_dashboard: {
         Args: { p_ano?: number; p_mes?: number }
