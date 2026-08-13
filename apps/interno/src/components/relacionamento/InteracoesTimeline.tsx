@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil, Megaphone, Reply } from 'lucide-react'
+import { ArrowRightLeft, MessageSquare, Tag, PhoneCall, Pencil, Megaphone, Reply, Sparkles } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { Modal } from '../ui'
@@ -136,10 +136,27 @@ function TimelineItem({ item, isLast, onEdit, campanhaNome }: { item: Interacao;
                     <Megaphone className="h-2.5 w-2.5" /> Ofereceu {campanhaNome}
                 </span>
             )}
+            {/* Procedência, não ação: por isso `muted` e não `primary` como o chip de
+                campanha. O Gilmar precisa saber num relance o que ele escreveu e o que
+                a IA escreveu — sem isso, os dois viram a mesma coisa na tela e ele
+                perde a confiança no registro inteiro. */}
+            {item.gerado_por_ia && (
+                <span
+                    className="mt-1 inline-flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                    title="Resumo escrito automaticamente pela leitura da conversa no WhatsApp. Você pode editar ou excluir."
+                >
+                    <Sparkles className="h-2.5 w-2.5" /> Automático
+                </span>
+            )}
             {item.observacao && (
                 <p className={cn(
                     'mt-0.5 text-[11px] leading-[1.4] text-muted-foreground/70',
-                    item.tipo === 'feedback' ? 'whitespace-pre-wrap wrap-break-word' : 'truncate',
+                    // `truncate` nasceu para nota curta digitada à mão, onde a linha
+                    // única basta. O resumo da IA tem duas frases e É o conteúdo do
+                    // registro — cortá-lo esconderia justamente o que dá valor ao selo.
+                    item.tipo === 'feedback' || item.gerado_por_ia
+                        ? 'whitespace-pre-wrap wrap-break-word'
+                        : 'truncate',
                 )}>
                     {item.observacao}
                 </p>
