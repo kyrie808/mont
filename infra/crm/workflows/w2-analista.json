@@ -1,0 +1,207 @@
+{
+  "name": "W2 — Analista de conversa (Gemini)",
+  "nodes": [
+    {
+      "id": "cron",
+      "name": "A cada 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "notes": "5 min e so a frequencia de VARREDURA. O que decide se a conversa entra e a janela de silencio de 30 min, aplicada na Edge Function."
+    },
+    {
+      "id": "fila",
+      "name": "Buscar fila",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-analista",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\"acao\":\"fila\"}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "O n8n nao tem credencial do banco: le a fila por endpoint autenticado por segredo."
+    },
+    {
+      "id": "prompt",
+      "name": "Montar prompt por conversa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Um item por conversa. O prompt carrega SO o que o modelo precisa julgar.\n// `sentido` fica de fora de proposito: ele e determinístico (quem mandou a ultima\n// mensagem) e ja veio resolvido da Edge Function. Quanto menos o LLM decide, menos\n// ele tem como errar.\nconst conversas = $input.first().json?.conversas ?? [];\nconst saida = [];\n\nfor (const c of conversas) {\n  const transcricao = c.mensagens\n    .map((m) => `${m.de === 'cliente' ? 'CLIENTE' : 'NOS'}: ${m.texto}`)\n    .join('\\n');\n\n  const prompt = [\n    'Voce registra pontos de contato no CRM da Mont Distribuidora, que vende pao de',\n    'queijo artesanal por WhatsApp. Leia a conversa e produza o registro que um bom',\n    'vendedor escreveria DEPOIS de encerrar o atendimento.',\n    '',\n    `Cliente: ${c.nome ?? 'sem nome'}`,\n    '',\n    'CONVERSA:',\n    transcricao,\n    '',\n    'Regras:',\n    '- observacao: no maximo 2 frases, em portugues, objetiva. Diga o que foi tratado e',\n    '  como ficou. Nada de floreio, nada de repetir a conversa inteira.',\n    '- tipo: use \"feedback\" apenas quando o cliente opina sobre produto/atendimento',\n    '  (elogio ou reclamacao). Caso contrario, \"ponto_contato\".',\n    '- resultado: descreve a RESPOSTA DO CLIENTE.',\n    '    \"aceitou\"  = fechou pedido ou concordou com a oferta;',\n    '    \"recusou\"  = disse claramente que NAO quer. Use com parcimonia: isso congela',\n    '                 o cliente por 30 dias. \"agora nao\" ou \"depois eu vejo\" NAO e recusa;',\n    '    \"respondeu\"= interagiu sem fechar nem recusar;',\n    '    \"nenhum\"   = so nos falamos, ou nao da pra dizer.'\n  ].join('\\n');\n\n  saida.push({ json: { contato_id: c.contato_id, telefone_wa: c.telefone_wa, nome: c.nome, sentido: c.sentido, message_ids: c.message_ids, prompt } });\n}\n\nreturn saida;"
+      }
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini Flash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { tipo: { type: 'STRING', enum: ['ponto_contato','feedback'] }, resultado: { type: 'STRING', enum: ['respondeu','aceitou','recusou','nenhum'] }, observacao: { type: 'STRING' } }, required: ['tipo','resultado','observacao'] } } }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bGq31q1z6utGJJ8k",
+          "name": "Gemini API (x-goog-api-key)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "responseSchema prende o modelo ao vocabulario no nivel da API — antes mesmo da RPC validar. temperature baixa porque isto e registro, nao criacao. onError continua: uma conversa que falhar nao pode travar as outras (ela volta na proxima rodada, porque so sai da fila quem foi gravado)."
+    },
+    {
+      "id": "parse",
+      "name": "Ler veredito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Junta o veredito do LLM com o que ja era determinístico. Se o Gemini falhar ou\n// devolver algo ilegivel, a conversa e PULADA — nao vai lixo pra timeline, e ela\n// volta na proxima rodada porque nunca saiu da fila.\nconst saida = [];\nconst entradas = $input.all();\n\nfor (let i = 0; i < entradas.length; i++) {\n  const base = $('Montar prompt por conversa').all()[i]?.json;\n  if (!base) continue;\n\n  const texto = entradas[i].json?.candidates?.[0]?.content?.parts?.[0]?.text;\n  if (!texto) continue;\n\n  let v;\n  try { v = JSON.parse(texto); } catch { continue; }\n  if (!v || typeof v.observacao !== 'string' || !v.observacao.trim()) continue;\n\n  saida.push({ json: {\n    acao: 'registrar',\n    telefone_wa: base.telefone_wa,\n    message_ids: base.message_ids,\n    analise: {\n      tipo: v.tipo,\n      sentido: base.sentido,               // determinístico, nao do LLM\n      resultado: v.resultado === 'nenhum' ? null : v.resultado,\n      observacao: v.observacao.trim(),\n    },\n  } });\n}\n\nreturn saida;"
+      }
+    },
+    {
+      "id": "registrar",
+      "name": "Registrar na timeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-analista",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "A RPC valida de novo e degrada valor invalido para null. Este e o unico caminho de escrita da IA na timeline."
+    }
+  ],
+  "connections": {
+    "A cada 5 min": {
+      "main": [
+        [
+          {
+            "node": "Buscar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar fila": {
+      "main": [
+        [
+          {
+            "node": "Montar prompt por conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar prompt por conversa": {
+      "main": [
+        [
+          {
+            "node": "Gemini Flash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Flash": {
+      "main": [
+        [
+          {
+            "node": "Ler veredito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler veredito": {
+      "main": [
+        [
+          {
+            "node": "Registrar na timeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
