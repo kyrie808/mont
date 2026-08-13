@@ -24,6 +24,7 @@ import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   extrairMensagensCruas,
   normalizarMensagem,
+  isAnuncioPago,
   lerCtwaClid,
   lerSourceId,
   type MensagemNormalizada,
@@ -43,6 +44,30 @@ function json(body: unknown, status: number): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+/**
+ * Lote de resgate de histórico, enviado pelo workflow "resgatador" do n8n.
+ *
+ * Na carga de histórico o `remoteJid` vem como LID (id opaco), então o telefone NÃO é
+ * derivável aqui. Quem resolve é o resgatador, que enxerga a Evolution e correlaciona
+ * o `updatedAt` do chat com o instante da mensagem ao vivo. A função só confia no
+ * telefone já resolvido — ela não tem como chegar na Evolution (roda na nuvem; a
+ * Evolution é local).
+ */
+interface Resgate {
+  lid: string
+  telefone_wa: string
+}
+
+function lerResgate(body: unknown): Resgate | null {
+  if (typeof body !== 'object' || body === null) return null
+  const r = (body as Record<string, unknown>).resgate
+  if (typeof r !== 'object' || r === null) return null
+  const { lid, telefone_wa } = r as Record<string, unknown>
+  if (typeof lid !== 'string' || !lid) return null
+  if (typeof telefone_wa !== 'string' || !/^\d{13}$/.test(telefone_wa)) return null
+  return { lid, telefone_wa }
 }
 
 function chunks<T>(arr: T[], tamanho: number): T[][] {
@@ -70,6 +95,7 @@ async function gravarCruas(
   admin: SupabaseClient,
   mensagens: MensagemNormalizada[],
   payloadPorId: Map<string, unknown>,
+  resgate: Resgate | null,
 ): Promise<number> {
   let gravadas = 0
 
@@ -83,6 +109,8 @@ async function gravarCruas(
       referral: m.referral,
       payload: payloadPorId.get(m.messageId) ?? {},
       enviada_em: m.enviadaEm,
+      historico: resgate !== null,
+      lid: resgate?.lid ?? null,
     }))
 
     const { data, error } = await admin
@@ -183,7 +211,12 @@ async function casarContatos(
 
   for (const [telefone, ag] of porTelefone) {
     const clid = lerCtwaClid(ag.referral)
-    const veioDeAnuncio = ag.referral !== null
+    // ⚠️ Referral NÃO é sinônimo de anúncio. O primeiro capturado em produção veio de um
+    // POST ORGÂNICO com botão de CTA (`FB_Post`/`post_cta`), de uma cliente que já era
+    // `origem: 'direto'`. Marcar aquilo como anúncio reescreveria a origem dela e
+    // enfileiraria um Lead na CAPI por tráfego orgânico. O referral orgânico é guardado
+    // na mensagem (é informação boa), mas só o PAGO mexe na origem do contato.
+    const veioDeAnuncio = isAnuncioPago(ag.referral)
     const campanhaId = veioDeAnuncio ? await resolverCampanha(admin, lerSourceId(ag.referral)) : null
     const atual = existentes.get(telefone)
 
@@ -270,12 +303,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'JSON inválido' }, 400)
   }
 
+  const resgate = lerResgate(body)
   const cruas = extrairMensagensCruas(body)
   const mensagens: MensagemNormalizada[] = []
   const payloadPorId = new Map<string, unknown>()
 
   for (const crua of cruas) {
-    const m = normalizarMensagem(crua)
+    // No resgate o telefone vem pronto do resgatador; ao vivo sai do próprio JID.
+    const m = normalizarMensagem(crua, resgate?.telefone_wa)
     if (!m) continue // grupo, status, sem id, telefone não-canonizável
     mensagens.push(m)
     payloadPorId.set(m.messageId, crua)
@@ -293,8 +328,25 @@ Deno.serve(async (req: Request) => {
   )
 
   try {
-    const gravadas = await gravarCruas(admin, mensagens, payloadPorId)
+    const gravadas = await gravarCruas(admin, mensagens, payloadPorId, resgate)
     const comReferral = mensagens.filter((m) => m.referral !== null).length
+    const comAnuncioPago = mensagens.filter((m) => isAnuncioPago(m.referral)).length
+
+    if (resgate) {
+      // Resgate registra o par LID→telefone e PARA. Nunca casa contato: o passado não
+      // reescreve origem, não mexe em `ultimo_contato` e não move o Kanban. Ele existe
+      // como contexto pro perfilador, não como evento de relacionamento.
+      await admin
+        .from('wa_lid_map')
+        .upsert({ lid: resgate.lid, telefone_wa: resgate.telefone_wa }, { onConflict: 'lid' })
+
+      return json({
+        ok: true, modo, resgate: true, lid: resgate.lid,
+        recebidas: cruas.length, gravadas,
+        ignoradas: cruas.length - mensagens.length,
+        com_referral: comReferral,
+      }, 200)
+    }
 
     if (modo === 'sombra') {
       return json({
@@ -304,6 +356,7 @@ Deno.serve(async (req: Request) => {
         gravadas,
         ignoradas: cruas.length - mensagens.length,
         com_referral: comReferral,
+        anuncio_pago: comAnuncioPago,
       }, 200)
     }
 
@@ -316,6 +369,7 @@ Deno.serve(async (req: Request) => {
       gravadas,
       ignoradas: cruas.length - mensagens.length,
       com_referral: comReferral,
+      anuncio_pago: comAnuncioPago,
       contatos,
     }, 200)
   } catch (e) {

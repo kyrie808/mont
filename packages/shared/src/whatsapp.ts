@@ -190,14 +190,19 @@ function extrairTipoEConteudo(message: Json | undefined): { tipo: TipoMidia; con
  */
 export function extrairReferral(payload: unknown): Record<string, unknown> | null {
     const achado: Record<string, unknown> = {}
+    let dentroDeObjetoDeAtribuicao = false
 
-    const CHAVES_DIRETAS = new Set([
+    // Só ESTES campos são copiados, e só se forem escalares. O primeiro referral real
+    // capturado em produção (11/08/2026) gravou 43 KB porque a versão anterior copiava
+    // o `externalAdReply` inteiro — que carrega `thumbnail` em base64. Guardar miniatura
+    // de anúncio não serve pra nada e multiplica o custo por mensagem.
+    const CHAVES = new Set([
         'ctwaClid', 'ctwa_clid', 'sourceId', 'source_id', 'sourceUrl', 'source_url',
-        'sourceType', 'source_type', 'conversionSource', 'conversionData',
-        'entryPointConversionSource', 'entryPointConversionApp', 'ctwaPayload',
-        'ctwaSignals', 'showAdAttribution', 'mediaType', 'headline', 'body',
+        'sourceType', 'source_type', 'conversionSource', 'entryPointConversionSource',
+        'entryPointConversionApp', 'ctwaSignals', 'showAdAttribution', 'headline', 'title',
     ])
-    const CHAVES_OBJETO = new Set(['externalAdReply', 'referral', 'adReferral'])
+    // A presença destes objetos já é sinal de atribuição, mesmo que o conteúdo varie.
+    const OBJETOS_DE_ATRIBUICAO = new Set(['externalAdReply', 'referral', 'adReferral'])
 
     const visitados = new Set<unknown>()
 
@@ -212,12 +217,12 @@ export function extrairReferral(payload: unknown): Record<string, unknown> | nul
         }
 
         for (const [chave, valor] of Object.entries(node as Json)) {
-            if (CHAVES_OBJETO.has(chave) && isObj(valor)) {
-                Object.assign(achado, valor)
-                achado[chave] = valor
-            } else if (CHAVES_DIRETAS.has(chave) && valor !== null && valor !== undefined && valor !== '') {
-                // Primeiro achado vence: o nível mais externo é o mais confiável.
-                if (!(chave in achado)) achado[chave] = valor
+            if (OBJETOS_DE_ATRIBUICAO.has(chave) && isObj(valor)) {
+                dentroDeObjetoDeAtribuicao = true
+            } else if (CHAVES.has(chave) && !(chave in achado)) {
+                // Escalar só: nada de objeto, array ou binário entra no jsonb.
+                const escalar = typeof valor === 'string' || typeof valor === 'number' || typeof valor === 'boolean'
+                if (escalar && valor !== '') achado[chave] = valor
             }
             anda(valor, profundidade + 1)
         }
@@ -225,17 +230,40 @@ export function extrairReferral(payload: unknown): Record<string, unknown> | nul
 
     anda(payload, 0)
 
-    // `body`/`headline`/`mediaType` sozinhos são de citação de link comum, não de
-    // anúncio. Só vale como referral se houver sinal real de Click-to-WhatsApp.
-    const temSinalDeAnuncio =
+    // `headline`/`title` sozinhos são de citação de link comum, não de anúncio.
+    // Só vale como referral se houver sinal real de origem externa.
+    const temSinal =
+        dentroDeObjetoDeAtribuicao ||
         'ctwaClid' in achado || 'ctwa_clid' in achado ||
         'sourceId' in achado || 'source_id' in achado ||
-        'externalAdReply' in achado || 'referral' in achado || 'adReferral' in achado ||
-        achado.conversionSource === 'FB_Ads' ||
-        achado.entryPointConversionSource === 'ctwa_ad' ||
+        typeof achado.conversionSource === 'string' ||
+        typeof achado.entryPointConversionSource === 'string' ||
         achado.showAdAttribution === true
 
-    return temSinalDeAnuncio ? achado : null
+    return temSinal ? achado : null
+}
+
+/**
+ * `true` só quando a origem é anúncio PAGO.
+ *
+ * Distinção descoberta com dado real: em 11/08/2026 a primeira atribuição capturada em
+ * produção veio de um POST orgânico do Facebook com botão de CTA
+ * (`conversionSource: 'FB_Post'`, `entryPointConversionSource: 'post_cta'`, sem clid),
+ * de uma cliente que já existia na base como `origem: 'direto'`.
+ *
+ * Tratar isso como anúncio reescreveria a origem dela e enfileiraria um Lead na CAPI
+ * por causa de tráfego orgânico — sujando exatamente o dado de aquisição que este
+ * projeto existe para limpar. O referral orgânico é guardado (é informação boa: sabemos
+ * que ela veio de um post), mas não vira `origem = 'anuncio'`.
+ */
+export function isAnuncioPago(referral: Record<string, unknown> | null): boolean {
+    if (!referral) return false
+    if (lerCtwaClid(referral)) return true
+    return (
+        referral.conversionSource === 'FB_Ads' ||
+        referral.entryPointConversionSource === 'ctwa_ad' ||
+        referral.sourceType === 'ad'
+    )
 }
 
 /** Lê o ctwa_clid de um referral já extraído, aceitando as duas grafias. */
@@ -292,18 +320,25 @@ export function extrairMensagensCruas(body: unknown): Json[] {
 /**
  * Mensagem crua da Evolution → forma normalizada, ou `null` quando deve ser
  * ignorada (grupo, status, sem id, telefone não-canonizável).
+ *
+ * `telefoneForcado` existe por causa do LID: na carga de histórico o `remoteJid` vem
+ * como `269466768244766@lid`, um id opaco do qual NÃO dá pra derivar telefone. Quem
+ * resolve essa tradução é o resgatador (que enxerga a Evolution e correlaciona por
+ * timestamp); aqui a gente só aceita o telefone já resolvido. Sem isso, a mensagem
+ * histórica seria descartada — foi o que aconteceu com as 6.098 do pareamento.
  */
-export function normalizarMensagem(crua: Json): MensagemNormalizada | null {
+export function normalizarMensagem(crua: Json, telefoneForcado?: string | null): MensagemNormalizada | null {
     const key = isObj(crua.key) ? crua.key : null
     if (!key) return null
 
     const jid = typeof key.remoteJid === 'string' ? key.remoteJid : null
+    // Grupo/status ficam de fora mesmo com telefone forçado: não são conversa 1:1.
     if (isJidIgnorado(jid)) return null
 
     const messageId = typeof key.id === 'string' && key.id ? key.id : null
     if (!messageId) return null
 
-    const tel = telefoneWaDeJid(jid)
+    const tel = telefoneForcado ?? telefoneWaDeJid(jid)
     if (!tel) return null
 
     const message = isObj(crua.message) ? crua.message : undefined

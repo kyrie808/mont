@@ -8,6 +8,7 @@ import {
     lerSourceId,
     extrairMensagensCruas,
     normalizarMensagem,
+    isAnuncioPago,
 } from '@mont/shared'
 
 // Camada pura: sem banco, sem rede, sem harness de integração.
@@ -160,6 +161,90 @@ describe('extrairReferral — a atribuição do anúncio', () => {
         const a: Record<string, unknown> = { message: { conversation: 'oi' } }
         a.self = a
         expect(() => extrairReferral(a)).not.toThrow()
+    })
+})
+
+/**
+ * Regressões vindas do PRIMEIRO referral real capturado em produção (11/08/2026),
+ * de uma cliente que já existia na base. Os dois defeitos abaixo só apareceram
+ * porque o dado real chegou — nenhum teste sintético teria pego.
+ */
+describe('isAnuncioPago — anúncio pago vs post orgânico', () => {
+    // Payload REAL recebido: post do Facebook com botão de CTA, sem clid.
+    const postOrganico = {
+        sourceId: '122161464422987064',
+        sourceUrl: 'https://fb.me/20S9JgX94n',
+        conversionSource: 'FB_Post',
+        entryPointConversionSource: 'post_cta',
+    }
+
+    it('post orgânico NÃO é anúncio pago', () => {
+        // A Ellen já era `origem: 'direto'`, cliente com 1 venda. Tratar isso como
+        // anúncio reescreveria a origem dela e enfileiraria um Lead falso na CAPI.
+        expect(isAnuncioPago(postOrganico)).toBe(false)
+    })
+
+    it('mas o referral orgânico continua sendo capturado — é informação boa', () => {
+        expect(extrairReferral({ message: { extendedTextMessage: { contextInfo: postOrganico } } }))
+            .not.toBeNull()
+    })
+
+    it('anúncio pago é reconhecido pelo clid, por FB_Ads ou por ctwa_ad', () => {
+        expect(isAnuncioPago({ ctwaClid: 'AfXyZ' })).toBe(true)
+        expect(isAnuncioPago({ conversionSource: 'FB_Ads' })).toBe(true)
+        expect(isAnuncioPago({ entryPointConversionSource: 'ctwa_ad' })).toBe(true)
+        expect(isAnuncioPago(null)).toBe(false)
+    })
+})
+
+describe('extrairReferral — não guarda lixo', () => {
+    it('descarta thumbnail e objetos aninhados', () => {
+        // O primeiro referral real gravou 43 KB porque a versão anterior copiava o
+        // externalAdReply inteiro, incluindo a miniatura do anúncio em base64.
+        const ref = extrairReferral({
+            message: {
+                extendedTextMessage: {
+                    contextInfo: {
+                        externalAdReply: {
+                            ctwaClid: 'AfXyZ',
+                            sourceId: '123',
+                            thumbnail: 'x'.repeat(40_000),
+                            thumbnailUrl: 'https://exemplo/imagem.jpg',
+                            quotedMessage: { conversation: 'ruido' },
+                        },
+                    },
+                },
+            },
+        })!
+        expect(lerCtwaClid(ref)).toBe('AfXyZ')
+        expect(lerSourceId(ref)).toBe('123')
+        expect(JSON.stringify(ref)).not.toContain('xxxx')
+        expect(JSON.stringify(ref).length).toBeLessThan(500)
+    })
+})
+
+describe('normalizarMensagem — telefone forçado (resgate de histórico)', () => {
+    // O histórico chega com LID, do qual NÃO dá pra derivar telefone. Foi por isso
+    // que as 6.098 mensagens do pareamento foram descartadas.
+    const cruaComLid = {
+        key: { remoteJid: '269466768244766@lid', fromMe: false, id: 'HIST_1' },
+        messageTimestamp: 1786150000,
+        message: { conversation: 'mensagem antiga' },
+    }
+
+    it('sem telefone forçado, mensagem em LID é descartada', () => {
+        expect(normalizarMensagem(cruaComLid)).toBeNull()
+    })
+
+    it('com telefone forçado, é aceita e usa o telefone resolvido', () => {
+        const m = normalizarMensagem(cruaComLid, '5511964911627')!
+        expect(m.telefoneWa).toBe('5511964911627')
+        expect(m.conteudo).toBe('mensagem antiga')
+    })
+
+    it('grupo continua descartado MESMO com telefone forçado', () => {
+        const grupo = { ...cruaComLid, key: { ...cruaComLid.key, remoteJid: '123@g.us' } }
+        expect(normalizarMensagem(grupo, '5511964911627')).toBeNull()
     })
 })
 

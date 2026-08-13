@@ -37,6 +37,7 @@ export {
     telefoneWaDeJid,
     isJidIgnorado,
     extrairReferral,
+    isAnuncioPago,
     lerCtwaClid,
     lerSourceId,
     extrairMensagensCruas,
