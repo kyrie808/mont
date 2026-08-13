@@ -76,7 +76,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -94,7 +94,7 @@
         }
       },
       "onError": "continueRegularOutput",
-      "notes": "responseSchema prende o modelo ao vocabulario no nivel da API — antes mesmo da RPC validar. temperature baixa porque isto e registro, nao criacao. onError continua: uma conversa que falhar nao pode travar as outras (ela volta na proxima rodada, porque so sai da fila quem foi gravado)."
+      "notes": "responseSchema prende o modelo ao vocabulario no nivel da API — antes mesmo da RPC validar. temperature baixa porque isto e registro, nao criacao. onError continua: uma conversa que falhar nao pode travar as outras.\n\nMODELO FIXADO. O Google aposenta modelo rapido: gemini-2.0-flash foi desligado em 01/06/2026 (deu 404 aqui) e o 2.5-flash morre em 16/10/2026. Fomos direto pro 3.5 pra nao migrar duas vezes. Quando aparecer 404 de novo, e isso: trocar o id do modelo na URL."
     },
     {
       "id": "parse",
