@@ -34,6 +34,14 @@ describe('telefoneWa — chave canônica', () => {
         expect(telefoneWa('1161234567')).toBe('5511961234567')
     })
 
+    it('recompõe o 9º dígito quando o número já vem com DDI e 12 dígitos', () => {
+        // Caso REAL: o WhatsApp guarda o número do Denivaldo (DDD 35) no formato
+        // antigo — `553588438564@s.whatsapp.net`, 12 dígitos, sem o 9. Um regex
+        // ingênuo (`^55\d{2}9\d{8}$`) descartaria o cliente inteiro.
+        expect(telefoneWa('553588438564')).toBe('5535988438564')
+        expect(telefoneWaDeJid('553588438564@s.whatsapp.net')).toBe('5535988438564')
+    })
+
     it('devolve null pra telefone fixo — fixo não existe no WhatsApp', () => {
         // Casos REAIS da base: Amanda (4 vendas) e Cira (1 venda).
         expect(telefoneWa('1148041265')).toBeNull()

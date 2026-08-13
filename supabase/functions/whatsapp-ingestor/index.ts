@@ -27,6 +27,8 @@ import {
   isAnuncioPago,
   lerCtwaClid,
   lerSourceId,
+  telefoneWa,
+  telefoneWaDeJid,
   type MensagemNormalizada,
 } from '../../../packages/shared/src/whatsapp.ts'
 
@@ -60,14 +62,30 @@ interface Resgate {
   telefone_wa: string
 }
 
+/**
+ * Lê o lote de resgate. O resgatador manda o `remoteJidAlt` CRU, como a Evolution
+ * entregou — quem canonicaliza é aqui.
+ *
+ * Isso é deliberado. A regra de telefone já existe em dois lugares que precisam
+ * concordar (a SQL `fn_telefone_wa` e a TS `telefoneWa`); uma TERCEIRA cópia dentro
+ * de um nó do n8n seria a mais fácil de divergir e a mais difícil de testar. A
+ * primeira versão tentou isso com um regex `^55\d{2}9\d{8}$` e já nasceu errada:
+ * descartou um cliente de DDD 35 cujo WhatsApp guarda o número no formato antigo,
+ * `553588438564` — 12 dígitos, sem o 9. É exatamente o caso que `telefoneWa` resolve.
+ */
 function lerResgate(body: unknown): Resgate | null {
   if (typeof body !== 'object' || body === null) return null
   const r = (body as Record<string, unknown>).resgate
   if (typeof r !== 'object' || r === null) return null
   const { lid, telefone_wa } = r as Record<string, unknown>
   if (typeof lid !== 'string' || !lid) return null
-  if (typeof telefone_wa !== 'string' || !/^\d{13}$/.test(telefone_wa)) return null
-  return { lid, telefone_wa }
+  if (typeof telefone_wa !== 'string' || !telefone_wa) return null
+
+  // Aceita JID completo (`553588438564@s.whatsapp.net`) ou só dígitos.
+  const canonico = telefoneWaDeJid(telefone_wa) ?? telefoneWa(telefone_wa)
+  if (!canonico) return null
+
+  return { lid, telefone_wa: canonico }
 }
 
 function chunks<T>(arr: T[], tamanho: number): T[][] {
@@ -338,7 +356,13 @@ Deno.serve(async (req: Request) => {
       // como contexto pro perfilador, não como evento de relacionamento.
       await admin
         .from('wa_lid_map')
-        .upsert({ lid: resgate.lid, telefone_wa: resgate.telefone_wa }, { onConflict: 'lid' })
+        .upsert(
+          // `remote_jid_alt` é a Evolution AFIRMANDO o vínculo, não inferência nossa —
+          // por isso o método fica registrado: um par vindo daqui é confiável, um par
+          // vindo de heurística (se um dia precisarmos de uma) não seria igual.
+          { lid: resgate.lid, telefone_wa: resgate.telefone_wa, metodo: 'remote_jid_alt' },
+          { onConflict: 'lid' },
+        )
 
       return json({
         ok: true, modo, resgate: true, lid: resgate.lid,

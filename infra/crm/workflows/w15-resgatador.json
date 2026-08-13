@@ -1,0 +1,231 @@
+{
+  "name": "W1.5 — Resgatador de histórico (LID → telefone)",
+  "nodes": [
+    {
+      "id": "cron",
+      "name": "A cada 30 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "notes": "Agendado, nao webhook: ninguem precisa alcancar o n8n de fora. Todo trafego e de saida, por isso a stack nao precisa de tunel."
+    },
+    {
+      "id": "recentes",
+      "name": "Mensagens recentes (Evolution)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution:8080/chat/findMessages/mont",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\"page\":1,\"offset\":300}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GAzXyugDzud6i2fY",
+          "name": "Evolution API (apikey)"
+        }
+      },
+      "notes": "So o topo da lista (mais recentes). E ai que moram as mensagens AO VIVO, as unicas que carregam remoteJidAlt. Varrer as 320 paginas seria desperdicio: o historico antigo nao tem o campo."
+    },
+    {
+      "id": "extrair",
+      "name": "Extrair pares LID → telefone",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// `key.remoteJidAlt` e a Evolution AFIRMANDO de quem e o LID — nao e inferencia\n// nossa. Uma unica mensagem ao vivo resolve a conversa inteira, e por isso o\n// resgate se auto-cura: cliente que volta a escrever destrava o proprio passado.\n//\n// NAO canonicaliza telefone aqui DE PROPOSITO. A regra ja vive em dois lugares que\n// precisam concordar (fn_telefone_wa no banco e telefoneWa no shared); uma terceira\n// copia num no do n8n seria a mais facil de divergir e a mais dificil de testar.\n// A primeira versao tentou com regex e ja nasceu errada: descartou um cliente de\n// DDD 35 cujo numero o WhatsApp guarda no formato antigo (553588438564, sem o 9).\n// Mandamos o JID cru; o ingestor canonicaliza com a funcao unica.\nconst estado = $getWorkflowStaticData(\"global\");\nestado.lidsResgatados = estado.lidsResgatados || {};\n\nconst registros = $input.first().json?.messages?.records ?? [];\nconst pares = new Map();\n\nfor (const r of registros) {\n  const lid = r?.key?.remoteJid;\n  const alt = r?.key?.remoteJidAlt;\n  if (!lid || !alt || !lid.endsWith(\"@lid\")) continue;\n  if (!pares.has(lid)) pares.set(lid, String(alt));\n}\n\nconst novos = [];\nfor (const [lid, telefone_wa] of pares) {\n  if (estado.lidsResgatados[lid]) continue;\n  novos.push({ json: { lid, telefone_wa } });\n}\n\nreturn novos;"
+      },
+      "notes": "Logica pura, sem rede. O estado de quem ja foi resgatado mora no static data do n8n."
+    },
+    {
+      "id": "historico",
+      "name": "Histórico do LID (Evolution)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution:8080/chat/findMessages/mont",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ where: { key: { remoteJid: $json.lid } }, limit: 500 }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GAzXyugDzud6i2fY",
+          "name": "Evolution API (apikey)"
+        }
+      },
+      "notes": "Roda uma vez por LID novo."
+    },
+    {
+      "id": "montar",
+      "name": "Montar lote de resgate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Um item por LID: { resgate: {lid, telefone_wa}, data: [mensagens cruas] }.\n// O telefone vai JUNTO porque o ingestor nao tem como derivar telefone de um LID —\n// ele roda na nuvem e nao alcanca a Evolution, que e local.\nconst saida = [];\n\nfor (let i = 0; i < $input.all().length; i++) {\n  const par = $('Extrair pares LID → telefone').all()[i]?.json;\n  if (!par) continue;\n\n  const registros = $input.all()[i].json?.messages?.records ?? [];\n  if (registros.length === 0) continue;\n\n  saida.push({ json: { resgate: { lid: par.lid, telefone_wa: par.telefone_wa }, data: registros } });\n}\n\nreturn saida;"
+      }
+    },
+    {
+      "id": "enviar",
+      "name": "POST whatsapp-ingestor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-ingestor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "O ingestor grava com historico=true e registra o par em wa_lid_map. Idempotente por message_id, entao reenvio nao duplica.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "marcar",
+      "name": "Marcar LID como resgatado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// So marca DEPOIS do ingestor confirmar. Se o POST falhar, o LID fica de fora do\n// estado e a proxima execucao tenta de novo — o resgate se conserta sozinho.\nconst estado = $getWorkflowStaticData('global');\nestado.lidsResgatados = estado.lidsResgatados || {};\n\nlet marcados = 0;\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (r?.ok !== true || !r?.lid) continue;\n  estado.lidsResgatados[r.lid] = { em: new Date().toISOString(), gravadas: r.gravadas ?? 0 };\n  marcados++;\n}\n\nreturn [{ json: { lids_resgatados_agora: marcados, total_no_estado: Object.keys(estado.lidsResgatados).length } }];"
+      }
+    }
+  ],
+  "connections": {
+    "A cada 30 min": {
+      "main": [
+        [
+          {
+            "node": "Mensagens recentes (Evolution)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagens recentes (Evolution)": {
+      "main": [
+        [
+          {
+            "node": "Extrair pares LID → telefone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair pares LID → telefone": {
+      "main": [
+        [
+          {
+            "node": "Histórico do LID (Evolution)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Histórico do LID (Evolution)": {
+      "main": [
+        [
+          {
+            "node": "Montar lote de resgate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar lote de resgate": {
+      "main": [
+        [
+          {
+            "node": "POST whatsapp-ingestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST whatsapp-ingestor": {
+      "main": [
+        [
+          {
+            "node": "Marcar LID como resgatado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
