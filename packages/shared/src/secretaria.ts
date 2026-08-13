@@ -39,8 +39,13 @@ export function calcularTempoDigitacaoMs(texto: string, aleatorio: () => number 
  *
  * Ninguém manda um parágrafo de seis linhas de uma vez no WhatsApp; manda duas
  * mensagens com uma pausa. É a assinatura mais humana do aplicativo.
+ *
+ * 140 e não 180: o prompt já limita a resposta a três frases curtas, e com teto de 180
+ * a partição praticamente nunca disparava — o comportamento existiria no código sem
+ * nunca aparecer na conversa. Em 140, uma resposta de três frases sai como informação
+ * e depois pergunta, que é como as pessoas realmente escrevem no aplicativo.
  */
-export function particionarResposta(texto: string, maxPorParte = 180): string[] {
+export function particionarResposta(texto: string, maxPorParte = 140): string[] {
     const limpo = texto.trim()
     if (!limpo) return []
     if (limpo.length <= maxPorParte) return [limpo]

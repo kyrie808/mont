@@ -22,6 +22,8 @@ import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   humanoAssumiu,
   estaLiberado,
+  particionarResposta,
+  calcularTempoDigitacaoMs,
   type MensagemDaConversa,
 } from '../../../packages/shared/src/secretaria.ts'
 
@@ -274,9 +276,45 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, interacao_id: data, registrada: data !== null }, 200)
     }
 
+    if (body.acao === 'preparar_envio') {
+      const texto = typeof body.texto === 'string' ? body.texto : ''
+      if (!texto.trim()) return json({ error: 'texto é obrigatório' }, 400)
+
+      // Existe para o nó Code do n8n NÃO virar a terceira cópia da regra de tempo.
+      // Este projeto já foi mordido exatamente assim: a canonicalização de telefone
+      // ganhou uma cópia dentro de um nó, nasceu com um regex errado e descartou um
+      // cliente em silêncio. Uma chamada HTTP é barata; uma regra divergente não.
+      const partes = particionarResposta(texto)
+      return json({
+        ok: true,
+        partes,
+        tempos_ms: partes.map((p) => calcularTempoDigitacaoMs(p)),
+      }, 200)
+    }
+
+    if (body.acao === 'destino_aviso') {
+      // O id do grupo é constante VALIDADA, nunca campo livre: dos grupos visíveis na
+      // conta, um tem 281 participantes (workshop externo). Id errado publicaria pedido
+      // de cliente, com nome e valor, para 281 estranhos.
+      const grupo = Deno.env.get('SECRETARIA_GRUPO_AVISO') ?? ''
+      const fallbackDev = '5511934417085@s.whatsapp.net'
+      const ehGrupoValido = grupo.endsWith('@g.us')
+
+      // Enquanto o número da Mont não estiver no grupo da equipe, o aviso vai para o
+      // Luccas — que assim vê as duas pontas na mesma tela durante o desenvolvimento.
+      return json({
+        ok: true,
+        jid: ehGrupoValido ? grupo : fallbackDev,
+        tipo: ehGrupoValido ? 'grupo' : 'fallback_dev',
+      }, 200)
+    }
+
     return json({
       error: "acao inválida",
-      acoes: ['contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete', 'registrar_pedido_intencao'],
+      acoes: [
+        'contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete',
+        'registrar_pedido_intencao', 'preparar_envio', 'destino_aviso',
+      ],
     }, 400)
   } catch (e) {
     console.error('[whatsapp-secretaria]', e)
