@@ -400,6 +400,9 @@ verify_jwt = false
 [functions.whatsapp-analista]
 verify_jwt = false
 
+[functions.whatsapp-secretaria]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
