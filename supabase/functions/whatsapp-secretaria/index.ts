@@ -192,7 +192,92 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true }, 200)
     }
 
-    return json({ error: "acao deve ser 'contexto' ou 'registrar_envio'" }, 400)
+    if (body.acao === 'consultar_produto') {
+      const termo = typeof body.termo === 'string' ? body.termo.trim() : ''
+      if (!termo) return json({ error: 'termo é obrigatório' }, 400)
+
+      const { data } = await admin
+        .from('produtos')
+        .select('nome, preco')
+        .eq('ativo', true)
+        .eq('visivel_catalogo', true)
+        .ilike('nome', `%${termo}%`)
+        .order('nome')
+        .limit(10)
+
+      return json({
+        ok: true,
+        produtos: (data ?? []).map((p) => ({ nome: p.nome, preco: Number(p.preco ?? 0) })),
+      }, 200)
+    }
+
+    if (body.acao === 'consultar_frete') {
+      // Lê a configuração real em vez de embutir a regra: o Gilmar muda o frete na tela
+      // de Configurações, e a secretária tem que falar o mesmo número que o sistema cobra.
+      const { data } = await admin
+        .from('configuracoes').select('valor').eq('chave', 'frete_config').maybeSingle()
+
+      const cfg = (data?.valor ?? {}) as {
+        modo?: string
+        faixas?: Array<{ ateKm?: number; valorFixo?: number }>
+        foraDoAlcance?: string
+      }
+      const faixa = cfg.faixas?.[0]
+
+      return json({
+        ok: true,
+        modo: cfg.modo ?? 'desconhecido',
+        valor: faixa?.valorFixo ?? null,
+        ate_km: faixa?.ateKm ?? null,
+        // 'a_combinar' NÃO é para a agente improvisar — é caso de escalar.
+        fora_do_alcance: cfg.foraDoAlcance ?? 'a_combinar',
+      }, 200)
+    }
+
+    if (body.acao === 'registrar_pedido_intencao') {
+      const resumo = typeof body.resumo === 'string' ? body.resumo.trim() : ''
+      if (!resumo) return json({ error: 'resumo é obrigatório' }, 400)
+
+      // As mensagens ainda não processadas desta conversa são a âncora de idempotência
+      // da RPC — com array vazio ela devolveria NULL e NÃO inseriria nada, perdendo a
+      // intenção de compra em silêncio. Ancorar também evita registro duplicado: o que a
+      // secretária consome aqui não volta na fila do W2 para virar um segundo resumo do
+      // mesmo papo.
+      const { data: pendentes } = await admin
+        .from('mensagens_whatsapp')
+        .select('message_id')
+        .eq('telefone_wa', telefoneWa)
+        .is('processado_em', null)
+        .eq('historico', false)
+
+      const messageIds = (pendentes ?? []).map((m) => m.message_id)
+
+      // NÃO cria venda de propósito. Venda criada por IA viraria estoque baixado e
+      // recebível fantasma. Aqui só fica o registro na timeline; quem transforma em venda
+      // é um humano, no sistema.
+      const { data, error } = await admin.rpc('rpc_registrar_interacao_ia', {
+        p_telefone_wa: telefoneWa,
+        p_payload: {
+          tipo: 'ponto_contato',
+          sentido: 'entrada',
+          resultado: 'aceitou',
+          observacao: `[intenção de compra] ${resumo}`,
+        },
+        p_message_ids: messageIds,
+      })
+
+      if (error) return json({ error: error.message }, 400)
+
+      // `registrada: false` = não havia mensagem pendente para ancorar (o W2 chegou
+      // antes). O aviso no canal interno sai do mesmo jeito — é ele que faz o humano
+      // agir — mas fica explícito aqui em vez de sumir.
+      return json({ ok: true, interacao_id: data, registrada: data !== null }, 200)
+    }
+
+    return json({
+      error: "acao inválida",
+      acoes: ['contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete', 'registrar_pedido_intencao'],
+    }, 400)
   } catch (e) {
     console.error('[whatsapp-secretaria]', e)
     return json({ error: (e as Error).message }, 500)
