@@ -150,7 +150,7 @@ Endpoints confirmados na Evolution v2.3.7 (testados: respondem 400 com corpo vaz
 | Tool | Para quê |
 |---|---|
 | `consultar_produto` | Preço e disponibilidade, por nome aproximado |
-| `calcular_frete` | Reusa a lógica que já existe (frete grátis acima de R$ 60 no ABC) |
+| `consultar_frete` | Lê `configuracoes.frete_config`: hoje **R$ 5 fixo até 30 km** da cozinha (Montanhão/SBC); fora disso, **"a combinar"** — e "a combinar" ela NÃO improvisa, escala |
 | `registrar_pedido_intencao` | Marca intenção de compra e avisa a equipe — **não cria venda** |
 
 **Catálogo entra como contexto, não como tool.** São 25 produtos ativos: cabem no prompt,
