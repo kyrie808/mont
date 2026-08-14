@@ -331,6 +331,21 @@ Deno.serve(async (req: Request) => {
       const texto = typeof body.texto === 'string' ? body.texto : ''
       if (!texto.trim()) return json({ error: 'texto é obrigatório' }, 400)
 
+      // Última barreira antes do cliente: resposta com entulho de modelo NÃO sai.
+      //
+      // Aconteceu de verdade com o Llama 3.3 no Groq — ele escreveu a chamada da tool
+      // como texto em vez de executá-la, e o cliente recebeu
+      // "Vou verificar o frete. <function=consultar_frete></function>".
+      //
+      // Rejeitar em vez de limpar: quando o modelo escreve a chamada, ele NÃO executou
+      // a ferramenta, então a resposta está incompleta — faltou justamente o dado que
+      // ele ia buscar. Enviar o pedaço limpo seria enviar meia informação. Cair no ramo
+      // de erro faz a equipe ser avisada e um humano responder direito.
+      if (/<\/?function|<tool_call|<\|python_tag\|>|\[TOOL_CALL\]|<invoke\b/i.test(texto)) {
+        console.error('[secretaria] resposta com entulho de tool call, bloqueada:', texto.slice(0, 200))
+        return json({ error: 'resposta_malformada', detalhe: 'modelo emitiu tool call como texto' }, 422)
+      }
+
       // Existe para o nó Code do n8n NÃO virar a terceira cópia da regra de tempo.
       // Este projeto já foi mordido exatamente assim: a canonicalização de telefone
       // ganhou uma cópia dentro de um nó, nasceu com um regex errado e descartou um
