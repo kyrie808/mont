@@ -193,15 +193,45 @@ Deno.serve(async (req: Request) => {
       const { data: contato } = await admin
         .from('contatos').select('id').eq('telefone_wa', telefoneWa).maybeSingle()
 
+      const texto = typeof body.texto === 'string' ? body.texto : null
+
       const { error } = await admin.from('wa_envios').upsert({
         message_id: messageId,
         telefone_wa: telefoneWa,
         contato_id: contato?.id ?? null,
-        texto: typeof body.texto === 'string' ? body.texto : null,
+        texto,
       }, { onConflict: 'message_id' })
 
       if (error) return json({ error: error.message }, 400)
-      return json({ ok: true }, 200)
+
+      // A conversa também precisa da fala dela — e ninguém mais vai gravar.
+      //
+      // Descoberto em campo: o que sai pela API da Evolution NÃO volta pelo webhook.
+      // Só mensagem digitada no celular ecoa (por isso as do celular ficam SERVER_ACK e
+      // as nossas ficam PENDING para sempre). Sem gravar aqui, `contexto` leria uma
+      // conversa só com as falas do CLIENTE: no segundo turno ela repetiria preço já
+      // dito e perderia o fio, porque não teria memória do que ela mesma falou.
+      //
+      // É isto que torna `wa_envios` load-bearing: a linha entra como `saida`, igual à
+      // de um humano, e só o id guardado lá diz que a voz é dela.
+      const { error: erroMsg } = await admin.from('mensagens_whatsapp').upsert({
+        message_id: messageId,
+        telefone_wa: telefoneWa,
+        contato_id: contato?.id ?? null,
+        direcao: 'saida',
+        conteudo: texto,
+        tipo_midia: 'texto',
+        payload: { origem: 'secretaria_ia' },
+        enviada_em: new Date().toISOString(),
+        historico: false,
+      }, { onConflict: 'message_id' })
+
+      // Não derruba o envio: a mensagem já saiu para o cliente, e falhar aqui só custa
+      // contexto. Mas aparece no log, porque perder isto em silêncio deixaria a
+      // secretária amnésica sem ninguém perceber.
+      if (erroMsg) console.error('[secretaria] falha ao gravar a fala dela:', erroMsg.message)
+
+      return json({ ok: true, conversa_gravada: !erroMsg }, 200)
     }
 
     if (body.acao === 'consultar_produto') {
