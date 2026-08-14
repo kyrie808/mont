@@ -126,10 +126,20 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
     em: m.enviada_em,
   }))
 
+  // Todas as mensagens do cliente desde a nossa última fala — não só a que disparou
+  // esta execução. Numa rajada de 5, as 4 primeiras morrem no debounce, e marcar só a
+  // última como lida deixa 4 mensagens com o check cinza para sempre: o cliente vê que
+  // respondemos sem ter "lido" o que ele escreveu, que é pior que não marcar nada.
+  const naoLidas: string[] = []
+  for (let i = ordenadas.length - 1; i >= 0; i--) {
+    if (ordenadas[i].direcao !== 'entrada') break
+    naoLidas.unshift(ordenadas[i].message_id)
+  }
+
   if (humanoAssumiu(paraRegra, idsDaAgente)) {
     // Devolve a conversa mesmo assim: o aviso no canal interno cita a última mensagem
     // do cliente, e sem isso o n8n teria que pedir o contexto de novo.
-    return { pode_responder: false, motivo: 'humano_assumiu' as const, contato, conversa }
+    return { pode_responder: false, motivo: 'humano_assumiu' as const, contato, conversa, nao_lidas: naoLidas }
   }
 
   return {
@@ -137,6 +147,7 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
     motivo: 'ok' as const,
     contato,
     conversa,
+    nao_lidas: naoLidas,
     catalogo: await lerCatalogo(admin),
   }
 }
@@ -342,10 +353,19 @@ Deno.serve(async (req: Request) => {
 
       // Enquanto o número da Mont não estiver no grupo da equipe, o aviso vai para o
       // Luccas — que assim vê as duas pontas na mesma tela durante o desenvolvimento.
+      //
+      // Devolve também o nome do contato: o aviso de FALHA da agente nasce de uma
+      // execução que morreu antes de ter contexto, então não teria como citar quem é o
+      // cliente. Sem nome, o aviso vira "alguém não foi respondido" e ninguém age.
+      const { data: quem } = await admin
+        .from('contatos').select('nome').eq('telefone_wa', telefoneWa).maybeSingle()
+
       return json({
         ok: true,
         jid: ehGrupoValido ? grupo : fallbackDev,
         tipo: ehGrupoValido ? 'grupo' : 'fallback_dev',
+        nome: quem?.nome ?? null,
+        telefone: telefoneWa,
       }, 200)
     }
 
