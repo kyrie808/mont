@@ -37,10 +37,54 @@ Nada precisa entrar. Um túnel só adicionaria superfície de ataque.
 Há histórico documentado de o objeto `referral` (que carrega o `ctwa_clid` dos anúncios)
 sumir do webhook entre versões da Evolution. Trocar a tag exige repetir o portão 1A.
 
-Escolhas verificadas nesta versão:
+⚠️ **Trocar de versão não é trocar a tag.** O schema Prisma não desce, então exige dropar o
+banco `evolution`, reparear por QR **com o celular do Gilmar** e reconfigurar webhook e
+Settings. Ver o runbook abaixo.
+
+### O falso alarme da 2.3.7 (14/08/2026) — não repetir a investigação
+
+Passamos a madrugada de 13→14/08 convencidos de que a
+[issue #1789](https://github.com/EvolutionAPI/evolution-api/issues/1789) (regressão de
+fan-out a partir da 2.3.1) explicava um sintoma real: **mensagem chegando com minutos de
+atraso no WhatsApp Web da Mont**, sempre em lote, com o divisor "1 mensagem não lida".
+O downgrade chegou a estar planejado e engatilhado.
+
+**Não era a versão, e não era a Evolution.** O que derrubou a hipótese:
+
+- Com o container **parado por 20 minutos**, o atraso continuou idêntico.
+- As mensagens saíam com **✓✓ mesmo com a Evolution fora do ar** — ou seja, algum aparelho
+  **real** da Mont recebia na hora. Só a sessão Web observada é que ficava para trás.
+- A **presença** ("digitando…") sempre chegou ao vivo; só a mensagem atrasava.
+- Não havia aparelho fantasma: a lista de "Aparelhos conectados" tinha só a equipe e a
+  Evolution.
+
+Diagnóstico: a sessão do WhatsApp Web observada era um companion degradado, que só dava
+catch-up periódico. Conserto: **desvincular e vincular aquele aparelho de novo** — 10
+segundos com o celular da Mont em mãos. Nada de Baileys, n8n, W3 ou downgrade.
+
+Três hipóteses foram descartadas pelo caminho, todas por correlação temporal (o sintoma
+apareceu junto com o desenvolvimento da secretária, então parecia nosso): presença presa
+depois do envio, `CONFIG_SESSION_PHONE_VERSION` (deprecada na 2.3.1+ — vazio significa
+autodetectar, e vazio está certo), e a própria #1789.
+
+**Armadilha de diagnóstico que custou horas:** `GET /instance/connectionState` respondeu
+`{"state":"open"}` durante **44 minutos** em que o socket estava morto — nenhuma linha de
+log, nenhuma execução do W1. O `state` mente. Quem diz a verdade sobre a Evolution estar
+viva é:
+
+```bash
+docker logs mont-crm-evolution --since 10m | tail
+docker exec mont-crm-postgres psql -U mont -d n8n -c \
+  "select id, \"startedAt\" from execution_entity where \"workflowId\"='WziyzoCqtb8Btexe' order by id desc limit 5;"
+```
+
+Se o log está mudo e o W1 não executa há muito tempo, o socket morreu: `docker restart
+mont-crm-evolution` reconecta em ~2s **sem QR** (as credenciais moram no banco).
+
+Escolhas verificadas:
 
 - **`evoapicloud`, não `atendai`** — o `atendai` parou na v2.2.3 (fev/2025); o mantido é o
-  `evoapicloud` (evolution-foundation), v2.3.7 é a última estável numerada.
+  `evoapicloud` (evolution-foundation).
 - **Modo Baileys, nunca Cloud API** — em modo Cloud API a Evolution **descarta o `referral`**
   ([issue #2645](https://github.com/evolution-foundation/evolution-api/issues/2645), aberta).
 - **Env externo vence o `.env` embutido** — a imagem traz um `/evolution/.env` de 13KB, e a
@@ -205,6 +249,74 @@ docker compose -f infra/crm/docker-compose.yml down -v   # ⚠️ APAGA a sessã
 
 `down -v` destrói o volume `evolution_instances` e obriga a parear o número de novo —
 pedindo o celular do Gilmar outra vez. Pensar duas vezes.
+
+## Runbook — trocar de versão / reparear o WhatsApp
+
+Só faça isto com o **Gilmar acordado**: o passo do QR não tem como ser feito sozinho.
+
+**1. Backup dos dois bancos.**
+
+```powershell
+Set-Location 'D:\3. DEV\mont'; .\supabase\scripts\dump-prod.ps1
+```
+```bash
+docker exec mont-crm-postgres pg_dump -U mont -d evolution > infra/crm/backup-evolution-$(date +%Y%m%d-%H%M%S).sql
+```
+
+Os dados do CRM (contatos, conversas, timeline) vivem no **Supabase**. O banco `evolution`
+é cache de protocolo — perdê-lo não perde CRM. O dump serve só para conseguir voltar.
+
+**2. Trocar a tag** em `docker-compose.yml` e subir com banco limpo:
+
+```bash
+cd infra/crm
+docker compose stop evolution
+docker exec mont-crm-postgres psql -U mont -d postgres -c 'DROP DATABASE evolution;' -c 'CREATE DATABASE evolution OWNER mont;'
+docker compose up -d evolution
+```
+
+**3. Criar a instância e parear.** `syncFullHistory: true` na criação — é a única chance de
+atribuição retroativa (ver a seção de versões acima).
+
+```bash
+set -a && . ./.env && set +a
+curl -s -X POST http://localhost:8080/instance/create -H "apikey: $EVOLUTION_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"instanceName":"mont","integration":"WHATSAPP-BAILEYS","qrcode":true,"syncFullHistory":true}'
+```
+
+QR em `http://localhost:8080/manager`. Escanear no **WhatsApp Business do Gilmar** →
+*Aparelhos conectados*. Aparece como **"Mont CRM"**.
+
+**4. Reconfigurar o que o banco novo perdeu** — estes são os valores em uso, capturados
+antes do downgrade de 14/08:
+
+```bash
+curl -s -X POST http://localhost:8080/webhook/set/mont -H "apikey: $EVOLUTION_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"webhook":{"enabled":true,"url":"http://n8n:5678/webhook/evolution","webhookByEvents":false,"webhookBase64":false,"events":["MESSAGES_UPSERT","MESSAGES_SET","CONNECTION_UPDATE"]}}'
+
+curl -s -X POST http://localhost:8080/settings/set/mont -H "apikey: $EVOLUTION_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"rejectCall":false,"groupsIgnore":false,"alwaysOnline":false,"readMessages":false,"readStatus":false,"syncFullHistory":true}'
+```
+
+⚠️ `alwaysOnline: false` **não é detalhe**. Com `true`, o Baileys se anuncia online e o
+WhatsApp para de mandar notificação para o celular — o Gilmar deixa de ver mensagem de
+cliente.
+
+**5. Conferir.**
+
+```bash
+curl -s -H "apikey: $EVOLUTION_API_KEY" http://localhost:8080/instance/connectionState/mont
+curl -s -H "apikey: $EVOLUTION_API_KEY" http://localhost:8080/webhook/find/mont
+```
+
+Esperado: `state: open` e o webhook apontando para `n8n:5678`. Depois: mandar mensagem de
+um celular e confirmar que o **W1 executou** — essa é a prova de que a ingestão voltou.
+
+⚠️ `state: open` sozinho não prova nada (ver o falso alarme da 2.3.7, acima). Confirme pela
+execução do W1.
 
 ## Segredos
 

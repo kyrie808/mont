@@ -51,6 +51,33 @@ services:
       retries: 20
 
   evolution:
+    # ⚠️ VERSÃO FIXA — não trocar para `latest` (ver o aviso de referral no topo).
+    #
+    # 14/08/2026 — houve uma investigação de "mensagem chega atrasada nos aparelhos
+    # da Mont" que quase virou um downgrade para a 2.3.0 (issue #1789). NÃO ERA A
+    # VERSÃO, e NÃO ERA A EVOLUTION. Fica registrado para ninguém repetir:
+    #
+    #   - Com o container PARADO por 20 minutos, o atraso continuou igual — mensagem
+    #     entrando em lote, minutos depois, com o divisor "1 mensagem não lida".
+    #   - As mensagens saíam com ✓✓ mesmo com a Evolution fora do ar, ou seja, algum
+    #     aparelho REAL da Mont recebia na hora.
+    #   - A presença ("digitando…") sempre chegou ao vivo; só a mensagem atrasava.
+    #
+    # Diagnóstico: a sessão do WhatsApp Web que estava sendo observada é um companion
+    # degradado, que só dava catch-up periódico. Conserto = desvincular e vincular
+    # aquele aparelho de novo. Nada a ver com Baileys, n8n ou o W3.
+    #
+    # Duas armadilhas que atrasaram esse diagnóstico, para a próxima vez:
+    #   1. `GET /instance/connectionState` respondeu `open` durante 44 minutos em que
+    #      o socket estava morto e o log não emitia UMA linha. O state MENTE — quem
+    #      diz a verdade é `docker logs` e a última execução do W1.
+    #   2. Correlação temporal não é causa: o problema apareceu junto com o
+    #      desenvolvimento da secretária, então pareceu nosso por três hipóteses
+    #      seguidas (presença presa, CONFIG_SESSION_PHONE_VERSION, regressão de versão).
+    #
+    # Se um dia precisar mesmo trocar de versão: exige dropar o banco `evolution`
+    # (o schema Prisma não desce), reparear por QR com o celular do Gilmar e
+    # reconfigurar webhook e Settings. Runbook completo no README.md desta pasta.
     image: evoapicloud/evolution-api:v2.3.7
     container_name: mont-crm-evolution
     restart: unless-stopped
