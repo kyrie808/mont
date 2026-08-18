@@ -67,6 +67,10 @@ services:
     # degradado, que só dava catch-up periódico. Conserto = desvincular e vincular
     # aquele aparelho de novo. Nada a ver com Baileys, n8n ou o W3.
     #
+    # CONFIRMADO em 18/08/2026: a Evolution voltou sozinha para a conta (W2 e W3
+    # desligados) e ficou 23h vinculada e ingerindo — 344 execuções do W1 — com o
+    # WhatsApp Business Desktop funcionando normalmente o dia inteiro. Inocente.
+    #
     # Duas armadilhas que atrasaram esse diagnóstico, para a próxima vez:
     #   1. `GET /instance/connectionState` respondeu `open` durante 44 minutos em que
     #      o socket estava morto e o log não emitia UMA linha. O state MENTE — quem

@@ -62,6 +62,13 @@ Diagnóstico: a sessão do WhatsApp Web observada era um companion degradado, qu
 catch-up periódico. Conserto: **desvincular e vincular aquele aparelho de novo** — 10
 segundos com o celular da Mont em mãos. Nada de Baileys, n8n, W3 ou downgrade.
 
+**Confirmado em 18/08/2026 por teste controlado.** O conserto e o desligamento dos
+containers foram feitos juntos, o que confundia a leitura — então a Evolution voltou
+sozinha para a conta, com **W2 e W3 desligados**, e ficou 23 horas vinculada e ingerindo
+(344 execuções do W1, `rate-overlimit` zerado depois da rajada inicial de catch-up).
+O WhatsApp Business Desktop funcionou normalmente o dia inteiro. **A Evolution está
+inocente: era a sessão do desktop, e revincular resolveu.**
+
 Três hipóteses foram descartadas pelo caminho, todas por correlação temporal (o sintoma
 apareceu junto com o desenvolvimento da secretária, então parecia nosso): presença presa
 depois do envio, `CONFIG_SESSION_PHONE_VERSION` (deprecada na 2.3.1+ — vazio significa
