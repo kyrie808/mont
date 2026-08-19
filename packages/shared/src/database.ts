@@ -851,6 +851,8 @@ export type Database = {
           numero: string | null
           observacoes: string | null
           origem: string
+          origem_cadastro: string
+          revisado_em: string | null
           status: string
           status_relacionamento: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo: string | null
@@ -890,6 +892,8 @@ export type Database = {
           numero?: string | null
           observacoes?: string | null
           origem?: string
+          origem_cadastro?: string
+          revisado_em?: string | null
           status?: string
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
@@ -929,6 +933,8 @@ export type Database = {
           numero?: string | null
           observacoes?: string | null
           origem?: string
+          origem_cadastro?: string
+          revisado_em?: string | null
           status?: string
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
@@ -2501,6 +2507,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "entregadores"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_envios: {
+        Row: {
+          contato_id: string | null
+          enviado_em: string
+          message_id: string
+          telefone_wa: string
+          texto: string | null
+        }
+        Insert: {
+          contato_id?: string | null
+          enviado_em?: string
+          message_id: string
+          telefone_wa: string
+          texto?: string | null
+        }
+        Update: {
+          contato_id?: string | null
+          enviado_em?: string
+          message_id?: string
+          telefone_wa?: string
+          texto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envios_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
           },
         ]
       }

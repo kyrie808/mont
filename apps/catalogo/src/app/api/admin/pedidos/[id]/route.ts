@@ -145,6 +145,8 @@ export async function PATCH(
                     telefone: telefoneNorm,
                     tipo: 'B2C',
                     origem: 'catalogo',
+                    // Porta de entrada do cadastro (ver contatos.origem_cadastro).
+                    origem_cadastro: 'catalogo',
                     status: 'cliente',
                     endereco: data.endereco_entrega || null,
                 })

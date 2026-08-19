@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Plus, Search, Diamond, Flame, History, Users, X, UserCheck } from 'lucide-react'
+import { Plus, Search, Diamond, Flame, History, Users, X, UserCheck, Sparkles } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -14,11 +14,14 @@ import { useContatosResumo } from '../hooks/useContatosResumo'
 import { useContatosRitmo } from '../hooks/useContatosRitmo'
 import { useDebounce } from '../hooks/useDebounce'
 import { classificarContato, type SegmentoCliente } from '../utils/segmentoCliente'
+import { precisaRevisao } from '../utils/filaRevisao'
 
 // Filtros = segmentos do funil, derivados do comportamento de compra (não do campo `status`).
-type FilterStoryId = 'all' | 'clientes' | 'leads' | 'vips' | 'inativos'
+// A exceção é `novos-ia`, que não é segmento nenhum: é a fila de cadastros que a
+// secretária de WhatsApp criou e ninguém conferiu ainda (ver utils/filaRevisao).
+type FilterStoryId = 'all' | 'clientes' | 'leads' | 'vips' | 'inativos' | 'novos-ia'
 
-const STORY_TO_SEGMENTO: Record<Exclude<FilterStoryId, 'all'>, SegmentoCliente> = {
+const STORY_TO_SEGMENTO: Record<Exclude<FilterStoryId, 'all' | 'novos-ia'>, SegmentoCliente> = {
     clientes: 'cliente',
     leads: 'lead',
     vips: 'vip',
@@ -61,15 +64,16 @@ export function Contatos() {
 
     // Counts por segmento
     const stats = useMemo(() => {
-        const s = { all: contatos.length, clientes: 0, leads: 0, vips: 0, inativos: 0 }
+        const s = { all: contatos.length, clientes: 0, leads: 0, vips: 0, inativos: 0, novosIa: 0 }
         for (const seg of segmentoDe.values()) {
             if (seg === 'cliente') s.clientes++
             else if (seg === 'lead') s.leads++
             else if (seg === 'vip') s.vips++
             else if (seg === 'inativo') s.inativos++
         }
+        for (const c of contatos) if (precisaRevisao(c)) s.novosIa++
         return s
-    }, [contatos.length, segmentoDe])
+    }, [contatos, segmentoDe])
 
     const storyItems = [
         { id: 'all', label: 'Todos', icon: Users, count: stats.all, color: 'primary' as const },
@@ -77,11 +81,16 @@ export function Contatos() {
         { id: 'leads', label: 'Leads', icon: Flame, count: stats.leads, color: 'warning' as const },
         { id: 'vips', label: 'VIPs', icon: Diamond, count: stats.vips, color: 'purple' as const },
         { id: 'inativos', label: 'Inativos', icon: History, count: stats.inativos, color: 'info' as const },
+        // Só aparece quando há trabalho: com a fila zerada a barra fica como sempre foi.
+        ...(stats.novosIa > 0
+            ? [{ id: 'novos-ia', label: 'Novos da IA', icon: Sparkles, count: stats.novosIa, color: 'warning' as const }]
+            : []),
     ]
 
     // Filtro por segmento (client-side; a busca já veio do servidor)
     const filteredContatos = useMemo(() => {
         if (activeStory === 'all') return contatos
+        if (activeStory === 'novos-ia') return contatos.filter(precisaRevisao)
         const alvo = STORY_TO_SEGMENTO[activeStory]
         return contatos.filter(c => segmentoDe.get(c.id) === alvo)
     }, [contatos, activeStory, segmentoDe])
@@ -208,12 +217,14 @@ export function Contatos() {
                                 {activeStory === 'leads' && <Flame className="size-4" />}
                                 {activeStory === 'inativos' && <History className="size-4" />}
                                 {activeStory === 'vips' && <Diamond className="size-4" />}
+                                {activeStory === 'novos-ia' && <Sparkles className="size-4" />}
                             </div>
                             <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">
                                 {activeStory === 'all' ? 'Todos os Contatos' :
                                     activeStory === 'clientes' ? 'Meus Clientes' :
                                         activeStory === 'leads' ? 'Leads' :
-                                            activeStory === 'inativos' ? 'Recuperação' : 'Clientes VIP'}
+                                            activeStory === 'inativos' ? 'Recuperação' :
+                                                activeStory === 'novos-ia' ? 'Capturados pela secretária — confira o cadastro' : 'Clientes VIP'}
                             </h2>
                         </div>
 

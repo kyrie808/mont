@@ -247,6 +247,11 @@ async function casarContatos(
         tipo: 'B2C',
         status: 'lead',
         origem: veioDeAnuncio ? 'anuncio' : 'direto',
+        // A porta pela qual o cadastro entrou. Sem isto o contato herdaria o
+        // DEFAULT 'manual' e sumiria da fila "Novos da IA" — que existe justamente
+        // porque o nome aqui é o push name do aparelho ("♡ Cadonhoto ♡", "🦋"),
+        // não um nome que o operador reconheça.
+        origem_cadastro: 'whatsapp',
         ultimo_contato: ag.ultimaEm,
         ...(veioDeAnuncio
           ? { ctwa_clid: clid, ad_referral: ag.referral, ctwa_clid_em: ag.referralEm, campanha_id: campanhaId }

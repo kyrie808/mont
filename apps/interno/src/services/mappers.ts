@@ -99,6 +99,8 @@ export const toDomainContato = (dbContato: ContatoRowWithIndicador): DomainConta
                 : dbContato.indicador
             return raw ? { id: raw.id, nome: raw.nome, telefone: raw.telefone ?? null } : null
         })(),
+        origemCadastro: (dbContato.origem_cadastro || 'manual') as DomainContato['origemCadastro'],
+        revisadoEm: dbContato.revisado_em ?? null,
         criadoEm: dbContato.criado_em || new Date().toISOString(),
         atualizadoEm: dbContato.atualizado_em || dbContato.criado_em || new Date().toISOString(),
         bairro: dbContato.bairro || null,
