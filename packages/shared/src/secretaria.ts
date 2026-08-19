@@ -74,25 +74,37 @@ export interface MensagemDaConversa {
 }
 
 /**
- * `true` quando um humano da equipe falou por último — e a agente deve calar.
+ * `true` quando um humano da equipe atendeu esta conversa há pouco — e a agente cala.
  *
  * A sutileza que justifica `wa_envios`: a mensagem que a própria agente envia volta
  * pelo webhook com `direcao: 'saida'`, IDÊNTICA à de qualquer um dos quatro humanos que
  * dividem a conta. Sem o conjunto de ids dela, ela leria a própria fala como "humano
  * assumiu" e se calaria para sempre na primeira resposta que desse.
  *
- * A prioridade vale enquanto o humano foi o ÚLTIMO a falar: se o cliente respondeu
- * depois dele, a conversa volta para a agente.
+ * É uma JANELA DE TEMPO, não "quem falou por último". A primeira versão olhava só a
+ * última mensagem, e isso tinha um buraco encontrado na validação de 19/08: o Gilmar
+ * respondia, o cliente escrevia de novo, e a agente voltava a falar por cima de um
+ * atendimento em curso. Quem pega a conversa fica com ela por `JANELA_HUMANO_MS`.
+ *
+ * A janela expira de propósito: sem prazo, um atendimento humano de terça calaria a
+ * agente naquela conversa para sempre.
  */
-export function humanoAssumiu(msgs: MensagemDaConversa[], idsDaAgente: Set<string>): boolean {
-    if (msgs.length === 0) return false
+export const JANELA_HUMANO_MS = 30 * 60 * 1000
 
-    const ordenadas = [...msgs].sort(
-        (a, b) => new Date(a.enviadaEm).getTime() - new Date(b.enviadaEm).getTime(),
+export function humanoAssumiu(
+    msgs: MensagemDaConversa[],
+    idsDaAgente: Set<string>,
+    agora: Date = new Date(),
+    janelaMs: number = JANELA_HUMANO_MS,
+): boolean {
+    const limite = agora.getTime() - janelaMs
+
+    return msgs.some(
+        (m) =>
+            m.direcao === 'saida' &&
+            !idsDaAgente.has(m.messageId) &&
+            new Date(m.enviadaEm).getTime() >= limite,
     )
-    const ultima = ordenadas[ordenadas.length - 1]
-
-    return ultima.direcao === 'saida' && !idsDaAgente.has(ultima.messageId)
 }
 
 /**

@@ -58,24 +58,56 @@ describe('humanoAssumiu', () => {
     const cliente = (id: string, em: string): MensagemDaConversa => ({ messageId: id, direcao: 'entrada', enviadaEm: em })
     const nos = (id: string, em: string): MensagemDaConversa => ({ messageId: id, direcao: 'saida', enviadaEm: em })
 
+    // A janela é relativa ao "agora", então todo caso que depende dela fixa o relógio.
+    const agora = new Date('2026-08-13T10:02:00Z')
+
     it('humano falou depois do cliente → assumiu', () => {
         const msgs = [cliente('c1', '2026-08-13T10:00:00Z'), nos('h1', '2026-08-13T10:01:00Z')]
-        expect(humanoAssumiu(msgs, new Set())).toBe(true)
+        expect(humanoAssumiu(msgs, new Set(), agora)).toBe(true)
     })
 
     it('quem falou depois foi a PRÓPRIA agente → não assumiu', () => {
         const msgs = [cliente('c1', '2026-08-13T10:00:00Z'), nos('a1', '2026-08-13T10:01:00Z')]
-        expect(humanoAssumiu(msgs, new Set(['a1']))).toBe(false)
+        expect(humanoAssumiu(msgs, new Set(['a1']), agora)).toBe(false)
     })
 
-    it('cliente falou por último → não assumiu, mesmo com humano antes', () => {
+    it('cliente voltou a falar, mas o humano atendeu há pouco → ainda é dele', () => {
         const msgs = [
             nos('h1', '2026-08-13T10:00:00Z'),
             cliente('c1', '2026-08-13T10:05:00Z'),
         ]
-        // Prioridade humana vale enquanto ele foi o ÚLTIMO. Aqui o cliente respondeu
-        // depois, então a conversa voltou para a agente.
-        expect(humanoAssumiu(msgs, new Set())).toBe(false)
+        // Regra ANTIGA olhava só quem falou por último, então bastava o cliente
+        // escrever de novo para a agente atropelar o atendimento em curso. Quem pegou
+        // a conversa fica com ela por uma janela de tempo.
+        expect(humanoAssumiu(msgs, new Set(), new Date('2026-08-13T10:06:00Z'))).toBe(true)
+    })
+
+    it('humano atendeu há muito tempo → a conversa volta para a agente', () => {
+        const msgs = [
+            nos('h1', '2026-08-13T10:00:00Z'),
+            cliente('c1', '2026-08-13T14:00:00Z'),
+        ]
+        // Sem expirar, um atendimento humano de terça calaria a agente para sempre.
+        expect(humanoAssumiu(msgs, new Set(), new Date('2026-08-13T14:01:00Z'))).toBe(false)
+    })
+
+    it('a janela conta a fala do HUMANO, não a da agente', () => {
+        const msgs = [
+            nos('h1', '2026-08-13T10:00:00Z'), // humano, fora da janela
+            nos('a1', '2026-08-13T13:59:00Z'), // agente, dentro — não conta
+            cliente('c1', '2026-08-13T14:00:00Z'),
+        ]
+        expect(humanoAssumiu(msgs, new Set(['a1']), new Date('2026-08-13T14:01:00Z'))).toBe(false)
+    })
+
+    it('janela é configurável', () => {
+        const msgs = [
+            nos('h1', '2026-08-13T10:00:00Z'),
+            cliente('c1', '2026-08-13T10:40:00Z'),
+        ]
+        const t = new Date('2026-08-13T10:41:00Z')
+        expect(humanoAssumiu(msgs, new Set(), t, 60 * 60 * 1000)).toBe(true)
+        expect(humanoAssumiu(msgs, new Set(), t, 10 * 60 * 1000)).toBe(false)
     })
 
     it('conversa sem mensagem nossa → não assumiu', () => {
