@@ -5,6 +5,21 @@ import { useToast } from '../components/ui/Toast'
 import type { CreateContato, UpdateContato } from '../types/domain'
 import type { ContatoFiltros } from '../schemas/contato'
 
+/**
+ * A mensagem que o serviço escreveu, ou o título genérico quando não houver uma.
+ *
+ * O `contatoService` traduz os erros que o operador precisa entender — o de
+ * telefone duplicado chega a consultar QUEM já tem o número. Engolir isso e
+ * mostrar só "Erro ao criar contato" transformava um conflito resolvível em
+ * beco sem saída: em 19/08/2026 o cadastro da "Najla" bateu no contato
+ * "♡ Cadonhoto ♡", criado pela secretária de WhatsApp com o push name do
+ * aparelho, e a tela não deu nenhuma pista disso.
+ */
+function mensagemDeErro(e: unknown, fallback: string): string {
+    const msg = e instanceof Error ? e.message.trim() : ''
+    return msg || fallback
+}
+
 interface UseContatosOptions {
     filtros?: ContatoFiltros
 }
@@ -51,8 +66,8 @@ export function useContatos(options: UseContatosOptions = {}) {
     const createContato = useCallback(async (data: CreateContato) => {
         try {
             return await createMutation.mutateAsync(data)
-        } catch {
-            toast.error('Erro ao criar contato')
+        } catch (e: unknown) {
+            toast.error(mensagemDeErro(e, 'Erro ao criar contato'))
             return null
         }
     }, [createMutation])
@@ -60,8 +75,8 @@ export function useContatos(options: UseContatosOptions = {}) {
     const updateContato = useCallback(async (id: string, data: UpdateContato) => {
         try {
             return await updateMutation.mutateAsync({ id, data })
-        } catch {
-            toast.error('Erro ao atualizar contato')
+        } catch (e: unknown) {
+            toast.error(mensagemDeErro(e, 'Erro ao atualizar contato'))
             return null
         }
     }, [updateMutation])
