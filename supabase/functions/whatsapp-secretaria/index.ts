@@ -327,6 +327,48 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, interacao_id: data, registrada: data !== null }, 200)
     }
 
+    // Intenções de compra registradas há pouco nesta conversa, para o aviso interno.
+    //
+    // Existe porque a agente PROMETE ao cliente que a equipe vai finalizar o pedido, e
+    // até 19/08 ninguém era avisado: a intenção ficava só na timeline do contato, que
+    // alguém teria que abrir por acaso. Promessa que o sistema não cumpre é pior que
+    // não prometer — o cliente espera um retorno que nunca vem.
+    //
+    // O n8n pergunta DEPOIS de entregar a resposta ao cliente: se o envio falhou, não
+    // faz sentido chamar alguém para fechar um pedido que o cliente não sabe que fez.
+    if (body.acao === 'intencoes_a_avisar') {
+      const janelaMin = typeof body.janela_min === 'number' ? body.janela_min : 10
+      const desde = new Date(Date.now() - janelaMin * 60_000).toISOString()
+
+      const { data: contato } = await admin
+        .from('contatos')
+        .select('id, nome')
+        .eq('telefone_wa', telefoneWa)
+        .maybeSingle()
+
+      if (!contato) return json({ ok: true, intencoes: [] }, 200)
+
+      const { data, error } = await admin
+        .from('interacoes')
+        .select('id, observacao, data')
+        .eq('contato_id', contato.id)
+        .eq('gerado_por_ia', true)
+        .like('observacao', '[intenção de compra]%')
+        .gte('data', desde)
+        .order('data', { ascending: false })
+
+      if (error) return json({ error: error.message }, 400)
+
+      // O prefixo é ruído para quem lê no grupo — a linha já diz "Intenção de compra:".
+      const intencoes = (data ?? []).map((i) => ({
+        id: i.id,
+        resumo: (i.observacao ?? '').replace('[intenção de compra] ', ''),
+        em: i.data,
+      }))
+
+      return json({ ok: true, contato, telefone_wa: telefoneWa, intencoes }, 200)
+    }
+
     if (body.acao === 'preparar_envio') {
       const texto = typeof body.texto === 'string' ? body.texto : ''
       if (!texto.trim()) return json({ error: 'texto é obrigatório' }, 400)
@@ -388,7 +430,7 @@ Deno.serve(async (req: Request) => {
       error: "acao inválida",
       acoes: [
         'contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete',
-        'registrar_pedido_intencao', 'preparar_envio', 'destino_aviso',
+        'registrar_pedido_intencao', 'intencoes_a_avisar', 'preparar_envio', 'destino_aviso',
       ],
     }, 400)
   } catch (e) {
