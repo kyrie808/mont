@@ -9,6 +9,7 @@ import {
     extrairMensagensCruas,
     normalizarMensagem,
     isAnuncioPago,
+    podeGravarAtribuicao,
 } from '@mont/shared'
 
 // Camada pura: sem banco, sem rede, sem harness de integração.
@@ -334,5 +335,36 @@ describe('normalizarMensagem', () => {
             },
         })!
         expect(lerCtwaClid(m.referral)).toBe('X1')
+    })
+})
+
+describe('podeGravarAtribuicao — a origem declarada por gente ganha', () => {
+    it('indicação NUNCA vira anúncio, mesmo que a cliente clique num depois', () => {
+        // O caso da Najla: trazida pelo Rodrigo da Daniele, comprou no mesmo dia.
+        expect(podeGravarAtribuicao('indicacao', false)).toBe(false)
+    })
+
+    it('catálogo e facebook também são declarações, não palpites', () => {
+        expect(podeGravarAtribuicao('catalogo', false)).toBe(false)
+        expect(podeGravarAtribuicao('facebook', false)).toBe(false)
+    })
+
+    it("'direto' é neutro: é onde a atribuição acrescenta informação", () => {
+        expect(podeGravarAtribuicao('direto', false)).toBe(true)
+    })
+
+    it('quem já é de anúncio pode ter o clid COMPLETADO (não muda história)', () => {
+        // Os 62 leads que o Luccas cadastrou à mão nunca tiveram ctwa_clid.
+        expect(podeGravarAtribuicao('anuncio', false)).toBe(true)
+    })
+
+    it('clid já capturado nunca é regravado — o primeiro clique é o que a Meta atribui', () => {
+        expect(podeGravarAtribuicao('direto', true)).toBe(false)
+        expect(podeGravarAtribuicao('anuncio', true)).toBe(false)
+    })
+
+    it('origem ausente não é tratada como neutra', () => {
+        expect(podeGravarAtribuicao(null, false)).toBe(false)
+        expect(podeGravarAtribuicao(undefined, false)).toBe(false)
     })
 })
