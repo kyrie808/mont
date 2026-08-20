@@ -31,6 +31,12 @@ import { telefoneWaDeJid } from '../../../packages/shared/src/whatsapp.ts'
 // Contexto suficiente para entender o assunto sem inflar o prompt.
 const MAX_MENSAGENS_CONTEXTO = 30
 
+// Por quanto tempo mensagens de pedido do mesmo cliente contam como UM pedido só.
+// Duas horas cobre com folga alguém pedindo em várias mensagens seguidas, e é curto o
+// bastante para não fundir o pedido da manhã com o da tarde — errar para o lado de dois
+// avisos custa um aviso ignorado; errar para o lado de um avisa esconde uma venda.
+const JANELA_PEDIDO_MS = 2 * 60 * 60 * 1000
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-ingestor-secret',
@@ -321,10 +327,48 @@ Deno.serve(async (req: Request) => {
 
       if (error) return json({ error: error.message }, 400)
 
+      // Pedido que cresce não vira dois recados.
+      //
+      // O cliente pede em três mensagens ("2 kg de pão de queijo" … "1 kg de chipa
+      // também" … "e mais 500g de palito") e a agente chama esta ação três vezes. Sem
+      // consolidar, o Gilmar recebe três avisos e não sabe se são três pedidos ou um
+      // pedido de três itens. O prompt manda o `resumo` vir SEMPRE com o pedido inteiro
+      // acumulado, então a linha nova já contém as anteriores — e as antigas viram lixo.
+      //
+      // Apaga só o que a própria agente escreveu, e só dentro da janela: pedido da manhã
+      // e pedido da tarde são coisas diferentes, e juntá-los esconderia uma venda.
+      //
+      // Nada se perde: as mensagens que originaram cada item continuam em
+      // `mensagens_whatsapp`, que é o histórico de verdade e o que a agente lê.
+      let substituidas = 0
+      if (data) {
+        const desde = new Date(Date.now() - JANELA_PEDIDO_MS).toISOString()
+
+        const { data: contatoDoPedido } = await admin
+          .from('contatos')
+          .select('id')
+          .eq('telefone_wa', telefoneWa)
+          .maybeSingle()
+
+        if (contatoDoPedido) {
+          const { data: antigas } = await admin
+            .from('interacoes')
+            .delete()
+            .eq('contato_id', contatoDoPedido.id)
+            .eq('gerado_por_ia', true)
+            .like('observacao', '[intenção de compra]%')
+            .gte('data', desde)
+            .neq('id', data)
+            .select('id')
+
+          substituidas = (antigas ?? []).length
+        }
+      }
+
       // `registrada: false` = não havia mensagem pendente para ancorar (o W2 chegou
       // antes). O aviso no canal interno sai do mesmo jeito — é ele que faz o humano
       // agir — mas fica explícito aqui em vez de sumir.
-      return json({ ok: true, interacao_id: data, registrada: data !== null }, 200)
+      return json({ ok: true, interacao_id: data, registrada: data !== null, substituidas }, 200)
     }
 
     // Intenções de compra registradas há pouco nesta conversa, para o aviso interno.
