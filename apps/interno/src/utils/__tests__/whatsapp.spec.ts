@@ -353,6 +353,10 @@ describe('podeGravarAtribuicao — a origem declarada por gente ganha', () => {
         expect(podeGravarAtribuicao('direto', false)).toBe(false)
     })
 
+    it("'whatsapp' é o palpite do próprio ingestor — ele pode corrigir o que ele mesmo chutou", () => {
+        expect(podeGravarAtribuicao('whatsapp', false)).toBe(true)
+    })
+
     it('quem já é de anúncio pode ter o clid COMPLETADO (não muda história)', () => {
         // Os 62 leads que o Luccas cadastrou à mão nunca tiveram ctwa_clid.
         expect(podeGravarAtribuicao('anuncio', false)).toBe(true)

@@ -279,9 +279,14 @@ export function isAnuncioPago(referral: Record<string, unknown> | null): boolean
  * nasce da atitude do Gilmar de prospectar**. É uma declaração como qualquer outra, e um
  * anúncio que o cliente veja depois não apaga o trabalho dele.
  *
- * Sobra `'anuncio'`, que é aceito porque não muda história nenhuma: só COMPLETA o
- * `ctwa_clid` de quem já era de anúncio (os 62 leads que o Luccas cadastrou à mão nunca
- * tiveram um).
+ * Sobram duas, e nenhuma delas é declaração de gente:
+ *
+ * - `'anuncio'` não muda história nenhuma — só COMPLETA o `ctwa_clid` de quem já era de
+ *   anúncio (os 62 leads que o Luccas cadastrou à mão nunca tiveram um).
+ * - `'whatsapp'` é o palpite do PRÓPRIO ingestor, gravado quando um estranho aparece na
+ *   conversa sem referral. Corrigir o próprio palpite quando o clique de anúncio enfim
+ *   chega não apaga trabalho de ninguém — é o único lugar onde a atribuição realmente
+ *   acrescenta informação.
  *
  * Isto vale só pro caminho de UPDATE. Contato NOVO que chega clicando num anúncio pago
  * continua nascendo `origem='anuncio'` — ali não há declaração nenhuma pra preservar.
@@ -297,7 +302,7 @@ export function podeGravarAtribuicao(
 ): boolean {
     // O primeiro clique é o que a Meta atribui; regravar apagaria a origem verdadeira.
     if (jaTemClid) return false
-    return origemAtual === 'anuncio'
+    return origemAtual === 'anuncio' || origemAtual === 'whatsapp'
 }
 
 /** Lê o ctwa_clid de um referral já extraído, aceitando as duas grafias. */

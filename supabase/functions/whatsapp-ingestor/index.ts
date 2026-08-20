@@ -250,7 +250,11 @@ async function casarContatos(
         telefone: telefoneNacional(telefone),
         tipo: 'B2C',
         status: 'lead',
-        origem: veioDeAnuncio ? 'anuncio' : 'direto',
+        // NÃO é 'direto': 'direto' significa que o Gilmar prospectou. Quem chega
+        // sozinho na conversa não veio da atitude dele, e carimbar isso inflaria
+        // justamente o número que mede a prospecção. 'whatsapp' assume a ignorância;
+        // a equipe corrige na mão quando descobre como a pessoa chegou.
+        origem: veioDeAnuncio ? 'anuncio' : 'whatsapp',
         // A porta pela qual o cadastro entrou. Sem isto o contato herdaria o
         // DEFAULT 'manual' e sumiria da fila "Novos da IA" — que existe justamente
         // porque o nome aqui é o push name do aparelho ("♡ Cadonhoto ♡", "🦋"),
