@@ -267,29 +267,29 @@ export function isAnuncioPago(referral: Record<string, unknown> | null): boolean
 }
 
 /**
- * `true` quando a atribuição de anúncio pode ser gravada no contato.
+ * `true` quando a atribuição de anúncio pode ser gravada num contato QUE JÁ EXISTE.
  *
- * **A origem declarada por gente ganha da atribuição automática.** Decisão do diretor
- * em 20/08/2026, a partir do caso da Najla: ela chegou pelo WhatsApp, o Gilmar a
- * cadastrou como indicação do Rodrigo da Daniele, e comprou no mesmo dia. Se amanhã ela
- * clicar num anúncio pago, o ingestor sobrescreveria `origem = 'anuncio'` + `campanha_id`
- * — e a indicação do Rodrigo desapareceria da história dela. Quem trouxe a cliente foi o
- * Rodrigo; um anúncio que ela viu depois não muda isso.
+ * **Nenhuma origem é neutra — nunca sobrescreve.** Decisão do diretor em 20/08/2026,
+ * em duas etapas. A primeira veio do caso da Najla: trazida pelo Rodrigo da Daniele e
+ * cliente no mesmo dia; se clicar num anúncio amanhã, sobrescrever `origem='anuncio'`
+ * apagaria quem de fato a trouxe.
+ *
+ * A segunda etapa desfez a premissa da primeira. Esta função já tratou `'direto'` como
+ * balde neutro ("não sabemos de onde veio") — está errado: **`'direto'` é a venda que
+ * nasce da atitude do Gilmar de prospectar**. É uma declaração como qualquer outra, e um
+ * anúncio que o cliente veja depois não apaga o trabalho dele.
+ *
+ * Sobra `'anuncio'`, que é aceito porque não muda história nenhuma: só COMPLETA o
+ * `ctwa_clid` de quem já era de anúncio (os 62 leads que o Luccas cadastrou à mão nunca
+ * tiveram um).
+ *
+ * Isto vale só pro caminho de UPDATE. Contato NOVO que chega clicando num anúncio pago
+ * continua nascendo `origem='anuncio'` — ali não há declaração nenhuma pra preservar.
  *
  * Não é preciosismo: `rpt_campanhas_roas_mensal` atribui receita pela coluna
- * `contatos.campanha_id`, então a compra dela viraria receita do anúncio e inflaria o
- * ROAS de uma campanha que não a trouxe.
- *
- * Só `'direto'` é neutro — é o que o próprio ingestor grava quando não sabe de onde a
- * pessoa veio, e é justamente aí que a atribuição acrescenta informação. `'indicacao'`,
- * `'catalogo'` e `'facebook'` são declarações e ficam intocadas.
- *
- * `'anuncio'` segue aceito de propósito: não muda história nenhuma, só COMPLETA o
- * registro de quem já era de anúncio (os 62 leads que o Luccas cadastrou à mão nunca
- * tiveram `ctwa_clid`; capturá-lo é ganho puro).
- *
- * O referral em si nunca se perde — ele fica gravado na mensagem, em
- * `mensagens_whatsapp.referral`, mesma regra já usada pro referral orgânico.
+ * `contatos.campanha_id`, então uma venda do Gilmar viraria receita de uma campanha que
+ * não a trouxe. O referral nunca se perde — fica gravado em `mensagens_whatsapp.referral`,
+ * mesma regra já usada pro referral orgânico.
  */
 export function podeGravarAtribuicao(
     origemAtual: string | null | undefined,
@@ -297,7 +297,7 @@ export function podeGravarAtribuicao(
 ): boolean {
     // O primeiro clique é o que a Meta atribui; regravar apagaria a origem verdadeira.
     if (jaTemClid) return false
-    return origemAtual === 'direto' || origemAtual === 'anuncio'
+    return origemAtual === 'anuncio'
 }
 
 /** Lê o ctwa_clid de um referral já extraído, aceitando as duas grafias. */

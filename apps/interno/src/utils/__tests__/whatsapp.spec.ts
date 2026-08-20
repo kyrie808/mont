@@ -349,8 +349,8 @@ describe('podeGravarAtribuicao — a origem declarada por gente ganha', () => {
         expect(podeGravarAtribuicao('facebook', false)).toBe(false)
     })
 
-    it("'direto' é neutro: é onde a atribuição acrescenta informação", () => {
-        expect(podeGravarAtribuicao('direto', false)).toBe(true)
+    it("'direto' NÃO é neutro: é a prospecção do Gilmar, e anúncio não apaga o trabalho dele", () => {
+        expect(podeGravarAtribuicao('direto', false)).toBe(false)
     })
 
     it('quem já é de anúncio pode ter o clid COMPLETADO (não muda história)', () => {
