@@ -4,6 +4,8 @@ import {
     particionarResposta,
     humanoAssumiu,
     estaLiberado,
+    pedidoVigente,
+    type IntencaoRegistrada,
     type MensagemDaConversa,
 } from '@mont/shared'
 
@@ -131,5 +133,52 @@ describe('estaLiberado — a gaiola', () => {
 
     it('allowlist vazia em dev bloqueia tudo — falha fechada', () => {
         expect(estaLiberado('5511934417085', [], 'dev')).toBe(false)
+    })
+})
+
+describe('pedidoVigente', () => {
+    // Nasceu de um defeito em produção (21/08): o cliente pediu "2 kg de pão de queijo"
+    // e a agente respondeu "4 kg + 1 kg de chipa". Ela não alucinou — SOMOU com o pedido
+    // do dia anterior, porque o contexto dela são as últimas 30 mensagens, sem data.
+    // A correção é parar de fazê-la deduzir o pedido do histórico: a função entrega o
+    // pedido vigente como FATO, e ela só modifica esse fato.
+    const intencao = (id: string, resumo: string, em: string): IntencaoRegistrada => ({ id, resumo, em })
+
+    it('pedido dentro da janela → é o pedido vigente', () => {
+        const msgs = [intencao('i1', '2 kg de pão de queijo', '2026-08-20T20:51:00Z')]
+        expect(pedidoVigente(msgs, new Date('2026-08-20T21:30:00Z'))?.resumo).toBe('2 kg de pão de queijo')
+    })
+
+    it('pedido de ONTEM → não é vigente (o bug do "4 kg")', () => {
+        const msgs = [intencao('i1', '2 kg de pão de queijo + 1 kg de chipa', '2026-08-20T20:51:00Z')]
+        // 22 horas depois: é outro pedido, não a continuação daquele.
+        expect(pedidoVigente(msgs, new Date('2026-08-21T18:47:00Z'))).toBeNull()
+    })
+
+    it('vários dentro da janela → vale o mais recente', () => {
+        const msgs = [
+            intencao('i1', '2 kg de pão de queijo', '2026-08-21T18:47:00Z'),
+            intencao('i2', '2 kg de pão de queijo + 1 kg de chipa', '2026-08-21T18:49:00Z'),
+        ]
+        expect(pedidoVigente(msgs, new Date('2026-08-21T18:50:00Z'))?.id).toBe('i2')
+    })
+
+    it('ordem de chegada não importa', () => {
+        const msgs = [
+            intencao('i2', 'mais novo', '2026-08-21T18:49:00Z'),
+            intencao('i1', 'mais velho', '2026-08-21T18:47:00Z'),
+        ]
+        expect(pedidoVigente(msgs, new Date('2026-08-21T18:50:00Z'))?.id).toBe('i2')
+    })
+
+    it('sem pedido nenhum → null', () => {
+        expect(pedidoVigente([], new Date('2026-08-21T18:50:00Z'))).toBeNull()
+    })
+
+    it('janela é configurável', () => {
+        const msgs = [intencao('i1', '2 kg', '2026-08-21T10:00:00Z')]
+        const agora = new Date('2026-08-21T13:00:00Z')
+        expect(pedidoVigente(msgs, agora, 4 * 60 * 60 * 1000)?.id).toBe('i1')
+        expect(pedidoVigente(msgs, agora, 1 * 60 * 60 * 1000)).toBeNull()
     })
 })

@@ -22,6 +22,9 @@ import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   humanoAssumiu,
   estaLiberado,
+  pedidoVigente,
+  JANELA_PEDIDO_MS,
+  type IntencaoRegistrada,
   particionarResposta,
   calcularTempoDigitacaoMs,
   type MensagemDaConversa,
@@ -31,11 +34,9 @@ import { telefoneWaDeJid } from '../../../packages/shared/src/whatsapp.ts'
 // Contexto suficiente para entender o assunto sem inflar o prompt.
 const MAX_MENSAGENS_CONTEXTO = 30
 
-// Por quanto tempo mensagens de pedido do mesmo cliente contam como UM pedido só.
-// Duas horas cobre com folga alguém pedindo em várias mensagens seguidas, e é curto o
-// bastante para não fundir o pedido da manhã com o da tarde — errar para o lado de dois
-// avisos custa um aviso ignorado; errar para o lado de um avisa esconde uma venda.
-const JANELA_PEDIDO_MS = 2 * 60 * 60 * 1000
+// JANELA_PEDIDO_MS mora em packages/shared: a MESMA janela decide o que a função
+// consolida e o que a agente enxerga como "o pedido". Foi a discordância entre essas
+// duas noções que fez ela somar o pedido de ontem com o de hoje em 21/08.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -154,8 +155,30 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
     contato,
     conversa,
     nao_lidas: naoLidas,
+    // O pedido de pé entra como FATO no prompt. Sem isso a agente deduzia o pedido das
+    // 30 últimas mensagens, que não têm fronteira de tempo — e somava com o de ontem.
+    pedido_atual: pedidoVigente(await lerIntencoes(admin, contato.id))?.resumo ?? null,
     catalogo: await lerCatalogo(admin),
   }
+}
+
+/** Intenções de compra já registradas para este contato, dentro da janela do pedido. */
+async function lerIntencoes(admin: SupabaseClient, contatoId: string): Promise<IntencaoRegistrada[]> {
+  const desde = new Date(Date.now() - JANELA_PEDIDO_MS).toISOString()
+
+  const { data } = await admin
+    .from('interacoes')
+    .select('id, observacao, data')
+    .eq('contato_id', contatoId)
+    .eq('gerado_por_ia', true)
+    .like('observacao', '[intenção de compra]%')
+    .gte('data', desde)
+
+  return (data ?? []).map((i) => ({
+    id: i.id as string,
+    resumo: ((i.observacao ?? '') as string).replace('[intenção de compra] ', ''),
+    em: i.data as string,
+  }))
 }
 
 Deno.serve(async (req: Request) => {

@@ -118,3 +118,42 @@ export function estaLiberado(telefoneWa: string, allowlist: string[], modo: 'dev
     if (modo === 'producao') return true
     return allowlist.includes(telefoneWa)
 }
+
+/** Por quanto tempo o que o cliente pediu continua sendo O MESMO pedido. */
+export const JANELA_PEDIDO_MS = 2 * 60 * 60 * 1000
+
+export interface IntencaoRegistrada {
+    id: string
+    resumo: string
+    /** ISO. Quando a intenção foi registrada. */
+    em: string
+}
+
+/**
+ * O pedido que está de pé agora, ou `null` se não há nenhum.
+ *
+ * Existe para a agente PARAR DE DEDUZIR o pedido do histórico. Em 21/08 o cliente pediu
+ * "2 kg de pão de queijo" e ela respondeu "4 kg + 1 kg de chipa": não alucinou, SOMOU com
+ * o pedido do dia anterior. O contexto dela são as últimas 30 mensagens e elas não têm
+ * fronteira de tempo, então "tudo que ele já pediu" incluía ontem.
+ *
+ * A saída daqui entra no prompt como FATO ("PEDIDO JÁ REGISTRADO: ..."), e a instrução
+ * passa a ser "modifique isto" em vez de "some o que achar na conversa". É o padrão de
+ * dialogue state tracking: estado estruturado no lugar de re-derivação do transcript.
+ *
+ * A janela é a MESMA que a Edge Function usa para consolidar. As duas noções de "o
+ * pedido" precisam ser uma só — foi a discordância entre elas que criou o defeito.
+ */
+export function pedidoVigente(
+    intencoes: IntencaoRegistrada[],
+    agora: Date = new Date(),
+    janelaMs: number = JANELA_PEDIDO_MS,
+): IntencaoRegistrada | null {
+    const limite = agora.getTime() - janelaMs
+
+    const dentro = intencoes.filter((i) => new Date(i.em).getTime() >= limite)
+    if (dentro.length === 0) return null
+
+    // A mais recente vence: as anteriores são rascunho do mesmo pedido.
+    return dentro.reduce((a, b) => (new Date(b.em).getTime() > new Date(a.em).getTime() ? b : a))
+}
