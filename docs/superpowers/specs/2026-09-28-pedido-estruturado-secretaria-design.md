@@ -160,11 +160,26 @@ Nos casos ambíguo e não encontrado **nada é gravado**. A regra "sempre pergun
 deixa de ser texto de prompt e vira mecânica: a ferramenta não tem caminho de código que
 escolha sozinha.
 
-A resolução casa o termo contra **`nome`, `apelido`, e os tokens de peso (1kg, 2kg, 4kg) e
-de tamanho de unidade (25g, 50g, 100g)**, sobre a lista de produtos vendáveis
-(`ativo AND visivel_catalogo`). Quando o cliente pede um peso que a família não tem — os
-500 g de chipa — o resultado é *não encontrado* com as opções daquela família, e não uma
-lista genérica do catálogo. O algoritmo exato fica para o plano; o contrato é este.
+**Como ela pergunta o tamanho.** Não lista opções como menu de robô: assume o provável e
+confirma junto, numa frase só.
+
+> *"O pão de queijo congelado, né? De qual grama você vai preferir?"*
+
+O palpite da família vem da curadoria dos sinônimos (que já resolveu para o congelado); o
+que falta é o tamanho. Se o palpite estiver errado, o cliente corrige na resposta — custo
+zero, e soa como gente. Listar cinco produtos numeradinhos seria correto e péssimo.
+
+A resolução casa o termo contra **`apelido` (sinônimos curados), `nome`, e os tokens de peso
+(1kg, 2kg, 4kg) e de tamanho de unidade (25g, 50g, 100g)**, sobre a lista de produtos
+vendáveis (`ativo AND visivel_catalogo`). Quando o cliente pede um peso que a família não
+tem — os 500 g de chipa — o resultado é *não encontrado* com as opções daquela família, e
+não uma lista genérica do catálogo. O algoritmo exato fica para o plano; o contrato é este.
+
+**Por que sinônimos curados e não busca por pedaço do nome:** "pão de queijo" aparece em
+cinco produtos, e dois deles são **massa crua** (`Massa Pão de Queijo 1kg` e `4kg`, o
+Baldinho e o Balde). Busca por substring devolveria os cinco e ela perguntaria se o cliente
+quer pronto ou cru, numa conversa em que ele claramente quis o pronto. Com curadoria, "pão
+de queijo" resolve para a família congelada e "baldinho"/"balde"/"massa" para a refrigerada.
 
 Quando a resposta vem **ambígua**, as opções trazem o `id` do produto, e a ferramenta
 aceita `produto_id` além de `termo` — assim a segunda chamada, depois de o cliente
@@ -247,24 +262,50 @@ Os 30 minutos são estimativa inicial; só o uso calibra.
 Validar contra lista errada é pior que não validar: dá confiança falsa. Três coisas antes
 das ferramentas entrarem em uso:
 
-**1. Nomes que o cliente reconhece, e `apelido` preenchido.** O Baldinho está cadastrado
-como `Massa Pão de Queijo 1kg`. Se o cliente escreve "baldinho" e a ferramenta não acha,
-ela responde que a Mont não vende baldinho — pior que o defeito atual. O `apelido` é o que
-faz "baldinho", "massa" e "balde" chegarem no produto certo.
+**1. `apelido` vira a coluna dos sinônimos.** O Baldinho está cadastrado como `Massa Pão de
+Queijo 1kg`. Se o cliente escreve "baldinho" e a ferramenta não acha, ela responde que a
+Mont não vende baldinho — pior que o defeito atual.
 
-**2. As flags têm que dizer a verdade.** `visivel_catalogo=false` significa "não vendemos
-mais" — confirmado pelo diretor, o que torna a flag sinal confiável. Mas os 6 kits da Copa
-estão visíveis e provavelmente não são mais vendidos. Conserta-se o dado, não a consulta: a
-secretária segue lendo `ativo AND visivel_catalogo`, e essa lista passa a ser verdade para
-todos os consumidores — inclusive o catálogo público, que lê a mesma flag.
+A coluna `apelido` de `produtos` existe desde o MVP, guarda hoje códigos de uma letra
+(`X`, `P`, `C`, `B`) e alimenta o `ProductNicknamesModal` do módulo de pedidos de compra —
+**que o diretor confirmou não usar mais**. Fica reaproveitada para os sinônimos do cliente,
+como **lista separada por vírgula**. Continua `text`, os campos de formulário que já editam
+`apelido` continuam funcionando, e nenhuma coluna nova é criada.
+
+Lista inicial, a corrigir com as palavras que os clientes usam de verdade — é dado, muda
+sem deploy:
+
+| produto | apelido |
+|---|---|
+| Pão de Queijo 1kg-25gr / 1kg-100gr / 2kg-50gr | `pão de queijo, pao de queijo, pdq, congelado` |
+| Massa Pão de Queijo 1kg | `baldinho, massa, massa crua, resfriado` |
+| Massa Pão de Queijo 4kg | `balde, baldão, massa, resfriado` |
+| Chipa 1kg / 2kg | `chipa, chipinha` |
+| Palito de Queijo 1kg / 2kg | `palito, palito de queijo` |
+
+**2. As flags já dizem a verdade.** `visivel_catalogo=false` significa "não vendemos mais",
+e a limpeza **já foi feita pelo diretor em 27/09**: os 6 kits da Copa e os 2 kits antigos
+saíram (`ativo=false`), e o `Palito de Queijo 2kg` entrou. A secretária segue lendo
+`ativo AND visivel_catalogo`, e essa lista é verdade para todos os consumidores — inclusive
+o catálogo público, que lê a mesma flag.
+
+Catálogo vendável em 28/09 — **9 produtos**:
+
+```
+congelado    Chipa 1kg R$40 · Chipa 2kg R$80
+             Palito de Queijo 1kg R$40 · Palito de Queijo 2kg R$80
+             Pão de Queijo 1kg-25gr R$30 · 1kg-100gr R$30 · 2kg-50gr R$60
+refrigerado  Massa Pão de Queijo 1kg R$30 (Baldinho) · 4kg R$75 (Balde)
+```
 
 **3. A matriz peso × tamanho é incompleta de verdade.** Não existe 1 kg-50 g nem 2 kg-25 g.
 Isso é o catálogo certo, não lacuna a preencher.
 
-### Pergunta aberta
+### Débito registrado, fora de escopo
 
-**Quais kits e combos ainda são vendidos?** Não bloqueia o desenho; bloqueia a tarefa de
-limpeza. Precisa da lista do diretor antes de mexer nas flags.
+O `ProductNicknamesModal` (`components/features/purchase-orders/`) passa a editar um campo
+com outro significado. Não é usado, então não quebra ninguém — mas vira código morto com
+nome enganoso. Remover em onda própria, não nesta.
 
 ## Testes
 
@@ -307,11 +348,12 @@ o fio do pedido.
 
 ## Riscos
 
-- **A limpeza do catálogo é trabalho de dados, não de código**, e depende do diretor
-  responder quais kits ainda vendem. Se as flags ficarem erradas, a validação valida contra
-  a lista errada.
-- **A resolução por `apelido` depende de os apelidos existirem.** Apelido faltando vira
-  "não encontrado", que do lado do cliente soa como "não vendemos isso".
+- **A resolução depende de os apelidos existirem e estarem certos.** Apelido faltando vira
+  "não encontrado", que do lado do cliente soa como "não vendemos isso". É a única parte
+  desta feature que é trabalho de dados e não de código — e a que mais degrada em silêncio,
+  porque produto novo cadastrado sem apelido some do vocabulário dela sem erro nenhum.
+- **`apelido` passa a ter dois significados históricos.** Os valores atuais (`X`, `P`, `C`,
+  `B`) precisam ser substituídos na migração dos dados, não acrescentados.
 - **Os 30 minutos do abandono e a cadência de 10 minutos do W4 são estimativas.**
 - **O W4 é peça nova no ar.** Se ele morrer, ninguém é avisado de pedido abandonado e o
   sintoma é silêncio — o mesmo formato de falha que a CAPI teve em agosto. A execução
