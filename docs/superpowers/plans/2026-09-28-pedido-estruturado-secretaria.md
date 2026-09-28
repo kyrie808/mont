@@ -687,9 +687,15 @@ import {
   resolverTermo,
   renderizarPedido,
   totalPedido,
+  formatarReais,
   type ProdutoVendavel,
   type ItemPedido,
 } from '../../../packages/shared/src/catalogo.ts'
+
+// ⚠️ `formatarReais` é o helper `reais` de `catalogo.ts`, exportado nesta tarefa (hoje ele
+// é privado do módulo). Renomeie na exportação para `formatarReais` e acrescente ao
+// `packages/shared/src/index.ts`. NÃO troque por `formatCurrency` de `formatters.ts`:
+// aquele usa Intl e produz espaço não-separável (U+00A0), ruim em texto de WhatsApp.
 ```
 
 Remover a interface local `ItemCatalogo` (agora é `ProdutoVendavel`).
@@ -795,6 +801,11 @@ async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo
     ok: true,
     pedido: renderizarPedido(itens),
     total: totalPedido(itens),
+    // Total JÁ FORMATADO, pelo mesmo formatador que escreve os subtotais das linhas.
+    // Se o n8n formatasse por conta própria, existiriam três formatadores de moeda no
+    // caminho e o rodapé poderia divergir das linhas em um centavo — e quem separa o
+    // pedido não saberia em qual acreditar.
+    total_texto: formatarReais(totalPedido(itens)),
     itens: itens.length,
   }
 }
@@ -952,6 +963,7 @@ de `if (body.acao === 'intencoes_a_avisar') { ... }` por:
         atualizacao: pedido.interacao_id !== null,
         pedido: texto,
         total: totalPedido(itens),
+        total_texto: formatarReais(totalPedido(itens)),
         contato: contato.nome,
         telefone_wa: telefoneWa,
       }, 200)
