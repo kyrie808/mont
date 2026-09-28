@@ -216,7 +216,15 @@ async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneW
     .maybeSingle()
 
   if (recemConfirmado) {
-    await admin.from('wa_pedido').update({ status: 'rascunho' }).eq('id', recemConfirmado.id)
+    const { error: erroReabrir } = await admin
+      .from('wa_pedido').update({ status: 'rascunho' }).eq('id', recemConfirmado.id)
+    if (erroReabrir) {
+      // Mesmo padrao estrutural do Critical: se o UPDATE falhar e devolvermos
+      // `status: 'rascunho'` do mesmo jeito, a chamada seguinte grava item num pedido
+      // que o banco ainda acha `confirmado` — e a proxima `lerRascunho` nao acha nada.
+      console.error('[secretaria] falha ao reabrir pedido confirmado:', erroReabrir.message)
+      throw new Error('nao foi possivel reabrir o pedido')
+    }
     return { ...recemConfirmado, status: 'rascunho' }
   }
 
@@ -226,7 +234,18 @@ async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneW
     .select('id, status, interacao_id')
     .single()
 
-  if (error) throw new Error(`nao foi possivel abrir o pedido: ${error.message}`)
+  if (error) {
+    // Corrida: duas execucoes do workflow para o MESMO contato batem no indice unico
+    // parcial `uniq_wa_pedido_aberto` (ja aconteceu em campo, documentado na migration
+    // dela). Nao e erro de verdade — a outra execucao acabou de abrir o rascunho que
+    // esta precisava. Reler em vez de derrubar a chamada com 500.
+    if (error.code === '23505') {
+      const ganhou = await lerRascunho(admin, contatoId)
+      if (ganhou) return ganhou
+    }
+    console.error('[secretaria] falha ao abrir rascunho:', error.message)
+    throw new Error('nao foi possivel abrir o pedido')
+  }
   return data
 }
 
@@ -365,6 +384,12 @@ Deno.serve(async (req: Request) => {
 
         // Guarda: humano atendendo nao vira alerta de abandono. Sem isto o robo avisaria
         // o grupo sobre um cliente que o Gilmar ja esta atendendo.
+        //
+        // `humanoAssumiu` (mesma funcao de `montarContexto`) e a que tem JANELA de
+        // tempo — uma resposta humana de semana passada dentro das ultimas mensagens
+        // NAO pode calar o alerta para sempre. Reimplementar isto a mao sem a janela foi
+        // o bug: bastava UMA resposta humana antiga pra marcar `abandonado` em silencio
+        // e o aviso nunca sair.
         const { data: msgs } = await admin
           .from('mensagens_whatsapp')
           .select('message_id, direcao, enviada_em')
@@ -375,19 +400,29 @@ Deno.serve(async (req: Request) => {
           .from('wa_envios').select('message_id').eq('telefone_wa', p.telefone_wa)
         const idsDaAgente = new Set((envios ?? []).map((e) => e.message_id))
 
-        const humano = (msgs ?? []).some(
-          (m) => m.direcao === 'saida' && !idsDaAgente.has(m.message_id),
-        )
+        const paraRegra: MensagemDaConversa[] = (msgs ?? []).map((m) => ({
+          messageId: m.message_id,
+          direcao: m.direcao as 'entrada' | 'saida',
+          enviadaEm: m.enviada_em,
+        }))
 
-        if (humano) {
-          await admin.from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+        if (humanoAssumiu(paraRegra, idsDaAgente)) {
+          const { error: erroAbandono } = await admin
+            .from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+          if (erroAbandono) {
+            console.error('[secretaria] falha ao marcar rascunho como abandonado (humano):', erroAbandono.message)
+          }
           continue
         }
 
         const { data: c } = await admin
           .from('contatos').select('nome').eq('id', p.contato_id).maybeSingle()
 
-        await admin.from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+        const { error: erroAbandono } = await admin
+          .from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+        if (erroAbandono) {
+          console.error('[secretaria] falha ao marcar rascunho como abandonado:', erroAbandono.message)
+        }
 
         saida.push({
           telefone_wa: p.telefone_wa,
@@ -567,7 +602,13 @@ Deno.serve(async (req: Request) => {
         },
         { onConflict: 'pedido_id,produto_id' },
       )
-      if (error) return json({ error: error.message }, 400)
+      // Vocabulario controlado: texto cru do Postgres nao sai daqui. Nada impede a
+      // agente de repetir a resposta ao cliente, e "duplicate key value violates unique
+      // constraint..." nao e coisa pra cliente ler.
+      if (error) {
+        console.error('[secretaria] falha ao gravar item do pedido:', error.message)
+        return json({ error: 'nao foi possivel gravar o item do pedido' }, 400)
+      }
 
       return json(await responderPedido(admin, pedido.id, catalogo), 200)
     }
@@ -590,30 +631,96 @@ Deno.serve(async (req: Request) => {
       // Reabertura: ATUALIZA a linha da timeline que ja existe, em vez de criar outra.
       // O perfil do cliente mostra o pedido, nao tres versoes dele se montando.
       let interacaoId = pedido.interacao_id as string | null
+      // O que aconteceu ao gravar a interacao — vai na resposta pra `ok:true` nunca
+      // significar "confirmei sem deixar rastro na timeline".
+      let timeline: 'atualizado' | 'rpc' | 'direto' | 'falhou'
+
       if (interacaoId) {
-        await admin.from('interacoes').update({ observacao }).eq('id', interacaoId)
+        timeline = 'atualizado'
+        const { error: erroUpdate } = await admin
+          .from('interacoes').update({ observacao }).eq('id', interacaoId)
+        if (erroUpdate) {
+          // Nao fatal: a linha da timeline JA EXISTE (é ela que estamos tentando
+          // atualizar) — so o texto ficou desatualizado, nao é o caso critico.
+          console.error('[secretaria] falha ao atualizar observacao da interacao existente:', erroUpdate.message)
+        }
       } else {
         const { data: pendentes } = await admin
           .from('mensagens_whatsapp').select('message_id')
           .eq('telefone_wa', telefoneWa).is('processado_em', null).eq('historico', false)
 
-        const { data: novaId } = await admin.rpc('rpc_registrar_interacao_ia', {
+        const { data: novaId, error: erroRpc } = await admin.rpc('rpc_registrar_interacao_ia', {
           p_telefone_wa: telefoneWa,
           p_payload: { tipo: 'ponto_contato', sentido: 'entrada', resultado: 'aceitou', observacao },
           p_message_ids: (pendentes ?? []).map((m) => m.message_id),
         })
-        interacaoId = novaId as string | null
+        if (erroRpc) console.error('[secretaria] rpc_registrar_interacao_ia falhou ao confirmar pedido:', erroRpc.message)
+
+        interacaoId = (novaId as string | null) ?? null
+        timeline = interacaoId ? 'rpc' : 'falhou'
+
+        if (!interacaoId) {
+          // A RPC devolve NULL DE PROPOSITO quando nenhuma mensagem pendente ancora o
+          // registro — existe pra nao duplicar RESUMO DE CONVERSA com o que o W2 consome
+          // da MESMA fila (mensagens_whatsapp.processado_em). Mas um PEDIDO CONFIRMADO e
+          // evento proprio, nao resumo de conversa: precisa existir na timeline mesmo
+          // quando o W2 ja passou e esvaziou a fila. Por isso, sem ancora, inserimos a
+          // interacao direto em vez de deixar o pedido confirmar em silencio sem nunca
+          // aparecer no Kanban/perfil do cliente (era exatamente esse o bug: `ok:true`
+          // indistinguivel de sucesso, sem nenhuma linha em `interacoes`).
+          const { data: direto, error: erroDireto } = await admin
+            .from('interacoes')
+            .insert({
+              contato_id: contato.id,
+              tipo: 'ponto_contato',
+              canal: 'whatsapp',
+              sentido: 'entrada',
+              resultado: 'aceitou',
+              observacao,
+              gerado_por_ia: true,
+            })
+            .select('id')
+            .single()
+
+          if (erroDireto) {
+            console.error('[secretaria] insert direto da interacao tambem falhou:', erroDireto.message)
+          } else {
+            interacaoId = direto.id as string
+            timeline = 'direto'
+          }
+        }
       }
 
-      await admin.from('wa_pedido').update({
+      // Nem RPC nem insert direto conseguiram gravar a interacao: NAO marca o pedido
+      // como confirmado. `ok:true` aqui seria a agente dizer ao cliente que confirmou um
+      // pedido que nunca apareceu na timeline nem moveu o Kanban.
+      if (timeline === 'falhou') {
+        return json({
+          ok: false,
+          motivo: 'falha_ao_registrar_timeline',
+          erro: 'nao foi possivel registrar o pedido na timeline do cliente',
+        }, 500)
+      }
+
+      const { error: erroConfirmar } = await admin.from('wa_pedido').update({
         status: 'confirmado',
         confirmado_em: new Date().toISOString(),
         interacao_id: interacaoId,
       }).eq('id', pedido.id)
 
+      if (erroConfirmar) {
+        console.error('[secretaria] falha ao marcar pedido como confirmado:', erroConfirmar.message)
+        return json({
+          ok: false,
+          motivo: 'falha_ao_confirmar',
+          erro: 'o pedido ficou registrado na timeline, mas nao foi marcado como confirmado',
+        }, 500)
+      }
+
       return json({
         ok: true,
         atualizacao: pedido.interacao_id !== null,
+        timeline,
         pedido: texto,
         total: totalPedido(itens),
         total_texto: formatarReais(totalPedido(itens)),
