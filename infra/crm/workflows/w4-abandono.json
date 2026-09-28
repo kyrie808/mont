@@ -124,8 +124,7 @@
           "name": "Evolution API (apikey)"
         }
       },
-      "onError": "continueRegularOutput",
-      "notes": "Formata R$ na mao (toFixed+replace virgula), igual formatarReais em catalogo.ts: 'rascunhos_abandonados' devolve 'total' numerico, nao 'total_texto'. Intl.NumberFormat produz espaco nao-separavel (U+00A0), ruim em texto de WhatsApp — por isso nao usamos formatCurrency aqui."
+      "notes": "Formata R$ na mao (toFixed+replace virgula), igual formatarReais em catalogo.ts: 'rascunhos_abandonados' devolve 'total' numerico, nao 'total_texto'. Intl.NumberFormat produz espaco nao-separavel (U+00A0), ruim em texto de WhatsApp — por isso nao usamos formatCurrency aqui.\n\nSem onError, de proposito — ao contrario do que os outros onError deste repo poderiam sugerir por padronizacao. O no 2 (Buscar abandonados) ja marcou este pedido como 'abandonado' no banco ANTES deste envio rodar. Se a Evolution estiver fora do ar aqui, o pedido ja saiu de 'rascunho' e a proxima varredura nunca mais o encontra. 'continueRegularOutput' deixaria essa falha em execucao VERDE: lead perdido pra sempre, sem aviso e sem nem um vermelho no historico pra alguem notar — exatamente o modo de falha que este workflow existe para eliminar. Diferente do W3, onde engolir erro no envio e necessario pra 'Liberar presenca' rodar depois (senao a conta trava): aqui nao ha nenhum no depois deste, entao nao ha custo nenhum em deixar vermelho. Vermelho aqui e o que avisa a equipe — nao tirar."
     }
   ],
   "connections": {
