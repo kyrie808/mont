@@ -824,7 +824,7 @@ function respostaDaResolucao(termo: string, catalogo: ProdutoVendavel[]): Traduz
         ok: false,
         motivo: 'ambiguo',
         opcoes,
-        instrucao: 'Pergunte ao cliente qual destes ele quer. NAO escolha por ele. NAO grave nada.',
+        instrucao: 'Pergunte ao cliente qual destes ele quer. NAO escolha por ele. NAO grave nada. Se o cliente citou MAIS DE UM produto na mesma frase, chame a ferramenta uma vez por produto em vez de perguntar.',
       },
     }
   }
@@ -1097,9 +1097,10 @@ No workflow, remover o nó `registrar_pedido_intencao` e criar quatro
 
 ```
 nome: adicionar_item
-toolDescription: "Adiciona um produto ao pedido do cliente. Use assim que ele disser o que
-  quer. Se a resposta vier com motivo 'ambiguo' ou 'nao_encontrado', NADA foi gravado: siga
-  a instrucao que veio junto e fale com o cliente."
+toolDescription: "Adiciona UM produto ao pedido do cliente. Use assim que ele disser o que
+  quer. Se ele pedir dois produtos na mesma frase, chame esta ferramenta duas vezes — um
+  item por chamada. Se a resposta vier com motivo 'ambiguo' ou 'nao_encontrado', NADA foi
+  gravado: siga a instrucao que veio junto e fale com o cliente."
 jsonBody: ={{ JSON.stringify({
     acao: 'adicionar_item',
     jid: $('Extrair mensagem').first().json.jid,
@@ -1153,6 +1154,7 @@ PEDIDO
 - Voce nao anota pedido escrevendo texto. Voce usa as ferramentas: adicionar_item,
   alterar_quantidade, remover_item, confirmar_pedido.
 - Se a mensagem diz QUANTO de QUAL produto, chame adicionar_item na hora.
+- UM item por chamada. Se ele pedir "1 kg de chipa e 2 de palito", sao duas chamadas.
 - A ferramenta pode responder 'ambiguo' (mais de um produto serve) ou 'nao_encontrado'
   (a Mont nao vende aquilo). Nos dois casos NADA foi gravado. Leia a instrucao que veio
   na resposta e fale com o cliente.
