@@ -1195,7 +1195,7 @@ saída da tool `confirmar_pedido`, com o texto:
 
 ```
 ={{ JSON.stringify({ number: $json.jid.split('@')[0], text:
-  `🛒 PEDIDO ${$('confirmar_pedido').first().json.atualizacao ? 'ATUALIZADO' : 'CONFIRMADO'} — ${$('confirmar_pedido').first().json.contato} (${$('confirmar_pedido').first().json.telefone_wa})\n${$('confirmar_pedido').first().json.pedido}\nProdutos: R$ ${$('confirmar_pedido').first().json.total.toFixed(2).replace('.',',')} (sem frete)\n${$('confirmar_pedido').first().json.atualizacao ? '⚠️ Ja tinha sido avisado antes. Confira se nao foi separado.' : 'Alguem precisa fechar.'}`,
+  `🛒 PEDIDO ${$('confirmar_pedido').first().json.atualizacao ? 'ATUALIZADO' : 'CONFIRMADO'} — ${$('confirmar_pedido').first().json.contato} (${$('confirmar_pedido').first().json.telefone_wa})\n${$('confirmar_pedido').first().json.pedido}\nProdutos: ${$('confirmar_pedido').first().json.total_texto} (sem frete)\n${$('confirmar_pedido').first().json.atualizacao ? '⚠️ Ja tinha sido avisado antes. Confira se nao foi separado.' : 'Alguem precisa fechar.'}`,
   delay: 0, linkPreview: false }) }}
 ```
 
