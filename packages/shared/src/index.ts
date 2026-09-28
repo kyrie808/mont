@@ -52,11 +52,9 @@ export {
     particionarResposta,
     humanoAssumiu,
     estaLiberado,
-    pedidoVigente,
     JANELA_HUMANO_MS,
-    JANELA_PEDIDO_MS,
 } from './secretaria'
-export type { MensagemDaConversa, IntencaoRegistrada } from './secretaria'
+export type { MensagemDaConversa } from './secretaria'
 
 // Catálogo da secretária — resolver o que o cliente escreveu em produto real
 // `ProdutoCatalogo` já é exportado por './types' (a view pública vw_catalogo_produtos,
