@@ -8,7 +8,7 @@
  * vende. Quatro tentativas de proibir isso por prompt falharam. A regra passa a ser código.
  */
 
-export interface ProdutoCatalogo {
+export interface ProdutoVendavel {
     id: string
     nome: string
     /** Sinônimos curados, separados por vírgula. É como o CLIENTE chama o produto. */
@@ -18,9 +18,9 @@ export interface ProdutoCatalogo {
 }
 
 export type Resolucao =
-    | { tipo: 'resolvido'; produto: ProdutoCatalogo }
-    | { tipo: 'ambiguo'; opcoes: ProdutoCatalogo[] }
-    | { tipo: 'nao_encontrado'; opcoes: ProdutoCatalogo[] }
+    | { tipo: 'resolvido'; produto: ProdutoVendavel }
+    | { tipo: 'ambiguo'; opcoes: ProdutoVendavel[] }
+    | { tipo: 'nao_encontrado'; opcoes: ProdutoVendavel[] }
 
 /**
  * Minúsculas, sem acento, sem pontuação, espaço único.
@@ -66,7 +66,7 @@ function pesosDoNome(nome: string): { embalagem: number | null; unidade: number 
     }
 }
 
-function sinonimos(p: ProdutoCatalogo): string[] {
+function sinonimos(p: ProdutoVendavel): string[] {
     return (p.apelido ?? '')
         .split(',')
         .map(normalizar)
@@ -92,7 +92,7 @@ function contemSinonimo(texto: string, sinonimo: string): boolean {
  * `termo` é o que o cliente escreveu, cru. Devolve sempre um dos três resultados —
  * nunca escolhe no lugar dele quando há mais de uma possibilidade.
  */
-export function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resolucao {
+export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resolucao {
     const t = normalizar(termo)
 
     // 1. A FAMÍLIA vem do sinônimo curado, não de pedaço do nome. "pão de queijo" está

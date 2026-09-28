@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { resolverTermo, type ProdutoCatalogoSecretaria, type Resolucao } from '@mont/shared'
+import { resolverTermo, type ProdutoVendavel, type Resolucao } from '@mont/shared'
 
 // Catálogo real da Mont em 28/09/2026. Os apelidos são os sinônimos curados.
-// Nome do tipo tem sufixo "Secretaria": `ProdutoCatalogo` já existe em @mont/shared
+// `ProdutoVendavel` (não `ProdutoCatalogo`): esse último já existe em @mont/shared
 // como a view pública do catálogo (vw_catalogo_produtos, usada em apps/catalogo) — mesmo
 // nome colidiria e quebraria o typecheck do catálogo público. Ver comentário em index.ts.
-const CATALOGO: ProdutoCatalogoSecretaria[] = [
+const CATALOGO: ProdutoVendavel[] = [
     { id: 'pq-1k-25', nome: 'Pão de Queijo 1kg - 25gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: -103 },
     { id: 'pq-1k-100', nome: 'Pão de Queijo 1kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: 4 },
     { id: 'pq-2k-50', nome: 'Pão de Queijo 2kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: -27 },
