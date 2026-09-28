@@ -123,6 +123,29 @@ describe('resolverTermo', () => {
         expect(resolverTermo('PAO DE QUEIJO 2kg', CATALOGO).tipo).toBe('resolvido')
     })
 
+    it('sinônimo casa como palavra inteira, não como pedaço', () => {
+        // "baldinho" contém "balde". Busca por substring devolveria os dois baldes.
+        const r = resolverTermo('baldinho', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'massa-1k' } })
+    })
+
+    it('peso da UNIDADE também resolve, não só o da embalagem', () => {
+        // "me vê o de 100g" fala do tamanho do pão, não do pacote — e existe.
+        const r = resolverTermo('pão de queijo de 100g', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'pq-1k-100' } })
+    })
+
+    it('pontuação não atrapalha — cliente escreve com "!" e ","', () => {
+        const r = resolverTermo('me vê 2kg de pão de queijo, por favor!', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'pq-2k-50' } })
+    })
+
+    it('KG maiúsculo também é peso', () => {
+        expect(resolverTermo('2KG de chipa', CATALOGO)).toMatchObject({
+            tipo: 'resolvido', produto: { id: 'chipa-2k' },
+        })
+    })
+
     it('termo que não é produto nenhum → nao_encontrado sem opções', () => {
         expect(opcoesDe(resolverTermo('coxinha', CATALOGO), 'nao_encontrado')).toEqual([])
     })
@@ -167,20 +190,32 @@ export type Resolucao =
     | { tipo: 'ambiguo'; opcoes: ProdutoCatalogo[] }
     | { tipo: 'nao_encontrado'; opcoes: ProdutoCatalogo[] }
 
+/**
+ * Min\u00fasculas, sem acento, sem pontua\u00e7\u00e3o, espa\u00e7o \u00fanico.
+ *
+ * A pontua\u00e7\u00e3o vira espa\u00e7o em vez de sumir: cliente escreve "me v\u00ea 1kg de chipa!" e
+ * "chipa!" precisa continuar casando com o sin\u00f4nimo "chipa".
+ */
 function normalizar(s: string): string {
     return s
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
         .trim()
 }
 
-/** Peso da EMBALAGEM em gramas: "1kg" → 1000, "500g" → 500. */
+/**
+ * Peso que o cliente pediu, em gramas: "1kg" → 1000, "500g" → 500.
+ *
+ * Trabalha sobre o termo em minúsculas mas COM pontuação, porque "2,5kg" precisa do
+ * separador decimal — `normalizar` o trocaria por espaço.
+ */
 function pesoPedido(termo: string): number | null {
-    const kg = termo.match(/(\d+(?:[.,]\d+)?)\s*kg\b/)
+    const t = termo.toLowerCase()
+    const kg = t.match(/(\d+(?:[.,]\d+)?)\s*kg\b/)
     if (kg) return Math.round(parseFloat(kg[1].replace(',', '.')) * 1000)
-    const g = termo.match(/(\d+)\s*(?:g|gr|gramas?)\b/)
+    const g = t.match(/(\d+)\s*(?:g|gr|gramas?)\b/)
     if (g) return parseInt(g[1], 10)
     return null
 }
@@ -207,6 +242,21 @@ function sinonimos(p: ProdutoCatalogo): string[] {
 }
 
 /**
+ * Sinônimo tem que casar como PALAVRA INTEIRA, não como pedaço.
+ *
+ * "baldinho".includes("balde") é `true`, então busca por substring faria "baldinho" casar
+ * com o Balde 4kg e voltar ambíguo — quando o cliente foi específico.
+ *
+ * Emoldurar com espaço resolve sem regex: `normalizar` já colapsou espaços e trocou
+ * pontuação por espaço, então " baldinho " não contém " balde ", e " 1 kg de chipa "
+ * contém " chipa ". Sem regex também não há o que escapar quando o apelido tiver
+ * parêntese ou acento.
+ */
+function contemSinonimo(texto: string, sinonimo: string): boolean {
+    return ` ${texto} `.includes(` ${sinonimo} `)
+}
+
+/**
  * `termo` é o que o cliente escreveu, cru. Devolve sempre um dos três resultados —
  * nunca escolhe no lugar dele quando há mais de uma possibilidade.
  */
@@ -215,7 +265,7 @@ export function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resol
 
     // 1. A FAMÍLIA vem do sinônimo curado, não de pedaço do nome. "pão de queijo" está
     //    dentro de "Massa Pão de Queijo", e a massa é produto cru — outra coisa.
-    const familia = catalogo.filter((p) => sinonimos(p).some((s) => t.includes(s)))
+    const familia = catalogo.filter((p) => sinonimos(p).some((s) => contemSinonimo(t, s)))
     if (familia.length === 0) return { tipo: 'nao_encontrado', opcoes: [] }
 
     // 2. Sem peso declarado, a escolha é do cliente.
@@ -226,17 +276,23 @@ export function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resol
             : { tipo: 'ambiguo', opcoes: familia }
     }
 
-    // 3. Com peso: casa contra a EMBALAGEM. "500 g de chipa" não casa com nenhuma, e a
-    //    resposta traz as embalagens que existem daquela família — não o catálogo inteiro.
+    // 3. Com peso: casa contra a EMBALAGEM primeiro — é o que o cliente diz mais vezes.
     const naEmbalagem = familia.filter((p) => pesosDoNome(p.nome).embalagem === peso)
-    if (naEmbalagem.length === 0) return { tipo: 'nao_encontrado', opcoes: familia }
     if (naEmbalagem.length === 1) return { tipo: 'resolvido', produto: naEmbalagem[0] }
+    if (naEmbalagem.length > 1) {
+        // Mesma embalagem, tamanhos de unidade diferentes: o cliente escolhe.
+        return { tipo: 'ambiguo', opcoes: naEmbalagem }
+    }
 
-    // 4. Mesma embalagem, tamanhos de unidade diferentes: o cliente escolhe.
-    const naUnidade = naEmbalagem.filter((p) => pesosDoNome(p.nome).unidade === peso)
+    // 4. Nenhuma embalagem com esse peso. Antes de dizer que não existe, tentar o TAMANHO
+    //    DA UNIDADE: "me vê o de 100g" fala da unidade, não do pacote, e o produto existe.
+    const naUnidade = familia.filter((p) => pesosDoNome(p.nome).unidade === peso)
     if (naUnidade.length === 1) return { tipo: 'resolvido', produto: naUnidade[0] }
+    if (naUnidade.length > 1) return { tipo: 'ambiguo', opcoes: naUnidade }
 
-    return { tipo: 'ambiguo', opcoes: naEmbalagem }
+    // 5. Nem embalagem nem unidade: a Mont não vende esse peso. As opções são as DA
+    //    FAMÍLIA — "chipa só tem 1kg ou 2kg" —, nunca o catálogo inteiro.
+    return { tipo: 'nao_encontrado', opcoes: familia }
 }
 ```
 
@@ -253,7 +309,7 @@ export type { ProdutoCatalogo, Resolucao } from './catalogo'
 - [ ] **Step 5: Rodar e confirmar que passa**
 
 Run: `pnpm --filter interno exec vitest run src/utils/__tests__/catalogo.spec.ts`
-Expected: PASS, 9 testes.
+Expected: PASS, 13 testes.
 
 - [ ] **Step 6: Commit**
 
@@ -384,7 +440,7 @@ export type { ProdutoCatalogo, Resolucao, ItemPedido } from './catalogo'
 - [ ] **Step 5: Rodar e confirmar que passa**
 
 Run: `pnpm --filter interno exec vitest run src/utils/__tests__/catalogo.spec.ts`
-Expected: PASS, 15 testes.
+Expected: PASS, 19 testes.
 
 - [ ] **Step 6: Commit**
 
@@ -649,10 +705,42 @@ async function lerRascunho(admin: SupabaseClient, contatoId: string) {
   return data
 }
 
-/** O rascunho aberto, criando se não houver. */
+/**
+ * Por quanto tempo depois de confirmar o cliente ainda esta no MESMO pedido.
+ *
+ * "Ah, esqueci, poe mais 1 kg" dois minutos depois e a mesma compra; um pedido novo na
+ * semana seguinte nao e. Sem esse prazo, ou toda mensagem reabriria o pedido antigo para
+ * sempre, ou a equipe receberia dois CONFIRMADO para uma entrega so.
+ */
+const JANELA_REABERTURA_MS = 2 * 60 * 60 * 1000
+
+/**
+ * O pedido em que os itens devem entrar: o rascunho aberto, ou o confirmado ha pouco
+ * REABERTO, ou um novo.
+ *
+ * A reabertura preserva `interacao_id` — e ele que faz a confirmacao seguinte ATUALIZAR a
+ * linha da timeline em vez de criar outra, e o aviso sair como ATUALIZADO em vez de um
+ * segundo CONFIRMADO.
+ */
 async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneWa: string) {
   const existente = await lerRascunho(admin, contatoId)
   if (existente) return existente
+
+  const desde = new Date(Date.now() - JANELA_REABERTURA_MS).toISOString()
+  const { data: recemConfirmado } = await admin
+    .from('wa_pedido')
+    .select('id, status, interacao_id')
+    .eq('contato_id', contatoId)
+    .eq('status', 'confirmado')
+    .gte('confirmado_em', desde)
+    .order('confirmado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (recemConfirmado) {
+    await admin.from('wa_pedido').update({ status: 'rascunho' }).eq('id', recemConfirmado.id)
+    return { ...recemConfirmado, status: 'rascunho' }
+  }
 
   const { data, error } = await admin
     .from('wa_pedido')
@@ -751,6 +839,11 @@ function respostaDaResolucao(termo: string, catalogo: ProdutoCatalogo[]): Traduz
 ```
 
 - [ ] **Step 3: Escrever as quatro ações**
+
+⚠️ **`rascunhos_abandonados` é GLOBAL** — varre todos os contatos e não recebe `jid` nem
+`telefone_wa`. O guard `if (!telefoneWa) return json({ error: ... }, 400)` mataria a
+chamada, então o bloco dela vai **antes desse guard**, logo depois do `createClient`. As
+outras três ficam onde estão, junto das demais ações.
 
 Substituir o bloco inteiro de `if (body.acao === 'registrar_pedido_intencao') { ... }` e o
 de `if (body.acao === 'intencoes_a_avisar') { ... }` por:
@@ -1137,13 +1230,17 @@ Produtos: R$ {total}
 Ninguem confirmou. Vale um empurrao?
 ```
 
-- [ ] **Step 2: Ajustar a Edge Function para a ação global**
+- [ ] **Step 2: Conferir que a ação global responde sem `jid`**
 
-`rascunhos_abandonados` não tem telefone. O guard atual
-(`if (!telefoneWa) return json({ error: ... }, 400)`) mata a chamada. Mover o tratamento
-dessa ação para **antes** desse guard, logo depois do `createClient`.
+A Task 5 já posicionou `rascunhos_abandonados` antes do guard de telefone. Confirmar com
+uma chamada sem `jid`:
 
-Redeployar: `npx supabase functions deploy whatsapp-secretaria --project-ref herlvujykltxnwqmwmyx`
+```bash
+curl -s -X POST "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-secretaria"   -H "x-ingestor-secret: $S" -H 'Content-Type: application/json'   -d '{"acao":"rascunhos_abandonados","minutos":30}'
+```
+
+Expected: `{"ok":true,"abandonados":[...]}` — **não** um 400 de telefone obrigatório. Se
+vier 400, o bloco ficou no lugar errado na Task 5: mover e redeployar.
 
 - [ ] **Step 3: Provar que o W4 funciona sem esperar 30 minutos**
 
@@ -1189,7 +1286,7 @@ arquivo de teste.
 - [ ] **Step 2: Rodar a suíte inteira**
 
 Run: `pnpm --filter interno exec vitest run --exclude "**/*.integration.test.ts"`
-Expected: PASS. A contagem cai 6 (os de `pedidoVigente`) e sobe 15 (os de `catalogo`).
+Expected: PASS. A contagem cai 6 (os de `pedidoVigente`) e sobe 19 (os de `catalogo`).
 
 - [ ] **Step 3: Typecheck nos dois apps**
 
