@@ -152,6 +152,16 @@ export interface ItemPedido {
     semEstoque: boolean
 }
 
+/**
+ * Formatador de reais para texto de WhatsApp da secretária.
+ *
+ * Existe de propósito separado do `formatCurrency` de `formatters.ts`, que usa
+ * `Intl.NumberFormat('pt-BR')` e produz `R$ 30,00` com espaço não-separável (U+00A0).
+ * Em texto de WhatsApp isso quebra quebras de linha e torna a leitura ruim. Aqui usamos
+ * espaço comum para garantir que as linhas se quebram bem.
+ *
+ * ⚠️ NÃO unificar os dois formatadores daqui a seis meses — seria uma regressão.
+ */
 function reais(v: number): string {
     return `R$ ${v.toFixed(2).replace('.', ',')}`
 }

@@ -136,14 +136,17 @@ describe('renderizarPedido', () => {
 
     it('lista item, quantidade e subtotal', () => {
         const txt = renderizarPedido(itens)
-        expect(txt).toContain('1× Pão de Queijo 1kg - 100gr')
-        expect(txt).toContain('R$ 30,00')
-        expect(txt).toContain('2× Chipa 1kg')
-        expect(txt).toContain('R$ 80,00')
+        // Afirmar linha inteira: nome + quantidade + subtotal pareados. Um bug que trocasse
+        // os subtotais entre linhas passaria em `toContain` solto mas falharia aqui.
+        expect(txt).toContain('1× Pão de Queijo 1kg - 100gr — R$ 30,00')
+        expect(txt).toContain('2× Chipa 1kg — R$ 80,00 ⚠️ sem estoque no sistema')
     })
 
     it('marca o que está sem estoque — a equipe confere antes de separar', () => {
-        expect(renderizarPedido(itens)).toContain('⚠️')
+        const txt = renderizarPedido(itens)
+        // Afirmar que o alerta caiu na Chipa (semEstoque: true) e não no pão de queijo.
+        expect(txt).toContain('2× Chipa 1kg — R$ 80,00 ⚠️ sem estoque no sistema')
+        expect(txt).not.toContain('1× Pão de Queijo 1kg - 100gr — R$ 30,00 ⚠️')
     })
 
     it('não marca nada quando tudo tem estoque', () => {
