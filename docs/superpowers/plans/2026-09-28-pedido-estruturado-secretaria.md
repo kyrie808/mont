@@ -47,12 +47,17 @@
 - Create: `apps/interno/src/utils/__tests__/catalogo.spec.ts`
 - Modify: `packages/shared/src/index.ts:48-56`
 
+> ⚠️ O tipo se chama `ProdutoVendavel` e **não** `ProdutoCatalogo`: esse nome já existe em
+> `packages/shared/src/types.ts:40` como a view pública `vw_catalogo_produtos`, consumida
+> por 14 arquivos de `apps/catalogo`. Nome repetido dá `TS2300 Duplicate identifier` e
+> quebra o build do site em produção — medido, 39 erros.
+
 **Interfaces:**
 - Consumes: nada.
 - Produces:
-  - `interface ProdutoCatalogo { id: string; nome: string; apelido: string | null; preco: number; estoqueAtual: number }`
-  - `type Resolucao = { tipo: 'resolvido'; produto: ProdutoCatalogo } | { tipo: 'ambiguo'; opcoes: ProdutoCatalogo[] } | { tipo: 'nao_encontrado'; opcoes: ProdutoCatalogo[] }`
-  - `function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resolucao`
+  - `interface ProdutoVendavel { id: string; nome: string; apelido: string | null; preco: number; estoqueAtual: number }`
+  - `type Resolucao = { tipo: 'resolvido'; produto: ProdutoVendavel } | { tipo: 'ambiguo'; opcoes: ProdutoVendavel[] } | { tipo: 'nao_encontrado'; opcoes: ProdutoVendavel[] }`
+  - `function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resolucao`
 
 - [ ] **Step 1: Escrever os testes que falham**
 
@@ -60,10 +65,10 @@ Criar `apps/interno/src/utils/__tests__/catalogo.spec.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest'
-import { resolverTermo, type ProdutoCatalogo, type Resolucao } from '@mont/shared'
+import { resolverTermo, type ProdutoVendavel, type Resolucao } from '@mont/shared'
 
 // Catálogo real da Mont em 28/09/2026. Os apelidos são os sinônimos curados.
-const CATALOGO: ProdutoCatalogo[] = [
+const CATALOGO: ProdutoVendavel[] = [
     { id: 'pq-1k-25', nome: 'Pão de Queijo 1kg - 25gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: -103 },
     { id: 'pq-1k-100', nome: 'Pão de Queijo 1kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: 4 },
     { id: 'pq-2k-50', nome: 'Pão de Queijo 2kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: -27 },
@@ -176,7 +181,7 @@ Criar `packages/shared/src/catalogo.ts`:
  * vende. Quatro tentativas de proibir isso por prompt falharam. A regra passa a ser código.
  */
 
-export interface ProdutoCatalogo {
+export interface ProdutoVendavel {
     id: string
     nome: string
     /** Sinônimos curados, separados por vírgula. É como o CLIENTE chama o produto. */
@@ -186,9 +191,9 @@ export interface ProdutoCatalogo {
 }
 
 export type Resolucao =
-    | { tipo: 'resolvido'; produto: ProdutoCatalogo }
-    | { tipo: 'ambiguo'; opcoes: ProdutoCatalogo[] }
-    | { tipo: 'nao_encontrado'; opcoes: ProdutoCatalogo[] }
+    | { tipo: 'resolvido'; produto: ProdutoVendavel }
+    | { tipo: 'ambiguo'; opcoes: ProdutoVendavel[] }
+    | { tipo: 'nao_encontrado'; opcoes: ProdutoVendavel[] }
 
 /**
  * Min\u00fasculas, sem acento, sem pontua\u00e7\u00e3o, espa\u00e7o \u00fanico.
@@ -234,7 +239,7 @@ function pesosDoNome(nome: string): { embalagem: number | null; unidade: number 
     }
 }
 
-function sinonimos(p: ProdutoCatalogo): string[] {
+function sinonimos(p: ProdutoVendavel): string[] {
     return (p.apelido ?? '')
         .split(',')
         .map(normalizar)
@@ -260,7 +265,7 @@ function contemSinonimo(texto: string, sinonimo: string): boolean {
  * `termo` é o que o cliente escreveu, cru. Devolve sempre um dos três resultados —
  * nunca escolhe no lugar dele quando há mais de uma possibilidade.
  */
-export function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resolucao {
+export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resolucao {
     const t = normalizar(termo)
 
     // 1. A FAMÍLIA vem do sinônimo curado, não de pedaço do nome. "pão de queijo" está
@@ -303,7 +308,7 @@ Depois do bloco `} from './secretaria'`, acrescentar:
 ```typescript
 // Catálogo da secretária — resolver o que o cliente escreveu em produto real
 export { resolverTermo } from './catalogo'
-export type { ProdutoCatalogo, Resolucao } from './catalogo'
+export type { ProdutoVendavel, Resolucao } from './catalogo'
 ```
 
 - [ ] **Step 5: Rodar e confirmar que passa**
@@ -328,7 +333,7 @@ git commit -m "feat(secretaria): resolucao de termo do cliente contra o catalogo
 - Modify: `apps/interno/src/utils/__tests__/catalogo.spec.ts`
 
 **Interfaces:**
-- Consumes: `ProdutoCatalogo` da Task 1.
+- Consumes: `ProdutoVendavel` da Task 1.
 - Produces:
   - `interface ItemPedido { produtoId: string; nome: string; quantidade: number; precoUnitario: number; semEstoque: boolean }`
   - `function renderizarPedido(itens: ItemPedido[]): string`
@@ -434,7 +439,7 @@ Em `packages/shared/src/index.ts`, trocar o bloco do catálogo por:
 
 ```typescript
 export { resolverTermo, renderizarPedido, totalPedido } from './catalogo'
-export type { ProdutoCatalogo, Resolucao, ItemPedido } from './catalogo'
+export type { ProdutoVendavel, Resolucao, ItemPedido } from './catalogo'
 ```
 
 - [ ] **Step 5: Rodar e confirmar que passa**
@@ -648,7 +653,7 @@ git commit -m "feat(secretaria): apelido vira sinonimo do cliente, nao codigo in
 - Modify: `supabase/functions/whatsapp-secretaria/index.ts`
 
 **Interfaces:**
-- Consumes: `resolverTermo`, `renderizarPedido`, `totalPedido`, `ProdutoCatalogo`, `ItemPedido` das Tasks 1–2; as tabelas da Task 3.
+- Consumes: `resolverTermo`, `renderizarPedido`, `totalPedido`, `ProdutoVendavel`, `ItemPedido` das Tasks 1–2; as tabelas da Task 3.
 - Produces: ações `adicionar_item`, `alterar_quantidade`, `remover_item`, `confirmar_pedido`, `rascunhos_abandonados`. Remove `registrar_pedido_intencao`, `intencoes_a_avisar`, `pedidoVigente`/`lerIntencoes`.
 
 - [ ] **Step 1: Trocar o leitor de catálogo**
@@ -657,7 +662,7 @@ git commit -m "feat(secretaria): apelido vira sinonimo do cliente, nao codigo in
 e `estoque_atual`. Substituir a função inteira (linhas 85–94) por:
 
 ```typescript
-async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoCatalogo[]> {
+async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoVendavel[]> {
   const { data } = await admin
     .from('produtos')
     .select('id, nome, apelido, preco, estoque_atual')
@@ -682,12 +687,12 @@ import {
   resolverTermo,
   renderizarPedido,
   totalPedido,
-  type ProdutoCatalogo,
+  type ProdutoVendavel,
   type ItemPedido,
 } from '../../../packages/shared/src/catalogo.ts'
 ```
 
-Remover a interface local `ItemCatalogo` (agora é `ProdutoCatalogo`).
+Remover a interface local `ItemCatalogo` (agora é `ProdutoVendavel`).
 
 - [ ] **Step 2: Escrever os helpers do pedido**
 
@@ -756,7 +761,7 @@ async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneW
 async function lerItens(
   admin: SupabaseClient,
   pedidoId: string,
-  catalogo: ProdutoCatalogo[],
+  catalogo: ProdutoVendavel[],
 ): Promise<ItemPedido[]> {
   const { data } = await admin
     .from('wa_pedido_item')
@@ -782,7 +787,7 @@ async function lerItens(
  * A agente nunca soma nem formata — ela repete isto. Foi ela escrevendo o pedido de
  * cabeça que somou o pedido da véspera e anotou 4 kg onde o cliente pediu 2 kg.
  */
-async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo: ProdutoCatalogo[]) {
+async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo: ProdutoVendavel[]) {
   const itens = await lerItens(admin, pedidoId, catalogo)
   await admin.from('wa_pedido').update({ atualizado_em: new Date().toISOString() }).eq('id', pedidoId)
 
@@ -802,10 +807,10 @@ async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo
  * — proibido pela Regra de Ouro #1.
  */
 type Traduzido =
-  | { tipo: 'segue'; produto: ProdutoCatalogo }
+  | { tipo: 'segue'; produto: ProdutoVendavel }
   | { tipo: 'responde'; corpo: Record<string, unknown> }
 
-function respostaDaResolucao(termo: string, catalogo: ProdutoCatalogo[]): Traduzido {
+function respostaDaResolucao(termo: string, catalogo: ProdutoVendavel[]): Traduzido {
   const r = resolverTermo(termo, catalogo)
 
   if (r.tipo === 'resolvido') return { tipo: 'segue', produto: r.produto }
