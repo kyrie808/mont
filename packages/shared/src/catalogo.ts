@@ -55,9 +55,15 @@ function pesoPedido(termo: string): number | null {
 /**
  * Pesos que o NOME do produto declara. "Pão de Queijo 1kg - 100gr" tem dois números: a
  * embalagem (1kg) e o tamanho da unidade (100gr). O primeiro é a embalagem.
+ *
+ * NÃO usa `normalizar`: ela troca vírgula por espaço, e "1,5kg" viraria "1 5kg" — o
+ * regex casaria só o "5kg" final e leria a embalagem como 5000g em vez de 1500g. Mesmo
+ * cuidado de `pesoPedido` (o pedido do cliente), aqui do lado espelhado (o nome do
+ * produto). Acento não atrapalha o regex — ele só procura dígito seguido de kg/g —,
+ * então `toLowerCase` sozinho basta.
  */
 function pesosDoNome(nome: string): { embalagem: number | null; unidade: number | null } {
-    const n = normalizar(nome)
+    const n = nome.toLowerCase()
     const kg = n.match(/(\d+(?:[.,]\d+)?)\s*kg\b/)
     const g = n.match(/(\d+)\s*(?:g|gr)\b/)
     return {
@@ -100,7 +106,17 @@ export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resol
     const familia = catalogo.filter((p) => sinonimos(p).some((s) => contemSinonimo(t, s)))
     if (familia.length === 0) return { tipo: 'nao_encontrado', opcoes: [] }
 
-    // 2. Sem peso declarado, a escolha é do cliente.
+    // 2. O termo pode citar mais de um produto distinto: "chipa e massa de 4kg" casa
+    //    "chipa" num produto e "massa" noutro. Resolver por peso a partir daqui
+    //    descartaria um deles em silêncio. Comparamos o PRIMEIRO sinônimo que casou em
+    //    cada produto da família: se os produtos casaram por sinônimos diferentes, são
+    //    itens diferentes que o cliente citou juntos — não um produto só com variações
+    //    de peso ("massa" casa massa-1k e massa-4k pelo MESMO sinônimo, e isso continua
+    //    resolvendo por peso normalmente).
+    const sinonimosCasados = new Set(familia.map((p) => sinonimos(p).find((s) => contemSinonimo(t, s))))
+    if (sinonimosCasados.size > 1) return { tipo: 'ambiguo', opcoes: familia }
+
+    // 3. Sem peso declarado, a escolha é do cliente.
     const peso = pesoPedido(termo)
     if (peso === null) {
         return familia.length === 1
@@ -108,7 +124,7 @@ export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resol
             : { tipo: 'ambiguo', opcoes: familia }
     }
 
-    // 3. Com peso: casa contra a EMBALAGEM primeiro — é o que o cliente diz mais vezes.
+    // 4. Com peso: casa contra a EMBALAGEM primeiro — é o que o cliente diz mais vezes.
     const naEmbalagem = familia.filter((p) => pesosDoNome(p.nome).embalagem === peso)
     if (naEmbalagem.length === 1) return { tipo: 'resolvido', produto: naEmbalagem[0] }
     if (naEmbalagem.length > 1) {
@@ -116,13 +132,13 @@ export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resol
         return { tipo: 'ambiguo', opcoes: naEmbalagem }
     }
 
-    // 4. Nenhuma embalagem com esse peso. Antes de dizer que não existe, tentar o TAMANHO
+    // 5. Nenhuma embalagem com esse peso. Antes de dizer que não existe, tentar o TAMANHO
     //    DA UNIDADE: "me vê o de 100g" fala da unidade, não do pacote, e o produto existe.
     const naUnidade = familia.filter((p) => pesosDoNome(p.nome).unidade === peso)
     if (naUnidade.length === 1) return { tipo: 'resolvido', produto: naUnidade[0] }
     if (naUnidade.length > 1) return { tipo: 'ambiguo', opcoes: naUnidade }
 
-    // 5. Nem embalagem nem unidade: a Mont não vende esse peso. As opções são as DA
+    // 6. Nem embalagem nem unidade: a Mont não vende esse peso. As opções são as DA
     //    FAMÍLIA — "chipa só tem 1kg ou 2kg" —, nunca o catálogo inteiro.
     return { tipo: 'nao_encontrado', opcoes: familia }
 }

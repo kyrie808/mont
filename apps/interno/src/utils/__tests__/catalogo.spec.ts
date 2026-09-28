@@ -62,7 +62,9 @@ describe('resolverTermo', () => {
     })
 
     it('ignora acento e caixa', () => {
-        expect(resolverTermo('PAO DE QUEIJO 2kg', CATALOGO).tipo).toBe('resolvido')
+        expect(resolverTermo('PAO DE QUEIJO 2kg', CATALOGO)).toMatchObject({
+            tipo: 'resolvido', produto: { id: 'pq-2k-50' },
+        })
     })
 
     it('sinônimo casa como palavra inteira, não como pedaço', () => {
@@ -94,5 +96,34 @@ describe('resolverTermo', () => {
 
     it('catálogo vazio → nao_encontrado, nunca explode', () => {
         expect(resolverTermo('chipa', []).tipo).toBe('nao_encontrado')
+    })
+
+    it('termo cita dois produtos distintos → ambiguo, não descarta um deles calado', () => {
+        // "chipa e massa de 4kg" casa "chipa" num produto e "massa" noutro. Resolver
+        // direto pelo peso ("4kg") devolveria só a massa e a chipa sumiria em silêncio.
+        const r = resolverTermo('chipa e massa de 4kg', CATALOGO)
+        expect(opcoesDe(r, 'ambiguo')).toEqual(['chipa-1k', 'chipa-2k', 'massa-1k', 'massa-4k'])
+    })
+
+    it('não regressão: mesma família casando pelo MESMO sinônimo continua resolvendo por peso', () => {
+        // "massa" casa massa-1k e massa-4k pelo sinônimo IDÊNTICO — não é "dois produtos
+        // citados juntos", é um produto só com variação de peso. Tem que resolver normal.
+        const r = resolverTermo('massa de 4kg', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'massa-4k' } })
+    })
+
+    it('peso decimal no NOME do produto não é corrompido pela normalização', () => {
+        // `pesosDoNome` não pode normalizar "2,5kg": a vírgula viraria espaço e o regex
+        // casaria só o "5kg" final, lendo a embalagem como 5000g em vez de 2500g — e aí
+        // um cliente pedindo 5kg receberia silenciosamente o produto de 2,5kg como
+        // resolvido. O catálogo real da Mont não tem peso decimal hoje, por isso o
+        // catálogo sintético aqui, isolado dos outros testes.
+        const catalogoDecimal: ProdutoVendavel[] = [
+            { id: 'chipa-2_5k', nome: 'Chipa 2,5kg', apelido: 'chipa', preco: 100, estoqueAtual: 0 },
+        ]
+        expect(resolverTermo('chipa de 2,5kg', catalogoDecimal)).toMatchObject({
+            tipo: 'resolvido', produto: { id: 'chipa-2_5k' },
+        })
+        expect(resolverTermo('chipa de 5kg', catalogoDecimal).tipo).not.toBe('resolvido')
     })
 })
