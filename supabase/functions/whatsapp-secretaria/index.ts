@@ -22,21 +22,26 @@ import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   humanoAssumiu,
   estaLiberado,
-  pedidoVigente,
-  JANELA_PEDIDO_MS,
-  type IntencaoRegistrada,
   particionarResposta,
   calcularTempoDigitacaoMs,
   type MensagemDaConversa,
 } from '../../../packages/shared/src/secretaria.ts'
 import { telefoneWaDeJid } from '../../../packages/shared/src/whatsapp.ts'
+import {
+  resolverTermo,
+  renderizarPedido,
+  totalPedido,
+  formatarReais,
+  type ProdutoVendavel,
+  type ItemPedido,
+} from '../../../packages/shared/src/catalogo.ts'
+
+// ⚠️ `formatarReais` é o helper `reais` de `catalogo.ts`, exportado nesta tarefa (hoje ele
+// é privado do módulo). NÃO trocar por `formatCurrency` de `formatters.ts`: aquele usa
+// Intl e produz espaço não-separável (U+00A0), ruim em texto de WhatsApp.
 
 // Contexto suficiente para entender o assunto sem inflar o prompt.
 const MAX_MENSAGENS_CONTEXTO = 30
-
-// JANELA_PEDIDO_MS mora em packages/shared: a MESMA janela decide o que a função
-// consolida e o que a agente enxerga como "o pedido". Foi a discordância entre essas
-// duas noções que fez ela somar o pedido de ontem com o de hoje em 21/08.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,11 +67,6 @@ function lerAllowlist(): string[] {
     .filter(Boolean)
 }
 
-interface ItemCatalogo {
-  nome: string
-  preco: number
-}
-
 /**
  * O que a secretária pode citar para um cliente.
  *
@@ -82,15 +82,21 @@ interface ItemCatalogo {
  * secretária dizer a quase todo lead que não temos pão de queijo. Enquanto o número não
  * for confiável, estoque é assunto de humano.
  */
-async function lerCatalogo(admin: SupabaseClient): Promise<ItemCatalogo[]> {
+async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoVendavel[]> {
   const { data } = await admin
     .from('produtos')
-    .select('nome, preco')
+    .select('id, nome, apelido, preco, estoque_atual')
     .eq('ativo', true)
     .eq('visivel_catalogo', true)
     .order('nome')
 
-  return (data ?? []).map((p) => ({ nome: p.nome, preco: Number(p.preco ?? 0) }))
+  return (data ?? []).map((p) => ({
+    id: p.id as string,
+    nome: p.nome as string,
+    apelido: (p.apelido ?? null) as string | null,
+    preco: Number(p.preco ?? 0),
+    estoqueAtual: Number(p.estoque_atual ?? 0),
+  }))
 }
 
 async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
@@ -155,30 +161,163 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
     contato,
     conversa,
     nao_lidas: naoLidas,
-    // O pedido de pé entra como FATO no prompt. Sem isso a agente deduzia o pedido das
-    // 30 últimas mensagens, que não têm fronteira de tempo — e somava com o de ontem.
-    pedido_atual: pedidoVigente(await lerIntencoes(admin, contato.id))?.resumo ?? null,
+    // O rascunho vai como FATO, derivado das linhas. A agente nao deduz pedido da conversa.
+    pedido_atual: await (async () => {
+      const r = await lerRascunho(admin, contato.id)
+      if (!r) return null
+      const cat = await lerCatalogo(admin)
+      return renderizarPedido(await lerItens(admin, r.id, cat))
+    })(),
     catalogo: await lerCatalogo(admin),
   }
 }
 
-/** Intenções de compra já registradas para este contato, dentro da janela do pedido. */
-async function lerIntencoes(admin: SupabaseClient, contatoId: string): Promise<IntencaoRegistrada[]> {
-  const desde = new Date(Date.now() - JANELA_PEDIDO_MS).toISOString()
-
+/** O rascunho aberto do contato, ou `null`. Nunca cria. */
+async function lerRascunho(admin: SupabaseClient, contatoId: string) {
   const { data } = await admin
-    .from('interacoes')
-    .select('id, observacao, data')
+    .from('wa_pedido')
+    .select('id, status, interacao_id')
     .eq('contato_id', contatoId)
-    .eq('gerado_por_ia', true)
-    .like('observacao', '[intenção de compra]%')
-    .gte('data', desde)
+    .eq('status', 'rascunho')
+    .maybeSingle()
+  return data
+}
 
-  return (data ?? []).map((i) => ({
-    id: i.id as string,
-    resumo: ((i.observacao ?? '') as string).replace('[intenção de compra] ', ''),
-    em: i.data as string,
-  }))
+/**
+ * Por quanto tempo depois de confirmar o cliente ainda esta no MESMO pedido.
+ *
+ * "Ah, esqueci, poe mais 1 kg" dois minutos depois e a mesma compra; um pedido novo na
+ * semana seguinte nao e. Sem esse prazo, ou toda mensagem reabriria o pedido antigo para
+ * sempre, ou a equipe receberia dois CONFIRMADO para uma entrega so.
+ */
+const JANELA_REABERTURA_MS = 2 * 60 * 60 * 1000
+
+/**
+ * O pedido em que os itens devem entrar: o rascunho aberto, ou o confirmado ha pouco
+ * REABERTO, ou um novo.
+ *
+ * A reabertura preserva `interacao_id` — e ele que faz a confirmacao seguinte ATUALIZAR a
+ * linha da timeline em vez de criar outra, e o aviso sair como ATUALIZADO em vez de um
+ * segundo CONFIRMADO.
+ */
+async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneWa: string) {
+  const existente = await lerRascunho(admin, contatoId)
+  if (existente) return existente
+
+  const desde = new Date(Date.now() - JANELA_REABERTURA_MS).toISOString()
+  const { data: recemConfirmado } = await admin
+    .from('wa_pedido')
+    .select('id, status, interacao_id')
+    .eq('contato_id', contatoId)
+    .eq('status', 'confirmado')
+    .gte('confirmado_em', desde)
+    .order('confirmado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (recemConfirmado) {
+    await admin.from('wa_pedido').update({ status: 'rascunho' }).eq('id', recemConfirmado.id)
+    return { ...recemConfirmado, status: 'rascunho' }
+  }
+
+  const { data, error } = await admin
+    .from('wa_pedido')
+    .insert({ contato_id: contatoId, telefone_wa: telefoneWa })
+    .select('id, status, interacao_id')
+    .single()
+
+  if (error) throw new Error(`nao foi possivel abrir o pedido: ${error.message}`)
+  return data
+}
+
+/** Itens do pedido, já com o alerta de estoque resolvido contra o catálogo. */
+async function lerItens(
+  admin: SupabaseClient,
+  pedidoId: string,
+  catalogo: ProdutoVendavel[],
+): Promise<ItemPedido[]> {
+  const { data } = await admin
+    .from('wa_pedido_item')
+    .select('produto_id, quantidade, preco_unitario')
+    .eq('pedido_id', pedidoId)
+    .order('criado_em')
+
+  return (data ?? []).map((i) => {
+    const p = catalogo.find((c) => c.id === i.produto_id)
+    return {
+      produtoId: i.produto_id as string,
+      nome: p?.nome ?? '(produto removido do catálogo)',
+      quantidade: Number(i.quantidade),
+      precoUnitario: Number(i.preco_unitario),
+      semEstoque: (p?.estoqueAtual ?? 0) <= 0,
+    }
+  })
+}
+
+/**
+ * Resposta padrão de toda mutação: o pedido INTEIRO, renderizado.
+ *
+ * A agente nunca soma nem formata — ela repete isto. Foi ela escrevendo o pedido de
+ * cabeça que somou o pedido da véspera e anotou 4 kg onde o cliente pediu 2 kg.
+ */
+async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo: ProdutoVendavel[]) {
+  const itens = await lerItens(admin, pedidoId, catalogo)
+  await admin.from('wa_pedido').update({ atualizado_em: new Date().toISOString() }).eq('id', pedidoId)
+
+  return {
+    ok: true,
+    pedido: renderizarPedido(itens),
+    total: totalPedido(itens),
+    // Total JÁ FORMATADO, pelo mesmo formatador que escreve os subtotais das linhas.
+    // Se o n8n formatasse por conta própria, existiriam três formatadores de moeda no
+    // caminho e o rodapé poderia divergir das linhas em um centavo — e quem separa o
+    // pedido não saberia em qual acreditar.
+    total_texto: formatarReais(totalPedido(itens)),
+    itens: itens.length,
+  }
+}
+
+/**
+ * Traduz a resolução do termo em resposta para a agente.
+ *
+ * União discriminada de propósito: com `{ produto, resposta }` o TypeScript não consegue
+ * provar que `produto` não é nulo depois de checar `resposta`, e a saída seria um `as`
+ * — proibido pela Regra de Ouro #1.
+ */
+type Traduzido =
+  | { tipo: 'segue'; produto: ProdutoVendavel }
+  | { tipo: 'responde'; corpo: Record<string, unknown> }
+
+function respostaDaResolucao(termo: string, catalogo: ProdutoVendavel[]): Traduzido {
+  const r = resolverTermo(termo, catalogo)
+
+  if (r.tipo === 'resolvido') return { tipo: 'segue', produto: r.produto }
+
+  const opcoes = r.opcoes.map((p) => ({ id: p.id, nome: p.nome, preco: p.preco }))
+
+  if (r.tipo === 'ambiguo') {
+    return {
+      tipo: 'responde',
+      corpo: {
+        ok: false,
+        motivo: 'ambiguo',
+        opcoes,
+        instrucao: 'Pergunte ao cliente qual destes ele quer. NAO escolha por ele. NAO grave nada. Se o cliente citou MAIS DE UM produto na mesma frase, chame a ferramenta uma vez por produto em vez de perguntar.',
+      },
+    }
+  }
+
+  return {
+    tipo: 'responde',
+    corpo: {
+      ok: false,
+      motivo: 'nao_encontrado',
+      opcoes,
+      instrucao: opcoes.length > 0
+        ? 'A Mont nao vende essa embalagem. Diga ao cliente quais existem, listadas em opcoes.'
+        : 'A Mont nao vende esse produto. Diga isso ao cliente. NAO ofereca substituto que nao esteja no catalogo.',
+    },
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -201,6 +340,69 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
+
+  // Consultada pelo W4. Rascunho parado, com item, em conversa que nenhum humano tocou.
+  //
+  // ⚠️ GLOBAL: varre todos os contatos, não recebe `jid` nem `telefone_wa` — por isso vem
+  // ANTES do guard de `telefoneWa` obrigatório abaixo, que mataria esta chamada.
+  if (body.acao === 'rascunhos_abandonados') {
+    try {
+      const minutos = typeof body.minutos === 'number' ? body.minutos : 30
+      const limite = new Date(Date.now() - minutos * 60_000).toISOString()
+
+      const { data: parados } = await admin
+        .from('wa_pedido')
+        .select('id, contato_id, telefone_wa')
+        .eq('status', 'rascunho')
+        .lt('atualizado_em', limite)
+
+      const catalogo = await lerCatalogo(admin)
+      const saida: unknown[] = []
+
+      for (const p of parados ?? []) {
+        const itens = await lerItens(admin, p.id, catalogo)
+        if (itens.length === 0) continue
+
+        // Guarda: humano atendendo nao vira alerta de abandono. Sem isto o robo avisaria
+        // o grupo sobre um cliente que o Gilmar ja esta atendendo.
+        const { data: msgs } = await admin
+          .from('mensagens_whatsapp')
+          .select('message_id, direcao, enviada_em')
+          .eq('telefone_wa', p.telefone_wa).eq('historico', false)
+          .order('enviada_em', { ascending: false }).limit(MAX_MENSAGENS_CONTEXTO)
+
+        const { data: envios } = await admin
+          .from('wa_envios').select('message_id').eq('telefone_wa', p.telefone_wa)
+        const idsDaAgente = new Set((envios ?? []).map((e) => e.message_id))
+
+        const humano = (msgs ?? []).some(
+          (m) => m.direcao === 'saida' && !idsDaAgente.has(m.message_id),
+        )
+
+        if (humano) {
+          await admin.from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+          continue
+        }
+
+        const { data: c } = await admin
+          .from('contatos').select('nome').eq('id', p.contato_id).maybeSingle()
+
+        await admin.from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+
+        saida.push({
+          telefone_wa: p.telefone_wa,
+          contato: c?.nome ?? 'Cliente',
+          pedido: renderizarPedido(itens),
+          total: totalPedido(itens),
+        })
+      }
+
+      return json({ ok: true, abandonados: saida }, 200)
+    } catch (e) {
+      console.error('[whatsapp-secretaria]', e)
+      return json({ error: (e as Error).message }, 500)
+    }
+  }
 
   try {
     // Aceita `jid` cru além de `telefone_wa` para que o n8n NUNCA precise canonicalizar
@@ -316,124 +518,108 @@ Deno.serve(async (req: Request) => {
       }, 200)
     }
 
-    if (body.acao === 'registrar_pedido_intencao') {
-      const resumo = typeof body.resumo === 'string' ? body.resumo.trim() : ''
-      if (!resumo) return json({ error: 'resumo é obrigatório' }, 400)
-
-      // As mensagens ainda não processadas desta conversa são a âncora de idempotência
-      // da RPC — com array vazio ela devolveria NULL e NÃO inseriria nada, perdendo a
-      // intenção de compra em silêncio. Ancorar também evita registro duplicado: o que a
-      // secretária consome aqui não volta na fila do W2 para virar um segundo resumo do
-      // mesmo papo.
-      const { data: pendentes } = await admin
-        .from('mensagens_whatsapp')
-        .select('message_id')
-        .eq('telefone_wa', telefoneWa)
-        .is('processado_em', null)
-        .eq('historico', false)
-
-      const messageIds = (pendentes ?? []).map((m) => m.message_id)
-
-      // NÃO cria venda de propósito. Venda criada por IA viraria estoque baixado e
-      // recebível fantasma. Aqui só fica o registro na timeline; quem transforma em venda
-      // é um humano, no sistema.
-      const { data, error } = await admin.rpc('rpc_registrar_interacao_ia', {
-        p_telefone_wa: telefoneWa,
-        p_payload: {
-          tipo: 'ponto_contato',
-          sentido: 'entrada',
-          resultado: 'aceitou',
-          observacao: `[intenção de compra] ${resumo}`,
-        },
-        p_message_ids: messageIds,
-      })
-
-      if (error) return json({ error: error.message }, 400)
-
-      // Pedido que cresce não vira dois recados.
-      //
-      // O cliente pede em três mensagens ("2 kg de pão de queijo" … "1 kg de chipa
-      // também" … "e mais 500g de palito") e a agente chama esta ação três vezes. Sem
-      // consolidar, o Gilmar recebe três avisos e não sabe se são três pedidos ou um
-      // pedido de três itens. O prompt manda o `resumo` vir SEMPRE com o pedido inteiro
-      // acumulado, então a linha nova já contém as anteriores — e as antigas viram lixo.
-      //
-      // Apaga só o que a própria agente escreveu, e só dentro da janela: pedido da manhã
-      // e pedido da tarde são coisas diferentes, e juntá-los esconderia uma venda.
-      //
-      // Nada se perde: as mensagens que originaram cada item continuam em
-      // `mensagens_whatsapp`, que é o histórico de verdade e o que a agente lê.
-      let substituidas = 0
-      if (data) {
-        const desde = new Date(Date.now() - JANELA_PEDIDO_MS).toISOString()
-
-        const { data: contatoDoPedido } = await admin
-          .from('contatos')
-          .select('id')
-          .eq('telefone_wa', telefoneWa)
-          .maybeSingle()
-
-        if (contatoDoPedido) {
-          const { data: antigas } = await admin
-            .from('interacoes')
-            .delete()
-            .eq('contato_id', contatoDoPedido.id)
-            .eq('gerado_por_ia', true)
-            .like('observacao', '[intenção de compra]%')
-            .gte('data', desde)
-            .neq('id', data)
-            .select('id')
-
-          substituidas = (antigas ?? []).length
-        }
-      }
-
-      // `registrada: false` = não havia mensagem pendente para ancorar (o W2 chegou
-      // antes). O aviso no canal interno sai do mesmo jeito — é ele que faz o humano
-      // agir — mas fica explícito aqui em vez de sumir.
-      return json({ ok: true, interacao_id: data, registrada: data !== null, substituidas }, 200)
-    }
-
-    // Intenções de compra registradas há pouco nesta conversa, para o aviso interno.
-    //
-    // Existe porque a agente PROMETE ao cliente que a equipe vai finalizar o pedido, e
-    // até 19/08 ninguém era avisado: a intenção ficava só na timeline do contato, que
-    // alguém teria que abrir por acaso. Promessa que o sistema não cumpre é pior que
-    // não prometer — o cliente espera um retorno que nunca vem.
-    //
-    // O n8n pergunta DEPOIS de entregar a resposta ao cliente: se o envio falhou, não
-    // faz sentido chamar alguém para fechar um pedido que o cliente não sabe que fez.
-    if (body.acao === 'intencoes_a_avisar') {
-      const janelaMin = typeof body.janela_min === 'number' ? body.janela_min : 10
-      const desde = new Date(Date.now() - janelaMin * 60_000).toISOString()
+    if (
+      body.acao === 'adicionar_item' ||
+      body.acao === 'alterar_quantidade' ||
+      body.acao === 'remover_item'
+    ) {
+      const termo = typeof body.termo === 'string' ? body.termo : ''
+      const produtoIdDireto = typeof body.produto_id === 'string' ? body.produto_id : ''
+      if (!termo && !produtoIdDireto) return json({ error: 'termo ou produto_id e obrigatorio' }, 400)
 
       const { data: contato } = await admin
-        .from('contatos')
-        .select('id, nome')
-        .eq('telefone_wa', telefoneWa)
-        .maybeSingle()
+        .from('contatos').select('id').eq('telefone_wa', telefoneWa).maybeSingle()
+      if (!contato) return json({ error: 'contato_nao_casado' }, 404)
 
-      if (!contato) return json({ ok: true, intencoes: [] }, 200)
+      const catalogo = await lerCatalogo(admin)
 
-      const { data, error } = await admin
-        .from('interacoes')
-        .select('id, observacao, data')
-        .eq('contato_id', contato.id)
-        .eq('gerado_por_ia', true)
-        .like('observacao', '[intenção de compra]%')
-        .gte('data', desde)
-        .order('data', { ascending: false })
+      // `produto_id` vem de uma resposta `ambiguo` anterior: o cliente ja escolheu, nao ha
+      // o que resolver de novo.
+      let produto = produtoIdDireto ? catalogo.find((p) => p.id === produtoIdDireto) : undefined
+      if (!produto) {
+        const r = respostaDaResolucao(termo, catalogo)
+        if (r.tipo === 'responde') return json(r.corpo, 200)
+        produto = r.produto
+      }
 
+      const pedido = await abrirRascunho(admin, contato.id, telefoneWa)
+
+      if (body.acao === 'remover_item') {
+        await admin.from('wa_pedido_item').delete()
+          .eq('pedido_id', pedido.id).eq('produto_id', produto.id)
+        return json(await responderPedido(admin, pedido.id, catalogo), 200)
+      }
+
+      const quantidade = Number(body.quantidade)
+      if (!Number.isInteger(quantidade) || quantidade < 1) {
+        return json({ error: 'quantidade deve ser inteiro maior que zero' }, 400)
+      }
+
+      // `upsert` pelo indice unico (pedido_id, produto_id): adicionar de novo o mesmo
+      // produto ALTERA a quantidade em vez de criar segunda linha. As duas acoes se
+      // comportam igual de proposito — e a unica representacao possivel no banco.
+      const { error } = await admin.from('wa_pedido_item').upsert(
+        {
+          pedido_id: pedido.id,
+          produto_id: produto.id,
+          quantidade,
+          preco_unitario: produto.preco,
+        },
+        { onConflict: 'pedido_id,produto_id' },
+      )
       if (error) return json({ error: error.message }, 400)
 
-      // O prefixo é ruído para quem lê no grupo — a linha já diz "Intenção de compra:".
-      const intencoes = (data ?? []).map((i) => ({
-        id: i.id,
-        resumo: (i.observacao ?? '').replace('[intenção de compra] ', ''),
-        em: i.data,
-      }))
+      return json(await responderPedido(admin, pedido.id, catalogo), 200)
+    }
 
-      return json({ ok: true, contato, telefone_wa: telefoneWa, intencoes }, 200)
+    if (body.acao === 'confirmar_pedido') {
+      const { data: contato } = await admin
+        .from('contatos').select('id, nome').eq('telefone_wa', telefoneWa).maybeSingle()
+      if (!contato) return json({ error: 'contato_nao_casado' }, 404)
+
+      const pedido = await lerRascunho(admin, contato.id)
+      if (!pedido) return json({ ok: false, motivo: 'sem_pedido_aberto' }, 200)
+
+      const catalogo = await lerCatalogo(admin)
+      const itens = await lerItens(admin, pedido.id, catalogo)
+      if (itens.length === 0) return json({ ok: false, motivo: 'pedido_vazio' }, 200)
+
+      const texto = renderizarPedido(itens)
+      const observacao = `[pedido confirmado] ${itens.map((i) => `${i.quantidade}x ${i.nome}`).join(' + ')}`
+
+      // Reabertura: ATUALIZA a linha da timeline que ja existe, em vez de criar outra.
+      // O perfil do cliente mostra o pedido, nao tres versoes dele se montando.
+      let interacaoId = pedido.interacao_id as string | null
+      if (interacaoId) {
+        await admin.from('interacoes').update({ observacao }).eq('id', interacaoId)
+      } else {
+        const { data: pendentes } = await admin
+          .from('mensagens_whatsapp').select('message_id')
+          .eq('telefone_wa', telefoneWa).is('processado_em', null).eq('historico', false)
+
+        const { data: novaId } = await admin.rpc('rpc_registrar_interacao_ia', {
+          p_telefone_wa: telefoneWa,
+          p_payload: { tipo: 'ponto_contato', sentido: 'entrada', resultado: 'aceitou', observacao },
+          p_message_ids: (pendentes ?? []).map((m) => m.message_id),
+        })
+        interacaoId = novaId as string | null
+      }
+
+      await admin.from('wa_pedido').update({
+        status: 'confirmado',
+        confirmado_em: new Date().toISOString(),
+        interacao_id: interacaoId,
+      }).eq('id', pedido.id)
+
+      return json({
+        ok: true,
+        atualizacao: pedido.interacao_id !== null,
+        pedido: texto,
+        total: totalPedido(itens),
+        total_texto: formatarReais(totalPedido(itens)),
+        contato: contato.nome,
+        telefone_wa: telefoneWa,
+      }, 200)
     }
 
     if (body.acao === 'preparar_envio') {
@@ -497,7 +683,8 @@ Deno.serve(async (req: Request) => {
       error: "acao inválida",
       acoes: [
         'contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete',
-        'registrar_pedido_intencao', 'intencoes_a_avisar', 'preparar_envio', 'destino_aviso',
+        'adicionar_item', 'alterar_quantidade', 'remover_item', 'confirmar_pedido',
+        'rascunhos_abandonados', 'preparar_envio', 'destino_aviso',
       ],
     }, 400)
   } catch (e) {

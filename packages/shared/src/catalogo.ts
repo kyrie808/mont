@@ -162,7 +162,7 @@ export interface ItemPedido {
  *
  * ⚠️ NÃO unificar os dois formatadores daqui a seis meses — seria uma regressão.
  */
-function reais(v: number): string {
+export function formatarReais(v: number): string {
     return `R$ ${v.toFixed(2).replace('.', ',')}`
 }
 
@@ -182,7 +182,7 @@ export function renderizarPedido(itens: ItemPedido[]): string {
     return itens
         .map((i) => {
             const alerta = i.semEstoque ? ' ⚠️ sem estoque no sistema' : ''
-            return `${i.quantidade}× ${i.nome} — ${reais(i.quantidade * i.precoUnitario)}${alerta}`
+            return `${i.quantidade}× ${i.nome} — ${formatarReais(i.quantidade * i.precoUnitario)}${alerta}`
         })
         .join('\n')
 }
