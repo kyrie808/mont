@@ -142,3 +142,37 @@ export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resol
     //    FAMÍLIA — "chipa só tem 1kg ou 2kg" —, nunca o catálogo inteiro.
     return { tipo: 'nao_encontrado', opcoes: familia }
 }
+
+export interface ItemPedido {
+    produtoId: string
+    nome: string
+    quantidade: number
+    /** Preço no momento em que ela FALOU com o cliente, não o de hoje. */
+    precoUnitario: number
+    semEstoque: boolean
+}
+
+function reais(v: number): string {
+    return `R$ ${v.toFixed(2).replace('.', ',')}`
+}
+
+export function totalPedido(itens: ItemPedido[]): number {
+    return itens.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0)
+}
+
+/**
+ * O pedido em texto, para a agente repetir ao cliente e para o aviso interno.
+ *
+ * A agente NUNCA monta esse texto: ela recebe daqui. Foi ela escrevendo o pedido de
+ * cabeça que produziu "4 kg" a partir de um pedido de 2 kg somado com o da véspera.
+ */
+export function renderizarPedido(itens: ItemPedido[]): string {
+    if (itens.length === 0) return '(nenhum item)'
+
+    return itens
+        .map((i) => {
+            const alerta = i.semEstoque ? ' ⚠️ sem estoque no sistema' : ''
+            return `${i.quantidade}× ${i.nome} — ${reais(i.quantidade * i.precoUnitario)}${alerta}`
+        })
+        .join('\n')
+}

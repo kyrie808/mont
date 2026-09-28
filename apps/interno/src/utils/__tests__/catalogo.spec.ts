@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolverTermo, type ProdutoVendavel, type Resolucao } from '@mont/shared'
+import { resolverTermo, renderizarPedido, totalPedido, type ProdutoVendavel, type Resolucao, type ItemPedido } from '@mont/shared'
 
 // Catálogo real da Mont em 28/09/2026. Os apelidos são os sinônimos curados.
 // `ProdutoVendavel` (não `ProdutoCatalogo`): esse último já existe em @mont/shared
@@ -125,5 +125,46 @@ describe('resolverTermo', () => {
             tipo: 'resolvido', produto: { id: 'chipa-2_5k' },
         })
         expect(resolverTermo('chipa de 5kg', catalogoDecimal).tipo).not.toBe('resolvido')
+    })
+})
+
+describe('renderizarPedido', () => {
+    const itens: ItemPedido[] = [
+        { produtoId: 'pq-1k-100', nome: 'Pão de Queijo 1kg - 100gr', quantidade: 1, precoUnitario: 30, semEstoque: false },
+        { produtoId: 'chipa-1k', nome: 'Chipa 1kg', quantidade: 2, precoUnitario: 40, semEstoque: true },
+    ]
+
+    it('lista item, quantidade e subtotal', () => {
+        const txt = renderizarPedido(itens)
+        expect(txt).toContain('1× Pão de Queijo 1kg - 100gr')
+        expect(txt).toContain('R$ 30,00')
+        expect(txt).toContain('2× Chipa 1kg')
+        expect(txt).toContain('R$ 80,00')
+    })
+
+    it('marca o que está sem estoque — a equipe confere antes de separar', () => {
+        expect(renderizarPedido(itens)).toContain('⚠️')
+    })
+
+    it('não marca nada quando tudo tem estoque', () => {
+        const ok = itens.map((i) => ({ ...i, semEstoque: false }))
+        expect(renderizarPedido(ok)).not.toContain('⚠️')
+    })
+
+    it('pedido vazio tem texto próprio, não string vazia', () => {
+        expect(renderizarPedido([])).toBe('(nenhum item)')
+    })
+})
+
+describe('totalPedido', () => {
+    it('soma quantidade × preço', () => {
+        expect(totalPedido([
+            { produtoId: 'a', nome: 'A', quantidade: 2, precoUnitario: 40, semEstoque: false },
+            { produtoId: 'b', nome: 'B', quantidade: 1, precoUnitario: 30, semEstoque: false },
+        ])).toBe(110)
+    })
+
+    it('pedido vazio soma zero', () => {
+        expect(totalPedido([])).toBe(0)
     })
 })
