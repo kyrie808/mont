@@ -28,6 +28,9 @@ export function origemBadge(
             return { label: 'Facebook', cls: DESTAQUE }
         case 'direto':
             return { label: 'Direto', cls: NEUTRO }
+        case 'whatsapp':
+            // Explícito por causa do caixa-alta do meio: o default entregaria "Whatsapp".
+            return { label: 'WhatsApp', cls: NEUTRO }
         default:
             return { label: origem ? origem.charAt(0).toUpperCase() + origem.slice(1) : '—', cls: NEUTRO }
     }

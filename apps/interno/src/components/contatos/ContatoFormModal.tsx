@@ -8,6 +8,7 @@ import { useContatos } from '../../hooks/useContatos'
 import { useToast } from '../ui/Toast'
 import { useCep } from '../../hooks/useCep'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { useDonoDoTelefone } from '../../hooks/useDonoDoTelefone'
 import { mesclarValoresContato } from '../../utils/contatoForm'
 import type { DomainContato, CreateContato, IndicadorRef } from '../../types/domain'
 
@@ -69,6 +70,11 @@ export function ContatoFormModal({
     const tipoValue = watch('tipo')
     const origemValue = watch('origem')
     const cepValue = watch('cep')
+    const telefoneValue = watch('telefone')
+
+    // Colisão de WhatsApp detectada durante a digitação. O banco recusaria de qualquer
+    // jeito; o ponto é o operador saber ANTES de preencher o cadastro inteiro.
+    const { dono: donoDoTelefone } = useDonoDoTelefone(telefoneValue, contato?.id)
 
     const handleFetchCep = useCallback(async (cep: string) => {
         const data = await fetchCep(cep)
@@ -219,13 +225,14 @@ export function ContatoFormModal({
                         indicadorResults={indicadorResults}
                         onClearIndicador={handleClearIndicador}
                         onSelectIndicador={handleSelectIndicador}
+                        donoDoTelefone={donoDoTelefone}
                     />
                 ) : (
                     /* MOBILE (<lg) — layout original, intocado (sagrado) */
                     <>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="space-y-6">
-                                <FormIdentidade register={register} errors={errors} />
+                                <FormIdentidade register={register} errors={errors} donoDoTelefone={donoDoTelefone} />
                                 <FormClassificacao register={register} errors={errors} tipoValue={tipoValue} />
                                 {origemValue === 'anuncio' && (
                                     <FormAquisicao register={register} errors={errors} />

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { telefoneWa } from '@mont/shared'
 import type {
     ContatoInsert,
     ContatoUpdate
@@ -142,6 +143,34 @@ export class ContatoService {
     }
 
     /**
+     * Quem já tem este número — `null` quando ninguém tem.
+     *
+     * Consulta as DUAS chaves que o banco usa pra recusar duplicata, porque cada uma
+     * pega um caso: `telefone_norm` compara dígito a dígito, e `telefone_wa` compara a
+     * forma canônica de WhatsApp. `1148041265` e `11948041265` são textos diferentes
+     * (passam pelo primeiro índice) mas o MESMO aparelho — só o segundo os une.
+     * Consultar as duas é o que faz o aviso na tela prever exatamente a recusa que
+     * viria do banco, em vez de deixar o operador descobrir no erro.
+     */
+    async donoDoTelefone(telefone: string | null | undefined): Promise<{ id: string; nome: string } | null> {
+        const norm = normalizarTelefone(telefone)
+        if (!norm) return null
+
+        const canonico = telefoneWa(norm)
+        const chaves = [`telefone_norm.eq.${norm}`]
+        if (canonico) chaves.push(`telefone_wa.eq.${canonico}`)
+
+        const { data } = await supabase
+            .from('contatos')
+            .select('id, nome')
+            .or(chaves.join(','))
+            .limit(1)
+            .maybeSingle()
+
+        return data ?? null
+    }
+
+    /**
      * O índice único `contatos_telefone_norm_key` garante um contato por telefone.
      * Quando ele barra uma gravação, o operador precisa saber QUEM já tem aquele
      * número — não ver um erro cru do Postgres.
@@ -154,11 +183,7 @@ export class ContatoService {
             error.code === '23505' && (error.message ?? '').includes('telefone')
         if (!violouUnicidade) return null
 
-        const { data: existente } = await supabase
-            .from('contatos')
-            .select('nome')
-            .eq('telefone_norm', normalizarTelefone(telefone))
-            .maybeSingle()
+        const existente = await this.donoDoTelefone(telefone)
 
         return existente
             ? `Este WhatsApp já está cadastrado para "${existente.nome}".`

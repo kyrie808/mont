@@ -48,6 +48,10 @@ export interface DomainContato {
     lat?: number | null
     lng?: number | null
     observacoes?: string | null
+    /** Por qual PORTA o cadastro entrou. Ortogonal a `origem` (como o cliente chegou). */
+    origemCadastro: 'manual' | 'whatsapp' | 'catalogo'
+    /** Quando um humano salvou este contato pela primeira vez. `null` = ninguém conferiu. */
+    revisadoEm?: string | null
     criadoEm: string
     atualizadoEm: string
 }
@@ -144,7 +148,14 @@ export interface DomainVenda {
 export type CreateProduto = Omit<DomainProduto, 'id' | 'criadoEm' | 'atualizadoEm' | 'estoqueAtual'>
 export type UpdateProduto = Partial<CreateProduto> & { ativo?: boolean; preco_ancoragem?: number | null }
 
-export type CreateContato = Omit<DomainContato, 'id' | 'criadoEm' | 'atualizadoEm' | 'indicador'>
+// `origemCadastro` e `revisadoEm` ficam de fora de propósito: quem manda neles é o
+// banco (DEFAULT 'manual' + gatilho `tr_contatos_revisado`), não o cliente. Deixá-los
+// no payload permitiria uma tela carimbar o próprio selo — e um contato criado à mão
+// poderia se declarar "capturado pela IA".
+export type CreateContato = Omit<
+    DomainContato,
+    'id' | 'criadoEm' | 'atualizadoEm' | 'indicador' | 'origemCadastro' | 'revisadoEm'
+>
 export type UpdateContato = Partial<CreateContato>
 
 export interface CreateVenda {

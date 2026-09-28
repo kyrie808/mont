@@ -38,6 +38,7 @@ export {
     isJidIgnorado,
     extrairReferral,
     isAnuncioPago,
+    podeGravarAtribuicao,
     lerCtwaClid,
     lerSourceId,
     extrairMensagensCruas,

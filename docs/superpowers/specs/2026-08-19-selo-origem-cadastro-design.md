@@ -28,6 +28,7 @@ As 4 portas de escrita passam a declarar a sua:
 | porta | arquivo | selo |
 |---|---|---|
 | interno | `apps/interno/src/services/contatoService.ts` | `manual` (herda o default) |
+| interno (cadastro rápido) | `components/features/vendas/NovaVenda/ClientSelector.tsx` | `manual` (herda o default) |
 | secretária | `supabase/functions/whatsapp-ingestor/index.ts` | `whatsapp` |
 | catálogo público | RPC `criar_pedido` | `catalogo` |
 | admin do catálogo | `apps/catalogo/src/app/api/admin/pedidos/[id]/route.ts` | `catalogo` |
@@ -64,12 +65,27 @@ O Gilmar arrumaria a Najla hoje e ela voltaria pra fila amanhã, na primeira men
 Um item novo em `storyItems` (`apps/interno/src/pages/Contatos.tsx`), que flui de graça pro
 carrossel do mobile (`ContactStoryFilter`) e pras tabs do desktop (`ContatosFilterTabs`).
 
-- Mostra a **fila**: `origem_cadastro <> 'manual' AND revisado_em IS NULL`.
+- Mostra a **fila**: `origem_cadastro = 'whatsapp' AND revisado_em IS NULL`.
+  **Corrigido durante a implementação:** a regra escrita aqui era `<> 'manual'`, o que
+  arrastaria os 17 do catálogo pra fila. Mas quem se cadastra no site digita o próprio
+  nome e endereço reais — não há o que conferir. Incluí-los inventaria 17 tarefas
+  inexistentes e a fila nunca esvaziaria. O chip aprovado já dizia 7, não 24.
 - Só aparece quando a contagem é > 0 — barra intocada no dia a dia.
 - Filtro client-side, igual aos outros (a lista já vem inteira do servidor).
 
 **Mobile:** o diretor autorizou explicitamente esta mudança no mobile ao escolher esta opção
 (19/08/2026), abrindo exceção pontual ao "mobile é sagrado".
+
+### 4. O selo é do servidor, não do cliente
+
+`CreateContato`/`UpdateContato` excluem `origemCadastro` e `revisadoEm` por `Omit`. Quem
+manda neles é o banco (DEFAULT + gatilho). Sem isso, uma tela poderia carimbar o próprio
+selo e um contato digitado à mão se declararia "capturado pela IA".
+
+Descoberto na implementação: existe uma **5ª porta** que o levantamento inicial não
+pegou — o cadastro rápido dentro do Nova Venda (`ClientSelector`). Ela chama o mesmo
+`contatoService.create`, então herda o default corretamente; quem revelou foi o
+`tsc -b` do build, que reprova o que o `tsc --noEmit` deixou passar.
 
 ## Fora de escopo
 

@@ -25,6 +25,7 @@ import {
   extrairMensagensCruas,
   normalizarMensagem,
   isAnuncioPago,
+  podeGravarAtribuicao,
   lerCtwaClid,
   lerSourceId,
   telefoneWa,
@@ -213,12 +214,15 @@ async function casarContatos(
   }
 
   const telefones = [...porTelefone.keys()]
-  const existentes = new Map<string, { id: string; ctwa_clid: string | null; ultimo_contato: string | null }>()
+  const existentes = new Map<
+    string,
+    { id: string; origem: string | null; ctwa_clid: string | null; ultimo_contato: string | null }
+  >()
 
   for (const lote of chunks(telefones, CHUNK)) {
     const { data, error } = await admin
       .from('contatos')
-      .select('id, telefone_wa, ctwa_clid, ultimo_contato')
+      .select('id, telefone_wa, origem, ctwa_clid, ultimo_contato')
       .in('telefone_wa', lote)
 
     if (error) throw new Error(`Falha ao buscar contatos: ${error.message}`)
@@ -246,7 +250,16 @@ async function casarContatos(
         telefone: telefoneNacional(telefone),
         tipo: 'B2C',
         status: 'lead',
-        origem: veioDeAnuncio ? 'anuncio' : 'direto',
+        // NÃO é 'direto': 'direto' significa que o Gilmar prospectou. Quem chega
+        // sozinho na conversa não veio da atitude dele, e carimbar isso inflaria
+        // justamente o número que mede a prospecção. 'whatsapp' assume a ignorância;
+        // a equipe corrige na mão quando descobre como a pessoa chegou.
+        origem: veioDeAnuncio ? 'anuncio' : 'whatsapp',
+        // A porta pela qual o cadastro entrou. Sem isto o contato herdaria o
+        // DEFAULT 'manual' e sumiria da fila "Novos da IA" — que existe justamente
+        // porque o nome aqui é o push name do aparelho ("♡ Cadonhoto ♡", "🦋"),
+        // não um nome que o operador reconheça.
+        origem_cadastro: 'whatsapp',
         ultimo_contato: ag.ultimaEm,
         ...(veioDeAnuncio
           ? { ctwa_clid: clid, ad_referral: ag.referral, ctwa_clid_em: ag.referralEm, campanha_id: campanhaId }
@@ -259,9 +272,10 @@ async function casarContatos(
       continue
     }
 
-    // Contato existente. Nunca sobrescreve um clid já capturado: o primeiro clique
-    // é o que a Meta atribui, e regravar apagaria a origem verdadeira do lead.
-    const gravarAtribuicao = veioDeAnuncio && !atual.ctwa_clid
+    // Contato existente. A origem que gente declarou ganha da atribuição automática:
+    // quem foi cadastrado como indicação NUNCA vira anúncio, mesmo clicando num depois
+    // (ver `podeGravarAtribuicao`). O referral segue guardado na mensagem.
+    const gravarAtribuicao = veioDeAnuncio && podeGravarAtribuicao(atual.origem, !!atual.ctwa_clid)
     const avancaContato = !atual.ultimo_contato || ag.ultimaEm > atual.ultimo_contato
 
     if (!gravarAtribuicao && !avancaContato) continue

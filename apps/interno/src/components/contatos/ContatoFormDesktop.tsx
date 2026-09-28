@@ -12,6 +12,7 @@ import { useOrigens } from '../../hooks/useOrigens'
 import { useFontes } from '../../hooks/useFontes'
 import { useCampanhas } from '../../hooks/useCampanhas'
 import { ModalActions, Button } from '../ui'
+import { AvisoTelefoneDuplicado } from './AvisoTelefoneDuplicado'
 
 // Mesmo inputBase do LancamentoModal (padrão v2 do Design System §4).
 const inputBase =
@@ -74,6 +75,8 @@ interface Props {
     indicadorResults: DomainContato[]
     onClearIndicador: () => void
     onSelectIndicador: (c: DomainContato) => void
+    /** Quem já tem este WhatsApp, quando o número digitado colide. */
+    donoDoTelefone?: { id: string; nome: string } | null
 }
 
 export function ContatoFormDesktop({
@@ -81,6 +84,7 @@ export function ContatoFormDesktop({
     isEditing, isSubmitting, onCancel, submitModeRef,
     dropdownRef, selectedIndicador, indicadorSearch, setIndicadorSearch,
     showIndicadorDropdown, indicadorResults, onClearIndicador, onSelectIndicador,
+    donoDoTelefone,
 }: Props) {
     const { data: origens = [] } = useOrigens()
     const { data: fontes = [] } = useFontes()
@@ -123,6 +127,7 @@ export function ContatoFormDesktop({
                                         errors.telefone && 'border-destructive focus-visible:ring-destructive')}
                                     placeholder="(11) 91234-5678"
                                 />
+                                {donoDoTelefone && <AvisoTelefoneDuplicado nome={donoDoTelefone.nome} />}
                             </Field>
                         </div>
                     </div>

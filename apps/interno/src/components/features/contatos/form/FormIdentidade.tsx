@@ -3,13 +3,16 @@ import { formatPhone } from '@mont/shared'
 import { Input } from '@/components/ui'
 import type { UseFormRegister, FieldErrors } from 'react-hook-form'
 import type { ContatoFormData } from '@/schemas/contato'
+import { AvisoTelefoneDuplicado } from '@/components/contatos/AvisoTelefoneDuplicado'
 
 interface FormIdentidadeProps {
     register: UseFormRegister<ContatoFormData>
     errors: FieldErrors<ContatoFormData>
+    /** Quem já tem este WhatsApp, quando o número digitado colide. */
+    donoDoTelefone?: { id: string; nome: string } | null
 }
 
-export function FormIdentidade({ register, errors }: FormIdentidadeProps) {
+export function FormIdentidade({ register, errors, donoDoTelefone }: FormIdentidadeProps) {
     const telefoneField = register('telefone')
 
     return (
@@ -45,6 +48,7 @@ export function FormIdentidade({ register, errors }: FormIdentidadeProps) {
                             telefoneField.onChange(e)
                         }}
                     />
+                    {donoDoTelefone && <AvisoTelefoneDuplicado nome={donoDoTelefone.nome} />}
                 </div>
             </div>
         </div>

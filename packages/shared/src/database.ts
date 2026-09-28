@@ -851,6 +851,8 @@ export type Database = {
           numero: string | null
           observacoes: string | null
           origem: string
+          origem_cadastro: string
+          revisado_em: string | null
           status: string
           status_relacionamento: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo: string | null
@@ -890,6 +892,8 @@ export type Database = {
           numero?: string | null
           observacoes?: string | null
           origem?: string
+          origem_cadastro?: string
+          revisado_em?: string | null
           status?: string
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
@@ -929,6 +933,8 @@ export type Database = {
           numero?: string | null
           observacoes?: string | null
           origem?: string
+          origem_cadastro?: string
+          revisado_em?: string | null
           status?: string
           status_relacionamento?: Database["public"]["Enums"]["enum_relacionamento_status"]
           subtipo?: string | null
