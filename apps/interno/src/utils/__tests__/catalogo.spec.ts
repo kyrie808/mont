@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolverTermo, renderizarPedido, totalPedido, type ProdutoVendavel, type Resolucao, type ItemPedido } from '@mont/shared'
 
-// Catálogo real da Mont em 29/09/2026, depois da primeira contagem física de estoque.
+// Catálogo real da Mont em 29/09/2026, depois da contagem física e do 1kg-50gr.
 // Os apelidos são os sinônimos curados; `estoqueAtual` são os números contados.
 //
 // ⚠️ Este fixture espelha a produção de propósito — é ele que documenta quais perguntas a
@@ -13,6 +13,7 @@ import { resolverTermo, renderizarPedido, totalPedido, type ProdutoVendavel, typ
 const CATALOGO: ProdutoVendavel[] = [
     { id: 'pq-1k-25', nome: 'Pão de Queijo 1kg - 25gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: -103 },
     { id: 'pq-1k-100', nome: 'Pão de Queijo 1kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: 4 },
+    { id: 'pq-1k-50', nome: 'Pão de Queijo 1kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: 10 },
     { id: 'pq-2k-50', nome: 'Pão de Queijo 2kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: 17 },
     { id: 'pq-2k-100', nome: 'Pão de Queijo 2kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: 9 },
     { id: 'chipa-1k', nome: 'Chipa 1kg', apelido: 'chipa, chipinha', preco: 40, estoqueAtual: -243 },
@@ -38,8 +39,17 @@ describe('resolverTermo', () => {
     })
 
     it('família + peso com mais de um tamanho → ambiguo', () => {
+        // Eram dois tamanhos de 1kg até 29/09. O 1kg-50gr chegou por pedido errado do
+        // fornecedor e o diretor decidiu vender — agora são três, e ela pergunta entre três.
         const r = resolverTermo('1 kg de pão de queijo', CATALOGO)
-        expect(opcoesDe(r, 'ambiguo')).toEqual(['pq-1k-100', 'pq-1k-25'])
+        expect(opcoesDe(r, 'ambiguo')).toEqual(['pq-1k-100', 'pq-1k-25', 'pq-1k-50'])
+    })
+
+    it('mesmo tamanho de unidade em pacotes diferentes → ambiguo pelo pacote', () => {
+        // "de 50g" existia só no pacote de 2kg e resolvia sozinho. Com o 1kg-50gr, ela
+        // passa a perguntar o TAMANHO DO PACOTE em vez do tamanho do pão.
+        const r = resolverTermo('pão de queijo de 50g', CATALOGO)
+        expect(opcoesDe(r, 'ambiguo')).toEqual(['pq-1k-50', 'pq-2k-50'])
     })
 
     it('família + peso com um tamanho só → resolvido', () => {
