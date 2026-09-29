@@ -34,6 +34,7 @@ import {
   formatarReais,
   type ProdutoVendavel,
   type ItemPedido,
+  type Resolucao,
 } from '../../../packages/shared/src/catalogo.ts'
 
 // ⚠️ `formatarReais` é o helper `reais` de `catalogo.ts`, exportado nesta tarefa (hoje ele
@@ -155,6 +156,10 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
     return { pode_responder: false, motivo: 'humano_assumiu' as const, contato, conversa, nao_lidas: naoLidas }
   }
 
+  // Uma leitura só, reaproveitada abaixo — `pedido_atual` e `catalogo` usavam duas
+  // consultas idênticas ao Postgres para a mesma mensagem recebida.
+  const catalogo = await lerCatalogo(admin)
+
   return {
     pode_responder: true,
     motivo: 'ok' as const,
@@ -165,10 +170,9 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
     pedido_atual: await (async () => {
       const r = await lerRascunho(admin, contato.id)
       if (!r) return null
-      const cat = await lerCatalogo(admin)
-      return renderizarPedido(await lerItens(admin, r.id, cat))
+      return renderizarPedido(await lerItens(admin, r.id, catalogo))
     })(),
-    catalogo: await lerCatalogo(admin),
+    catalogo,
   }
 }
 
@@ -274,6 +278,38 @@ async function lerItens(
 }
 
 /**
+ * Os produtos que estão nas LINHAS de um pedido, sem o filtro de vitrine (`ativo` e
+ * `visivel_catalogo`) que `lerCatalogo` aplica.
+ *
+ * Existe só para `remover_item`/`alterar_quantidade` conseguirem resolver o termo do
+ * cliente contra um produto que já está no rascunho dele mesmo depois de esse produto
+ * sair do catálogo vendável no meio da conversa (desativado ou tirado da vitrine) — tirar
+ * item do pedido tem que funcionar sempre, mesmo quando adicionar não funcionaria mais.
+ */
+async function lerProdutosDoPedido(admin: SupabaseClient, pedidoId: string): Promise<ProdutoVendavel[]> {
+  const { data: itens } = await admin
+    .from('wa_pedido_item')
+    .select('produto_id')
+    .eq('pedido_id', pedidoId)
+
+  const ids = (itens ?? []).map((i) => i.produto_id as string)
+  if (ids.length === 0) return []
+
+  const { data } = await admin
+    .from('produtos')
+    .select('id, nome, apelido, preco, estoque_atual')
+    .in('id', ids)
+
+  return (data ?? []).map((p) => ({
+    id: p.id as string,
+    nome: p.nome as string,
+    apelido: (p.apelido ?? null) as string | null,
+    preco: Number(p.preco ?? 0),
+    estoqueAtual: Number(p.estoque_atual ?? 0),
+  }))
+}
+
+/**
  * Resposta padrão de toda mutação: o pedido INTEIRO, renderizado.
  *
  * A agente nunca soma nem formata — ela repete isto. Foi ela escrevendo o pedido de
@@ -307,9 +343,7 @@ type Traduzido =
   | { tipo: 'segue'; produto: ProdutoVendavel }
   | { tipo: 'responde'; corpo: Record<string, unknown> }
 
-function respostaDaResolucao(termo: string, catalogo: ProdutoVendavel[]): Traduzido {
-  const r = resolverTermo(termo, catalogo)
-
+function respostaDaResolucao(r: Resolucao): Traduzido {
   if (r.tipo === 'resolvido') return { tipo: 'segue', produto: r.produto }
 
   const opcoes = r.opcoes.map((p) => ({ id: p.id, nome: p.nome, preco: p.preco }))
@@ -572,7 +606,24 @@ Deno.serve(async (req: Request) => {
       // o que resolver de novo.
       let produto = produtoIdDireto ? catalogo.find((p) => p.id === produtoIdDireto) : undefined
       if (!produto) {
-        const r = respostaDaResolucao(termo, catalogo)
+        let resolucao = resolverTermo(termo, catalogo)
+
+        // Nao encontrou no catalogo vendavel: antes de desistir, se a acao e tirar ou
+        // ajustar quantidade, tenta de novo contra os produtos que JA ESTAO no pedido
+        // (mesmo que um deles tenha sido desativado/tirado da vitrine no meio da
+        // conversa). So substitui a resolucao quando esse segundo chute RESOLVE — um
+        // resultado ambiguo aqui nao e mais claro que o "nao encontrado" original.
+        if (
+          resolucao.tipo === 'nao_encontrado' &&
+          (body.acao === 'remover_item' || body.acao === 'alterar_quantidade')
+        ) {
+          const rascunhoAtual = await lerRascunho(admin, contato.id)
+          const produtosNoPedido = rascunhoAtual ? await lerProdutosDoPedido(admin, rascunhoAtual.id) : []
+          const resolucaoNoPedido = resolverTermo(termo, produtosNoPedido)
+          if (resolucaoNoPedido.tipo === 'resolvido') resolucao = resolucaoNoPedido
+        }
+
+        const r = respostaDaResolucao(resolucao)
         if (r.tipo === 'responde') return json(r.corpo, 200)
         produto = r.produto
       }
@@ -619,11 +670,28 @@ Deno.serve(async (req: Request) => {
       if (!contato) return json({ error: 'contato_nao_casado' }, 404)
 
       const pedido = await lerRascunho(admin, contato.id)
-      if (!pedido) return json({ ok: false, motivo: 'sem_pedido_aberto' }, 200)
+      if (!pedido) {
+        // Mesmo vocabulario controlado das outras recusas (ambiguo/nao_encontrado): sem
+        // `instrucao` aqui a agente ficava sem orientacao justo quando o cliente acha que
+        // tem um pedido de pe (ex.: sumiu 35min, o rascunho virou `abandonado` sozinho, e
+        // ele volta dizendo "pode confirmar"). Nao ressuscita o rascunho antigo aqui —
+        // so orienta a remontar do zero.
+        return json({
+          ok: false,
+          motivo: 'sem_pedido_aberto',
+          instrucao: 'Nao ha pedido aberto. Nao confirme nada. Diga ao cliente que voce nao encontrou pedido em aberto e pergunte o que ele quer, para montar de novo.',
+        }, 200)
+      }
 
       const catalogo = await lerCatalogo(admin)
       const itens = await lerItens(admin, pedido.id, catalogo)
-      if (itens.length === 0) return json({ ok: false, motivo: 'pedido_vazio' }, 200)
+      if (itens.length === 0) {
+        return json({
+          ok: false,
+          motivo: 'pedido_vazio',
+          instrucao: 'O pedido esta aberto mas sem nenhum item. Nao confirme nada. Pergunte ao cliente o que ele quer para montar o pedido.',
+        }, 200)
+      }
 
       const texto = renderizarPedido(itens)
       const observacao = `[pedido confirmado] ${itens.map((i) => `${i.quantidade}x ${i.nome}`).join(' + ')}`
