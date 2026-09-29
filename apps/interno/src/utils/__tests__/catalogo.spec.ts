@@ -1,14 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { resolverTermo, renderizarPedido, totalPedido, type ProdutoVendavel, type Resolucao, type ItemPedido } from '@mont/shared'
 
-// Catálogo real da Mont em 28/09/2026. Os apelidos são os sinônimos curados.
+// Catálogo real da Mont em 29/09/2026, depois da primeira contagem física de estoque.
+// Os apelidos são os sinônimos curados; `estoqueAtual` são os números contados.
+//
+// ⚠️ Este fixture espelha a produção de propósito — é ele que documenta quais perguntas a
+// agente faz. Produto que entra ou sai do catálogo MUDA a ambiguidade: quando o
+// `2kg - 100gr` voltou a ser vendido, "2 kg de pão de queijo" deixou de resolver sozinho.
 // `ProdutoVendavel` (não `ProdutoCatalogo`): esse último já existe em @mont/shared
 // como a view pública do catálogo (vw_catalogo_produtos, usada em apps/catalogo) — mesmo
 // nome colidiria e quebraria o typecheck do catálogo público. Ver comentário em index.ts.
 const CATALOGO: ProdutoVendavel[] = [
     { id: 'pq-1k-25', nome: 'Pão de Queijo 1kg - 25gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: -103 },
     { id: 'pq-1k-100', nome: 'Pão de Queijo 1kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: 4 },
-    { id: 'pq-2k-50', nome: 'Pão de Queijo 2kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: -27 },
+    { id: 'pq-2k-50', nome: 'Pão de Queijo 2kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: 17 },
+    { id: 'pq-2k-100', nome: 'Pão de Queijo 2kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: 9 },
     { id: 'chipa-1k', nome: 'Chipa 1kg', apelido: 'chipa, chipinha', preco: 40, estoqueAtual: -243 },
     { id: 'chipa-2k', nome: 'Chipa 2kg', apelido: 'chipa, chipinha', preco: 80, estoqueAtual: -21 },
     { id: 'palito-1k', nome: 'Palito de Queijo 1kg', apelido: 'palito, palito de queijo', preco: 40, estoqueAtual: -426 },
@@ -37,9 +43,17 @@ describe('resolverTermo', () => {
     })
 
     it('família + peso com um tamanho só → resolvido', () => {
-        const r = resolverTermo('2 kg de pão de queijo', CATALOGO)
+        // Chipa tem 1kg e 2kg e nenhum tamanho de unidade, então o peso decide sozinho.
+        const r = resolverTermo('2 kg de chipa', CATALOGO)
         expect(r.tipo).toBe('resolvido')
-        expect(r).toMatchObject({ produto: { id: 'pq-2k-50' } })
+        expect(r).toMatchObject({ produto: { id: 'chipa-2k' } })
+    })
+
+    it('mesma embalagem com tamanhos diferentes → ambiguo, ela pergunta a grama', () => {
+        // Enquanto só existia o de 50g, isto resolvia sozinho. O 2kg-100gr voltou a ser
+        // vendido em 29/09 e a pergunta nasceu junto — é o comportamento correto.
+        const r = resolverTermo('2 kg de pão de queijo', CATALOGO)
+        expect(opcoesDe(r, 'ambiguo')).toEqual(['pq-2k-100', 'pq-2k-50'])
     })
 
     it('sinônimo resolve sozinho quando a família tem um peso só naquele nome', () => {
@@ -62,9 +76,12 @@ describe('resolverTermo', () => {
     })
 
     it('ignora acento e caixa', () => {
-        expect(resolverTermo('PAO DE QUEIJO 2kg', CATALOGO)).toMatchObject({
-            tipo: 'resolvido', produto: { id: 'pq-2k-50' },
+        expect(resolverTermo('2 KG DE CHIPA', CATALOGO)).toMatchObject({
+            tipo: 'resolvido', produto: { id: 'chipa-2k' },
         })
+        // E o acento no sinônimo curado também casa sem acento no termo do cliente.
+        expect(opcoesDe(resolverTermo('PAO DE QUEIJO 2kg', CATALOGO), 'ambiguo'))
+            .toEqual(['pq-2k-100', 'pq-2k-50'])
     })
 
     it('sinônimo casa como palavra inteira, não como pedaço', () => {
@@ -73,15 +90,18 @@ describe('resolverTermo', () => {
         expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'massa-1k' } })
     })
 
-    it('peso da UNIDADE também resolve, não só o da embalagem', () => {
-        // "me vê o de 100g" fala do tamanho do pão, não do pacote — e existe.
+    it('peso da UNIDADE também é procurado, não só o da embalagem', () => {
+        // "me vê o de 100g" fala do tamanho do pão, não do pacote. Antes de 29/09 isto
+        // resolvia sozinho; com o 2kg-100gr de volta, existem dois pães de 100g e ela
+        // pergunta o tamanho do pacote. O que importa aqui é que a busca por unidade
+        // ACONTECE — sem ela, a resposta seria "a Mont não vende isso".
         const r = resolverTermo('pão de queijo de 100g', CATALOGO)
-        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'pq-1k-100' } })
+        expect(opcoesDe(r, 'ambiguo')).toEqual(['pq-1k-100', 'pq-2k-100'])
     })
 
     it('pontuação não atrapalha — cliente escreve com "!" e ","', () => {
-        const r = resolverTermo('me vê 2kg de pão de queijo, por favor!', CATALOGO)
-        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'pq-2k-50' } })
+        const r = resolverTermo('me vê 2kg de chipa, por favor!', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'chipa-2k' } })
     })
 
     it('KG maiúsculo também é peso', () => {
