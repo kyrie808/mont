@@ -549,18 +549,24 @@ Deno.serve(async (req: Request) => {
       const termo = typeof body.termo === 'string' ? body.termo.trim() : ''
       if (!termo) return json({ error: 'termo é obrigatório' }, 400)
 
-      const { data } = await admin
-        .from('produtos')
-        .select('nome, preco')
-        .eq('ativo', true)
-        .eq('visivel_catalogo', true)
-        .ilike('nome', `%${termo}%`)
-        .order('nome')
-        .limit(10)
+      // Usa a MESMA resolução curada das ferramentas de pedido, não `ilike` no nome.
+      //
+      // Com busca por pedaço do nome, "pão de queijo" casava também com "Massa Pão de
+      // Queijo" — que é massa CRUA. Em 03/10 isso apareceu numa conversa real: o cliente
+      // pediu pão de queijo e ela ofereceu o Baldinho e o Balde junto, que é exatamente o
+      // que a curadoria de sinônimos existe para evitar.
+      //
+      // O que ela pode COTAR e o que ela pode ADICIONAR tem que ser a mesma lista. Produto
+      // sem apelido fica fora das duas — de propósito: cotar o que não dá para adicionar
+      // seria pior que não achar.
+      const catalogo = await lerCatalogo(admin)
+      const r = resolverTermo(termo, catalogo)
+
+      const achados = r.tipo === 'resolvido' ? [r.produto] : r.opcoes
 
       return json({
         ok: true,
-        produtos: (data ?? []).map((p) => ({ nome: p.nome, preco: Number(p.preco ?? 0) })),
+        produtos: achados.map((p) => ({ nome: p.nome, preco: p.preco })),
       }, 200)
     }
 
