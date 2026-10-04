@@ -30,12 +30,19 @@ import { telefoneWaDeJid } from '../../../packages/shared/src/whatsapp.ts'
 import {
   resolverTermo,
   renderizarPedido,
+  renderizarPedidoCliente,
   totalPedido,
   formatarReais,
   type ProdutoVendavel,
   type ItemPedido,
   type Resolucao,
 } from '../../../packages/shared/src/catalogo.ts'
+import {
+  formatarAgora,
+  diaEmSaoPaulo,
+  renderizarHistorico,
+  type HistoricoCompra,
+} from '../../../packages/shared/src/marcia.ts'
 
 // ⚠️ `formatarReais` é o helper `reais` de `catalogo.ts`, exportado nesta tarefa (hoje ele
 // é privado do módulo). NÃO trocar por `formatCurrency` de `formatters.ts`: aquele usa
@@ -100,6 +107,60 @@ async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoVendavel[]> {
   }))
 }
 
+/**
+ * Histórico de compra do cliente, para a Márcia sugerir com fundamento.
+ *
+ * ⚠️ BRINDE FORA. Brinde neste projeto é `pago = false` E `status = 'entregue'` — produto
+ * doado. Contar como compra faria a Márcia oferecer de novo justamente o que a Mont deu de
+ * graça, e inflaria "já comprou N vezes" com o que ninguém pagou.
+ *
+ * "Compra" é DIA DISTINTO, não linha de venda: é a definição canônica do projeto, a mesma
+ * dos relatórios e do ranking de pontos. Duas vendas no mesmo dia são uma compra.
+ */
+async function lerHistoricoCompra(
+  admin: SupabaseClient,
+  contatoId: string,
+): Promise<HistoricoCompra | null> {
+  const { data: vendas } = await admin
+    .from('vendas')
+    .select('id, data, pago, status')
+    .eq('contato_id', contatoId)
+
+  const pagas = (vendas ?? []).filter((v) => !(v.pago === false && v.status === 'entregue'))
+  if (pagas.length === 0) return null
+
+  const dias = new Set(pagas.map((v) => v.data))
+
+  const { data: itens } = await admin
+    .from('itens_venda')
+    .select('venda_id, produto_id, produtos(nome)')
+    .in('venda_id', pagas.map((v) => v.id))
+
+  // Frequência por produto = em quantas VENDAS ele apareceu, não soma de quantidade: quem
+  // leva 10 kg de um produto uma única vez não "costuma levar" aquilo.
+  const vezes = new Map<string, number>()
+  for (const i of itens ?? []) {
+    const nome = (i as { produtos?: { nome?: string } | null }).produtos?.nome
+    if (!nome) continue
+    vezes.set(nome, (vezes.get(nome) ?? 0) + 1)
+  }
+
+  // Desempate por nome para a saída ser determinística — sem isso dois produtos com a
+  // mesma frequência alternariam entre execuções e o prompt mudaria sem motivo.
+  const produtosFrequentes = [...vezes.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))
+    .slice(0, 2)
+    .map(([nome]) => nome)
+
+  const datas = [...dias].sort()
+
+  return {
+    compras: dias.size,
+    produtosFrequentes,
+    ultimaCompraEm: datas[datas.length - 1] ?? null,
+  }
+}
+
 async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
   const { data: contato } = await admin
     .from('contatos')
@@ -160,19 +221,50 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
   // consultas idênticas ao Postgres para a mesma mensagem recebida.
   const catalogo = await lerCatalogo(admin)
 
+  const agoraDate = new Date()
+
+  // "Primeiro contato dele hoje" = nenhuma mensagem DE ENTRADA deste cliente em dia de
+  // calendário de São Paulo antes desta. Sem isso a regra "no primeiro contato diz seu
+  // nome" é instrução sobre dado que não chega, e ela se apresentaria a cada mensagem.
+  //
+  // Dia de calendário e não 24h: às 8h da manhã, o contato de ontem às 22h é um contato
+  // NOVO, e é aí que o bom dia cabe.
+  //
+  // `<= 1` porque a mensagem que disparou esta execução já está gravada quando chegamos
+  // aqui — o ingestor grava antes de o W3 pedir contexto.
+  const hoje = diaEmSaoPaulo(agoraDate)
+  const entradasHoje = ordenadas.filter(
+    (m) => m.direcao === 'entrada' && diaEmSaoPaulo(new Date(m.enviada_em)) === hoje,
+  )
+  const primeiroContatoHoje = entradasHoje.length <= 1
+
+  const historico = renderizarHistorico(
+    await lerHistoricoCompra(admin, contato.id),
+    agoraDate,
+  )
+
   return {
     pode_responder: true,
     motivo: 'ok' as const,
     contato,
     conversa,
     nao_lidas: naoLidas,
+    agora: formatarAgora(agoraDate),
+    primeiro_contato_hoje: primeiroContatoHoje,
+    historico,
     // O rascunho vai como FATO, derivado das linhas. A agente nao deduz pedido da conversa.
     pedido_atual: await (async () => {
       const r = await lerRascunho(admin, contato.id)
       if (!r) return null
-      return renderizarPedido(await lerItens(admin, r.id, catalogo))
+      // Versao CLIENTE: este texto entra no prompt como o fato que ela REPETE, e
+      // `renderizarPedido` embute o alerta de estoque, que e recado interno da equipe.
+      return renderizarPedidoCliente(await lerItens(admin, r.id, catalogo))
     })(),
-    catalogo,
+    // `catalogo` NAO volta mais. Ele vinha aqui e o no `Montar entrada do agente` jogava
+    // fora — e as cinco linhas do prompt sobre `estoqueAtual` eram instrucao sobre dado
+    // que a agente nunca via. Quem precisa de estoque e `consultar_produto`, que devolve
+    // `disponivel` por produto. A leitura de `lerCatalogo` acima FICA: ela e usada para
+    // renderizar `pedido_atual`.
   }
 }
 
@@ -321,7 +413,8 @@ async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo
 
   return {
     ok: true,
-    pedido: renderizarPedido(itens),
+    // Idem: a `toolDescription` manda REPETIR este campo ao cliente.
+    pedido: renderizarPedidoCliente(itens),
     total: totalPedido(itens),
     // Total JÁ FORMATADO, pelo mesmo formatador que escreve os subtotais das linhas.
     // Se o n8n formatasse por conta própria, existiriam três formatadores de moeda no
@@ -566,7 +659,17 @@ Deno.serve(async (req: Request) => {
 
       return json({
         ok: true,
-        produtos: achados.map((p) => ({ nome: p.nome, preco: p.preco })),
+        produtos: achados.map((p) => ({
+          nome: p.nome,
+          preco: p.preco,
+          // Booleano, NUNCA o número. A Márcia segue proibida de falar de estoque com o
+          // cliente, e número na mão dela é convite a dizer "tenho 4". O que ela precisa
+          // saber é só se deve SUGERIR aquilo por conta própria.
+          //
+          // A contagem física de 28/09 é o que torna este campo confiável: antes dela,
+          // estoque negativo não significava "acabou", significava "ninguém nunca contou".
+          disponivel: p.estoqueAtual > 0,
+        })),
       }, 200)
     }
 
@@ -699,7 +802,11 @@ Deno.serve(async (req: Request) => {
         }, 200)
       }
 
-      const texto = renderizarPedido(itens)
+      const texto = renderizarPedidoCliente(itens)
+      // Campo separado para o grupo interno: a equipe PRECISA do alerta de estoque, que e
+      // o aviso de que talvez nao haja como separar o pedido. Um campo so servindo as duas
+      // audiencias E o defeito: a agente repetia ao cliente o recado da equipe.
+      const textoEquipe = renderizarPedido(itens)
       const observacao = `[pedido confirmado] ${itens.map((i) => `${i.quantidade}x ${i.nome}`).join(' + ')}`
 
       // Reabertura: ATUALIZA a linha da timeline que ja existe, em vez de criar outra.
@@ -796,6 +903,7 @@ Deno.serve(async (req: Request) => {
         atualizacao: pedido.interacao_id !== null,
         timeline,
         pedido: texto,
+        pedido_equipe: textoEquipe,
         total: totalPedido(itens),
         total_texto: formatarReais(totalPedido(itens)),
         contato: contato.nome,
