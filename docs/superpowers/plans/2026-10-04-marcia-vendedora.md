@@ -366,7 +366,7 @@ export {
 - [ ] **Step 6: Rodar o teste e confirmar que passa**
 
 Run: `pnpm --filter interno exec vitest run src/utils/__tests__/marcia.spec.ts`
-Expected: PASS — 14 testes.
+Expected: PASS — 13 testes (eram 14; o teste de caractere invisível caiu na revisão — era logicamente implicado pelo `toBe` que já trava os 21 codepoints).
 
 - [ ] **Step 7: Corrigir o fixture de estoque em `catalogo.spec.ts`**
 
@@ -634,13 +634,68 @@ Na ação `consultar_produto`, trocar o `return json(...)` final por:
       }, 200)
 ```
 
-- [ ] **Step 5: Deploy**
+- [ ] **Step 5: Fechar o vazamento do `⚠️` que JÁ ESTÁ VIVO em produção**
+
+Achado na revisão da Task 1, e é a razão de `renderizarPedidoCliente` não ser decorativa.
+
+`renderizarPedido` embute `⚠️ sem estoque no sistema`, e **três** campos que a agente
+repete ao cliente saem dele hoje:
+
+| onde | linha | quem consome |
+|---|---|---|
+| `pedido_atual` em `montarContexto` | `:173` | o prompt, como FATO que ela repete |
+| `pedido` em `responderPedido` | `:324` | resposta das 3 ferramentas de mutação |
+| `pedido` em `confirmar_pedido` | `~:799` | **a agente E o grupo interno, no mesmo campo** |
+
+O `Pão de Queijo 1kg - 25gr` está em **-103** na produção. Então hoje, se um cliente pede o
+25gr, a ferramenta devolve `1x Pão de Queijo 1kg - 25gr — R$ 30,00 ⚠️ sem estoque no
+sistema` e a `toolDescription` manda repetir — ela fala de estoque com o cliente, com um
+número que a própria migration de 28/09 descreve como baseline nunca contado.
+
+Os dois primeiros são troca direta:
+
+```ts
+    pedido_atual: await (async () => {
+      const r = await lerRascunho(admin, contato.id)
+      if (!r) return null
+      // Versao CLIENTE: este texto entra no prompt como o fato que ela REPETE, e
+      // `renderizarPedido` embute o alerta de estoque, que e recado interno da equipe.
+      return renderizarPedidoCliente(await lerItens(admin, r.id, catalogo))
+    })(),
+```
+
+```ts
+  return {
+    ok: true,
+    // Idem: a `toolDescription` manda REPETIR este campo ao cliente.
+    pedido: renderizarPedidoCliente(itens),
+```
+
+⚠️ **`confirmar_pedido` exige cuidado: é um campo servindo duas audiências.** O `pedido`
+dele é lido pela agente **e** pelo nó `Avisar intenção ao time` do W3. Trocar direto
+removeria o `⚠️` do aviso da equipe — e a equipe é exatamente quem **precisa** dele. Divida:
+
+```ts
+      const texto = renderizarPedidoCliente(itens)
+      // Campo separado para o grupo interno: a equipe PRECISA do alerta de estoque, que e
+      // o aviso de que talvez nao haja como separar o pedido. Um campo so servindo as duas
+      // audiencias E o defeito: a agente repetia ao cliente o recado da equipe.
+      const textoEquipe = renderizarPedido(itens)
+```
+
+e acrescentar `pedido_equipe: textoEquipe` ao lado de `pedido: texto` em **todos** os
+`return json({...})` dessa ação que já devolvem `pedido`. O W3 passa a ler `pedido_equipe`
+(Task 5, Step 8).
+
+Acrescentar `renderizarPedidoCliente` ao import de `@mont/shared` que já existe.
+
+- [ ] **Step 6: Deploy**
 
 ⚠️ Conferir ANTES que `supabase/config.toml` continua com a entrada de `whatsapp-secretaria`. Sem ela o deploy liga `verify_jwt=true`, o gateway devolve 401 antes de o código rodar, e `cron.job_run_details` marca SUCESSO porque o `pg_net` só enfileira — foi assim que a CAPI ficou 3 dias fora em 08-10/08.
 
 Run: `npx supabase functions deploy whatsapp-secretaria --project-ref herlvujykltxnwqmwmyx`
 
-- [ ] **Step 6: Provar na produção que o contexto chegou**
+- [ ] **Step 7: Provar na produção que o contexto chegou**
 
 ⚠️ **Sonda com acento vai por Python, nunca por `curl` no Git Bash** — o shell corrompe UTF-8 e já produziu um `nao_encontrado` falso que quase foi reportado como bug. O nome do header de autenticação é o que o arquivo já usa; conferir no topo do `index.ts` antes de rodar.
 
@@ -677,11 +732,25 @@ Expected:
 - `catalogo ainda vem? False`
 - em `consultar_produto`: os cinco pães de queijo, cada um com `disponivel`. O `1kg - 25gr` (estoque −103) vem `false`; o `1kg - 50gr` (10) vem `true`. **Nenhum Baldinho/Balde na lista** — massa crua não casa com "pão de queijo" desde o fix `b77d7b6`.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Provar que o `⚠️` parou de ir para o cliente**
+
+Com o `1kg - 25gr` em -103, adicionar ele a um pedido de teste e conferir os dois lados.
+Monte a sonda como arquivo `.py` e rode `python arquivo.py` — **não** por heredoc: um
+heredoc dentro de outro fecha o externo no primeiro delimitador e o resto da sua mensagem
+vira comando de shell.
+
+A sonda chama `adicionar_item` com termo `pao de queijo 25g` e quantidade 1, e imprime o
+campo `pedido` mais o booleano de `'⚠️' in pedido`.
+
+Expected: o campo `pedido` traz o item **sem** `⚠️` e sem a frase "sem estoque" — booleano
+`False`. Em seguida, `confirmar_pedido` devolve `pedido` limpo e `pedido_equipe` **com** o
+`⚠️`: é o recado que a equipe precisa, agora no campo certo.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add supabase/functions/whatsapp-secretaria/index.ts
-git commit -m "feat(marcia): contexto do turno com hora, primeiro contato e historico"
+git commit -m "feat(marcia): contexto do turno, e o alerta de estoque para de vazar"
 ```
 
 ---
@@ -1155,7 +1224,18 @@ Do número `5511980017732`, mandar em sequência:
 
 Conferir cada execução em `mcp__n8n__n8n_executions` e o que de fato saiu em `wa_envios`.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Apontar o aviso da equipe para `pedido_equipe`**
+
+A Task 3 dividiu o campo: `confirmar_pedido` devolve `pedido` (sem o `⚠️`, que a agente
+repete ao cliente) e `pedido_equipe` (com o `⚠️`, para quem separa). O nó `Avisar intenção
+ao time` lê `pedido` hoje — trocar só esse trecho do `jsonBody`, de
+`$('confirmar_pedido').first().json.pedido` para
+`$('confirmar_pedido').first().json.pedido_equipe`, mantendo todo o resto igual.
+
+Se ficar em `pedido`, a equipe perde o aviso de que talvez não haja como separar o pedido —
+e era esse aviso, vazando para o lado errado, que originou a divisão.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add infra/crm/workflows/w3-secretaria.json
