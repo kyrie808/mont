@@ -1232,7 +1232,13 @@ Do número `5511980017732`, mandar em sequência:
 
 Conferir cada execução em `mcp__n8n__n8n_executions` e o que de fato saiu em `wa_envios`.
 
-- [ ] **Step 8: Apontar o aviso da equipe para `pedido_equipe`**
+- [x] **Step 8: Apontar o aviso da equipe para `pedido_equipe`** — ✅ **JÁ APLICADO, fora de ordem**
+
+Feito logo depois da Task 3, e não aqui, porque a Task 3 criou uma **regressão viva**: o
+campo `pedido` ficou limpo no mesmo deploy, e até este religamento a equipe deixou de ver o
+`⚠️` no aviso de pedido confirmado. Com o `1kg - 25gr` em -103, era fácil de aparecer em
+campo no intervalo. Aplicado no arquivo versionado e no n8n (workflow `JAibLGIwNDLJN0Ym`,
+segue ativo, 33 nós), e verificado lendo o nó de volta. **Não refazer.**
 
 A Task 3 dividiu o campo: `confirmar_pedido` devolve `pedido` (sem o `⚠️`, que a agente
 repete ao cliente) e `pedido_equipe` (com o `⚠️`, para quem separa). O nó `Avisar intenção
