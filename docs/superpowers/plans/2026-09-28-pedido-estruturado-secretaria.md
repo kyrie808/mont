@@ -47,12 +47,17 @@
 - Create: `apps/interno/src/utils/__tests__/catalogo.spec.ts`
 - Modify: `packages/shared/src/index.ts:48-56`
 
+> ⚠️ O tipo se chama `ProdutoVendavel` e **não** `ProdutoCatalogo`: esse nome já existe em
+> `packages/shared/src/types.ts:40` como a view pública `vw_catalogo_produtos`, consumida
+> por 14 arquivos de `apps/catalogo`. Nome repetido dá `TS2300 Duplicate identifier` e
+> quebra o build do site em produção — medido, 39 erros.
+
 **Interfaces:**
 - Consumes: nada.
 - Produces:
-  - `interface ProdutoCatalogo { id: string; nome: string; apelido: string | null; preco: number; estoqueAtual: number }`
-  - `type Resolucao = { tipo: 'resolvido'; produto: ProdutoCatalogo } | { tipo: 'ambiguo'; opcoes: ProdutoCatalogo[] } | { tipo: 'nao_encontrado'; opcoes: ProdutoCatalogo[] }`
-  - `function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resolucao`
+  - `interface ProdutoVendavel { id: string; nome: string; apelido: string | null; preco: number; estoqueAtual: number }`
+  - `type Resolucao = { tipo: 'resolvido'; produto: ProdutoVendavel } | { tipo: 'ambiguo'; opcoes: ProdutoVendavel[] } | { tipo: 'nao_encontrado'; opcoes: ProdutoVendavel[] }`
+  - `function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resolucao`
 
 - [ ] **Step 1: Escrever os testes que falham**
 
@@ -60,10 +65,10 @@ Criar `apps/interno/src/utils/__tests__/catalogo.spec.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest'
-import { resolverTermo, type ProdutoCatalogo, type Resolucao } from '@mont/shared'
+import { resolverTermo, type ProdutoVendavel, type Resolucao } from '@mont/shared'
 
 // Catálogo real da Mont em 28/09/2026. Os apelidos são os sinônimos curados.
-const CATALOGO: ProdutoCatalogo[] = [
+const CATALOGO: ProdutoVendavel[] = [
     { id: 'pq-1k-25', nome: 'Pão de Queijo 1kg - 25gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: -103 },
     { id: 'pq-1k-100', nome: 'Pão de Queijo 1kg - 100gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 30, estoqueAtual: 4 },
     { id: 'pq-2k-50', nome: 'Pão de Queijo 2kg - 50gr', apelido: 'pão de queijo, pao de queijo, pdq, congelado', preco: 60, estoqueAtual: -27 },
@@ -123,6 +128,29 @@ describe('resolverTermo', () => {
         expect(resolverTermo('PAO DE QUEIJO 2kg', CATALOGO).tipo).toBe('resolvido')
     })
 
+    it('sinônimo casa como palavra inteira, não como pedaço', () => {
+        // "baldinho" contém "balde". Busca por substring devolveria os dois baldes.
+        const r = resolverTermo('baldinho', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'massa-1k' } })
+    })
+
+    it('peso da UNIDADE também resolve, não só o da embalagem', () => {
+        // "me vê o de 100g" fala do tamanho do pão, não do pacote — e existe.
+        const r = resolverTermo('pão de queijo de 100g', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'pq-1k-100' } })
+    })
+
+    it('pontuação não atrapalha — cliente escreve com "!" e ","', () => {
+        const r = resolverTermo('me vê 2kg de pão de queijo, por favor!', CATALOGO)
+        expect(r).toMatchObject({ tipo: 'resolvido', produto: { id: 'pq-2k-50' } })
+    })
+
+    it('KG maiúsculo também é peso', () => {
+        expect(resolverTermo('2KG de chipa', CATALOGO)).toMatchObject({
+            tipo: 'resolvido', produto: { id: 'chipa-2k' },
+        })
+    })
+
     it('termo que não é produto nenhum → nao_encontrado sem opções', () => {
         expect(opcoesDe(resolverTermo('coxinha', CATALOGO), 'nao_encontrado')).toEqual([])
     })
@@ -153,7 +181,7 @@ Criar `packages/shared/src/catalogo.ts`:
  * vende. Quatro tentativas de proibir isso por prompt falharam. A regra passa a ser código.
  */
 
-export interface ProdutoCatalogo {
+export interface ProdutoVendavel {
     id: string
     nome: string
     /** Sinônimos curados, separados por vírgula. É como o CLIENTE chama o produto. */
@@ -163,24 +191,36 @@ export interface ProdutoCatalogo {
 }
 
 export type Resolucao =
-    | { tipo: 'resolvido'; produto: ProdutoCatalogo }
-    | { tipo: 'ambiguo'; opcoes: ProdutoCatalogo[] }
-    | { tipo: 'nao_encontrado'; opcoes: ProdutoCatalogo[] }
+    | { tipo: 'resolvido'; produto: ProdutoVendavel }
+    | { tipo: 'ambiguo'; opcoes: ProdutoVendavel[] }
+    | { tipo: 'nao_encontrado'; opcoes: ProdutoVendavel[] }
 
+/**
+ * Min\u00fasculas, sem acento, sem pontua\u00e7\u00e3o, espa\u00e7o \u00fanico.
+ *
+ * A pontua\u00e7\u00e3o vira espa\u00e7o em vez de sumir: cliente escreve "me v\u00ea 1kg de chipa!" e
+ * "chipa!" precisa continuar casando com o sin\u00f4nimo "chipa".
+ */
 function normalizar(s: string): string {
     return s
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
         .trim()
 }
 
-/** Peso da EMBALAGEM em gramas: "1kg" → 1000, "500g" → 500. */
+/**
+ * Peso que o cliente pediu, em gramas: "1kg" → 1000, "500g" → 500.
+ *
+ * Trabalha sobre o termo em minúsculas mas COM pontuação, porque "2,5kg" precisa do
+ * separador decimal — `normalizar` o trocaria por espaço.
+ */
 function pesoPedido(termo: string): number | null {
-    const kg = termo.match(/(\d+(?:[.,]\d+)?)\s*kg\b/)
+    const t = termo.toLowerCase()
+    const kg = t.match(/(\d+(?:[.,]\d+)?)\s*kg\b/)
     if (kg) return Math.round(parseFloat(kg[1].replace(',', '.')) * 1000)
-    const g = termo.match(/(\d+)\s*(?:g|gr|gramas?)\b/)
+    const g = t.match(/(\d+)\s*(?:g|gr|gramas?)\b/)
     if (g) return parseInt(g[1], 10)
     return null
 }
@@ -199,7 +239,7 @@ function pesosDoNome(nome: string): { embalagem: number | null; unidade: number 
     }
 }
 
-function sinonimos(p: ProdutoCatalogo): string[] {
+function sinonimos(p: ProdutoVendavel): string[] {
     return (p.apelido ?? '')
         .split(',')
         .map(normalizar)
@@ -207,15 +247,30 @@ function sinonimos(p: ProdutoCatalogo): string[] {
 }
 
 /**
+ * Sinônimo tem que casar como PALAVRA INTEIRA, não como pedaço.
+ *
+ * "baldinho".includes("balde") é `true`, então busca por substring faria "baldinho" casar
+ * com o Balde 4kg e voltar ambíguo — quando o cliente foi específico.
+ *
+ * Emoldurar com espaço resolve sem regex: `normalizar` já colapsou espaços e trocou
+ * pontuação por espaço, então " baldinho " não contém " balde ", e " 1 kg de chipa "
+ * contém " chipa ". Sem regex também não há o que escapar quando o apelido tiver
+ * parêntese ou acento.
+ */
+function contemSinonimo(texto: string, sinonimo: string): boolean {
+    return ` ${texto} `.includes(` ${sinonimo} `)
+}
+
+/**
  * `termo` é o que o cliente escreveu, cru. Devolve sempre um dos três resultados —
  * nunca escolhe no lugar dele quando há mais de uma possibilidade.
  */
-export function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resolucao {
+export function resolverTermo(termo: string, catalogo: ProdutoVendavel[]): Resolucao {
     const t = normalizar(termo)
 
     // 1. A FAMÍLIA vem do sinônimo curado, não de pedaço do nome. "pão de queijo" está
     //    dentro de "Massa Pão de Queijo", e a massa é produto cru — outra coisa.
-    const familia = catalogo.filter((p) => sinonimos(p).some((s) => t.includes(s)))
+    const familia = catalogo.filter((p) => sinonimos(p).some((s) => contemSinonimo(t, s)))
     if (familia.length === 0) return { tipo: 'nao_encontrado', opcoes: [] }
 
     // 2. Sem peso declarado, a escolha é do cliente.
@@ -226,17 +281,23 @@ export function resolverTermo(termo: string, catalogo: ProdutoCatalogo[]): Resol
             : { tipo: 'ambiguo', opcoes: familia }
     }
 
-    // 3. Com peso: casa contra a EMBALAGEM. "500 g de chipa" não casa com nenhuma, e a
-    //    resposta traz as embalagens que existem daquela família — não o catálogo inteiro.
+    // 3. Com peso: casa contra a EMBALAGEM primeiro — é o que o cliente diz mais vezes.
     const naEmbalagem = familia.filter((p) => pesosDoNome(p.nome).embalagem === peso)
-    if (naEmbalagem.length === 0) return { tipo: 'nao_encontrado', opcoes: familia }
     if (naEmbalagem.length === 1) return { tipo: 'resolvido', produto: naEmbalagem[0] }
+    if (naEmbalagem.length > 1) {
+        // Mesma embalagem, tamanhos de unidade diferentes: o cliente escolhe.
+        return { tipo: 'ambiguo', opcoes: naEmbalagem }
+    }
 
-    // 4. Mesma embalagem, tamanhos de unidade diferentes: o cliente escolhe.
-    const naUnidade = naEmbalagem.filter((p) => pesosDoNome(p.nome).unidade === peso)
+    // 4. Nenhuma embalagem com esse peso. Antes de dizer que não existe, tentar o TAMANHO
+    //    DA UNIDADE: "me vê o de 100g" fala da unidade, não do pacote, e o produto existe.
+    const naUnidade = familia.filter((p) => pesosDoNome(p.nome).unidade === peso)
     if (naUnidade.length === 1) return { tipo: 'resolvido', produto: naUnidade[0] }
+    if (naUnidade.length > 1) return { tipo: 'ambiguo', opcoes: naUnidade }
 
-    return { tipo: 'ambiguo', opcoes: naEmbalagem }
+    // 5. Nem embalagem nem unidade: a Mont não vende esse peso. As opções são as DA
+    //    FAMÍLIA — "chipa só tem 1kg ou 2kg" —, nunca o catálogo inteiro.
+    return { tipo: 'nao_encontrado', opcoes: familia }
 }
 ```
 
@@ -247,13 +308,13 @@ Depois do bloco `} from './secretaria'`, acrescentar:
 ```typescript
 // Catálogo da secretária — resolver o que o cliente escreveu em produto real
 export { resolverTermo } from './catalogo'
-export type { ProdutoCatalogo, Resolucao } from './catalogo'
+export type { ProdutoVendavel, Resolucao } from './catalogo'
 ```
 
 - [ ] **Step 5: Rodar e confirmar que passa**
 
 Run: `pnpm --filter interno exec vitest run src/utils/__tests__/catalogo.spec.ts`
-Expected: PASS, 9 testes.
+Expected: PASS, 13 testes.
 
 - [ ] **Step 6: Commit**
 
@@ -272,7 +333,7 @@ git commit -m "feat(secretaria): resolucao de termo do cliente contra o catalogo
 - Modify: `apps/interno/src/utils/__tests__/catalogo.spec.ts`
 
 **Interfaces:**
-- Consumes: `ProdutoCatalogo` da Task 1.
+- Consumes: `ProdutoVendavel` da Task 1.
 - Produces:
   - `interface ItemPedido { produtoId: string; nome: string; quantidade: number; precoUnitario: number; semEstoque: boolean }`
   - `function renderizarPedido(itens: ItemPedido[]): string`
@@ -378,13 +439,13 @@ Em `packages/shared/src/index.ts`, trocar o bloco do catálogo por:
 
 ```typescript
 export { resolverTermo, renderizarPedido, totalPedido } from './catalogo'
-export type { ProdutoCatalogo, Resolucao, ItemPedido } from './catalogo'
+export type { ProdutoVendavel, Resolucao, ItemPedido } from './catalogo'
 ```
 
 - [ ] **Step 5: Rodar e confirmar que passa**
 
 Run: `pnpm --filter interno exec vitest run src/utils/__tests__/catalogo.spec.ts`
-Expected: PASS, 15 testes.
+Expected: PASS, 19 testes.
 
 - [ ] **Step 6: Commit**
 
@@ -592,7 +653,7 @@ git commit -m "feat(secretaria): apelido vira sinonimo do cliente, nao codigo in
 - Modify: `supabase/functions/whatsapp-secretaria/index.ts`
 
 **Interfaces:**
-- Consumes: `resolverTermo`, `renderizarPedido`, `totalPedido`, `ProdutoCatalogo`, `ItemPedido` das Tasks 1–2; as tabelas da Task 3.
+- Consumes: `resolverTermo`, `renderizarPedido`, `totalPedido`, `ProdutoVendavel`, `ItemPedido` das Tasks 1–2; as tabelas da Task 3.
 - Produces: ações `adicionar_item`, `alterar_quantidade`, `remover_item`, `confirmar_pedido`, `rascunhos_abandonados`. Remove `registrar_pedido_intencao`, `intencoes_a_avisar`, `pedidoVigente`/`lerIntencoes`.
 
 - [ ] **Step 1: Trocar o leitor de catálogo**
@@ -601,7 +662,7 @@ git commit -m "feat(secretaria): apelido vira sinonimo do cliente, nao codigo in
 e `estoque_atual`. Substituir a função inteira (linhas 85–94) por:
 
 ```typescript
-async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoCatalogo[]> {
+async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoVendavel[]> {
   const { data } = await admin
     .from('produtos')
     .select('id, nome, apelido, preco, estoque_atual')
@@ -626,12 +687,18 @@ import {
   resolverTermo,
   renderizarPedido,
   totalPedido,
-  type ProdutoCatalogo,
+  formatarReais,
+  type ProdutoVendavel,
   type ItemPedido,
 } from '../../../packages/shared/src/catalogo.ts'
+
+// ⚠️ `formatarReais` é o helper `reais` de `catalogo.ts`, exportado nesta tarefa (hoje ele
+// é privado do módulo). Renomeie na exportação para `formatarReais` e acrescente ao
+// `packages/shared/src/index.ts`. NÃO troque por `formatCurrency` de `formatters.ts`:
+// aquele usa Intl e produz espaço não-separável (U+00A0), ruim em texto de WhatsApp.
 ```
 
-Remover a interface local `ItemCatalogo` (agora é `ProdutoCatalogo`).
+Remover a interface local `ItemCatalogo` (agora é `ProdutoVendavel`).
 
 - [ ] **Step 2: Escrever os helpers do pedido**
 
@@ -649,10 +716,42 @@ async function lerRascunho(admin: SupabaseClient, contatoId: string) {
   return data
 }
 
-/** O rascunho aberto, criando se não houver. */
+/**
+ * Por quanto tempo depois de confirmar o cliente ainda esta no MESMO pedido.
+ *
+ * "Ah, esqueci, poe mais 1 kg" dois minutos depois e a mesma compra; um pedido novo na
+ * semana seguinte nao e. Sem esse prazo, ou toda mensagem reabriria o pedido antigo para
+ * sempre, ou a equipe receberia dois CONFIRMADO para uma entrega so.
+ */
+const JANELA_REABERTURA_MS = 2 * 60 * 60 * 1000
+
+/**
+ * O pedido em que os itens devem entrar: o rascunho aberto, ou o confirmado ha pouco
+ * REABERTO, ou um novo.
+ *
+ * A reabertura preserva `interacao_id` — e ele que faz a confirmacao seguinte ATUALIZAR a
+ * linha da timeline em vez de criar outra, e o aviso sair como ATUALIZADO em vez de um
+ * segundo CONFIRMADO.
+ */
 async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneWa: string) {
   const existente = await lerRascunho(admin, contatoId)
   if (existente) return existente
+
+  const desde = new Date(Date.now() - JANELA_REABERTURA_MS).toISOString()
+  const { data: recemConfirmado } = await admin
+    .from('wa_pedido')
+    .select('id, status, interacao_id')
+    .eq('contato_id', contatoId)
+    .eq('status', 'confirmado')
+    .gte('confirmado_em', desde)
+    .order('confirmado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (recemConfirmado) {
+    await admin.from('wa_pedido').update({ status: 'rascunho' }).eq('id', recemConfirmado.id)
+    return { ...recemConfirmado, status: 'rascunho' }
+  }
 
   const { data, error } = await admin
     .from('wa_pedido')
@@ -668,7 +767,7 @@ async function abrirRascunho(admin: SupabaseClient, contatoId: string, telefoneW
 async function lerItens(
   admin: SupabaseClient,
   pedidoId: string,
-  catalogo: ProdutoCatalogo[],
+  catalogo: ProdutoVendavel[],
 ): Promise<ItemPedido[]> {
   const { data } = await admin
     .from('wa_pedido_item')
@@ -694,7 +793,7 @@ async function lerItens(
  * A agente nunca soma nem formata — ela repete isto. Foi ela escrevendo o pedido de
  * cabeça que somou o pedido da véspera e anotou 4 kg onde o cliente pediu 2 kg.
  */
-async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo: ProdutoCatalogo[]) {
+async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo: ProdutoVendavel[]) {
   const itens = await lerItens(admin, pedidoId, catalogo)
   await admin.from('wa_pedido').update({ atualizado_em: new Date().toISOString() }).eq('id', pedidoId)
 
@@ -702,6 +801,11 @@ async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo
     ok: true,
     pedido: renderizarPedido(itens),
     total: totalPedido(itens),
+    // Total JÁ FORMATADO, pelo mesmo formatador que escreve os subtotais das linhas.
+    // Se o n8n formatasse por conta própria, existiriam três formatadores de moeda no
+    // caminho e o rodapé poderia divergir das linhas em um centavo — e quem separa o
+    // pedido não saberia em qual acreditar.
+    total_texto: formatarReais(totalPedido(itens)),
     itens: itens.length,
   }
 }
@@ -714,10 +818,10 @@ async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo
  * — proibido pela Regra de Ouro #1.
  */
 type Traduzido =
-  | { tipo: 'segue'; produto: ProdutoCatalogo }
+  | { tipo: 'segue'; produto: ProdutoVendavel }
   | { tipo: 'responde'; corpo: Record<string, unknown> }
 
-function respostaDaResolucao(termo: string, catalogo: ProdutoCatalogo[]): Traduzido {
+function respostaDaResolucao(termo: string, catalogo: ProdutoVendavel[]): Traduzido {
   const r = resolverTermo(termo, catalogo)
 
   if (r.tipo === 'resolvido') return { tipo: 'segue', produto: r.produto }
@@ -731,7 +835,7 @@ function respostaDaResolucao(termo: string, catalogo: ProdutoCatalogo[]): Traduz
         ok: false,
         motivo: 'ambiguo',
         opcoes,
-        instrucao: 'Pergunte ao cliente qual destes ele quer. NAO escolha por ele. NAO grave nada.',
+        instrucao: 'Pergunte ao cliente qual destes ele quer. NAO escolha por ele. NAO grave nada. Se o cliente citou MAIS DE UM produto na mesma frase, chame a ferramenta uma vez por produto em vez de perguntar.',
       },
     }
   }
@@ -751,6 +855,11 @@ function respostaDaResolucao(termo: string, catalogo: ProdutoCatalogo[]): Traduz
 ```
 
 - [ ] **Step 3: Escrever as quatro ações**
+
+⚠️ **`rascunhos_abandonados` é GLOBAL** — varre todos os contatos e não recebe `jid` nem
+`telefone_wa`. O guard `if (!telefoneWa) return json({ error: ... }, 400)` mataria a
+chamada, então o bloco dela vai **antes desse guard**, logo depois do `createClient`. As
+outras três ficam onde estão, junto das demais ações.
 
 Substituir o bloco inteiro de `if (body.acao === 'registrar_pedido_intencao') { ... }` e o
 de `if (body.acao === 'intencoes_a_avisar') { ... }` por:
@@ -854,6 +963,7 @@ de `if (body.acao === 'intencoes_a_avisar') { ... }` por:
         atualizacao: pedido.interacao_id !== null,
         pedido: texto,
         total: totalPedido(itens),
+        total_texto: formatarReais(totalPedido(itens)),
         contato: contato.nome,
         telefone_wa: telefoneWa,
       }, 200)
@@ -999,9 +1109,10 @@ No workflow, remover o nó `registrar_pedido_intencao` e criar quatro
 
 ```
 nome: adicionar_item
-toolDescription: "Adiciona um produto ao pedido do cliente. Use assim que ele disser o que
-  quer. Se a resposta vier com motivo 'ambiguo' ou 'nao_encontrado', NADA foi gravado: siga
-  a instrucao que veio junto e fale com o cliente."
+toolDescription: "Adiciona UM produto ao pedido do cliente. Use assim que ele disser o que
+  quer. Se ele pedir dois produtos na mesma frase, chame esta ferramenta duas vezes — um
+  item por chamada. Se a resposta vier com motivo 'ambiguo' ou 'nao_encontrado', NADA foi
+  gravado: siga a instrucao que veio junto e fale com o cliente."
 jsonBody: ={{ JSON.stringify({
     acao: 'adicionar_item',
     jid: $('Extrair mensagem').first().json.jid,
@@ -1055,6 +1166,7 @@ PEDIDO
 - Voce nao anota pedido escrevendo texto. Voce usa as ferramentas: adicionar_item,
   alterar_quantidade, remover_item, confirmar_pedido.
 - Se a mensagem diz QUANTO de QUAL produto, chame adicionar_item na hora.
+- UM item por chamada. Se ele pedir "1 kg de chipa e 2 de palito", sao duas chamadas.
 - A ferramenta pode responder 'ambiguo' (mais de um produto serve) ou 'nao_encontrado'
   (a Mont nao vende aquilo). Nos dois casos NADA foi gravado. Leia a instrucao que veio
   na resposta e fale com o cliente.
@@ -1083,7 +1195,7 @@ saída da tool `confirmar_pedido`, com o texto:
 
 ```
 ={{ JSON.stringify({ number: $json.jid.split('@')[0], text:
-  `🛒 PEDIDO ${$('confirmar_pedido').first().json.atualizacao ? 'ATUALIZADO' : 'CONFIRMADO'} — ${$('confirmar_pedido').first().json.contato} (${$('confirmar_pedido').first().json.telefone_wa})\n${$('confirmar_pedido').first().json.pedido}\nProdutos: R$ ${$('confirmar_pedido').first().json.total.toFixed(2).replace('.',',')} (sem frete)\n${$('confirmar_pedido').first().json.atualizacao ? '⚠️ Ja tinha sido avisado antes. Confira se nao foi separado.' : 'Alguem precisa fechar.'}`,
+  `🛒 PEDIDO ${$('confirmar_pedido').first().json.atualizacao ? 'ATUALIZADO' : 'CONFIRMADO'} — ${$('confirmar_pedido').first().json.contato} (${$('confirmar_pedido').first().json.telefone_wa})\n${$('confirmar_pedido').first().json.pedido}\nProdutos: ${$('confirmar_pedido').first().json.total_texto} (sem frete)\n${$('confirmar_pedido').first().json.atualizacao ? '⚠️ Ja tinha sido avisado antes. Confira se nao foi separado.' : 'Alguem precisa fechar.'}`,
   delay: 0, linkPreview: false }) }}
 ```
 
@@ -1137,13 +1249,17 @@ Produtos: R$ {total}
 Ninguem confirmou. Vale um empurrao?
 ```
 
-- [ ] **Step 2: Ajustar a Edge Function para a ação global**
+- [ ] **Step 2: Conferir que a ação global responde sem `jid`**
 
-`rascunhos_abandonados` não tem telefone. O guard atual
-(`if (!telefoneWa) return json({ error: ... }, 400)`) mata a chamada. Mover o tratamento
-dessa ação para **antes** desse guard, logo depois do `createClient`.
+A Task 5 já posicionou `rascunhos_abandonados` antes do guard de telefone. Confirmar com
+uma chamada sem `jid`:
 
-Redeployar: `npx supabase functions deploy whatsapp-secretaria --project-ref herlvujykltxnwqmwmyx`
+```bash
+curl -s -X POST "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-secretaria"   -H "x-ingestor-secret: $S" -H 'Content-Type: application/json'   -d '{"acao":"rascunhos_abandonados","minutos":30}'
+```
+
+Expected: `{"ok":true,"abandonados":[...]}` — **não** um 400 de telefone obrigatório. Se
+vier 400, o bloco ficou no lugar errado na Task 5: mover e redeployar.
 
 - [ ] **Step 3: Provar que o W4 funciona sem esperar 30 minutos**
 
@@ -1189,7 +1305,7 @@ arquivo de teste.
 - [ ] **Step 2: Rodar a suíte inteira**
 
 Run: `pnpm --filter interno exec vitest run --exclude "**/*.integration.test.ts"`
-Expected: PASS. A contagem cai 6 (os de `pedidoVigente`) e sobe 15 (os de `catalogo`).
+Expected: PASS. A contagem cai 6 (os de `pedidoVigente`) e sobe 19 (os de `catalogo`).
 
 - [ ] **Step 3: Typecheck nos dois apps**
 

@@ -1,0 +1,182 @@
+{
+  "name": "W4 — Relógio do abandono (pedido montado e esquecido)",
+  "nodes": [
+    {
+      "id": "cron",
+      "name": "A cada 10 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "notes": "So varredura. A janela de abandono (30 min) e decidida pela Edge Function via `minutos` no corpo, nao aqui."
+    },
+    {
+      "id": "buscar-abandonados",
+      "name": "Buscar abandonados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-secretaria",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ acao: 'rascunhos_abandonados', minutos: 30 }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "Acao GLOBAL: varre todos os contatos, nao recebe jid nem telefone_wa. Ja marca os rascunhos como 'abandonado' e ja tem guarda de humano atendendo dentro da Edge Function — nao reimplementar nada disso aqui."
+    },
+    {
+      "id": "um-por-vez",
+      "name": "Um por vez",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return $json.abandonados.map(a => ({ json: a }));"
+      },
+      "notes": "Um item por rascunho abandonado. Cada item ja traz telefone_wa, contato, pedido e total (numero, sem formatacao)."
+    },
+    {
+      "id": "destino-do-aviso",
+      "name": "Destino do aviso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-secretaria",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ acao: 'destino_aviso', telefone_wa: $json.telefone_wa }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "O id do grupo e constante VALIDADA na Edge Function, nunca campo livre aqui. O item de 'rascunhos_abandonados' ja traz telefone_wa (nao jid) — mandamos direto, sem reconstruir jid a mao num Code (essa conversao mora so em packages/shared)."
+    },
+    {
+      "id": "avisar-abandono",
+      "name": "Avisar abandono",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution:8080/message/sendText/mont",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.jid.split('@')[0], text: `⏳ NAO CONFIRMADO — ${$('Um por vez').item.json.contato} (${$('Um por vez').item.json.telefone_wa})\\nMontou isto e parou de responder ha 30 min:\\n${$('Um por vez').item.json.pedido}\\nProdutos: R$ ${$('Um por vez').item.json.total.toFixed(2).replace('.', ',')}\\nNinguem confirmou. Vale um empurrao?`, delay: 0, linkPreview: false }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GAzXyugDzud6i2fY",
+          "name": "Evolution API (apikey)"
+        }
+      },
+      "notes": "Formata R$ na mao (toFixed+replace virgula), igual formatarReais em catalogo.ts: 'rascunhos_abandonados' devolve 'total' numerico, nao 'total_texto'. Intl.NumberFormat produz espaco nao-separavel (U+00A0), ruim em texto de WhatsApp — por isso nao usamos formatCurrency aqui.\n\nSem onError, de proposito — ao contrario do que os outros onError deste repo poderiam sugerir por padronizacao. O no 2 (Buscar abandonados) ja marcou este pedido como 'abandonado' no banco ANTES deste envio rodar. Se a Evolution estiver fora do ar aqui, o pedido ja saiu de 'rascunho' e a proxima varredura nunca mais o encontra. 'continueRegularOutput' deixaria essa falha em execucao VERDE: lead perdido pra sempre, sem aviso e sem nem um vermelho no historico pra alguem notar — exatamente o modo de falha que este workflow existe para eliminar. Diferente do W3, onde engolir erro no envio e necessario pra 'Liberar presenca' rodar depois (senao a conta trava): aqui nao ha nenhum no depois deste, entao nao ha custo nenhum em deixar vermelho. Vermelho aqui e o que avisa a equipe — nao tirar."
+    }
+  ],
+  "connections": {
+    "A cada 10 min": {
+      "main": [
+        [
+          {
+            "node": "Buscar abandonados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar abandonados": {
+      "main": [
+        [
+          {
+            "node": "Um por vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Um por vez": {
+      "main": [
+        [
+          {
+            "node": "Destino do aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destino do aviso": {
+      "main": [
+        [
+          {
+            "node": "Avisar abandono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
