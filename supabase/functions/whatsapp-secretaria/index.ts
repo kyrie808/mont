@@ -41,6 +41,7 @@ import {
   formatarAgora,
   diaEmSaoPaulo,
   renderizarHistorico,
+  montarRetomada,
   type HistoricoCompra,
 } from '../../../packages/shared/src/marcia.ts'
 
@@ -498,25 +499,28 @@ Deno.serve(async (req: Request) => {
 
       const { data: parados } = await admin
         .from('wa_pedido')
-        .select('id, contato_id, telefone_wa')
+        .select('id, contato_id, telefone_wa, retomado_em')
         .eq('status', 'rascunho')
         .lt('atualizado_em', limite)
 
       const catalogo = await lerCatalogo(admin)
-      const saida: unknown[] = []
+      const modo = lerModo()
+      const allowlist = lerAllowlist()
+
+      const retomar: unknown[] = []
+      const avisar: unknown[] = []
 
       for (const p of parados ?? []) {
         const itens = await lerItens(admin, p.id, catalogo)
         if (itens.length === 0) continue
 
-        // Guarda: humano atendendo nao vira alerta de abandono. Sem isto o robo avisaria
-        // o grupo sobre um cliente que o Gilmar ja esta atendendo.
+        // Guarda: humano atendendo nao vira retomada nem alerta. Sem isto o robo falaria
+        // por cima de um cliente que o Gilmar ja esta atendendo.
         //
-        // `humanoAssumiu` (mesma funcao de `montarContexto`) e a que tem JANELA de
-        // tempo — uma resposta humana de semana passada dentro das ultimas mensagens
-        // NAO pode calar o alerta para sempre. Reimplementar isto a mao sem a janela foi
-        // o bug: bastava UMA resposta humana antiga pra marcar `abandonado` em silencio
-        // e o aviso nunca sair.
+        // `humanoAssumiu` (mesma funcao de `montarContexto`) e a que tem JANELA de tempo —
+        // uma resposta humana de semana passada dentro das ultimas mensagens NAO pode calar
+        // o alerta para sempre. Reimplementar isto a mao sem a janela foi o bug: bastava UMA
+        // resposta humana antiga pra marcar `abandonado` em silencio e o aviso nunca sair.
         const { data: msgs } = await admin
           .from('mensagens_whatsapp')
           .select('message_id, direcao, enviada_em')
@@ -545,21 +549,59 @@ Deno.serve(async (req: Request) => {
         const { data: c } = await admin
           .from('contatos').select('nome').eq('id', p.contato_id).maybeSingle()
 
-        const { error: erroAbandono } = await admin
-          .from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
-        if (erroAbandono) {
-          console.error('[secretaria] falha ao marcar rascunho como abandonado:', erroAbandono.message)
+        // ETAPA 2 — ela ja puxou e o cliente seguiu calado. Agora a equipe sabe.
+        if (p.retomado_em) {
+          const { error: erroAbandono } = await admin
+            .from('wa_pedido').update({ status: 'abandonado' }).eq('id', p.id)
+          if (erroAbandono) {
+            console.error('[secretaria] falha ao marcar rascunho como abandonado:', erroAbandono.message)
+          }
+
+          avisar.push({
+            telefone_wa: p.telefone_wa,
+            contato: c?.nome ?? 'Cliente',
+            pedido: renderizarPedido(itens),
+            total: totalPedido(itens),
+          })
+          continue
         }
 
-        saida.push({
+        // ETAPA 1 — a MARCIA puxa o cliente.
+        //
+        // ⚠️ A GAIOLA. Este e o PRIMEIRO caminho do projeto que manda mensagem a CLIENTE
+        // fora do W3. O W4 sempre falou so com o grupo interno, cujo destino e constante
+        // validada, e por isso esta acao nasceu global, antes do guard de telefone. Sem
+        // este filtro, a primeira execucao em modo `dev` escreve para TODO cliente real
+        // com rascunho parado. Falha FECHADA: allowlist vazia bloqueia tudo.
+        if (!estaLiberado(p.telefone_wa, allowlist, modo)) {
+          console.log(`[secretaria] retomada bloqueada pela gaiola: ${p.telefone_wa} (modo ${modo})`)
+          continue
+        }
+
+        // `retomado_em` ANTES do envio, de proposito. O trigger BEFORE UPDATE carimba
+        // `atualizado_em := now()` junto, e e isso que faz o relogio da Etapa 2 contar da
+        // retomada. Se o envio falhar depois disto, o cliente nao e puxado e a Etapa 2
+        // avisa a equipe em 30 min — a degradacao cai para o lado seguro, que e alguem
+        // SABER. O inverso (marcar depois do envio) arrisca puxar o mesmo cliente a cada
+        // 10 minutos para sempre.
+        const { error: erroRetomada } = await admin
+          .from('wa_pedido').update({ retomado_em: new Date().toISOString() }).eq('id', p.id)
+
+        if (erroRetomada) {
+          console.error('[secretaria] falha ao marcar retomada:', erroRetomada.message)
+          continue
+        }
+
+        // Sem `jid`: o envio da Etapa 1 usa `number: telefone_wa`, e campo que ninguem le
+        // e exatamente o que acabou de sair do `contexto`. Nao reintroduzir payload morto.
+        retomar.push({
           telefone_wa: p.telefone_wa,
           contato: c?.nome ?? 'Cliente',
-          pedido: renderizarPedido(itens),
-          total: totalPedido(itens),
+          texto: montarRetomada(renderizarPedidoCliente(itens)),
         })
       }
 
-      return json({ ok: true, abandonados: saida }, 200)
+      return json({ ok: true, retomar, avisar }, 200)
     } catch (e) {
       console.error('[whatsapp-secretaria]', e)
       return json({ error: (e as Error).message }, 500)
@@ -693,6 +735,32 @@ Deno.serve(async (req: Request) => {
         ate_km: faixa?.ateKm ?? null,
         // 'a_combinar' NÃO é para a agente improvisar — é caso de escalar.
         fora_do_alcance: cfg.foraDoAlcance ?? 'a_combinar',
+      }, 200)
+    }
+
+    if (body.acao === 'avisar_99') {
+      // Entrega hoje pela 99: o cliente paga a corrida e o calculo e MANUAL — alguem abre
+      // o app, poe o endereco, tira print e manda. A Marcia nunca chuta preco de corrida,
+      // e o sistema nao tem de onde tirar esse numero: nao e frete da Mont.
+      //
+      // Terceiro tipo de aviso no mesmo grupo interno (🛒 pedido, ⏳ abandono, 🚕 99). Emoji
+      // proprio para a equipe distinguir de relance o que precisa de acao e qual.
+      const endereco = typeof body.endereco === 'string' ? body.endereco.trim() : ''
+
+      const { data: contato } = await admin
+        .from('contatos').select('nome').eq('telefone_wa', telefoneWa).maybeSingle()
+
+      const nome = contato?.nome ?? 'Cliente'
+
+      return json({
+        ok: true,
+        telefone_wa: telefoneWa,
+        contato: nome,
+        texto: [
+          `🚕 ENTREGA PELA 99 — ${nome} (${telefoneWa})`,
+          endereco ? `Endereco: ${endereco}` : 'Endereco: nao informado — perguntar ao cliente.',
+          'Abrir o app da 99, calcular a corrida e mandar o print. O cliente paga.',
+        ].join('\n'),
       }, 200)
     }
 
@@ -973,7 +1041,7 @@ Deno.serve(async (req: Request) => {
       acoes: [
         'contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete',
         'adicionar_item', 'alterar_quantidade', 'remover_item', 'confirmar_pedido',
-        'rascunhos_abandonados', 'preparar_envio', 'destino_aviso',
+        'rascunhos_abandonados', 'preparar_envio', 'destino_aviso', 'avisar_99',
       ],
     }, 400)
   } catch (e) {
