@@ -69,8 +69,28 @@ export interface HistoricoCompra {
 export const MIN_COMPRAS_PARA_HISTORICO = 2
 
 /**
+ * Dia de calendário em `YYYY-MM-DD`, e nada além disso.
+ *
+ * `diasEntre` fatia a string por POSIÇÃO, então entrada fora desse formato não dá erro —
+ * dá número. `'04/10/2026'` produz `Number('04/1')` = NaN e a Márcia leria
+ * "Última compra: NaN dias atrás."; `'2026-10'` produz `Number('')` = 0, que o `Date.UTC`
+ * interpreta como dia 0 (o último dia do mês anterior) e devolve "4 dias atrás" — plausível,
+ * errado e silencioso. Como o texto vai direto para o prompt que ela repete ao cliente, o
+ * caminho seguro é não dizer nada. Ver `renderizarHistorico`.
+ */
+const DIA_ISO = /^\d{4}-\d{2}-\d{2}$/
+
+/**
  * Diferença em DIAS DE CALENDÁRIO, não em 24h corridas: "ontem" tem que ser ontem mesmo
  * quando a compra foi às 23h e agora é 1h da manhã.
+ *
+ * Assimetria proposital: `agora` é um instante e precisa ser trazido para o fuso da Mont
+ * (`diaEmSaoPaulo`), enquanto `dataIso` JÁ É um dia de calendário e não tem fuso para
+ * converter. A fonte dele é `vendas.data`, coluna `date` no Postgres — volta sem hora e sem
+ * offset, então aplicar fuso em cima dela deslocaria o dia em vez de corrigir.
+ *
+ * Só aceita `YYYY-MM-DD`: o chamador valida com `DIA_ISO` ANTES de chamar, porque aqui o
+ * fatiamento é por posição e entrada malformada devolveria número em vez de erro.
  */
 function diasEntre(dataIso: string, agora: Date): number {
     const compra = Date.UTC(
@@ -91,6 +111,11 @@ function diasEntre(dataIso: string, agora: Date): number {
  *
  * Entra a partir da SEGUNDA compra. Com uma compra só não existe padrão de consumo —
  * dizer "costuma levar" para quem comprou uma vez soa invasivo e não ajuda a sugerir.
+ *
+ * Data que não é `YYYY-MM-DD` cai no MESMO caminho de `ultimaCompraEm: null` — a linha de
+ * data simplesmente não aparece. Não lança (derrubar o turno por causa de uma linha de
+ * contexto seria pior do que ficar sem ela) e não chuta conversão em cima de entrada
+ * malformada. O resto do histórico, que não depende da data, continua indo.
  */
 export function renderizarHistorico(h: HistoricoCompra | null, agora: Date): string | null {
     if (!h || h.compras < MIN_COMPRAS_PARA_HISTORICO) return null
@@ -102,7 +127,7 @@ export function renderizarHistorico(h: HistoricoCompra | null, agora: Date): str
         : ''
     linhas.push(`Já comprou ${h.compras} vezes.${frequentes}`)
 
-    if (h.ultimaCompraEm) {
+    if (h.ultimaCompraEm && DIA_ISO.test(h.ultimaCompraEm)) {
         const dias = diasEntre(h.ultimaCompraEm, agora)
         const quando = dias <= 0 ? 'hoje' : dias === 1 ? 'ontem' : `${dias} dias atrás`
         linhas.push(`Última compra: ${quando}.`)

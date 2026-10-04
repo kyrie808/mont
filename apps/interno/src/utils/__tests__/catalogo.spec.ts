@@ -3,7 +3,7 @@ import { resolverTermo, renderizarPedido, totalPedido, type ProdutoVendavel, typ
 
 // Catálogo real da Mont, lido da produção em 04/10/2026 (`ativo AND visivel_catalogo`,
 // que é o mesmo filtro de `lerCatalogo` — por isso os dois combos ficam fora).
-// Os apelidos são os sinônimos curados; `estoqueAtual` são os números contados.
+// Os apelidos são os sinônimos curados; `estoqueAtual` são os números lidos.
 //
 // ⚠️ Este fixture espelha a produção de propósito — é ele que documenta quais perguntas a
 // agente faz. Produto que entra ou sai do catálogo MUDA a ambiguidade: quando o

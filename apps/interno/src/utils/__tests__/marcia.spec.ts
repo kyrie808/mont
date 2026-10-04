@@ -10,6 +10,12 @@ import {
 
 describe('formatarAgora', () => {
     // 04/10/2026 às 12:12 UTC = 09:12 em São Paulo (UTC-3), e é DOMINGO.
+    //
+    // Este `toBe` é também o guardião do NBSP: ele tranca os 21 codepoints da string
+    // inteira, então qualquer separador invisível que o `Intl` inserisse (NBSP, narrow
+    // NBSP, thin space — já morderam este projeto em formatCurrency) quebraria a
+    // igualdade aqui. Um teste `not.toMatch` só para os invisíveis existiu e foi apagado:
+    // recebia o mesmo input e não podia falhar sem que este falhasse antes.
     it('formata no fuso de São Paulo, não em UTC', () => {
         expect(formatarAgora(new Date('2026-10-04T12:12:00Z'))).toBe('domingo, 04/10, 09:12')
     })
@@ -22,17 +28,6 @@ describe('formatarAgora', () => {
 
     it('usa relógio de 24 horas', () => {
         expect(formatarAgora(new Date('2026-10-04T20:05:00Z'))).toBe('domingo, 04/10, 17:05')
-    })
-
-    // Byte-a-byte: `Intl.format()` insere caracteres invisíveis (NBSP) que já morderam
-    // este projeto em formatCurrency. A montagem é à mão, via formatToParts.
-    //
-    // Os três invisíveis vão escapados e não literais: um teste sobre caractere
-    // invisível que os carrega no próprio fonte é ilegível em review, e literal ali
-    // dispara `no-irregular-whitespace` no lint. São os três que `Intl` usa como
-    // separador: NBSP, narrow NBSP e thin space.
-    it('não contém caractere invisível', () => {
-        expect(formatarAgora(new Date('2026-10-04T12:12:00Z'))).not.toMatch(/[\u00A0\u202F\u2009]/)
     })
 })
 
@@ -78,6 +73,27 @@ describe('renderizarHistorico', () => {
     it('omite a linha de data quando não há data', () => {
         const h: HistoricoCompra = { compras: 2, produtosFrequentes: ['Chipa 1kg'], ultimaCompraEm: null }
         expect(renderizarHistorico(h, agora)).toBe('Já comprou 2 vezes. Costuma levar: Chipa 1kg.')
+    })
+
+    // `diasEntre` fatia a data por POSIÇÃO. Com `'04/10/2026'` ele faz `Number('04/1')`,
+    // que é NaN, e o cliente leria "Última compra: NaN dias atrás." — por isso data fora
+    // de `YYYY-MM-DD` cai no mesmo caminho de `null`: a linha não aparece.
+    it('omite a linha de data quando a data está em formato errado', () => {
+        const h: HistoricoCompra = {
+            compras: 2, produtosFrequentes: ['Chipa 1kg'], ultimaCompraEm: '04/10/2026',
+        }
+        expect(renderizarHistorico(h, agora)).toBe('Já comprou 2 vezes. Costuma levar: Chipa 1kg.')
+    })
+
+    // Pior que o NaN, porque é plausível: `'2026-10'` fazia `Number('')` = 0, o `Date.UTC`
+    // lia dia 0 como 30/09 e saía "4 dias atrás". Número errado que ninguém percebe.
+    it('omite a linha de data quando a data vem truncada', () => {
+        const h: HistoricoCompra = {
+            compras: 2, produtosFrequentes: ['Chipa 1kg'], ultimaCompraEm: '2026-10',
+        }
+        const texto = renderizarHistorico(h, agora)
+        expect(texto).toBe('Já comprou 2 vezes. Costuma levar: Chipa 1kg.')
+        expect(texto).not.toContain('dias atrás')
     })
 
     it('omite "costuma levar" quando não há produto frequente', () => {

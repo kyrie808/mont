@@ -171,19 +171,36 @@ export function totalPedido(itens: ItemPedido[]): number {
 }
 
 /**
+ * Uma linha de item, sem o alerta de estoque. É o glifo COMPARTILHADO pelas duas audiências.
+ *
+ * Privada de propósito, e privada por um motivo operacional: no grupo interno a equipe
+ * compara o pedido que a agente repetiu ao CLIENTE com o pedido que ela mandou para a
+ * EQUIPE separar. Com o template duplicado, trocar `—` por `-` ou `×` por `x` em só uma das
+ * duas faria os textos deixarem de casar — e ninguém saberia em qual acreditar. Mesmo
+ * raciocínio do aviso em `formatarReais` sobre ter três formatadores de moeda no caminho.
+ *
+ * O que NÃO se compartilha é a assinatura: as duas funções públicas continuam separadas em
+ * vez de uma `renderizarPedido(itens, { alerta })`, porque os dois NOMES são o guardrail —
+ * quem lê a Edge Function vê "Cliente" no nome e sabe a audiência num relance.
+ */
+function linhaItem(i: ItemPedido): string {
+    return `${i.quantidade}× ${i.nome} — ${formatarReais(i.quantidade * i.precoUnitario)}`
+}
+
+/** Mesmo sentinel nas duas audiências, pelo mesmo motivo de `linhaItem`. */
+const SEM_ITENS = '(nenhum item)'
+
+/**
  * O pedido em texto, para a agente repetir ao cliente e para o aviso interno.
  *
  * A agente NUNCA monta esse texto: ela recebe daqui. Foi ela escrevendo o pedido de
  * cabeça que produziu "4 kg" a partir de um pedido de 2 kg somado com o da véspera.
  */
 export function renderizarPedido(itens: ItemPedido[]): string {
-    if (itens.length === 0) return '(nenhum item)'
+    if (itens.length === 0) return SEM_ITENS
 
     return itens
-        .map((i) => {
-            const alerta = i.semEstoque ? ' ⚠️ sem estoque no sistema' : ''
-            return `${i.quantidade}× ${i.nome} — ${formatarReais(i.quantidade * i.precoUnitario)}${alerta}`
-        })
+        .map((i) => `${linhaItem(i)}${i.semEstoque ? ' ⚠️ sem estoque no sistema' : ''}`)
         .join('\n')
 }
 
@@ -199,9 +216,7 @@ export function renderizarPedido(itens: ItemPedido[]): string {
  * (ver `montarRetomada`), e a quebra partiria a frase.
  */
 export function renderizarPedidoCliente(itens: ItemPedido[]): string {
-    if (itens.length === 0) return '(nenhum item)'
+    if (itens.length === 0) return SEM_ITENS
 
-    return itens
-        .map((i) => `${i.quantidade}× ${i.nome} — ${formatarReais(i.quantidade * i.precoUnitario)}`)
-        .join(', ')
+    return itens.map(linhaItem).join(', ')
 }
