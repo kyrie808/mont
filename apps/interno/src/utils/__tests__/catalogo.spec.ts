@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { resolverTermo, renderizarPedido, totalPedido, type ProdutoVendavel, type Resolucao, type ItemPedido } from '@mont/shared'
 
-// Catálogo real da Mont em 29/09/2026, depois da contagem física e do 1kg-50gr.
+// Catálogo real da Mont, lido da produção em 04/10/2026 (`ativo AND visivel_catalogo`,
+// que é o mesmo filtro de `lerCatalogo` — por isso os dois combos ficam fora).
 // Os apelidos são os sinônimos curados; `estoqueAtual` são os números contados.
 //
 // ⚠️ Este fixture espelha a produção de propósito — é ele que documenta quais perguntas a
@@ -20,8 +21,8 @@ const CATALOGO: ProdutoVendavel[] = [
     { id: 'chipa-2k', nome: 'Chipa 2kg', apelido: 'chipa, chipinha', preco: 80, estoqueAtual: 10 },
     { id: 'palito-1k', nome: 'Palito de Queijo 1kg', apelido: 'palito, palito de queijo', preco: 40, estoqueAtual: 36 },
     { id: 'palito-2k', nome: 'Palito de Queijo 2kg', apelido: 'palito, palito de queijo', preco: 80, estoqueAtual: 4 },
-    { id: 'massa-1k', nome: 'Massa Pão de Queijo 1kg', apelido: 'baldinho, massa, massa crua, resfriado', preco: 30, estoqueAtual: -323 },
-    { id: 'massa-4k', nome: 'Massa Pão de Queijo 4kg', apelido: 'balde, baldão, massa, resfriado', preco: 75, estoqueAtual: -228 },
+    { id: 'massa-1k', nome: 'Massa Pão de Queijo 1kg', apelido: 'baldinho, massa, massa crua, resfriado', preco: 30, estoqueAtual: 9 },
+    { id: 'massa-4k', nome: 'Massa Pão de Queijo 4kg', apelido: 'balde, baldão, massa, resfriado', preco: 75, estoqueAtual: 13 },
 ]
 
 describe('resolverTermo', () => {
