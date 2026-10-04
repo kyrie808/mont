@@ -38,7 +38,7 @@
 | `supabase/functions/whatsapp-secretaria/index.ts` | `contexto` enriquecido, `disponivel`, abandono em 2 etapas, ação `avisar_99` |
 | `infra/crm/workflows/w3-secretaria.json` | prompt, descrições de ferramenta, injeção, ferramenta `avisar_99` |
 | `infra/crm/workflows/w4-abandono.json` | duas etapas |
-| `apps/interno/src/utils/__tests__/catalogo.spec.ts` | fixture de estoque corrigida + teste de `renderizarPedidoCliente` |
+| `apps/interno/src/utils/__tests__/catalogo.spec.ts` | fixture de estoque corrigida (os testes de `renderizarPedidoCliente` moram em `marcia.spec.ts`) |
 
 ---
 
@@ -49,7 +49,7 @@
 - Create: `apps/interno/src/utils/__tests__/marcia.spec.ts`
 - Modify: `packages/shared/src/catalogo.ts` (adicionar `renderizarPedidoCliente`)
 - Modify: `packages/shared/src/index.ts` (exports)
-- Modify: `apps/interno/src/utils/__tests__/catalogo.spec.ts` (fixture + novo teste)
+- Modify: `apps/interno/src/utils/__tests__/catalogo.spec.ts` (só o fixture)
 
 **Interfaces:**
 - Consumes: nada de tarefas anteriores.
@@ -663,8 +663,16 @@ p = chamar({"acao": "consultar_produto", "telefone_wa": "5511980017732", "termo"
 print(p)
 PY
 ```
+⚠️ **Esta sonda é a ÚNICA prova de `formatarAgora` sob Deno, e é por isso que ela não é
+opcional.** Os testes da Task 1 rodam sob o Node do Vitest, e a justificativa de usar
+`formatToParts` em vez de `format()` é exatamente que o ICU varia por runtime e por
+versão — então teste verde no Node não é afirmação sobre o Deno. Se o dia da semana vier
+em inglês, com separador diferente, ou com `hour` em ciclo de 12h, o defeito é de ICU do
+Deno e aparece **aqui**, não na suíte.
+
 Expected:
-- `agora` no formato `"domingo, 04/10, 09:12"` (dia da semana em português, hora de São Paulo)
+- `agora` no formato `"domingo, 04/10, 09:12"` (dia da semana em português minúsculo, hora
+  de São Paulo, dois-pontos entre hora e minuto, vírgulas como no exemplo)
 - `primeiro_contato_hoje` booleano
 - `catalogo ainda vem? False`
 - em `consultar_produto`: os cinco pães de queijo, cada um com `disponivel`. O `1kg - 25gr` (estoque −103) vem `false`; o `1kg - 50gr` (10) vem `true`. **Nenhum Baldinho/Balde na lista** — massa crua não casa com "pão de queijo" desde o fix `b77d7b6`.
