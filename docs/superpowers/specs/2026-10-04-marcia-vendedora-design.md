@@ -209,7 +209,7 @@ abre o app, calcula e manda o valor. Diga ao cliente que você retorna com o val
 
 ```
 Cliente: Luccas Ferreira
-Agora: sexta-feira, 04/10, 09:12
+Agora: domingo, 04/10, 09:12
 Primeiro contato dele hoje: sim
 Já comprou 7 vezes. Costuma levar: Pão de Queijo 1kg-100gr, Palito 1kg.
 Última compra: 12 dias atrás.
