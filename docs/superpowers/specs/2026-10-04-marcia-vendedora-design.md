@@ -64,7 +64,7 @@ pesquisa descreve, adaptado ao que já existe:
 
 | camada | onde mora | o que vai |
 |---|---|---|
-| **Identidade e voz** | system prompt, ~280 palavras | quem é a Márcia, como fala, o que nunca faz |
+| **Identidade e voz** | system prompt, 419 palavras | quem é a Márcia, como fala, o que nunca faz |
 | **Mecânica** | descrição de cada ferramenta | quando chamar, o que a resposta significa, o que fazer com ela |
 | **Contexto do turno** | nó `Montar entrada do agente` | hora, primeiro contato, pedido vigente, histórico de compra |
 
@@ -162,8 +162,13 @@ O QUE VOCÊ NUNCA FAZ
 Quando não puder resolver, diz que vai confirmar com a equipe, sem prometer quando.
 ```
 
-**280 palavras contra 500.** Sumiram as 25 linhas de mecânica (vão para a camada 2) e as
-cinco linhas sobre `estoqueAtual` (eram texto morto).
+**419 palavras contra 560.** Sumiram as 25 linhas de mecânica (vão para a camada 2)
+e as cinco linhas sobre `estoqueAtual` (eram texto morto).
+
+⚠️ Numeros medidos, nao estimados: a primeira versao desta spec dizia "~280 contra 500" e
+as duas metades estavam erradas. O ganho real nao esta no tamanho — e na PROPORCAO. Antes:
+25 linhas de mecanica contra 4 de voz e 0 de venda. Depois: 0 de mecanica (foi para as
+`toolDescription`), 4 de voz, 4 de venda, 3 de vocabulario.
 
 ## Camada 2 — Mecânica dentro das ferramentas
 
@@ -302,5 +307,7 @@ partir da segunda compra.
 20,1 km — 1,4 km separando duas faixas. Reclamação de cliente da divisa se investiga aí.
 
 **A persona pode voltar a apodrecer.** A arquitetura de três camadas reduz a pressão, mas
-nada impede alguém de acrescentar a vigésima regra ao prompt. O sinal de alerta é o prompt
-passar de ~300 palavras.
+nada impede alguém de acrescentar a vigésima regra ao prompt. O sinal de alerta NAO e
+contagem de palavras — e mecanica de ferramenta reaparecendo no prompt. Regra que diga
+QUANDO chamar ferramenta, o que a resposta significa ou o que fazer com ela pertence a
+`toolDescription`; se voltar para ca, a divida voltou, em 300 palavras ou em 500.

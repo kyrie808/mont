@@ -4,7 +4,7 @@
 
 **Goal:** Transformar a agente de WhatsApp de registradora de pedido em vendedora — persona comercial, vocabulário da Mont, contexto de turno (hora/primeiro contato/histórico de compra) e retomada ativa de cliente que parou de responder.
 
-**Architecture:** Três camadas separadas por onde o modelo lê cada coisa. Identidade e voz no system prompt (~280 palavras). Mecânica de pedido dentro da `toolDescription` de cada ferramenta. Contexto do turno injetado pelo nó `Montar entrada do agente` a partir do que a ação `contexto` da Edge Function devolve. Toda renderização de texto é função pura em `packages/shared` — única pasta que o Deno da Edge Function e o Vitest do interno alcançam.
+**Architecture:** Três camadas separadas por onde o modelo lê cada coisa. Identidade e voz no system prompt (419 palavras, contra 560 do anterior). Mecânica de pedido dentro da `toolDescription` de cada ferramenta. Contexto do turno injetado pelo nó `Montar entrada do agente` a partir do que a ação `contexto` da Edge Function devolve. Toda renderização de texto é função pura em `packages/shared` — única pasta que o Deno da Edge Function e o Vitest do interno alcançam.
 
 **Tech Stack:** Supabase Edge Function (Deno) + Postgres/migration versionada + n8n 2.33.7 (W3 agente, W4 cron) + Evolution API v2.3.7 + Vitest.
 
@@ -20,7 +20,7 @@
 - **Lógica pura em `packages/shared/src/*.ts`**, exportada por `index.ts`, testada em `apps/interno/src/utils/__tests__/*.spec.ts`. É o padrão de `catalogo.ts`/`secretaria.ts`/`whatsapp.ts`: o Vitest roda com root em `apps/interno` e não enxerga teste dentro de `packages/`.
 - **`Intl` não entra em string montada à mão** sem `formatToParts`. `formatCurrency` já mordeu este projeto colocando NBSP invisível no meio do texto.
 - **Vocabulário da Mont, literal:** "pacote de 1 kg", "pacote de 2 kg", "pão de 25 g / 50 g / 100 g". **Nunca** "porções". **Nunca** "qual embalagem". Baldinho (1 kg) e Balde (4 kg) são **massa crua**.
-- **Teto do prompt: ~300 palavras.** Passar disso é o sinal de que a dívida voltou.
+- **O prompt negociado tem 419 palavras. Aplique verbatim e NÃO corte para caber em teto nenhum.** A versão anterior desta linha dizia "teto ~300", derivado de uma contagem minha errada — o texto sempre teve 419, e cada frase dele foi negociada com o diretor. O sinal de que a dívida voltou é **mecânica de ferramenta reaparecendo no prompt**, não contagem de palavras: regra que diga QUANDO chamar ferramenta, o que a resposta significa, ou o que fazer com ela, pertence à `toolDescription`.
 - **A Edge Function `whatsapp-secretaria` já existe** e tem entrada em `supabase/config.toml`. É **redeploy**, não função nova. Não remover nem alterar a entrada do `config.toml`: sem ela o deploy liga `verify_jwt=true` e mata a chamada em silêncio (derrubou a CAPI por 3 dias em 08-10/08).
 - **Nada de `⚠️ sem estoque no sistema` em texto que vai para o cliente.** `renderizarPedido` embute esse alerta, que é interno.
 
@@ -1361,7 +1361,7 @@ git commit -m "feat(marcia): W4 puxa o cliente antes de avisar a equipe"
 - [ ] `pnpm --filter interno exec vitest run` — toda a suíte verde
 - [ ] `pnpm --filter interno exec tsc --noEmit` **e** `pnpm turbo build --filter=interno` — o `tsc -b` do build reprova onde o `--noEmit` passa
 - [ ] `mcp__supabase-distribuidora__get_advisors` — zero advisor novo depois da migration
-- [ ] Contagem de palavras do `systemMessage` ≤ 300
+- [x] `systemMessage` sem mecânica de ferramenta — zero menção a quando chamar tool, a `estoqueAtual`, ou ao que fazer com a resposta. É a métrica real, no lugar da contagem de palavras. **Verificado:** 0 ocorrências de `estoqueAtual`, as palavras "porções" e "qual embalagem" aparecem só na linha de proibição
 - [ ] `grep -i "porç\|embalagem"` em `w3-secretaria.json` — zero ocorrência no prompt e nas descrições
 - [ ] Nenhum `onError` nos nós de envio do W3 e do W4
 - [ ] `grep -n "estoqueAtual" infra/crm/workflows/w3-secretaria.json` — zero (o texto morto não voltou)
