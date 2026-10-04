@@ -151,9 +151,10 @@ describe('renderizarHistorico', () => {
 })
 
 describe('renderizarPedidoCliente', () => {
+    // `ItemPedido` exige `produtoId` (catalogo.ts:147) — objeto sem ele nao compila.
     const itens: ItemPedido[] = [
-        { nome: 'Chipa 1kg', quantidade: 1, precoUnitario: 40, semEstoque: false },
-        { nome: 'Palito de Queijo 1kg', quantidade: 2, precoUnitario: 40, semEstoque: true },
+        { produtoId: 'chipa-1k', nome: 'Chipa 1kg', quantidade: 1, precoUnitario: 40, semEstoque: false },
+        { produtoId: 'palito-1k', nome: 'Palito de Queijo 1kg', quantidade: 2, precoUnitario: 40, semEstoque: true },
     ]
 
     // O ⚠️ de `renderizarPedido` é recado para a EQUIPE. Mandar para o cliente seria
@@ -686,7 +687,7 @@ git commit -m "feat(marcia): contexto do turno com hora, primeiro contato e hist
 - Consumes: `retomado_em` (Task 2); `montarRetomada`, `renderizarPedidoCliente` de `@mont/shared` (Task 1).
 - Produces:
   - `rascunhos_abandonados` devolve `{ ok: true, retomar: [...], avisar: [...] }` em vez de `{ ok: true, abandonados: [...] }`
-    - item de `retomar`: `{ telefone_wa, jid, contato, texto }`
+    - item de `retomar`: `{ telefone_wa, contato, texto }`
     - item de `avisar`: `{ telefone_wa, contato, pedido, total }`
   - nova ação `avisar_99` → `{ ok: true, telefone_wa, contato, texto }`
 
@@ -799,9 +800,10 @@ Substituir o bloco inteiro (linhas 401-474) por:
           continue
         }
 
+        // Sem `jid`: o envio da Etapa 1 usa `number: telefone_wa`, e campo que ninguem le
+        // e exatamente o que acabou de sair do `contexto`. Nao reintroduzir payload morto.
         retomar.push({
           telefone_wa: p.telefone_wa,
-          jid: `${p.telefone_wa}@s.whatsapp.net`,
           contato: c?.nome ?? 'Cliente',
           texto: montarRetomada(renderizarPedidoCliente(itens)),
         })
@@ -1106,7 +1108,11 @@ Avisa a equipe que o cliente quer a entrega AGORA, pela 99. Use quando ele disse
 
 Criar três nós, espelhando `Pedido foi confirmado?` → `Destino do aviso (intenção)` → `Avisar intenção ao time`:
 
-1. Nó IF `Pediu a 99?`, pendurado no mesmo ponto do fluxo principal em que `Pedido foi confirmado?` está:
+1. Nó IF `Pediu a 99?`, ligado como **segundo destino da saída de `Liberar presença`** — a
+   fiação hoje é `Liberar presença → Pedido foi confirmado? → Destino do aviso (intenção) →
+   Avisar intenção ao time`, e a saída falsa do IF está vazia. O ramo da 99 **não** pendura
+   na saída falsa: confirmar pedido e pedir a 99 podem acontecer no MESMO turno, e pendurar
+   ali faria um excluir o outro. Dois destinos na mesma saída rodam em paralelo.
 ```
 ={{ (() => { try { return $('avisar_99').first().json.ok === true } catch (e) { return false } })() }}
 ```
@@ -1190,8 +1196,13 @@ Dois nós em série a partir de `Retomar, um por vez`:
 
 2. HTTP `Registrar retomada` → a Edge Function:
 ```
-={{ JSON.stringify({ acao: 'registrar_envio', telefone_wa: $('Retomar, um por vez').item.json.telefone_wa, message_id: $json.key.id, texto: $('Retomar, um por vez').item.json.texto }) }}
+={{ JSON.stringify({ acao: 'registrar_envio', telefone_wa: $('Retomar, um por vez').item.json.telefone_wa, message_id: $json.key?.id ?? '', texto: $('Retomar, um por vez').item.json.texto }) }}
 ```
+
+`$json.key?.id ?? ''` com encadeamento opcional, não `$json.key.id`: é o padrão que o nó
+`Registrar envio` do W3 já usa, porque a resposta da Evolution não sempre traz `key`, e o
+acesso cru lança. A Edge Function rejeita `message_id` vazio com 400 — falha visível, que é
+o que se quer aqui.
 
 ⚠️ **Este nó é load-bearing, não é telemetria.** `registrar_envio` grava o `message_id` em `wa_envios`, e é só isso que distingue a voz dela da dos quatro humanos que dividem a conta. Sem ele, `humanoAssumiu` lê a própria retomada como "o Gilmar assumiu" e a Márcia **se cala naquela conversa** — e, pior, a Etapa 2 nunca avisa a equipe, porque o guard de humano manda marcar `abandonado` em silêncio. Ele também grava a fala dela em `mensagens_whatsapp`: o que sai pela API da Evolution **não volta** pelo webhook, então sem isso ela fica amnésica da própria retomada.
 
