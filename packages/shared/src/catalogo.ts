@@ -186,3 +186,22 @@ export function renderizarPedido(itens: ItemPedido[]): string {
         })
         .join('\n')
 }
+
+/**
+ * O pedido como o CLIENTE vê: uma linha, sem o alerta interno de estoque.
+ *
+ * `renderizarPedido` embute `⚠️ sem estoque no sistema`, que é recado para a equipe no
+ * grupo interno. Mandar isso ao cliente seria falar de estoque — exatamente o que a
+ * Márcia é proibida de fazer, e com um número que a contagem física de 28/09 mostrou
+ * que era baseline nunca contado.
+ *
+ * Uma linha e não multilinha porque o texto entra no MEIO de uma frase de WhatsApp
+ * (ver `montarRetomada`), e a quebra partiria a frase.
+ */
+export function renderizarPedidoCliente(itens: ItemPedido[]): string {
+    if (itens.length === 0) return '(nenhum item)'
+
+    return itens
+        .map((i) => `${i.quantidade}× ${i.nome} — ${formatarReais(i.quantidade * i.precoUnitario)}`)
+        .join(', ')
+}
