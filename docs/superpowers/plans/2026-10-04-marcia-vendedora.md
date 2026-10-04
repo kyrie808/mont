@@ -366,7 +366,7 @@ export {
 - [ ] **Step 6: Rodar o teste e confirmar que passa**
 
 Run: `pnpm --filter interno exec vitest run src/utils/__tests__/marcia.spec.ts`
-Expected: PASS — 13 testes (eram 14; o teste de caractere invisível caiu na revisão — era logicamente implicado pelo `toBe` que já trava os 21 codepoints).
+Expected: PASS — 15 testes. (Eram 14. A revisão removeu o de caractere invisível, que era logicamente implicado pelo `toBe` que já trava os 21 codepoints, e exigiu dois de regressão para o guard de data malformada: -1 +2.)
 
 - [ ] **Step 7: Corrigir o fixture de estoque em `catalogo.spec.ts`**
 
@@ -645,7 +645,15 @@ repete ao cliente saem dele hoje:
 |---|---|---|
 | `pedido_atual` em `montarContexto` | `:173` | o prompt, como FATO que ela repete |
 | `pedido` em `responderPedido` | `:324` | resposta das 3 ferramentas de mutação |
-| `pedido` em `confirmar_pedido` | `~:799` | **a agente E o grupo interno, no mesmo campo** |
+| `pedido` em `confirmar_pedido` | `:702` | **a agente E o grupo interno, no mesmo campo** |
+| `pedido` em `rascunhos_abandonados` | `:464` | **só a equipe** — ⚠️ NÃO TROCAR, ver abaixo |
+
+⚠️ **São quatro chamadores, e o quarto é uma armadilha.** O da linha `:464` monta o aviso
+`⏳` do grupo interno, e a equipe **precisa** do alerta de estoque ali: é como ela descobre
+que talvez não haja como separar o pedido. Troca mecânica de todos os `renderizarPedido`
+por `renderizarPedidoCliente` apaga exatamente o aviso de quem depende dele. A Task 4
+reescreve esse bloco e mantém `pedido: renderizarPedido(itens)` no push de `avisar` — está
+certo assim, não "conserte".
 
 O `Pão de Queijo 1kg - 25gr` está em **-103** na produção. Então hoje, se um cliente pede o
 25gr, a ferramenta devolve `1x Pão de Queijo 1kg - 25gr — R$ 30,00 ⚠️ sem estoque no
