@@ -33,6 +33,7 @@ import {
   renderizarPedidoCliente,
   totalPedido,
   formatarReais,
+  ALERTA_SEM_ESTOQUE,
   type ProdutoVendavel,
   type ItemPedido,
   type Resolucao,
@@ -111,31 +112,58 @@ async function lerCatalogo(admin: SupabaseClient): Promise<ProdutoVendavel[]> {
 /**
  * Histórico de compra do cliente, para a Márcia sugerir com fundamento.
  *
- * ⚠️ BRINDE FORA. Brinde neste projeto é `pago = false` E `status = 'entregue'` — produto
- * doado. Contar como compra faria a Márcia oferecer de novo justamente o que a Mont deu de
- * graça, e inflaria "já comprou N vezes" com o que ninguém pagou.
+ * ⚠️ O CRITÉRIO É O DA `rpc_ranking_compras`, COPIADO DELA EM 06/10/2026. Não é preferência
+ * de estilo: é o número que o Gilmar lê na tela do interno (ranking de pontos e perfil do
+ * cliente). A versão anterior tinha critério próprio — `count(distinct data)`, e "tudo que
+ * não fosse brinde", incluindo venda `pendente` e `cancelada` — e divergia em 73 dos 755
+ * contatos: o Daniel Alves Ferreira saía com 6 aqui e 12 no ranking. O Gilmar abre o perfil
+ * e lê os dois números na mesma tela.
  *
- * "Compra" é DIA DISTINTO, não linha de venda: é a definição canônica do projeto, a mesma
- * dos relatórios e do ranking de pontos. Duas vendas no mesmo dia são uma compra.
+ * O critério, verbatim da RPC em produção:
+ *   · `status = 'entregue'` E `pago = true` E `forma_pagamento <> 'brinde'`;
+ *   · "compra" é LINHA DE VENDA (`count(v.id)`), NÃO dia distinto — duas vendas no mesmo
+ *     dia são duas compras, porque é assim que o ranking pontua;
+ *   · só vale quem tem valor de PRODUTO positivo (o `HAVING` da RPC, frete fora) — sem
+ *     isso ela diria "já comprou N vezes" para contato que o ranking nem lista.
+ *
+ * ⚠️ BRINDE FORA PELA COLUNA, não por heurística. Brinde é `forma_pagamento = 'brinde'`, que
+ * é o que a RPC usa. A heurística anterior (`pago = false` E `status = 'entregue'`) acerta
+ * HOJE por coincidência — em 06/10/2026 nenhum dos 13 brindes escapava dela —, mas o fluxo
+ * "Entrego depois" faz venda NASCER PENDENTE: um brinde por esse caminho fica
+ * `pago = false, status = 'pendente'`, passava pela heurística, contava como compra e
+ * entrava em "costuma levar". A Márcia oferecendo de novo justamente o que a Mont deu de
+ * graça é o que o aviso antigo dizia estar prevenindo.
  */
 async function lerHistoricoCompra(
   admin: SupabaseClient,
   contatoId: string,
 ): Promise<HistoricoCompra | null> {
+  // Os três filtros vão no BANCO, iguais aos da RPC. `neq('forma_pagamento', 'brinde')` vira
+  // `forma_pagamento <> 'brinde'` no PostgREST, então linha com `forma_pagamento` nulo fica
+  // de fora aqui como fica lá — mesmo resultado, não só mesma intenção.
   const { data: vendas } = await admin
     .from('vendas')
-    .select('id, data, pago, status')
+    .select('id, data, total, taxa_entrega')
     .eq('contato_id', contatoId)
+    .eq('status', 'entregue')
+    .eq('pago', true)
+    .neq('forma_pagamento', 'brinde')
 
-  const pagas = (vendas ?? []).filter((v) => !(v.pago === false && v.status === 'entregue'))
-  if (pagas.length === 0) return null
+  const compras = vendas ?? []
+  if (compras.length === 0) return null
 
-  const dias = new Set(pagas.map((v) => v.data))
+  // O `HAVING sum(v.total - coalesce(v.taxa_entrega, 0)) > 0` da RPC. Frete não é produto e
+  // não pontua — a mesma separação frete/produto que o resto do projeto já faz.
+  const valorProduto = compras.reduce(
+    (soma, v) => soma + (Number(v.total ?? 0) - Number(v.taxa_entrega ?? 0)),
+    0,
+  )
+  if (valorProduto <= 0) return null
 
   const { data: itens } = await admin
     .from('itens_venda')
     .select('venda_id, produto_id, produtos(nome)')
-    .in('venda_id', pagas.map((v) => v.id))
+    .in('venda_id', compras.map((v) => v.id))
 
   // Frequência por produto = em quantas VENDAS ele apareceu, não soma de quantidade: quem
   // leva 10 kg de um produto uma única vez não "costuma levar" aquilo.
@@ -153,10 +181,12 @@ async function lerHistoricoCompra(
     .slice(0, 2)
     .map(([nome]) => nome)
 
-  const datas = [...dias].sort()
+  // `max(v.data)` da RPC. Ordem lexicográfica serve porque `vendas.data` é `date` e volta
+  // como `YYYY-MM-DD` — e é nesse formato que `renderizarHistorico` valida antes de usar.
+  const datas = compras.map((v) => v.data as string).sort()
 
   return {
-    compras: dias.size,
+    compras: compras.length,
     produtosFrequentes,
     ultimaCompraEm: datas[datas.length - 1] ?? null,
   }
@@ -224,20 +254,33 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
 
   const agoraDate = new Date()
 
-  // "Primeiro contato dele hoje" = nenhuma mensagem DE ENTRADA deste cliente em dia de
-  // calendário de São Paulo antes desta. Sem isso a regra "no primeiro contato diz seu
+  // "Primeiro contato dele hoje" = NÓS ainda não falamos com ele neste dia de calendário de
+  // São Paulo. Sem isso a regra "no primeiro contato cumprimenta pelo horário e diz seu
   // nome" é instrução sobre dado que não chega, e ela se apresentaria a cada mensagem.
   //
   // Dia de calendário e não 24h: às 8h da manhã, o contato de ontem às 22h é um contato
   // NOVO, e é aí que o bom dia cabe.
   //
-  // `<= 1` porque a mensagem que disparou esta execução já está gravada quando chegamos
-  // aqui — o ingestor grava antes de o W3 pedir contexto.
+  // ⚠️ A pergunta é sobre a NOSSA fala (`saida`) — NÃO contar as mensagens dele. A versão
+  // anterior filtrava as entradas do dia e aceitava `<= 1`, supondo uma mensagem por
+  // execução. Mas o W3 tem debounce de 12 s PORQUE o cliente manda em RAJADA, e é o mesmo
+  // fato que o cálculo de `naoLidas` logo acima já registra ("numa rajada de 5, as 4
+  // primeiras morrem no debounce"). Quando a rajada ERA o primeiro contato do dia, a conta
+  // dava 2, 3 ou 5, saía `false` — e ela NÃO SE APRESENTAVA, que é a reclamação que
+  // originou todo este trabalho. Medido na produção: 20 de 96 dias de conversa (20,8%)
+  // começaram com 2+ entradas dentro de 12 s da primeira.
+  //
+  // Olhar a nossa fala é imune a rajada por construção, e certo nas bordas: cliente que
+  // volta à tarde já teve `saida` hoje → `false`; se o GILMAR respondeu e a agente não,
+  // também `false`, porque o cliente FOI atendido hoje e a apresentação já passou.
+  //
+  // Resíduo aceito: `ordenadas` é a janela de MAX_MENSAGENS_CONTEXTO, então a nossa fala de
+  // hoje sai da janela se o cliente mandar 30 mensagens depois dela. A versão anterior
+  // tinha o mesmo teto, e nesse cenário ela se apresentar de novo é o erro mais barato.
   const hoje = diaEmSaoPaulo(agoraDate)
-  const entradasHoje = ordenadas.filter(
-    (m) => m.direcao === 'entrada' && diaEmSaoPaulo(new Date(m.enviada_em)) === hoje,
+  const primeiroContatoHoje = !ordenadas.some(
+    (m) => m.direcao === 'saida' && diaEmSaoPaulo(new Date(m.enviada_em)) === hoje,
   )
-  const primeiroContatoHoje = entradasHoje.length <= 1
 
   const historico = renderizarHistorico(
     await lerHistoricoCompra(admin, contato.id),
@@ -259,7 +302,21 @@ async function montarContexto(admin: SupabaseClient, telefoneWa: string) {
       if (!r) return null
       // Versao CLIENTE: este texto entra no prompt como o fato que ela REPETE, e
       // `renderizarPedido` embute o alerta de estoque, que e recado interno da equipe.
-      return renderizarPedidoCliente(await lerItens(admin, r.id, catalogo))
+      const itens = await lerItens(admin, r.id, catalogo)
+
+      // ⚠️ `null`, NAO o sentinel `'(nenhum item)'` de `renderizarPedidoCliente`. O no Code
+      // do W3 ramifica com `ctx.pedido_atual ? <ramo FATO> : <ramo NENHUM>`, e
+      // `'(nenhum item)'` e TRUTHY: com rascunho vazio a agente recebia
+      // "PEDIDO JA REGISTRADO (e o que vale; modifique ISTO): (nenhum item)" e nunca via o
+      // ramo NENHUM — que e exatamente onde mora o paragrafo anti-alucinacao (mandar chamar
+      // `adicionar_item` e NAO acreditar num "Anotado:" antigo dela). O defeito nao era o
+      // cliente ler o placeholder, era a defesa desligar junto.
+      //
+      // Rascunho vazio nao e hipotese: nasce quando o cliente tira o ultimo item, e quando o
+      // `upsert` de item falha depois de a linha de `wa_pedido` ja existir.
+      if (itens.length === 0) return null
+
+      return renderizarPedidoCliente(itens)
     })(),
     // `catalogo` NAO volta mais. Ele vinha aqui e o no `Montar entrada do agente` jogava
     // fora — e as cinco linhas do prompt sobre `estoqueAtual` eram instrucao sobre dado
@@ -412,10 +469,25 @@ async function responderPedido(admin: SupabaseClient, pedidoId: string, catalogo
   const itens = await lerItens(admin, pedidoId, catalogo)
   await admin.from('wa_pedido').update({ atualizado_em: new Date().toISOString() }).eq('id', pedidoId)
 
+  // ⚠️ Pedido que ficou VAZIO (o cliente tirou o ultimo item) nao pode sair no sentinel
+  // `'(nenhum item)'` de `renderizarPedidoCliente`: a `toolDescription` manda REPETIR o
+  // campo `pedido` ao cliente, e "(nenhum item)" lido em voz alta e texto de sistema na boca
+  // de uma vendedora. O campo vira frase dizivel, e `vazio` + `instrucao` dizem a ela o que
+  // FAZER com isso — conduzir ("quer incluir outra coisa?") em vez de anunciar placeholder.
+  const vazio = itens.length === 0
+
   return {
     ok: true,
+    vazio,
     // Idem: a `toolDescription` manda REPETIR este campo ao cliente.
-    pedido: renderizarPedidoCliente(itens),
+    pedido: vazio ? 'Seu pedido esta sem nenhum item agora.' : renderizarPedidoCliente(itens),
+    // Mesmo vocabulario controlado das outras recusas (`ambiguo`, `pedido_vazio`): quando a
+    // lista some, orientacao explicita vale mais que ela deduzir do campo.
+    ...(vazio
+      ? {
+          instrucao: 'O pedido ficou sem nenhum item. NAO leia o campo pedido como se fosse lista. Confirme ao cliente que tirou e pergunte se ele quer incluir outra coisa.',
+        }
+      : {}),
     total: totalPedido(itens),
     // Total JÁ FORMATADO, pelo mesmo formatador que escreve os subtotais das linhas.
     // Se o n8n formatasse por conta própria, existiriam três formatadores de moeda no
@@ -460,8 +532,13 @@ function respostaDaResolucao(r: Resolucao): Traduzido {
       ok: false,
       motivo: 'nao_encontrado',
       opcoes,
+      // ⚠️ VOCABULARIO VINCULANTE. Este campo e ORDEM SOBRE O QUE DIZER, entao a palavra
+      // errada aqui sai da boca dela com o CODIGO mandando — nenhum ajuste de prompt
+      // alcanca isto. A Mont fala "pacote de 1 kg" e "pao de 50 g"; "embalagem" e
+      // "porcoes" sao proibidas. A versao anterior prescrevia "A Mont nao vende essa
+      // embalagem".
       instrucao: opcoes.length > 0
-        ? 'A Mont nao vende essa embalagem. Diga ao cliente quais existem, listadas em opcoes.'
+        ? 'A Mont nao vende esse peso. Diga ao cliente quais pacotes existem, listados em opcoes.'
         : 'A Mont nao vende esse produto. Diga isso ao cliente. NAO ofereca substituto que nao esteja no catalogo.',
     },
   }
@@ -557,11 +634,28 @@ Deno.serve(async (req: Request) => {
             console.error('[secretaria] falha ao marcar rascunho como abandonado:', erroAbandono.message)
           }
 
+          // ⚠️ O relogio da Etapa 2 e `atualizado_em`, que so bumpa quando o PEDIDO muda —
+          // mensagem de cliente nao bumpa nada. Entao "a Marcia puxou e ele nao respondeu"
+          // era afirmacao que ninguem tinha checado: o cliente podia ter respondido (so nao
+          // mexeu no pedido) e o aviso mentia para a equipe. Aqui a gente OLHA — existe
+          // mensagem de ENTRADA depois de `retomado_em`?
+          //
+          // Reusa o `msgs` que o guard do humano ja leu: zero consulta nova. A janela de
+          // MAX_MENSAGENS_CONTEXTO vem em ordem decrescente, entao o que chegou depois da
+          // retomada esta sempre nela.
+          const retomadoEmMs = new Date(p.retomado_em).getTime()
+          const clienteRespondeu = (msgs ?? []).some(
+            (m) => m.direcao === 'entrada' && new Date(m.enviada_em).getTime() > retomadoEmMs,
+          )
+
           avisar.push({
             telefone_wa: p.telefone_wa,
             contato: c?.nome ?? 'Cliente',
             pedido: renderizarPedido(itens),
             total: totalPedido(itens),
+            // Para o texto do no do W4 nao afirmar "ele nao respondeu" sem saber. Quem
+            // escreve a frase e o workflow; o FATO sai daqui.
+            cliente_respondeu: clienteRespondeu,
           })
           continue
         }
@@ -996,6 +1090,34 @@ Deno.serve(async (req: Request) => {
       if (/<\/?function|<tool_call|<\|python_tag\|>|\[TOOL_CALL\]|<invoke\b/i.test(texto)) {
         console.error('[secretaria] resposta com entulho de tool call, bloqueada:', texto.slice(0, 200))
         return json({ error: 'resposta_malformada', detalhe: 'modelo emitiu tool call como texto' }, 422)
+      }
+
+      // Mesma barreira, outro vazamento: o recado INTERNO da equipe na boca dela.
+      //
+      // `n8n-nodes-base.httpRequestTool` sem `optimizeResponse` devolve o corpo INTEIRO da
+      // ferramenta ao modelo. Entao ela LE o `pedido_equipe` do `confirmar_pedido` — o campo
+      // que existe justamente para levar o `⚠️ sem estoque no sistema` ate a EQUIPE — e
+      // repete o alerta ao cliente. O vazamento que esta branch fechou no CAMPO mudou de
+      // lugar e voltou pelo CONTEXTO; aqui e a ultima barreira antes do cliente, e e aqui
+      // que ele morre.
+      //
+      // Rejeitar e nao limpar, pelo mesmo motivo do caso de cima: se ela escreveu o alerta,
+      // ela repetiu o campo errado, e o resto da frase provavelmente esta contaminado
+      // tambem. Cair no ramo de erro faz a equipe ser avisada e um humano responder direito.
+      //
+      // `error` proprio e distinto de `resposta_malformada` DE PROPOSITO: la o modelo nao
+      // executou a ferramenta (resposta incompleta); aqui ele executou e leu o campo errado.
+      // Um codigo so para os dois esconderia o diagnostico de quem for olhar o log.
+      //
+      // A frase vem de `ALERTA_SEM_ESTOQUE` em `catalogo.ts`, a MESMA que
+      // `renderizarPedido` escreve. Copia-la aqui seria desarmar a barreira em silencio no
+      // dia em que alguem reescrever o alerta.
+      if (texto.toLowerCase().includes(ALERTA_SEM_ESTOQUE)) {
+        console.error('[secretaria] resposta repetiu o alerta interno de estoque, bloqueada:', texto.slice(0, 200))
+        return json({
+          error: 'alerta_interno_na_resposta',
+          detalhe: 'resposta citou o alerta de estoque, que e recado interno da equipe',
+        }, 422)
       }
 
       // Existe para o nó Code do n8n NÃO virar a terceira cópia da regra de tempo.

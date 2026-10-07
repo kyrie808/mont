@@ -57,7 +57,14 @@ export function formatarAgora(d: Date): string {
 }
 
 export interface HistoricoCompra {
-    /** Dias distintos em que este cliente comprou. Brinde não conta. */
+    /**
+     * Compras contadas como a `rpc_ranking_compras` conta: LINHAS de venda entregue e paga,
+     * brinde fora. Duas vendas no mesmo dia são DUAS compras.
+     *
+     * Era "dias distintos" aqui e no cálculo, e divergia do ranking que o Gilmar lê na tela
+     * do interno em 73 dos 755 contatos. Ver `lerHistoricoCompra` na Edge Function, onde o
+     * critério é copiado da RPC.
+     */
     compras: number
     /** Os produtos que ele leva mais vezes, já ordenados. No máximo dois. */
     produtosFrequentes: string[]

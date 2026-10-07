@@ -191,6 +191,25 @@ function linhaItem(i: ItemPedido): string {
 const SEM_ITENS = '(nenhum item)'
 
 /**
+ * O alerta de estoque do aviso interno, SEM o emoji.
+ *
+ * Exportado porque a barreira de `preparar_envio` na Edge Function precisa reconhecer esta
+ * frase na resposta da agente e bloqueá-la antes do cliente: `httpRequestTool` sem
+ * `optimizeResponse` devolve o corpo INTEIRO da ferramenta ao modelo, então ela LÊ o
+ * `pedido_equipe` do `confirmar_pedido` — o campo que existe justamente para carregar este
+ * alerta até a equipe — e às vezes repete o recado interno ao cliente.
+ *
+ * Constante compartilhada e não uma segunda cópia da frase na Edge Function: trocar o texto
+ * aqui desarmaria a barreira em silêncio. É o mesmo raciocínio de `linhaItem` e de
+ * `formatarReais` — duas cópias de um texto que precisa casar é regra divergente esperando
+ * a hora.
+ *
+ * Sem o emoji de propósito: a barreira tem que pegar também quando ela parafraseia a frase
+ * e deixa o ⚠️ de fora.
+ */
+export const ALERTA_SEM_ESTOQUE = 'sem estoque no sistema'
+
+/**
  * O pedido em texto, para a agente repetir ao cliente e para o aviso interno.
  *
  * A agente NUNCA monta esse texto: ela recebe daqui. Foi ela escrevendo o pedido de
@@ -200,7 +219,7 @@ export function renderizarPedido(itens: ItemPedido[]): string {
     if (itens.length === 0) return SEM_ITENS
 
     return itens
-        .map((i) => `${linhaItem(i)}${i.semEstoque ? ' ⚠️ sem estoque no sistema' : ''}`)
+        .map((i) => `${linhaItem(i)}${i.semEstoque ? ` ⚠️ ${ALERTA_SEM_ESTOQUE}` : ''}`)
         .join('\n')
 }
 
