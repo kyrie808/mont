@@ -99,7 +99,8 @@ describe('meta_eventos — enfileiramento de Purchase (integração)', () => {
         expect(ev.moeda).toBe('BRL')
         expect(ev.contato_id).toBe(contato.id)
         expect(ev.venda_id).toBe(venda.id)
-        expect(ev.action_source).toBe('physical_store') // sem ctwa_clid
+        // O canal é decidido pelo worker no envio (META_WABA_ID), não pelo trigger.
+        expect(ev.action_source).toBeNull()
     })
 
     it('fiado entregue É enfileirado (incluído)', async () => {
@@ -143,5 +144,47 @@ describe('meta_eventos — enfileiramento de Purchase (integração)', () => {
         await supabase.from('vendas').update({ forma_pagamento: 'dinheiro' }).eq('id', venda.id)
 
         expect(await eventoDaVenda(venda.id)).toHaveLength(1)
+    })
+})
+
+describe('meta_eventos — enfileiramento de Lead (integração)', () => {
+    async function eventoDoLead(contatoId: string) {
+        const { data, error } = await supabase
+            .from('meta_eventos')
+            .select('*')
+            .eq('event_id', `lead_${contatoId}`)
+        if (error) throw error
+        return data ?? []
+    }
+
+    // Regressão do erro 2804063: com clid, o trigger gravava business_messaging e a Meta
+    // recusava 100% (sem WABA). Agora o trigger guarda o clid e deixa o canal em aberto.
+    it('contato de anúncio com ctwa_clid enfileira Lead com o clid e SEM canal decidido', async () => {
+        const { data: contato, error } = await supabase
+            .from('contatos')
+            .insert({
+                nome: 'Lead CAPI Teste',
+                telefone: '11955550001',
+                tipo: 'B2C',
+                status: 'lead',
+                origem: 'anuncio',
+                ctwa_clid: 'CLID_TESTE_INTEGRACAO',
+            })
+            .select('id')
+            .single()
+        if (error) throw error
+
+        const eventos = await eventoDoLead(contato.id)
+        expect(eventos).toHaveLength(1)
+        const ev = eventos[0]
+        expect(ev.evento).toBe('Lead')
+        expect(ev.status).toBe('pendente')
+        expect(ev.ctwa_clid).toBe('CLID_TESTE_INTEGRACAO')
+        expect(ev.action_source).toBeNull()
+    })
+
+    it('contato que não é de anúncio NÃO enfileira Lead', async () => {
+        const contato = await criarContato()
+        expect(await eventoDoLead(contato.id)).toHaveLength(0)
     })
 })
