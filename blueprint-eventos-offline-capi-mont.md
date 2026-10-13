@@ -204,3 +204,30 @@ Contato sintético "TESTE CAPI", **telefone 5511900001313**, São Bernardo do Ca
 
 ### 10.3 Regra para qualquer teste futuro na CAPI
 **Só disparar evento de teste com a aba "Testar eventos" do Gerenciador de Eventos ABERTA, usando o código que aparece nela naquele momento, e ver o evento aparecer na tela antes de liberar o resto.** O código de teste só vale enquanto a sessão está ativa; código vencido ou de outra sessão **não** faz a Meta recusar — ela processa o evento como real. Ao terminar, `supabase secrets unset META_TEST_EVENT_CODE` (com ele setado o cron recebe 409 e as vendas reais param de subir).
+
+---
+
+## 11. Catálogo: envio do pedido vira InitiateCheckout; Purchase só na entrega (13/10/2026)
+
+### 11.1 O que mudou
+O site disparava **Purchase** no clique de "finalizar pedido" (antes de abrir o WhatsApp), pelo pixel (GTM) e pelo servidor (`/api/meta-capi`). Mas a compra só existe na entrega: os 3 pedidos do catálogo desde agosto (R$ 55, R$ 65, R$ 220) **nunca foram entregues** e a Meta contou os três como compra. Ao mesmo tempo, o trigger excluía `origem='catalogo'`, então venda do catálogo **entregue** nunca virava Purchase.
+
+- **Site, ao enviar o pedido:** `InitiateCheckout` **só pelo servidor** (`/api/meta-capi`), com valor real do carrinho, `currency: BRL`, `contents` (id, quantidade, preço), `content_ids`, `num_items` e `event_id = checkout_<id do pedido>`.
+- **`dataLayer`:** sai `purchase`; entra `pedido_enviado` (mesmos dados + `event_id`). `begin_checkout` continua só na abertura do carrinho. Nenhuma tag do GTM escuta `pedido_enviado`.
+- **Sistema:** o trigger `fn_enfileirar_purchase_meta` passou a enfileirar venda do catálogo entregue — **só as criadas a partir do corte**, para os pedidos antigos (que já tinham mandado Purchase pelo site) não contarem duas vezes.
+- **`/api/meta-capi`:** telefone e nome passam pela mesma normalização do worker (`normalizePhone`/`splitName` do `@mont/shared`). Antes o telefone era hasheado como digitado e não casava com ninguém.
+- O pixel do navegador fica **só no GTM** (nenhum `fbq` no código).
+
+### 11.2 ⚠️ O que ficou SEM disparo no GTM (`GTM-W6CXZC3R`)
+O gatilho "evento personalizado `purchase`" não recebe mais nada. Com isso pararam:
+- **Tag 14 — Meta Pixel Purchase** (HTML personalizado, `fbq('track','Purchase', …, {eventID: {{event_id}}})`);
+- **Tag 8 — conversão do Google Ads** (`__awct`) ligada ao mesmo gatilho;
+- **Tag 1 — evento GA4 `purchase`**.
+
+Consequência: o Google Ads e o GA4 deixam de contar "pedido enviado" como compra (era contagem inflada). Nada quebra no site.
+
+**Para reativar (decisão futura, no GTM):**
+1. Criar o acionador "evento personalizado `pedido_enviado`".
+2. Pixel Meta no navegador: duplicar a tag 14 trocando `"Purchase"` por `"InitiateCheckout"` e ligar no novo acionador, mantendo `eventID: {{event_id}}` — o mesmo `checkout_<id>` do servidor, então pixel + CAPI deduplicam. **Não** religar `Purchase` no navegador: o Purchase do catálogo agora vem do sistema na entrega e contaria duas vezes.
+3. Google Ads / GA4: se quiser medir o pedido enviado, criar uma conversão própria ("pedido enviado"), não reaproveitar a de compra.
+4. Testar no modo Preview do GTM + aba "Testar eventos" aberta (§10.3) antes de publicar.
