@@ -12,7 +12,11 @@ import { hashField, normalizePhone, splitName } from '@mont/shared'
  * `META_TEST_EVENT_CODE` (opcional, só pra teste local): manda pro Test Events. ⚠️ Se o
  * código não bater com uma sessão ATIVA da aba "Testar eventos", a Meta processa o evento
  * como REAL e só avisa em `messages` — que esta rota devolve na resposta (blueprint §10.3).
+ * Em produção na Vercel (`VERCEL_ENV=production`) ele é IGNORADO: uma variável esquecida
+ * lá mandaria todo checkout real pro Test Events, e eles nunca chegariam à campanha.
  */
+const TEST_EVENT_CODE =
+    process.env.VERCEL_ENV === 'production' ? undefined : process.env.META_TEST_EVENT_CODE || undefined
 
 async function hashEmail(raw: string | undefined): Promise<string[] | undefined> {
     const email = raw?.trim().toLowerCase()
@@ -34,7 +38,6 @@ export async function POST(req: NextRequest) {
 
         const PIXEL_ID = process.env.META_PIXEL_ID
         const ACCESS_TOKEN = process.env.META_CAPI_TOKEN
-        const TEST_EVENT_CODE = process.env.META_TEST_EVENT_CODE || undefined
 
         if (!PIXEL_ID || !ACCESS_TOKEN) {
             console.error('[Meta CAPI] Missing environment variables')
