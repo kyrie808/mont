@@ -73,7 +73,7 @@ CREATE INDEX idx_meta_eventos_pendentes ON public.meta_eventos (status) WHERE st
 > A UNIQUE em `event_id` é a idempotência forçada no banco — impossível duplicar. RLS: habilitar, acesso só service_role (o worker).
 
 ### 3.3 Enfileiramento (trigger que só INSERE na outbox, não envia)
-- **Purchase:** trigger `AFTER INSERT OR UPDATE` em `vendas` → quando `status='entregue' AND forma_pagamento<>'brinde'` e ainda não existe `event_id='venda_<id>'`, insere linha `pendente`. `action_source` = `business_messaging` se o contato tem `ctwa_clid`, senão `physical_store`.
+- **Purchase:** trigger `AFTER INSERT OR UPDATE` em `vendas` → quando `status='entregue' AND forma_pagamento<>'brinde'` e ainda não existe `event_id='venda_<id>'`, insere linha `pendente`. ~~`action_source` = `business_messaging` se o contato tem `ctwa_clid`, senão `physical_store`.~~ **Superado em 13/10/2026:** o trigger não decide mais o canal (grava `NULL`); quem decide é o worker — ver §10.
 - **Lead:** trigger `AFTER INSERT` em `contatos` → quando `origem='anuncio' OR fonte='meta_ads' OR ctwa_clid IS NOT NULL`, insere `Lead` pendente.
 > Alternativa a triggers: enfileirar na camada de aplicação (único ponto de escrita). Escolher uma; TDD nos dois casos. Migração versionada para a função/trigger.
 
@@ -177,3 +177,30 @@ Implementação: VIEW/materialized view ou job agendado recalcula o segmento; a 
 5. **Config/segredos:** existe lugar server-side (env/edge secrets) para `META_CAPI_ACCESS_TOKEN`? o que `configuracoes` guarda?
 6. **Tipos compartilhados:** regenerar `packages/shared/src/database.ts` após a migração.
 7. **Dedup Pixel×CAPI:** o Pixel do catálogo emite Purchase? com qual `eventID`? (alinhar ao `event_id` da CAPI).
+
+---
+
+## 10. Canal decidido no worker + incidente de teste (13/10/2026)
+
+### 10.1 O que mudou
+Todo evento `business_messaging` era recusado pela Meta: erro 100, subcode **2804063**, "parâmetro de canal de mensagens ausente". Esse canal exige `messaging_channel: "whatsapp"` e `user_data.whatsapp_business_account_id` (WABA), que só existe com a API oficial. A Mont usa o WhatsApp Business app pela Evolution, então não tem WABA. Os 39 eventos que falharam foram reenviados à mão como `physical_store` em 13/10 (39 de 39 aceitos).
+
+- **Trigger** (`fn_enfileirar_lead_meta`, `fn_enfileirar_purchase_meta`): só registra o evento e o `ctwa_clid`. `action_source` nasce `NULL`. Migration `20261013092618_meta_capi_canal_no_worker`.
+- **Worker** (`meta-capi-worker` v18, lógica em `packages/shared/src/metaCapi.ts`):
+  - sem o segredo `META_WABA_ID` → `physical_store` com telefone/nome/cidade/UF/CEP/`external_id` em hash e `ctwa_clid` cru;
+  - com `META_WABA_ID` **e** clid → `business_messaging` + `messaging_channel` + WABA; se a Meta recusar de forma **definitiva**, reenvia na hora como `physical_store` com o mesmo `event_id` (`resposta_meta.fallback_de` registra);
+  - grava em `action_source` o canal que a Meta aceitou. Regra no banco: `status='enviado'` exige `action_source` preenchido.
+- **Trava de teste:** com `META_TEST_EVENT_CODE` setado, o worker só processa os `event_ids` passados no corpo (`{"event_ids": [...]}`); sem eles responde 409 e não toca na fila.
+
+### 10.2 ⚠️ Incidente: 2 eventos de teste entraram como REAIS no dataset
+Em **13/10/2026, ~09:27 UTC (06:27 em SP)**, a validação mandou ao dataset **1689731802148035** com `test_event_code=TEST24481`, mas o código não correspondia a uma sessão ativa da aba "Testar eventos". A Meta respondeu *"does not match an active Test Events session… These events were received and processed normally"* — ou seja, **foram processados como eventos reais**:
+
+| Evento | event_id | Valor | fbtrace_id |
+|---|---|---|---|
+| Lead | `lead_a58caaa5-ba71-4ef9-884a-35c953c7e73d` | — | `AgnlcA9sqRTkTDssU6G6yQB` |
+| Purchase | `teste_capi_purchase_a58caaa5-ba71-4ef9-884a-35c953c7e73d` | **R$ 157,50** | `ALoNxGIzKIwzS2FS6fF8dDF` |
+
+Contato sintético "TESTE CAPI", **telefone 5511900001313**, São Bernardo do Campo/SP, `ctwa_clid` falso `CLID_FALSO_TESTE_CAPI_20261013`, `action_source=physical_store`. A CAPI não permite apagar evento recebido: **1 Lead e 1 Purchase de R$ 157,50 do dia 13/10/2026 nos relatórios da Meta são falsos — descontar em qualquer análise desse dia.** No banco, as linhas sintéticas foram apagadas (backup CSV em `_dados_analise_ads/teste-capi-20261013-*.csv`, fora do repo).
+
+### 10.3 Regra para qualquer teste futuro na CAPI
+**Só disparar evento de teste com a aba "Testar eventos" do Gerenciador de Eventos ABERTA, usando o código que aparece nela naquele momento, e ver o evento aparecer na tela antes de liberar o resto.** O código de teste só vale enquanto a sessão está ativa; código vencido ou de outra sessão **não** faz a Meta recusar — ela processa o evento como real. Ao terminar, `supabase secrets unset META_TEST_EVENT_CODE` (com ele setado o cron recebe 409 e as vendas reais param de subir).
