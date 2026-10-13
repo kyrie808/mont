@@ -1,6 +1,6 @@
 ---
 name: tdd-mont-pragmatico
-description: TDD practices for Mont project. TRIGGER every time you write, modify, or run tests. Integration tests run against PRODUCTION authenticated as a dedicated test account (teste@teste.com); cleanup is scoped by created_by. Do NOT suggest Docker, service_role, __TEST__ prefixes, or CI — deliberate project decisions.
+description: TDD practices for Mont project. TRIGGER every time you write, modify, or run tests. Anything touching a trigger or financial data is tested as a SQL DO-block that always ends in RAISE (discarded transaction, run via MCP) — never persist-and-clean. Other integration tests run against PRODUCTION authenticated as a dedicated test account (teste@teste.com); cleanup is scoped by created_by. Do NOT suggest Docker, service_role, __TEST__ prefixes, or CI — deliberate project decisions.
 allowed-tools: Read, Write, Bash, Grep
 ---
 
@@ -20,6 +20,22 @@ Testes de integração rodam contra **Supabase de produção**, autenticados com
 - Mock total do Supabase client em testes de integração.
 - CI automático (GitHub Actions, Vercel hooks).
 - Prefixos `__TEST__` / marcadores permanentes / preflight / global-teardown — **arquitetura ANTIGA, abolida** (06/06/2026). Não recriar.
+
+## ⭐ Padrão preferido: transação descartada (bloco SQL com RAISE)
+
+**Obrigatório para qualquer teste que toque trigger ou dado financeiro** (vendas, lancamentos, pagamentos, estoque, meta_eventos…). Decisão do diretor, 13/10/2026: o diretor exige conciliação com diferença zero, e "persistir e limpar" deixa venda entregue, lançamento e baixa de estoque existindo de verdade entre o teste e o cleanup. **Nunca persistir e limpar nesses casos.**
+
+Como é:
+- Um arquivo versionado em `supabase/tests/<assunto>.sql` com UM `DO $suite$ ... $suite$;`.
+- Cada caso num sub-bloco `BEGIN ... EXCEPTION WHEN others THEN ... END;` que acumula `{caso, ok, erro}` num `jsonb`.
+- O bloco **SEMPRE** termina em `RAISE EXCEPTION 'SUITE_OK|SUITE_FALHOU <nome> n/total | contagens_antes=… | <resultados>'`. A exceção aborta a transação inteira → nada é gravado. **Não existe caminho de COMMIT.**
+- Rodar como a conta-teste dentro do bloco: `set_config('request.jwt.claims', '{"sub":"<uid>","role":"authenticated"}', true)` + `SET LOCAL ROLE authenticated`, e conferir `auth.uid()` antes do 1º caso (RLS e `created_by` iguais ao app).
+- Dados fictícios com prefixo próprio (ex.: telefone `119000014xx`); abortar se o prefixo já existir.
+- Antes de escrever, checar o que **escapa** de rollback: trigger que faça HTTP (`net.http_post`) e `nextval` de sequência visível (ex.: `cat_pedidos.numero_pedido`). Evitar os caminhos que os disparam.
+- Rodar pelo MCP (`execute_sql`): contagens das tabelas tocadas ANTES → suíte → contagens DEPOIS. Têm que bater. Isso é a evidência.
+- Referência: `supabase/tests/meta_eventos_triggers.sql`.
+
+O modelo conta-teste abaixo (Vitest + `cleanTestData`) continua para o que NÃO toca trigger nem financeiro.
 
 ## Como funciona (modelo conta-teste)
 
@@ -98,7 +114,8 @@ Para todo bug crítico em produção:
 - ❌ Docker / `supabase start` como alternativa.
 - ❌ `service_role` em teste de integração (quebra o `created_by`).
 - ❌ Mockar Supabase client em teste de integração.
-- ❌ Commitar teste sem `afterEach(cleanTestData)`.
+- ❌ Commitar teste Vitest de integração sem `afterEach(cleanTestData)`.
+- ❌ Testar trigger ou financeiro com "persistir e limpar" — use o bloco SQL com RAISE.
 - ❌ Rodar em CI automático.
 - ❌ Recriar prefixos `__TEST__` / marcadores permanentes (arquitetura abolida).
 - ❌ Inserir contas de CLIENTE em `admin_users` (a conta-teste é exceção interna autorizada; clientes, nunca — ver o gate da área do cliente).

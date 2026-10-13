@@ -8,8 +8,8 @@
 --
 -- COMO RODAR: cole o arquivo inteiro no `execute_sql` do MCP do Supabase (ou no SQL Editor).
 -- O resultado SEMPRE vem como erro P0001 — é o esperado. Leia a mensagem:
---   SUITE_OK     meta_eventos_triggers 10/10 | [...]   → tudo passou
---   SUITE_FALHOU meta_eventos_triggers  9/10 | [...]   → veja o caso com "ok": false
+--   SUITE_OK     meta_eventos_triggers 11/11 | [...]   → tudo passou
+--   SUITE_FALHOU meta_eventos_triggers 10/11 | [...]   → veja o caso com "ok": false
 -- Prova de que nada ficou: rode as contagens do rodapé antes e depois — têm que bater.
 --
 -- Roda COMO A CONTA-TESTE (role `authenticated` + jwt com o uid dela), igual ao harness
@@ -125,22 +125,47 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'P3 brinde não enfileira', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- ── P4: origem catálogo NÃO é enfileirada (o Pixel do site já dispara) ──────────
+  -- ── P4: venda NOVA do catálogo entregue É enfileirada ───────────────────────────
+  -- Desde a migration catalogo_purchase_na_entrega o site manda InitiateCheckout, e o
+  -- Purchase do catálogo sai daqui, na entrega.
   total := total + 1;
   BEGIN
     INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
     VALUES ('Suite P4', c_tel || '04', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
     INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem)
-    VALUES (v_contato, current_date, 'pendente', 'pix', 100, false, 'catalogo') RETURNING id INTO v_venda;
+    VALUES (v_contato, current_date, 'pendente', 'pix', 220, false, 'catalogo') RETURNING id INTO v_venda;
     UPDATE public.vendas SET status = 'entregue' WHERE id = v_venda;
 
     SELECT count(*) INTO n FROM public.meta_eventos WHERE venda_id = v_venda;
-    IF n <> 0 THEN RAISE EXCEPTION 'catálogo enfileirou % evento(s)', n; END IF;
+    IF n <> 1 THEN RAISE EXCEPTION 'catálogo novo: esperado 1 evento, veio %', n; END IF;
+    SELECT * INTO ev FROM public.meta_eventos WHERE venda_id = v_venda;
+    IF ev.evento <> 'Purchase' OR ev.valor <> 220 THEN RAISE EXCEPTION 'evento = % valor = %', ev.evento, ev.valor; END IF;
 
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'P4 catálogo não enfileira', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'P4 catálogo novo enfileira', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'P4 catálogo não enfileira', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'P4 catálogo novo enfileira', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── P4b: venda do catálogo ANTERIOR ao corte NÃO é enfileirada ──────────────────
+  -- O site já mandou Purchase dela no envio do pedido (código antigo); enfileirar na
+  -- entrega contaria a mesma compra duas vezes.
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite P4b', c_tel || '08', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, criado_em)
+    VALUES (v_contato, DATE '2026-10-11', 'pendente', 'pix', 220, false, 'catalogo', TIMESTAMPTZ '2026-10-11 14:47:52+00')
+    RETURNING id INTO v_venda;
+    UPDATE public.vendas SET status = 'entregue' WHERE id = v_venda;
+
+    SELECT count(*) INTO n FROM public.meta_eventos WHERE venda_id = v_venda;
+    IF n <> 0 THEN RAISE EXCEPTION 'catálogo antigo enfileirou % evento(s)', n; END IF;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'P4b catálogo antes do corte não enfileira', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'P4b catálogo antes do corte não enfileira', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── P5: venda pendente NÃO é enfileirada ───────────────────────────────────────

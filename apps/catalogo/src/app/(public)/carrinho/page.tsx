@@ -165,11 +165,15 @@ export default function CarrinhoPage() {
             }
 
             const result = await response.json()
-            const transactionId = result.pedido?.id
-            const eventId = crypto.randomUUID()
+            const transactionId: string = result.pedido?.id ?? crypto.randomUUID()
+            // Determinístico por pedido: um reenvio do mesmo pedido não vira 2 eventos na Meta.
+            const eventId = `checkout_${transactionId}`
 
+            // Enviar o pedido NÃO é compra: a venda só existe na entrega, e o Purchase sai do
+            // sistema nesse momento. Aqui é InitiateCheckout, só pelo servidor (o pixel do
+            // navegador fica com o GTM, que hoje não escuta `pedido_enviado`).
             pushEvent({
-                event: 'purchase',
+                event: 'pedido_enviado',
                 event_id: eventId,
                 ecommerce: {
                     transaction_id: transactionId,
@@ -184,18 +188,22 @@ export default function CarrinhoPage() {
                 }
             })
 
-            // Envia evento para o Meta via Conversions API (CAPI)
-            const [firstName, ...lastNameParts] = data.customer_name.trim().split(/\s+/)
-            sendServerEvent('Purchase', {
+            sendServerEvent('InitiateCheckout', {
                 value: total,
                 currency: 'BRL',
-                content_ids: items.map(item => item.product.id),
                 content_type: 'product',
+                content_ids: items.map(item => item.product.id),
+                contents: items.map(item => ({
+                    id: item.product.id,
+                    quantity: item.quantity,
+                    item_price: item.product.preco ?? 0,
+                })),
+                num_items: items.reduce((soma, item) => soma + item.quantity, 0),
                 order_id: transactionId
             }, {
+                // Cru: a rota normaliza (DDI 55, nome sem acento) e faz o hash.
                 ph: data.customer_phone,
-                fn: firstName,
-                ln: lastNameParts.join(' ')
+                fn: data.customer_name,
             }, eventId)
 
             // Gera mensagem WhatsApp (usa customer_address montado)

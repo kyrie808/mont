@@ -22,10 +22,11 @@ pnpm --filter interno exec tsc --noEmit    # deve ficar verde
 
 ### 3. Rodar o TDD dos triggers (transação descartada — nada é gravado)
 Cole `supabase/tests/meta_eventos_triggers.sql` inteiro no `execute_sql` do MCP (ou no SQL
-Editor). Termina SEMPRE em erro P0001: `SUITE_OK ... 10/10` = tudo passou. Roda como a
+Editor). Termina SEMPRE em erro P0001: `SUITE_OK ... 11/11` = tudo passou. Roda como a
 conta-teste e desfaz tudo no fim; as contagens do rodapé do arquivo provam que nada ficou.
-Cobre: entregue→enfileira com canal NULL, brinde/catálogo/pendente→não, fiado→sim,
-idempotência, clid copiado no Purchase, Lead de anúncio com e sem clid, não-anúncio→sem Lead.
+Cobre: entregue→enfileira com canal NULL, brinde/pendente→não, fiado→sim, catálogo novo→sim
+e catálogo anterior ao corte→não, idempotência, clid copiado no Purchase, Lead de anúncio
+com e sem clid, não-anúncio→sem Lead.
 
 ### 4. Secrets da função (server-side, NUNCA no banco/cliente)
 ```bash

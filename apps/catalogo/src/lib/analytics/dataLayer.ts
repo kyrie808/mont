@@ -54,16 +54,22 @@ export interface BeginCheckoutEvent {
     };
 }
 
-export interface PurchaseEvent {
-    event: 'purchase';
-    event_id?: string;
+/**
+ * O cliente enviou o pedido pro WhatsApp. NÃO é compra: a venda só existe na entrega, e
+ * o Purchase da Meta sai do sistema nesse momento (trigger em `vendas`).
+ *
+ * Nome próprio de propósito: `purchase` acionava no GTM a tag Meta Purchase (14), o GA4
+ * e a conversão do Google Ads, contando como compra pedido que nunca foi entregue; e
+ * `begin_checkout` já dispara ao abrir o carrinho. Nenhuma tag escuta `pedido_enviado`
+ * hoje — fica disponível pra ligar no GTM (ver blueprint CAPI §11).
+ */
+export interface PedidoEnviadoEvent {
+    event: 'pedido_enviado';
+    event_id: string;
     ecommerce: {
-        transaction_id: string; // Obrigatório no nosso setup para deduplicação (UUID pedido.id)
+        transaction_id: string;
         currency: 'BRL';
         value: number;
-        tax?: number;
-        shipping?: number;
-        coupon?: string;
         items: readonly ItemGA4[];
     };
 }
@@ -88,7 +94,7 @@ export type TrackingEvent =
     | AddToCartEvent
     | RemoveFromCartEvent
     | BeginCheckoutEvent
-    | PurchaseEvent
+    | PedidoEnviadoEvent
     | WhatsappClickEvent
     | WhatsappSupportClickEvent;
 
