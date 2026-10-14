@@ -47,8 +47,9 @@ export {
     lerSourceId,
     extrairMensagensCruas,
     normalizarMensagem,
+    extrairPedidoCatalogo,
 } from './whatsapp'
-export type { TipoMidia, MensagemNormalizada } from './whatsapp'
+export type { TipoMidia, MensagemNormalizada, PedidoCatalogo } from './whatsapp'
 
 // Secretária de WhatsApp — lógica pura (tempo de digitação, partição, gaiola)
 export {

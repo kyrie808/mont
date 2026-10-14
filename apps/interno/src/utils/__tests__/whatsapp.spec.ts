@@ -8,6 +8,7 @@ import {
     lerSourceId,
     extrairMensagensCruas,
     normalizarMensagem,
+    extrairPedidoCatalogo,
     isAnuncioPago,
     podeGravarAtribuicao,
 } from '@mont/shared'
@@ -370,5 +371,94 @@ describe('podeGravarAtribuicao — a origem declarada por gente ganha', () => {
     it('origem ausente não é tratada como neutra', () => {
         expect(podeGravarAtribuicao(null, false)).toBe(false)
         expect(podeGravarAtribuicao(undefined, false)).toBe(false)
+    })
+})
+
+describe('pedido pelo catálogo do WhatsApp (orderMessage)', () => {
+    // Formato REAL capturado da Evolution em 14/10/2026 (o da Ana Paula), sem o
+    // thumbnail. Não traz produto_id nem quantidade por item — só o título com os
+    // nomes juntos, o total em milésimos e a contagem de itens.
+    const orderMessage = {
+        status: 1,
+        message: '',
+        orderId: '1090427210245925',
+        surface: 1,
+        itemCount: 3,
+        sellerJid: '116952647336153@lid',
+        orderTitle: '🍯 Doce de Leite Tradicional — 400g, 🪣 Massa Pão de Queijo — Baldinho 1kg',
+        catalogType: 'NATIVE',
+        totalAmount1000: { low: 90000, high: 0, unsigned: false },
+        totalCurrencyCode: 'BRL',
+    }
+    const crua = {
+        key: { remoteJid: '5511930990308@s.whatsapp.net', fromMe: false, id: 'PEDIDO1' },
+        pushName: 'Ana',
+        messageTimestamp: 1791976031,
+        message: { orderMessage },
+    }
+
+    it('extrai o pedido estruturado: id, título, itens e total em reais', () => {
+        expect(extrairPedidoCatalogo({ orderMessage })).toEqual({
+            orderId: '1090427210245925',
+            titulo: '🍯 Doce de Leite Tradicional — 400g, 🪣 Massa Pão de Queijo — Baldinho 1kg',
+            itensQtd: 3,
+            total: 90,
+            moeda: 'BRL',
+            observacao: null,
+        })
+    })
+
+    it('lê o total como número, string ou Long com parte alta', () => {
+        const total = (t: unknown) => extrairPedidoCatalogo({ orderMessage: { ...orderMessage, totalAmount1000: t } })!.total
+        expect(total(155500)).toBe(155.5)
+        expect(total('90000')).toBe(90)
+        expect(total({ low: 1000, high: 1 })).toBe((2 ** 32 + 1000) / 1000)
+    })
+
+    it('total ausente ou ilegível vira null — nunca zero inventado', () => {
+        const { totalAmount1000: _fora, ...semTotal } = orderMessage
+        expect(extrairPedidoCatalogo({ orderMessage: semTotal })!.total).toBeNull()
+        expect(extrairPedidoCatalogo({ orderMessage: { ...orderMessage, totalAmount1000: 'abc' } })!.total).toBeNull()
+    })
+
+    it('guarda o recado que o cliente escreveu junto do pedido', () => {
+        const p = extrairPedidoCatalogo({ orderMessage: { ...orderMessage, message: '  entrega à tarde  ' } })!
+        expect(p.observacao).toBe('entrega à tarde')
+    })
+
+    it('mensagem que não é pedido devolve null', () => {
+        expect(extrairPedidoCatalogo({ conversation: 'oi' })).toBeNull()
+        expect(extrairPedidoCatalogo(undefined)).toBeNull()
+    })
+
+    it("normaliza como tipo 'pedido' com conteúdo legível — o analista lia só [outro]", () => {
+        const m = normalizarMensagem(crua)!
+        expect(m.tipoMidia).toBe('pedido')
+        expect(m.conteudo).toBe(
+            '🛒 Pedido pelo catálogo do WhatsApp — 3 itens, total R$ 90,00: ' +
+                '🍯 Doce de Leite Tradicional — 400g, 🪣 Massa Pão de Queijo — Baldinho 1kg',
+        )
+        expect(m.pedido?.orderId).toBe('1090427210245925')
+    })
+
+    it('conteúdo usa singular, omite o que falta e anexa o recado', () => {
+        const m = normalizarMensagem({
+            ...crua,
+            message: {
+                orderMessage: {
+                    ...orderMessage,
+                    itemCount: 1,
+                    totalAmount1000: undefined,
+                    orderTitle: '',
+                    message: 'sem cebola',
+                },
+            },
+        })!
+        expect(m.conteudo).toBe('🛒 Pedido pelo catálogo do WhatsApp — 1 item — recado: "sem cebola"')
+    })
+
+    it('mensagem comum não carrega pedido', () => {
+        const m = normalizarMensagem({ ...crua, message: { conversation: 'oi' } })!
+        expect(m.pedido).toBeNull()
     })
 })

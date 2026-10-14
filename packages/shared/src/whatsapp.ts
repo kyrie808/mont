@@ -116,7 +116,25 @@ export function isJidIgnorado(jid: string | null | undefined): boolean {
 
 export type TipoMidia =
     | 'texto' | 'audio' | 'imagem' | 'video'
-    | 'documento' | 'sticker' | 'localizacao' | 'contato' | 'outro'
+    | 'documento' | 'sticker' | 'localizacao' | 'contato' | 'pedido' | 'outro'
+
+/**
+ * Pedido montado pelo cliente no catálogo NATIVO do WhatsApp (`orderMessage`).
+ *
+ * É só o que o WhatsApp entrega: título com os nomes dos itens juntos, contagem e
+ * total. NÃO há `produto_id` nem quantidade por item — por isso não cabe em
+ * `wa_pedido` (o rascunho estruturado da secretária) e vai para `wa_pedido_catalogo`.
+ */
+export interface PedidoCatalogo {
+    orderId: string | null
+    titulo: string | null
+    itensQtd: number | null
+    /** Em reais. `null` quando o WhatsApp não mandou ou mandou ilegível. */
+    total: number | null
+    moeda: string | null
+    /** O recado que o cliente escreveu junto do pedido, quando houver. */
+    observacao: string | null
+}
 
 export interface MensagemNormalizada {
     messageId: string
@@ -128,6 +146,8 @@ export interface MensagemNormalizada {
     referral: Record<string, unknown> | null
     enviadaEm: string // ISO
     pushName: string | null
+    /** Preenchido só quando `tipoMidia === 'pedido'`. */
+    pedido: PedidoCatalogo | null
 }
 
 // ─── Parsing ──────────────────────────────────────────────────────────────────
@@ -152,8 +172,69 @@ const MIDIA_POR_CHAVE: Record<string, TipoMidia> = {
     contactsArrayMessage: 'contato',
 }
 
+/**
+ * `totalAmount1000` (milésimos da moeda) → reais. Chega como número, string ou Long
+ * do protobuf (`{ low, high }`, com `low` em int32 com sinal).
+ */
+function lerMilesimos(raw: unknown): number | null {
+    let milesimos: number | null = null
+    if (typeof raw === 'number') milesimos = raw
+    else if (typeof raw === 'string' && /^\d+$/.test(raw)) milesimos = Number(raw)
+    else if (isObj(raw) && typeof raw.low === 'number') {
+        const high = typeof raw.high === 'number' ? raw.high : 0
+        milesimos = high * 2 ** 32 + (raw.low >>> 0)
+    }
+    if (milesimos === null || !Number.isFinite(milesimos) || milesimos < 0) return null
+    return milesimos / 1000
+}
+
+const textoOuNull = (v: unknown): string | null =>
+    typeof v === 'string' && v.trim() ? v.trim() : null
+
+/** Pedido do catálogo nativo do WhatsApp, ou `null` quando a mensagem não é um. */
+export function extrairPedidoCatalogo(message: unknown): PedidoCatalogo | null {
+    if (!isObj(message)) return null
+    const o = message.orderMessage
+    if (!isObj(o)) return null
+
+    return {
+        orderId: textoOuNull(o.orderId),
+        titulo: textoOuNull(o.orderTitle),
+        itensQtd: typeof o.itemCount === 'number' && Number.isInteger(o.itemCount) ? o.itemCount : null,
+        total: lerMilesimos(o.totalAmount1000),
+        moeda: textoOuNull(o.totalCurrencyCode),
+        observacao: textoOuNull(o.message),
+    }
+}
+
+/** `90` → `R$ 90,00`. Sem `Intl` de propósito: o resultado tem que ser idêntico no Deno e no Node. */
+function reais(valor: number): string {
+    const [inteiro, centavos] = valor.toFixed(2).split('.')
+    return `R$ ${inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${centavos}`
+}
+
+/**
+ * A linha que o analista e a secretária leem no lugar de `[outro]`.
+ * ⚠️ A migration `wa_pedido_catalogo` reescreveu os pedidos antigos com este MESMO
+ * formato em SQL — mudou aqui, os registros antigos ficam no formato velho.
+ */
+function descreverPedido(p: PedidoCatalogo): string {
+    const partes: string[] = []
+    if (p.itensQtd !== null) partes.push(`${p.itensQtd} ${p.itensQtd === 1 ? 'item' : 'itens'}`)
+    if (p.total !== null) partes.push(`total ${reais(p.total)}`)
+
+    let texto = '🛒 Pedido pelo catálogo do WhatsApp'
+    if (partes.length) texto += ` — ${partes.join(', ')}`
+    if (p.titulo) texto += `: ${p.titulo}`
+    if (p.observacao) texto += ` — recado: "${p.observacao}"`
+    return texto
+}
+
 function extrairTipoEConteudo(message: Json | undefined): { tipo: TipoMidia; conteudo: string | null } {
     if (!isObj(message)) return { tipo: 'outro', conteudo: null }
+
+    const pedido = extrairPedidoCatalogo(message)
+    if (pedido) return { tipo: 'pedido', conteudo: descreverPedido(pedido) }
 
     if (typeof message.conversation === 'string') {
         return { tipo: 'texto', conteudo: message.conversation }
@@ -392,5 +473,6 @@ export function normalizarMensagem(crua: Json, telefoneForcado?: string | null):
         referral: extrairReferral(crua),
         enviadaEm: lerTimestamp(crua.messageTimestamp),
         pushName: typeof crua.pushName === 'string' && crua.pushName ? crua.pushName : null,
+        pedido: tipo === 'pedido' ? extrairPedidoCatalogo(message) : null,
     }
 }

@@ -2698,6 +2698,124 @@ export type Database = {
           },
         ]
       }
+      wa_pedido_catalogo: {
+        Row: {
+          atualizado_em: string
+          contato_id: string
+          criado_em: string
+          id: string
+          interacao_id: string | null
+          itens_qtd: number | null
+          message_id: string
+          moeda: string | null
+          observacao: string | null
+          order_id: string | null
+          pedido_em: string
+          status: string
+          telefone_wa: string
+          titulo: string | null
+          total: number | null
+        }
+        Insert: {
+          atualizado_em?: string
+          contato_id: string
+          criado_em?: string
+          id?: string
+          interacao_id?: string | null
+          itens_qtd?: number | null
+          message_id: string
+          moeda?: string | null
+          observacao?: string | null
+          order_id?: string | null
+          pedido_em: string
+          status?: string
+          telefone_wa: string
+          titulo?: string | null
+          total?: number | null
+        }
+        Update: {
+          atualizado_em?: string
+          contato_id?: string
+          criado_em?: string
+          id?: string
+          interacao_id?: string | null
+          itens_qtd?: number | null
+          message_id?: string
+          moeda?: string | null
+          observacao?: string | null
+          order_id?: string | null
+          pedido_em?: string
+          status?: string
+          telefone_wa?: string
+          titulo?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: false
+            referencedRelation: "interacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "mensagens_whatsapp"
+            referencedColumns: ["message_id"]
+          },
+        ]
+      }
       wa_pedido_item: {
         Row: {
           criado_em: string
@@ -3574,6 +3692,18 @@ export type Database = {
           p_message_ids: string[]
           p_payload: Json
           p_telefone_wa: string
+        }
+        Returns: string
+      }
+      rpc_registrar_pedido_catalogo_wa: {
+        Args: {
+          p_itens_qtd: number
+          p_message_id: string
+          p_moeda: string
+          p_observacao: string
+          p_order_id: string
+          p_titulo: string
+          p_total: number
         }
         Returns: string
       }

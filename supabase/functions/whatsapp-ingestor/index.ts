@@ -317,6 +317,40 @@ async function casarContatos(
   return resumo
 }
 
+// ── Passo 3: pedido do catálogo do WhatsApp ───────────────────────────────────
+
+/**
+ * `orderMessage` vira pedido pendente + nota na timeline, pela RPC (que é idempotente
+ * por `message_id`: reentrega do webhook e backfill não duplicam nada).
+ *
+ * Roda DEPOIS de `casarContatos` porque a RPC exige a mensagem já ligada ao contato.
+ * Falha aqui sobe como 500 de propósito: a Evolution reentrega, e um pedido de cliente
+ * não pode sumir em silêncio — foi exatamente o que acontecia quando ele virava "[outro]".
+ */
+async function registrarPedidos(admin: SupabaseClient, mensagens: MensagemNormalizada[]): Promise<number> {
+  let registrados = 0
+
+  for (const m of mensagens) {
+    if (!m.pedido || m.direcao !== 'entrada') continue
+
+    const { data, error } = await admin.rpc('rpc_registrar_pedido_catalogo_wa', {
+      p_message_id: m.messageId,
+      p_order_id: m.pedido.orderId,
+      p_titulo: m.pedido.titulo,
+      p_itens_qtd: m.pedido.itensQtd,
+      p_total: m.pedido.total,
+      p_moeda: m.pedido.moeda,
+      p_observacao: m.pedido.observacao,
+    })
+
+    if (error) throw new Error(`Falha ao registrar pedido ${m.messageId}: ${error.message}`)
+    // `null` = já estava registrado.
+    if (data) registrados++
+  }
+
+  return registrados
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -399,6 +433,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const contatos = await casarContatos(admin, mensagens)
+    const pedidos = await registrarPedidos(admin, mensagens)
 
     return json({
       ok: true,
@@ -409,6 +444,7 @@ Deno.serve(async (req: Request) => {
       com_referral: comReferral,
       anuncio_pago: comAnuncioPago,
       contatos,
+      pedidos,
     }, 200)
   } catch (e) {
     // 500 faz a Evolution/n8n reentregar. Como a gravação é idempotente por
