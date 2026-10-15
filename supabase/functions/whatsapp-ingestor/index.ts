@@ -22,6 +22,8 @@
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
+  agregarPorTelefone,
+  avancaUltimoContato,
   extrairMensagensCruas,
   lidDaMensagem,
   normalizarMensagem,
@@ -211,29 +213,8 @@ async function casarContatos(
 ): Promise<ResumoContato> {
   const resumo: ResumoContato = { criados: 0, atualizados: 0, atribuicoes: 0 }
 
-  // Agrega por telefone: 1 contato por conversa, não 1 por mensagem.
-  interface Agregado {
-    ultimaEm: string
-    nome: string | null
-    referral: Record<string, unknown> | null
-    referralEm: string | null
-  }
-  const porTelefone = new Map<string, Agregado>()
-
-  for (const m of mensagens) {
-    const at = porTelefone.get(m.telefoneWa) ?? {
-      ultimaEm: m.enviadaEm, nome: null, referral: null, referralEm: null,
-    }
-    if (m.enviadaEm > at.ultimaEm) at.ultimaEm = m.enviadaEm
-    // pushName só existe em mensagem de entrada — o nome que a pessoa escolheu.
-    if (!at.nome && m.direcao === 'entrada' && m.pushName) at.nome = m.pushName
-    // O primeiro clique é o que vale: mantém o referral mais ANTIGO.
-    if (m.referral && (!at.referralEm || m.enviadaEm < at.referralEm)) {
-      at.referral = m.referral
-      at.referralEm = m.enviadaEm
-    }
-    porTelefone.set(m.telefoneWa, at)
-  }
+  // 1 contato por conversa, não 1 por mensagem. Referral só de entrada (ver a função).
+  const porTelefone = agregarPorTelefone(mensagens)
 
   const telefones = [...porTelefone.keys()]
   const existentes = new Map<
@@ -298,7 +279,7 @@ async function casarContatos(
     // quem foi cadastrado como indicação NUNCA vira anúncio, mesmo clicando num depois
     // (ver `podeGravarAtribuicao`). O referral segue guardado na mensagem.
     const gravarAtribuicao = veioDeAnuncio && podeGravarAtribuicao(atual.origem, !!atual.ctwa_clid)
-    const avancaContato = !atual.ultimo_contato || ag.ultimaEm > atual.ultimo_contato
+    const avancaContato = avancaUltimoContato(atual.ultimo_contato, ag.ultimaEm)
 
     if (!gravarAtribuicao && !avancaContato) continue
 

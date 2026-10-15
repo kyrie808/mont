@@ -49,8 +49,24 @@ export {
     normalizarMensagem,
     extrairPedidoCatalogo,
     lidDaMensagem,
+    agregarPorTelefone,
+    avancaUltimoContato,
 } from './whatsapp'
-export type { TipoMidia, MensagemNormalizada, PedidoCatalogo } from './whatsapp'
+export type { TipoMidia, MensagemNormalizada, PedidoCatalogo, AgregadoTelefone } from './whatsapp'
+
+// Analista de conversa do WhatsApp — segmentação, prompt e validação do veredito
+export {
+    segmentar,
+    montarPromptUsuario,
+    validarVeredito,
+    normalizarTrecho,
+    PROMPT_SISTEMA,
+    GAP_SEGMENTO_MS,
+    JANELA_ANALISE_MS,
+    MAX_MENSAGENS_PROMPT,
+    MAX_OBSERVACAO,
+} from './analista'
+export type { MensagemPendente, Segmento, Veredito, ValidacaoVeredito } from './analista'
 
 // Secretária de WhatsApp — lógica pura (tempo de digitação, partição, gaiola)
 export {

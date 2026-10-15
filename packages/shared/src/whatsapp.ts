@@ -491,3 +491,53 @@ export function normalizarMensagem(crua: Json, telefoneForcado?: string | null):
         pedido: tipo === 'pedido' ? extrairPedidoCatalogo(message) : null,
     }
 }
+
+// ─── Agregação por telefone (ingestor) ─────────────────────────────────────────
+
+export interface AgregadoTelefone {
+    ultimaEm: string
+    nome: string | null
+    referral: Record<string, unknown> | null
+    referralEm: string | null
+}
+
+/**
+ * Resume um lote de mensagens em 1 entrada por telefone: 1 contato por conversa, não 1
+ * por mensagem.
+ *
+ * Referral só conta em mensagem de ENTRADA. É o clique do CLIENTE no anúncio que atribui
+ * a conversa; um referral numa mensagem nossa (contexto citado, envio pela API) não diz
+ * de onde o cliente veio e não pode reescrever a origem nem enfileirar Lead na CAPI.
+ */
+export function agregarPorTelefone(mensagens: MensagemNormalizada[]): Map<string, AgregadoTelefone> {
+    const porTelefone = new Map<string, AgregadoTelefone>()
+
+    for (const m of mensagens) {
+        const at = porTelefone.get(m.telefoneWa) ?? {
+            ultimaEm: m.enviadaEm, nome: null, referral: null, referralEm: null,
+        }
+        if (Date.parse(m.enviadaEm) > Date.parse(at.ultimaEm)) at.ultimaEm = m.enviadaEm
+        // pushName só existe em mensagem de entrada — o nome que a pessoa escolheu.
+        if (!at.nome && m.direcao === 'entrada' && m.pushName) at.nome = m.pushName
+        // O primeiro clique é o que vale: mantém o referral mais ANTIGO.
+        if (
+            m.direcao === 'entrada' && m.referral &&
+            (!at.referralEm || Date.parse(m.enviadaEm) < Date.parse(at.referralEm))
+        ) {
+            at.referral = m.referral
+            at.referralEm = m.enviadaEm
+        }
+        porTelefone.set(m.telefoneWa, at)
+    }
+
+    return porTelefone
+}
+
+/**
+ * `ultimo_contato` só avança. Compara INSTANTES: o banco devolve '...+00:00' e o
+ * normalizador produz '...000Z'; comparados como texto, o mesmo instante parecia mais
+ * novo e o contato era regravado à toa.
+ */
+export function avancaUltimoContato(atual: string | null, nova: string): boolean {
+    return !atual || Date.parse(nova) > Date.parse(atual)
+}

@@ -12,6 +12,9 @@ import {
     lidDaMensagem,
     isAnuncioPago,
     podeGravarAtribuicao,
+    agregarPorTelefone,
+    avancaUltimoContato,
+    type MensagemNormalizada,
 } from '@mont/shared'
 
 // Camada pura: sem banco, sem rede, sem harness de integração.
@@ -506,5 +509,53 @@ describe('envio pela API para contato em LID (send.message)', () => {
         expect(lidDaMensagem({ key: { remoteJid: '120363000000000000@g.us', id: 'x' } })).toBeNull()
         expect(lidDaMensagem({ key: { id: 'x' } })).toBeNull()
         expect(lidDaMensagem({})).toBeNull()
+    })
+})
+
+describe('agregarPorTelefone — 1 contato por conversa', () => {
+    const referral = { sourceType: 'ad', sourceId: '120200000000', ctwaClid: 'clid-1' }
+    function m(over: Partial<MensagemNormalizada>): MensagemNormalizada {
+        return {
+            messageId: 'x', telefoneWa: '5511999990000', direcao: 'entrada', conteudo: 'oi', tipoMidia: 'texto',
+            referral: null, enviadaEm: '2026-10-14T10:00:00.000Z', pushName: null, pedido: null, ...over,
+        }
+    }
+
+    it('referral de mensagem de SAÍDA não vale como atribuição', () => {
+        const ag = agregarPorTelefone([m({ direcao: 'saida', referral })]).get('5511999990000')
+        expect(ag?.referral).toBeNull()
+        expect(ag?.referralEm).toBeNull()
+    })
+
+    it('referral de entrada vale, e o mais antigo ganha mesmo com uma saída anterior com referral', () => {
+        const ag = agregarPorTelefone([
+            m({ direcao: 'saida', referral: { ...referral, ctwaClid: 'da-saida' }, enviadaEm: '2026-10-14T09:00:00.000Z' }),
+            m({ referral: { ...referral, ctwaClid: 'segundo' }, enviadaEm: '2026-10-14T11:00:00.000Z' }),
+            m({ referral, enviadaEm: '2026-10-14T10:00:00.000Z' }),
+        ]).get('5511999990000')
+        expect(ag?.referral).toEqual(referral)
+        expect(ag?.referralEm).toBe('2026-10-14T10:00:00.000Z')
+    })
+
+    it('última mensagem e nome (push name só da entrada)', () => {
+        const ag = agregarPorTelefone([
+            m({ direcao: 'saida', pushName: 'Mont', enviadaEm: '2026-10-14T12:00:00.000Z' }),
+            m({ pushName: 'Ana', enviadaEm: '2026-10-14T10:00:00.000Z' }),
+        ]).get('5511999990000')
+        expect(ag?.ultimaEm).toBe('2026-10-14T12:00:00.000Z')
+        expect(ag?.nome).toBe('Ana')
+    })
+})
+
+describe('avancaUltimoContato — compara instantes, não texto', () => {
+    it('mesmo instante em formatos diferentes NÃO avança (antes: ".000Z" > "+00:00" como texto)', () => {
+        expect(avancaUltimoContato('2026-10-14T18:40:12+00:00', '2026-10-14T18:40:12.000Z')).toBe(false)
+    })
+    it('instante posterior avança; anterior não', () => {
+        expect(avancaUltimoContato('2026-10-14T18:40:12+00:00', '2026-10-14T18:40:13.000Z')).toBe(true)
+        expect(avancaUltimoContato('2026-10-14T18:40:12+00:00', '2026-10-14T18:40:11.000Z')).toBe(false)
+    })
+    it('contato sem último contato sempre avança', () => {
+        expect(avancaUltimoContato(null, '2026-10-14T18:40:12.000Z')).toBe(true)
     })
 })
