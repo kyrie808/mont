@@ -195,7 +195,7 @@ BEGIN
   total := total + 1;
   BEGIN
     r := public.rpc_registrar_interacao_ia(v_contato,
-      '{"tipo":"ponto_contato","sentido":"saida","resultado":"recusou","observacao":"Cliente recusou a oferta.","trecho_recusa":"não tenho interesse"}',
+      '{"tipo":"ponto_contato","sentido":"saida","resultado":"recusou","observacao":"Cliente recusou a oferta.","trecho_cliente":"não tenho interesse"}',
       ARRAY['SUITE_AN_A1', 'SUITE_AN_A2']);
     IF r->>'resultado' IS DISTINCT FROM 'recusou' THEN RAISE EXCEPTION 'resultado %', r; END IF;
     SELECT * INTO it FROM public.interacoes WHERE id = (r->>'interacao_id')::uuid;
@@ -222,7 +222,7 @@ BEGIN
   total := total + 1;
   BEGIN
     r := public.rpc_registrar_interacao_ia(v_contato,
-      '{"tipo":"feedback","resultado":"recusou","observacao":"Só lembrete.","trecho_recusa":"pode tirar meu número"}',
+      '{"tipo":"feedback","resultado":"recusou","observacao":"Só lembrete.","trecho_cliente":"pode tirar meu número"}',
       ARRAY['SUITE_AN_B1']);
     IF r->>'resultado' IS NOT NULL THEN RAISE EXCEPTION 'resultado deveria ser nulo: %', r; END IF;
     IF r->>'degradou' IS NULL THEN RAISE EXCEPTION 'degradação não registrada: %', r; END IF;

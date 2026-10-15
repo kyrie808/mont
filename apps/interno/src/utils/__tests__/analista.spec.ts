@@ -4,6 +4,7 @@ import {
     validarVeredito,
     montarPromptUsuario,
     referenciaDatas,
+    DIAS_ADIAMENTO_SEM_PRAZO,
     PROMPT_SISTEMA,
     type MensagemPendente,
     type Segmento,
@@ -106,23 +107,23 @@ const conversaComRecusa = seg([
 describe('validarVeredito — o que pode ir para a RPC', () => {
     it('aceita um ponto de contato comum e troca "nenhum" por nulo', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'nenhum', observacao: 'Enviamos a oferta.', trecho_recusa: null }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'nenhum', observacao: 'Enviamos a oferta.', trecho_cliente: null }),
             seg([['nos', 'oferta']]),
         )
-        expect(r).toEqual({ ok: true, veredito: { tipo: 'ponto_contato', resultado: null, observacao: 'Enviamos a oferta.', trechoRecusa: null, retomarEm: null } })
+        expect(r).toEqual({ ok: true, veredito: { tipo: 'ponto_contato', resultado: null, observacao: 'Enviamos a oferta.', trechoCliente: null, retomarEm: null } })
     })
 
     it('recusa: aceita quando o trecho está numa mensagem do cliente (ignora caixa, espaços e aspas)', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Cliente recusou a oferta.', trecho_recusa: '"não tenho interesse, obrigada"' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Cliente recusou a oferta.', trecho_cliente: '"não tenho interesse, obrigada"' }),
             conversaComRecusa,
         )
-        expect(r).toMatchObject({ ok: true, veredito: { resultado: 'recusou', trechoRecusa: 'não tenho interesse, obrigada' } })
+        expect(r).toMatchObject({ ok: true, veredito: { resultado: 'recusou', trechoCliente: 'não tenho interesse, obrigada' } })
     })
 
     it('recusa sem trecho é inválida (pede outra resposta)', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou.', trecho_recusa: null }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou.', trecho_cliente: null }),
             conversaComRecusa,
         )
         expect(r.ok).toBe(false)
@@ -130,7 +131,7 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
 
     it('recusa com trecho inventado é inválida', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou.', trecho_recusa: 'pode tirar meu número' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou.', trecho_cliente: 'pode tirar meu número' }),
             conversaComRecusa,
         )
         expect(r).toMatchObject({ ok: false })
@@ -141,7 +142,7 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
         (trecho) => {
             const andreia = seg([['nos', 'Essa é a semana do seu balde'], ['cliente', trecho], ['cliente', 'Estou viajando']])
             const r = validarVeredito(
-                JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou o balde.', trecho_recusa: trecho }),
+                JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou o balde.', trecho_cliente: trecho }),
                 andreia,
             )
             expect(r).toMatchObject({ ok: false })
@@ -150,7 +151,7 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
 
     it('recusa citando uma mensagem NOSSA é inválida', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou.', trecho_recusa: 'quer aproveitar a promoção' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'recusou', observacao: 'Recusou.', trecho_cliente: 'quer aproveitar a promoção' }),
             conversaComRecusa,
         )
         expect(r).toMatchObject({ ok: false })
@@ -166,7 +167,7 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
 
     it('feedback com resultado vira ponto_contato, para o "aceitou" não se perder', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'feedback', resultado: 'aceitou', observacao: 'Elogiou e pediu mais 2 baldes.' }),
+            JSON.stringify({ tipo: 'feedback', resultado: 'aceitou', observacao: 'Elogiou e pediu mais 2 baldes.', trecho_cliente: 'manda mais 2 baldes' }),
             seg([['cliente', 'amei, manda mais 2 baldes']]),
         )
         expect(r).toMatchObject({ ok: true, veredito: { tipo: 'ponto_contato', resultado: 'aceitou' } })
@@ -187,21 +188,34 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
         expect(fb).toMatchObject({ ok: true, veredito: { tipo: 'feedback', resultado: null } })
     })
 
+    const zelia = seg([
+        ['nos', 'Sua mãe decidiu pelo balde?'],
+        ['cliente', 'estou no hospital com minha mãe'],
+        ['cliente', 'nem tive tempo de responder'],
+        ['nos', 'Cuida dela!'],
+    ])
+
     it.each([
         'Cliente em hospital com mãe; pediu para chamar depois.',
         'Mãe internada, retomar depois.',
         'Está na clínica com o pai.',
         'Filho fez cirurgia, falar semana que vem.',
     ])('nota com detalhe de saúde pede outra resposta: %s', (observacao) => {
-        const zelia = seg([['nos', 'Sua mãe decidiu pelo balde?'], ['cliente', 'estou no hospital com minha mãe'], ['nos', 'Cuida dela!']])
-        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao }), zelia)
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao, trecho_cliente: 'nem tive tempo de responder' }), zelia)
+        expect(r).toMatchObject({ ok: false })
+    })
+
+    it('frase do cliente com detalhe de saúde também pede outra resposta', () => {
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe; pediu para retomar depois.', trecho_cliente: 'estou no hospital com minha mãe' }),
+            zelia,
+        )
         expect(r).toMatchObject({ ok: false })
     })
 
     it('nota de saúde no mínimo passa', () => {
-        const zelia = seg([['nos', 'Sua mãe decidiu pelo balde?'], ['cliente', 'estou no hospital com minha mãe'], ['nos', 'Cuida dela!']])
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe; pediu para retomar depois.' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe; pediu para retomar depois.', trecho_cliente: 'nem tive tempo de responder' }),
             zelia,
         )
         expect(r).toMatchObject({ ok: true, veredito: { resultado: 'adiou' } })
@@ -210,15 +224,15 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
     it('a palavra recusa só cabe na nota quando o resultado é recusou', () => {
         const andreia = seg([['nos', 'Essa é a semana do seu balde'], ['cliente', 'Não obrigada'], ['cliente', 'Estou viajando']])
         const errada = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Cliente recusou o pedido porque está viajando.' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Cliente recusou o pedido porque está viajando.', trecho_cliente: 'Estou viajando' }),
             andreia,
         )
         expect(errada).toMatchObject({ ok: false })
         const certa = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Está viajando; pediu para retomar na volta.', retomar_em: null }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Está viajando; combinamos retomar na volta.', retomar_em: null, trecho_cliente: 'Estou viajando' }),
             andreia,
         )
-        expect(certa).toMatchObject({ ok: true, veredito: { resultado: 'adiou', retomarEm: null } })
+        expect(certa).toMatchObject({ ok: true, veredito: { resultado: 'adiou', trechoCliente: 'Estou viajando' } })
     })
 
     it.each([
@@ -233,6 +247,80 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
     })
 })
 
+describe('validarVeredito — frase do cliente entre aspas (respondeu/aceitou/adiou)', () => {
+    const conversa = seg([['nos', 'Essa é a semana do seu balde'], ['cliente', 'Não obrigada'], ['cliente', 'Estou viajando'], ['nos', 'Quando voltar, me chama']])
+
+    it.each(['respondeu', 'aceitou', 'adiou'])('%s sem trecho_cliente pede outra resposta', (resultado) => {
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado, observacao: 'Nota.', trecho_cliente: null }), conversa)
+        expect(r).toMatchObject({ ok: false })
+    })
+
+    it('trecho de uma mensagem NOSSA pede outra resposta', () => {
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Viajando.', trecho_cliente: 'Quando voltar, me chama' }),
+            conversa,
+        )
+        expect(r).toMatchObject({ ok: false })
+    })
+
+    it('trecho do cliente passa, sem as aspas', () => {
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Viajando; combinamos retomar na volta.', trecho_cliente: '"estou   viajando"' }),
+            conversa,
+        )
+        expect(r).toMatchObject({ ok: true, veredito: { trechoCliente: 'estou   viajando' } })
+    })
+
+    it('cliente que só mandou áudio: a frase é a marca da mídia, como no prompt', () => {
+        const s = seg([['nos', 'Quer o balde?'], ['cliente', '[audio]']])
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'respondeu', observacao: 'Respondeu por áudio.', trecho_cliente: '[audio]' }),
+            s,
+        )
+        expect(r).toMatchObject({ ok: true, veredito: { trechoCliente: '[audio]' } })
+    })
+
+    it('erro só na frase: a correção pede para manter o resultado', () => {
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Viajando.', trecho_cliente: 'Quando voltar, me chama' }),
+            conversa,
+        )
+        expect(r).toMatchObject({ ok: false, manterResultado: 'adiou' })
+    })
+
+    it('na correção, mudar o resultado é rejeitado (Zélia: adiou virou respondeu para caber "Me desculpa")', () => {
+        const zelia = seg([['nos', 'Sua mãe decidiu?'], ['cliente', 'estou no hospital com minha mãe nem tive tempo'], ['cliente', 'Me desculpa']])
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'respondeu', observacao: 'Acompanhando a mãe.', trecho_cliente: 'Me desculpa' }),
+            zelia,
+            { manterResultado: 'adiou' },
+        )
+        expect(r).toMatchObject({ ok: false })
+        const certa = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe.', trecho_cliente: 'nem tive tempo' }),
+            zelia,
+            { manterResultado: 'adiou' },
+        )
+        expect(certa).toMatchObject({ ok: true, veredito: { resultado: 'adiou' } })
+    })
+
+    it('frase com saúde: a correção mantém o resultado', () => {
+        const zelia = seg([['nos', 'Sua mãe decidiu?'], ['cliente', 'estou no hospital com minha mãe nem tive tempo']])
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe.', trecho_cliente: 'estou no hospital com minha mãe' }),
+            zelia,
+        )
+        expect(r).toMatchObject({ ok: false, manterResultado: 'adiou' })
+    })
+
+    it('feedback e "nenhum" não levam frase', () => {
+        const fb = validarVeredito(JSON.stringify({ tipo: 'feedback', resultado: 'nenhum', observacao: 'Elogiou.' }), seg([['cliente', 'ficou ótimo']]))
+        expect(fb).toMatchObject({ ok: true, veredito: { trechoCliente: null } })
+        const nada = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'nenhum', observacao: 'Oferta.' }), seg([['nos', 'oferta']]))
+        expect(nada).toMatchObject({ ok: true, veredito: { trechoCliente: null } })
+    })
+})
+
 describe('validarVeredito — adiou e retomar_em', () => {
     // fim do segmento: 14/10 19:10Z = 14/10 16:10 em Brasília (quarta-feira)
     const lena = seg([['nos', 'O balde de 4kg sai R$ 75'], ['cliente', 'Vou ver se consigo pegar amanhã viu'], ['cliente', 'Pra fim de semana']])
@@ -240,10 +328,10 @@ describe('validarVeredito — adiou e retomar_em', () => {
 
     it('adiou com prazo: guarda a data', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Vai ver se pega amanhã.', retomar_em: '2026-10-15' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Vai ver se pega amanhã.', retomar_em: '2026-10-15', trecho_cliente: 'Vou ver se consigo pegar amanhã' }),
             lena,
         )
-        expect(r).toEqual({ ok: true, veredito: { tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Vai ver se pega amanhã.', trechoRecusa: null, retomarEm: '2026-10-15' } })
+        expect(r).toEqual({ ok: true, veredito: { tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Vai ver se pega amanhã.', trechoCliente: 'Vou ver se consigo pegar amanhã', retomarEm: '2026-10-15' } })
     })
 
     it.each([
@@ -254,7 +342,7 @@ describe('validarVeredito — adiou e retomar_em', () => {
         ['mais de 60 dias à frente', '2026-12-20'],
     ])('adiou com retomar_em inválido (%s) pede outra resposta', (_caso, data) => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Adiou.', retomar_em: data }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Adiou.', retomar_em: data, trecho_cliente: 'Pra fim de semana' }),
             lena,
         )
         expect(r.ok).toBe(false)
@@ -262,24 +350,26 @@ describe('validarVeredito — adiou e retomar_em', () => {
 
     it('adiou sem data quando o CLIENTE citou um prazo ("amanhã", "fim de semana") pede outra resposta', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Vai ver se pega no fim de semana.', retomar_em: null }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Vai ver se pega no fim de semana.', retomar_em: null, trecho_cliente: 'Pra fim de semana' }),
             lena,
         )
         expect(r).toMatchObject({ ok: false })
     })
 
-    it('adiou sem data passa quando o prazo foi só nosso ou não há prazo', () => {
+    it('adiou sem prazo claro: lembrete em 7 dias, contados do dia da conversa (Brasília)', () => {
+        // fim padrão de seg(): 14/10 10:10Z = 14/10 em Brasília → 21/10
         const s = seg([['nos', 'Posso levar amanhã?'], ['cliente', 'Estou viajando, quando voltar te chamo']])
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Viajando; retomar na volta.', retomar_em: null }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Viajando; retomar na volta.', retomar_em: null, trecho_cliente: 'quando voltar te chamo' }),
             s,
         )
-        expect(r).toMatchObject({ ok: true, veredito: { resultado: 'adiou', retomarEm: null } })
+        expect(r).toMatchObject({ ok: true, veredito: { resultado: 'adiou', retomarEm: '2026-10-21' } })
+        expect(DIAS_ADIAMENTO_SEM_PRAZO).toBe(7)
     })
 
     it('retomar_em em outro resultado é descartado (só adiamento tem data de retomada)', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao: 'Fechou 1kg para amanhã.', retomar_em: '2026-10-15' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao: 'Fechou 1kg para amanhã.', retomar_em: '2026-10-15', trecho_cliente: 'Vou ver se consigo pegar amanhã viu' }),
             lena,
         )
         expect(r).toMatchObject({ ok: true, veredito: { resultado: 'aceitou', retomarEm: null } })
@@ -340,7 +430,8 @@ describe('prompt', () => {
         expect(PROMPT_SISTEMA).toContain('pode tirar')
         expect(PROMPT_SISTEMA).toContain('Adiamento NÃO é recusa')
         expect(PROMPT_SISTEMA).toContain('semana que vem')
-        expect(PROMPT_SISTEMA).toContain('trecho_recusa')
+        expect(PROMPT_SISTEMA).toContain('trecho_cliente')
+        expect(PROMPT_SISTEMA).toContain('Cliente: "')
     })
 
     it('transcrição com nome, horário de Brasília e aviso de mensagens omitidas', () => {

@@ -2759,6 +2759,13 @@ export type Database = {
             foreignKeyName: "wa_pedido_interacao_id_fkey"
             columns: ["interacao_id"]
             isOneToOne: false
+            referencedRelation: "aceitou_sem_venda"
+            referencedColumns: ["interacao_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: false
             referencedRelation: "interacoes"
             referencedColumns: ["id"]
           },
@@ -2870,6 +2877,13 @@ export type Database = {
             foreignKeyName: "wa_pedido_catalogo_interacao_id_fkey"
             columns: ["interacao_id"]
             isOneToOne: false
+            referencedRelation: "aceitou_sem_venda"
+            referencedColumns: ["interacao_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: false
             referencedRelation: "interacoes"
             referencedColumns: ["id"]
           },
@@ -2947,6 +2961,71 @@ export type Database = {
       }
     }
     Views: {
+      aceitou_sem_venda: {
+        Row: {
+          aceitou_em: string | null
+          contato_id: string | null
+          gerado_por_ia: boolean | null
+          interacao_id: string | null
+          nome: string | null
+          observacao: string | null
+          status_relacionamento:
+            | Database["public"]["Enums"]["enum_relacionamento_status"]
+            | null
+          telefone: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+        ]
+      }
       contato_compras_resumo: {
         Row: {
           contato_id: string | null

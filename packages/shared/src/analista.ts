@@ -118,7 +118,7 @@ export const PROMPT_SISTEMA = [
     'DEPOIS de encerrar o atendimento.',
     '',
     'Responda SÓ com um objeto JSON, com os campos NESTA ORDEM:',
-    '{"observacao": "...", "tipo": "ponto_contato" | "feedback", "resultado": "aceitou" | "adiou" | "recusou" | "respondeu" | "nenhum", "retomar_em": "AAAA-MM-DD" | null, "trecho_recusa": "..." | null}',
+    '{"observacao": "...", "tipo": "ponto_contato" | "feedback", "resultado": "aceitou" | "adiou" | "recusou" | "respondeu" | "nenhum", "retomar_em": "AAAA-MM-DD" | null, "trecho_cliente": "..." | null}',
     '',
     'observacao (escreva primeiro):',
     '- No máximo 2 frases, em português, objetiva, até 300 caracteres. Diga o que foi tratado',
@@ -151,18 +151,26 @@ export const PROMPT_SISTEMA = [
     '     passageiro (viagem, compromisso, alguém doente); ou ficou combinado retomar depois',
     '     ("quando puder, me chama"). "Não, obrigada" seguido de um motivo passageiro também',
     '     conta -> "adiou". Adiamento NÃO é recusa.',
-    '  5. Qualquer outra resposta do cliente (dúvida, agradecimento, comentário) -> "respondeu".',
+    '  5. Qualquer outra resposta do cliente (dúvida, agradecimento, comentário), sem pedido',
+    '     fechado e sem nada deixado para depois -> "respondeu". Antes de usar "respondeu",',
+    '     confira o item 4: se o cliente deu um motivo para não comprar agora, ou se a conversa',
+    '     terminou combinada para depois, o resultado é "adiou".',
     '  Se existe linha CLIENTE, nunca use "nenhum".',
     '',
     'retomar_em: só quando o resultado for "adiou" E o cliente der um prazo. Use as datas de',
     'REFERÊNCIA que vêm com a conversa: "amanhã" = AMANHÃ; "fim de semana" = PRÓXIMO SÁBADO;',
     '"semana que vem" = PRÓXIMA SEGUNDA; uma data ou dia da semana citado = essa data. Prazo',
     'incerto também conta ("vou ver se consigo amanhã" = AMANHÃ). Se o cliente der mais de',
-    'um prazo, use o mais cedo. Sem prazo nenhum ("quando eu voltar de',
-    'viagem", "depois eu vejo"): null. Nos outros resultados: null.',
+    'um prazo, use o mais cedo. Sem prazo nenhum ("quando eu voltar de viagem", "depois eu',
+    'vejo"): null (o sistema marca o lembrete para 7 dias depois). Nos outros resultados: null.',
     '',
-    'trecho_recusa: quando o resultado for "recusou", copie EXATAMENTE as palavras do cliente',
-    '(de uma linha CLIENTE) que mostram a recusa. Nos outros casos, null.',
+    'trecho_cliente: em todo resultado diferente de "nenhum", copie EXATAMENTE a frase-chave do',
+    'cliente (de uma linha CLIENTE, nunca de uma linha NÓS) que justifica o resultado. Pode ser',
+    'só um pedaço de uma mensagem. Curta, até 100 caracteres, sem detalhe de saúde. Escolha a',
+    'frase DEPOIS de decidir o resultado; nunca mude o resultado para caber uma frase. Em',
+    '"recusou", é a frase da recusa. Se o cliente',
+    'só mandou mídia, copie a marca dela (ex.: "[audio]"). O sistema acrescenta no fim da nota',
+    'Cliente: "<trecho_cliente>" — não repita a frase na observacao. Em "nenhum": null.',
 ].join('\n')
 
 // ─── Datas de referência ─────────────────────────────────────────────────────
@@ -171,6 +179,8 @@ export const PROMPT_SISTEMA = [
 
 /** Teto do adiamento: mais longe que isso não é prazo, é "depois". */
 export const MAX_DIAS_RETOMADA = 60
+/** Adiamento sem prazo claro também ganha lembrete: nenhum adiamento fica esquecido. */
+export const DIAS_ADIAMENTO_SEM_PRAZO = 7
 
 const DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
 
@@ -234,13 +244,19 @@ export interface Veredito {
     tipo: 'ponto_contato' | 'feedback'
     resultado: 'aceitou' | 'adiou' | 'recusou' | 'respondeu' | null
     observacao: string
-    /** Só quando `resultado === 'recusou'`: as palavras do cliente, como estão na conversa. */
-    trechoRecusa: string | null
-    /** Só quando `resultado === 'adiou'` e o cliente deu prazo: 'AAAA-MM-DD'. */
+    /**
+     * Com resultado: a frase-chave do cliente, como está numa mensagem DELE. A RPC a cita no
+     * fim da nota (`Cliente: "..."`, ou `Recusa: "..."` na recusa).
+     */
+    trechoCliente: string | null
+    /** Só no adiamento: o prazo do cliente ou, sem prazo claro, 7 dias depois da conversa. */
     retomarEm: string | null
 }
 
-export type ValidacaoVeredito = { ok: true; veredito: Veredito } | { ok: false; motivo: string }
+export type ValidacaoVeredito =
+    | { ok: true; veredito: Veredito }
+    /** manterResultado: o resultado estava certo e o erro é só na frase, na saúde ou na data. */
+    | { ok: false; motivo: string; manterResultado?: string }
 
 /** A mesma normalização que a RPC aplica em SQL: minúsculas e espaços colapsados. */
 export function normalizarTrecho(texto: string): string {
@@ -254,15 +270,20 @@ function limparAspas(texto: string): string {
 /**
  * Lê a resposta do LLM e decide se ela pode ir para a RPC.
  *
- * Recusa: só vale com o trecho do cliente que a justifica, encontrado numa mensagem DELE.
- * Recusar congela o card por 30 dias; um "agora não" lido como recusa custaria uma venda.
+ * Todo resultado vem com a frase-chave do cliente, encontrada numa mensagem DELE. Na recusa
+ * isso é ainda mais caro: recusar congela o card por 30 dias; um "agora não" lido como
+ * recusa custaria uma venda.
  *
  * Duas correções são determinísticas, não motivo de nova tentativa:
  *  • segmento sem nenhuma mensagem do cliente não tem resposta do cliente → resultado nulo;
  *  • resultado preenchido vence "feedback" → vira ponto_contato (a RPC zeraria o resultado
  *    de um feedback, e um "aceitou" se perderia).
  */
-export function validarVeredito(texto: string, seg: Segmento): ValidacaoVeredito {
+export function validarVeredito(
+    texto: string,
+    seg: Segmento,
+    opcoes: { manterResultado?: string } = {},
+): ValidacaoVeredito {
     let v: unknown
     try {
         v = JSON.parse(texto)
@@ -282,6 +303,13 @@ export function validarVeredito(texto: string, seg: Segmento): ValidacaoVeredito
     if (!['aceitou', 'adiou', 'recusou', 'respondeu', 'nenhum'].includes(brutoResultado as string)) {
         return { ok: false, motivo: 'resultado deve ser "aceitou", "adiou", "recusou", "respondeu" ou "nenhum"' }
     }
+    // Na correção de um erro que não era do resultado, o modelo pequeno às vezes troca o
+    // resultado para caber a frase nova (Zélia, 15/10: adiou virou respondeu para citar
+    // "Me desculpa"). Trocar o resultado nessa hora é rejeitado.
+    if (opcoes.manterResultado !== undefined && brutoResultado !== opcoes.manterResultado) {
+        return { ok: false, motivo: `o resultado era "${opcoes.manterResultado}" e não podia mudar na correção`, manterResultado: opcoes.manterResultado }
+    }
+    const manter = { manterResultado: brutoResultado as string }
     let resultado = brutoResultado === 'nenhum' ? null : (brutoResultado as Veredito['resultado'])
 
     const observacao = typeof o.observacao === 'string' ? o.observacao.trim() : ''
@@ -298,65 +326,76 @@ export function validarVeredito(texto: string, seg: Segmento): ValidacaoVeredito
         return { ok: false, motivo: 'há mensagens do CLIENTE: o resultado não pode ser "nenhum" (siga a ordem: aceitou, recusou, adiou, respondeu)' }
     }
 
-    let trechoRecusa: string | null = null
-    if (resultado === 'recusou') {
-        const trecho = typeof o.trecho_recusa === 'string' ? limparAspas(o.trecho_recusa) : ''
-        if (trecho.length < 3) {
-            return { ok: false, motivo: 'resultado "recusou" exige trecho_recusa com as palavras do cliente' }
+    // Frase-chave do cliente: toda nota com resultado termina citando o que o CLIENTE
+    // escreveu, conferido aqui e na RPC. É a prova de quem disse o quê (Andreia, 14/10: o
+    // nosso "quando voltar, me chama" virou "o cliente pediu para retomar").
+    let trechoCliente: string | null = null
+    if (resultado !== null) {
+        const trecho = typeof o.trecho_cliente === 'string' ? limparAspas(o.trecho_cliente) : ''
+        if (trecho.length < 2) {
+            return { ok: false, motivo: `resultado "${resultado}" exige trecho_cliente com a frase-chave copiada de uma linha CLIENTE`, ...manter }
         }
         const doCliente = normalizarTrecho(
             seg.mensagens.filter((m) => m.de === 'cliente').map((m) => m.texto).join(' '),
         )
         if (!doCliente.includes(normalizarTrecho(trecho))) {
-            return { ok: false, motivo: 'trecho_recusa não aparece em nenhuma mensagem do CLIENTE; copie as palavras exatas' }
+            return { ok: false, motivo: 'trecho_cliente não aparece em nenhuma mensagem do CLIENTE; copie as palavras exatas de uma linha CLIENTE (nunca de uma linha NÓS)', ...manter }
         }
         // "Não, obrigada" é educação, não recusa explícita (Andreia, 14/10: "Não obrigada /
         // Estou viajando" virou recusa e congelaria o card por 30 dias).
-        if (/^n[ãa]o[\s,]*obrigad[oa]s?[\s.!]*$/.test(normalizarTrecho(trecho))) {
+        if (resultado === 'recusou' && /^n[ãa]o[\s,]*obrigad[oa]s?[\s.!]*$/.test(normalizarTrecho(trecho))) {
             return { ok: false, motivo: '"não, obrigada" sozinho não é recusa explícita; se o cliente deu um motivo passageiro, o resultado é "adiou"' }
         }
-        trechoRecusa = trecho
-    } else if (/recus/i.test(observacao)) {
-        // "Cliente recusou o pedido" numa nota de adiamento: quem lê a timeline acredita na
-        // palavra, não no rótulo.
+        trechoCliente = trecho
+    }
+
+    // "Cliente recusou o pedido" numa nota de adiamento: quem lê a timeline acredita na
+    // palavra, não no rótulo.
+    if (resultado !== 'recusou' && /recus/i.test(observacao)) {
         return { ok: false, motivo: 'a observacao fala em recusa, mas o resultado não é "recusou"; reescreva sem essa palavra ou mude o resultado' }
     }
 
     // Saúde no mínimo (Zélia, 14/10: "estou no hospital com minha mãe" virou "Cliente no
     // hospital"). O modelo pequeno ignora a regra do prompt; a checagem devolve para ele
-    // reescrever. Se o hospital for só endereço de entrega, ele troca por "local de trabalho".
-    if (/\b(hospital|cl[ií]nica|internad[oa]|interna[çc][ãa]o|cirurgia|exames?|doen[çt]|diagn[óo]stic)/i.test(observacao)) {
+    // reescrever. Vale também para a frase citada, que vai para a nota.
+    const saude = /\b(hospital|cl[ií]nica|internad[oa]|interna[çc][ãa]o|cirurgia|exames?|doen[çt]|diagn[óo]stic)/i
+    if (saude.test(observacao) || (trechoCliente && saude.test(trechoCliente))) {
         return {
             ok: false,
-            motivo: 'a observacao cita hospital, clínica, doença ou exame; registre só o mínimo, sem o local nem o problema (ex.: "acompanhando a mãe; pediu para retomar depois"; se for só o endereço de entrega, diga "local de trabalho")',
+            motivo: 'a observacao ou o trecho_cliente cita hospital, clínica, doença ou exame. NÃO mude o resultado: reescreva a observacao só com o mínimo (ex.: "acompanhando a mãe; pediu para retomar depois"; se for só o endereço de entrega, diga "local de trabalho") e, no trecho_cliente, copie outro PEDAÇO da mensagem do cliente sem a parte de saúde',
+            ...manter,
         }
     }
 
     // Data de retomada: só no adiamento. Em outro resultado é descartada, não é erro.
     let retomarEm: string | null = null
-    const semData = o.retomar_em == null || o.retomar_em === ''
-    // O cliente deu prazo e o modelo não preencheu (Lena, 14/10: "vou ver se consigo pegar
-    // amanhã / pra fim de semana" saiu sem data). Só termos sem ambiguidade, e só do cliente.
-    if (resultado === 'adiou' && semData) {
-        const doCliente = normalizarTrecho(seg.mensagens.filter((m) => m.de === 'cliente').map((m) => m.texto).join(' '))
-        const prazo = doCliente.match(/amanh[ãa]|fi(?:m|nal) de semana|semana que vem|pr[óo]xima semana|m[êe]s que vem/)
-        if (prazo) {
-            return { ok: false, motivo: `o cliente citou um prazo ("${prazo[0]}"): preencha retomar_em com a data de REFERÊNCIA correspondente (o mais cedo, se houver mais de um)` }
-        }
-    }
-    if (resultado === 'adiou' && !semData) {
+    if (resultado === 'adiou') {
         const ref = referenciaDatas(seg.fim)
-        const data = typeof o.retomar_em === 'string' ? o.retomar_em.trim() : ''
-        const valida = /^\d{4}-\d{2}-\d{2}$/.test(data) && somarDias(data, 0) === data
-        if (!valida || data <= ref.hoje || data > somarDias(ref.hoje, MAX_DIAS_RETOMADA)) {
-            return {
-                ok: false,
-                motivo: `retomar_em deve ser uma data AAAA-MM-DD depois de ${ref.hoje} e até ${somarDias(ref.hoje, MAX_DIAS_RETOMADA)}, ou null`,
+        const semData = o.retomar_em == null || o.retomar_em === ''
+        if (semData) {
+            // O cliente deu prazo e o modelo não preencheu (Lena, 14/10: "vou ver se consigo
+            // pegar amanhã / pra fim de semana" saiu sem data). Só termos sem ambiguidade.
+            const doCliente = normalizarTrecho(seg.mensagens.filter((m) => m.de === 'cliente').map((m) => m.texto).join(' '))
+            const prazo = doCliente.match(/amanh[ãa]|fi(?:m|nal) de semana|semana que vem|pr[óo]xima semana|m[êe]s que vem/)
+            if (prazo) {
+                return { ok: false, motivo: `o cliente citou um prazo ("${prazo[0]}"): preencha retomar_em com a data de REFERÊNCIA correspondente (o mais cedo, se houver mais de um)`, ...manter }
             }
+            // Sem prazo claro: lembrete em 7 dias, contados do dia da conversa.
+            retomarEm = somarDias(ref.hoje, DIAS_ADIAMENTO_SEM_PRAZO)
+        } else {
+            const data = typeof o.retomar_em === 'string' ? o.retomar_em.trim() : ''
+            const valida = /^\d{4}-\d{2}-\d{2}$/.test(data) && somarDias(data, 0) === data
+            if (!valida || data <= ref.hoje || data > somarDias(ref.hoje, MAX_DIAS_RETOMADA)) {
+                return {
+                    ok: false,
+                    motivo: `retomar_em deve ser uma data AAAA-MM-DD depois de ${ref.hoje} e até ${somarDias(ref.hoje, MAX_DIAS_RETOMADA)}, ou null`,
+                    ...manter,
+                }
+            }
+            retomarEm = data
         }
-        retomarEm = data
     }
 
     const tipo = resultado !== null ? 'ponto_contato' : (o.tipo as Veredito['tipo'])
-    return { ok: true, veredito: { tipo, resultado, observacao, trechoRecusa, retomarEm } }
+    return { ok: true, veredito: { tipo, resultado, observacao, trechoCliente, retomarEm } }
 }

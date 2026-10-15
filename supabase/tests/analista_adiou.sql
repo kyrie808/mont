@@ -30,6 +30,7 @@ DECLARE
   r jsonb;
   n int;
   ok boolean;
+  it_criado timestamptz;
 BEGIN
   antes := jsonb_build_object(
     'contatos', (SELECT count(*) FROM public.contatos),
@@ -179,7 +180,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM public.vendas WHERE contato_id = v_real AND status = 'pendente') THEN RAISE EXCEPTION 'Maria sem venda pendente'; END IF;
 
     r := public.rpc_registrar_interacao_ia(v_real,
-           '{"tipo":"ponto_contato","resultado":"aceitou","observacao":"Fechou 1kg de pão de queijo congelado (bolinha 50g) para amanhã, Pix na entrega, R$ 35."}',
+           '{"tipo":"ponto_contato","resultado":"aceitou","observacao":"Fechou 1kg de pão de queijo congelado (bolinha 50g) para amanhã, Pix na entrega, R$ 35.","trecho_cliente":"Pode ser amanhã"}',
            v_ids);
     IF r->>'sentido' <> 'saida' THEN RAISE EXCEPTION 'sentido %', r->>'sentido'; END IF;
     IF r->>'coluna_antes' <> 'follow_up' OR r->>'coluna_depois' <> 'em_negociacao' OR r->>'status_depois' <> 'em_negociacao' THEN
@@ -202,17 +203,20 @@ BEGIN
     SELECT tentativas INTO n FROM public.view_relacionamento_kanban WHERE contato_id = v_real;
 
     r := public.rpc_registrar_interacao_ia(v_real,
-           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Acompanhando a mãe; pediu para retomar depois.","retomar_em":null}',
+           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Acompanhando a mãe; pediu para retomar depois.","retomar_em":null,"trecho_cliente":"nem tive tempo de mandar mensagem pra vc"}',
            v_ids);
     SELECT tentativas, coluna_efetiva INTO v_tent, v_col FROM public.view_relacionamento_kanban WHERE contato_id = v_real;
     IF r->>'resultado' <> 'adiou' OR r->>'status_depois' <> 'contatado' THEN RAISE EXCEPTION 'Zélia: %', r; END IF;
     IF v_tent <> n + 1 THEN RAISE EXCEPTION 'tentativas % → % (esperado +1)', n, v_tent; END IF;
-    IF v_col <> 'follow_up' THEN RAISE EXCEPTION 'Zélia coluna %', v_col; END IF;
+    -- Sem prazo claro: lembrete no dia da conversa + 7 (14/10 → 21/10). Até lá, contatado.
+    IF r->>'retomar_em' <> '2026-10-21' THEN RAISE EXCEPTION 'Zélia retomar_em %', r->>'retomar_em'; END IF;
+    IF v_col <> 'contatado' THEN RAISE EXCEPTION 'Zélia coluna % (esperado contatado até 21/10)', v_col; END IF;
+    IF r->>'observacao' NOT LIKE '%Cliente: "nem tive tempo de mandar mensagem pra vc"' THEN RAISE EXCEPTION 'citação: %', r->>'observacao'; END IF;
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'A7 Zélia adiou: fica contatado, follow_up pela cadência (gravação real)', 'ok', true,
+    resultados := resultados || jsonb_build_object('caso', 'A7 Zélia adiou sem prazo: lembrete em 7 dias e frase do cliente citada (gravação real)', 'ok', true,
       'tentativas', n || ' → ' || v_tent);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'A7 Zélia adiou: fica contatado, follow_up pela cadência (gravação real)', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'A7 Zélia adiou sem prazo: lembrete em 7 dias e frase do cliente citada (gravação real)', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── A8: Lena (REAL) — adiou para amanhã (15/10): em_negociacao, follow_up no dia ──
@@ -224,7 +228,7 @@ BEGIN
      WHERE contato_id = v_real AND processado_em IS NULL AND NOT historico;
 
     r := public.rpc_registrar_interacao_ia(v_real,
-           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Vai ver se pega o balde de 4kg amanhã ou no fim de semana.","retomar_em":"2026-10-15"}',
+           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Vai ver se pega o balde de 4kg amanhã ou no fim de semana.","retomar_em":"2026-10-15","trecho_cliente":"Vou ver se consigo pegar amanhã viu"}',
            v_ids);
     IF r->>'retomar_em' <> '2026-10-15' OR r->>'status_depois' <> 'em_negociacao' THEN RAISE EXCEPTION 'Lena: %', r; END IF;
     IF current_date >= date '2026-10-15' AND r->>'coluna_depois' <> 'follow_up' THEN RAISE EXCEPTION 'Lena coluna %', r->>'coluna_depois'; END IF;
@@ -245,20 +249,22 @@ BEGIN
     ok := false;
     BEGIN
       PERFORM public.rpc_registrar_interacao_ia(v_c2,
-        '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Cliente recusou o pedido, está viajando."}',
+        '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Cliente recusou o pedido, está viajando.","trecho_cliente":"Não obrigada"}',
         ARRAY['SUITE_AD_1', 'SUITE_AD_2', 'SUITE_AD_3']);
     EXCEPTION WHEN check_violation THEN ok := true;
     END;
     IF NOT ok THEN RAISE EXCEPTION 'nota com "recusou" passou num adiamento'; END IF;
 
     r := public.rpc_registrar_interacao_ia(v_c2,
-           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Está viajando; retomar na volta.","retomar_em":"2027-03-01"}',
+           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Está viajando; retomar na volta.","retomar_em":"2027-03-01","trecho_cliente":"[audio]"}',
            ARRAY['SUITE_AD_1', 'SUITE_AD_2', 'SUITE_AD_3']);
-    IF r->>'resultado' <> 'adiou' OR r->>'retomar_em' IS NOT NULL OR r->>'degradou' IS NULL THEN RAISE EXCEPTION 'janela: %', r; END IF;
+    -- Data fora da janela cai para o lembrete de 7 dias (14/10 → 21/10); áudio citado pela marca.
+    IF r->>'resultado' <> 'adiou' OR r->>'retomar_em' <> '2026-10-21' OR r->>'degradou' IS NULL THEN RAISE EXCEPTION 'janela: %', r; END IF;
+    IF r->>'observacao' <> 'Está viajando; retomar na volta. Cliente: "[audio]"' THEN RAISE EXCEPTION 'citação: %', r->>'observacao'; END IF;
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'A9 nota sem recusa fora de recusou; retomar_em fora da janela cai', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'A9 nota sem recusa fora de recusou; retomar_em fora da janela vira 7 dias', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'A9 nota sem recusa fora de recusou; retomar_em fora da janela cai', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'A9 nota sem recusa fora de recusou; retomar_em fora da janela vira 7 dias', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── A10: orderMessage da E1 fora da fila; o resto da conversa continua nela ──────
@@ -286,6 +292,71 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'A10 orderMessage com nota fora da fila; resto da conversa fica', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'A10 orderMessage com nota fora da fila; resto da conversa fica', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── A11: frase do cliente obrigatória e de uma mensagem de ENTRADA ──────────────
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id) VALUES
+      ('55' || c_tel || '01', 'SUITE_AD_F1', 'saida',   'Quando voltar, me chama', 'texto', '{}', '2026-10-14 18:00:00+00', v_c1),
+      ('55' || c_tel || '01', 'SUITE_AD_F2', 'entrada', 'Estou viajando',          'texto', '{}', '2026-10-14 18:05:00+00', v_c1);
+    n := 0;
+    BEGIN
+      PERFORM public.rpc_registrar_interacao_ia(v_c1, '{"resultado":"respondeu","observacao":"Viajando."}', ARRAY['SUITE_AD_F1', 'SUITE_AD_F2']);
+    EXCEPTION WHEN check_violation THEN n := n + 1;
+    END;
+    BEGIN
+      PERFORM public.rpc_registrar_interacao_ia(v_c1, '{"resultado":"adiou","observacao":"Viajando.","trecho_cliente":"Quando voltar, me chama"}', ARRAY['SUITE_AD_F1', 'SUITE_AD_F2']);
+    EXCEPTION WHEN check_violation THEN n := n + 1;
+    END;
+    IF n <> 2 THEN RAISE EXCEPTION 'passou % de 2 notas sem frase do cliente', 2 - n; END IF;
+    -- A frase certa (caixa e espaços à parte) passa e vai para o fim da nota.
+    r := public.rpc_registrar_interacao_ia(v_c1,
+           '{"resultado":"aceitou","observacao":"Combinamos retomar na volta.","trecho_cliente":"  estou   viajando "}',
+           ARRAY['SUITE_AD_F1', 'SUITE_AD_F2']);
+    IF r->>'observacao' <> 'Combinamos retomar na volta. Cliente: "estou   viajando"' THEN RAISE EXCEPTION 'citação: %', r->>'observacao'; END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'A11 frase do cliente obrigatória, de mensagem de entrada', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'A11 frase do cliente obrigatória, de mensagem de entrada', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── A12: aceitou_sem_venda ───────────────────────────────────────────────────────
+  total := total + 1;
+  BEGIN
+    -- Fictício sem venda: aceite de 30h atrás aparece; de 10h (tolerância) e de 80h, não.
+    INSERT INTO public.interacoes (contato_id, data, tipo, canal, sentido, resultado, gerado_por_ia)
+    VALUES (v_c2, now() - interval '30 hours', 'ponto_contato', 'whatsapp', 'entrada', 'aceitou', true);
+    INSERT INTO public.interacoes (contato_id, data, tipo, canal, sentido, resultado, gerado_por_ia)
+    VALUES (v_c3, now() - interval '10 hours', 'ponto_contato', 'whatsapp', 'entrada', 'aceitou', true),
+           (v_c3, now() - interval '80 hours', 'ponto_contato', 'whatsapp', 'entrada', 'aceitou', true);
+    IF NOT EXISTS (SELECT 1 FROM public.aceitou_sem_venda WHERE contato_id = v_c2) THEN RAISE EXCEPTION 'aceite de 30h sem venda não apareceu'; END IF;
+    IF EXISTS (SELECT 1 FROM public.aceitou_sem_venda WHERE contato_id = v_c3) THEN RAISE EXCEPTION 'aceite de 10h/80h apareceu'; END IF;
+
+    -- Cliente REAL com venda lançada no dia do aceite (antes da hora da nota): não aparece.
+    SELECT v.contato_id, v.criado_em INTO v_real, it_criado
+      FROM public.vendas v JOIN public.contatos c ON c.id = v.contato_id
+     WHERE v.status IN ('pendente', 'entregue') AND c.arquivado_em IS NULL
+       AND v.criado_em BETWEEN now() - interval '70 hours' AND now() - interval '26 hours'
+     ORDER BY v.criado_em DESC LIMIT 1;
+    IF v_real IS NULL THEN RAISE EXCEPTION 'nenhuma venda real entre 26h e 70h atrás para testar'; END IF;
+    INSERT INTO public.interacoes (contato_id, data, tipo, canal, sentido, resultado, gerado_por_ia)
+    VALUES (v_real, it_criado + interval '1 hour', 'ponto_contato', 'whatsapp', 'saida', 'aceitou', true);
+    IF EXISTS (SELECT 1 FROM public.aceitou_sem_venda WHERE contato_id = v_real AND aceitou_em = it_criado + interval '1 hour') THEN
+      RAISE EXCEPTION 'aceite com venda lançada no mesmo dia apareceu';
+    END IF;
+
+    -- O app (authenticated, admin) lê a view.
+    PERFORM set_config('request.jwt.claims',
+      jsonb_build_object('sub', '627bc83a-8e02-4949-ab6b-7efae29c4ac5', 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+    PERFORM count(*) FROM public.aceitou_sem_venda;
+    RESET ROLE;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'A12 aceitou_sem_venda: 24h a 72h, venda a partir do dia do aceite', 'ok', true);
+  EXCEPTION WHEN others THEN
+    IF current_user = 'authenticated' THEN RESET ROLE; END IF;
+    resultados := resultados || jsonb_build_object('caso', 'A12 aceitou_sem_venda: 24h a 72h, venda a partir do dia do aceite', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── Fim: SEMPRE aborta. Não existe caminho que grave. ───────────────────────────

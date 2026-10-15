@@ -42,10 +42,6 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // O Groq reserva o teto de saída no limite por minuto (8000 tokens). 400 cobre o JSON e
 // o raciocínio curto do reasoning_effort=low (medido: ~60 tokens).
 const MAX_COMPLETION = 400
-// Esforço de raciocínio. Produção: low (decisão do brief). `medium` só pode ser pedido numa
-// simulação, para comparar a qualidade das notas antes de qualquer troca.
-type Esforco = 'low' | 'medium'
-const TETO_SAIDA: Record<Esforco, number> = { low: MAX_COMPLETION, medium: 1500 }
 const LIMITE_CRON = 5
 const LIMITE_MAXIMO = 10
 // Depois disso não começa segmento novo: a function tem teto de execução.
@@ -110,7 +106,7 @@ class Ritmo {
   }
 }
 
-async function chamarGroq(chave: string, mensagens: Mensagem[], ritmo: Ritmo, esforco: Esforco): Promise<RespostaGroq> {
+async function chamarGroq(chave: string, mensagens: Mensagem[], ritmo: Ritmo): Promise<RespostaGroq> {
   let res: Response
   try {
     res = await fetch(GROQ_URL, {
@@ -120,8 +116,8 @@ async function chamarGroq(chave: string, mensagens: Mensagem[], ritmo: Ritmo, es
         model: MODELO,
         messages: mensagens,
         response_format: { type: 'json_object' },
-        reasoning_effort: esforco,
-        max_completion_tokens: TETO_SAIDA[esforco],
+        reasoning_effort: 'low',
+        max_completion_tokens: MAX_COMPLETION,
         temperature: 0.2,
       }),
       signal: AbortSignal.timeout(30_000),
@@ -174,8 +170,8 @@ interface Detalhe {
   interacao_id?: string
   erro?: string
   tokens?: number
-  /** Só na simulação: o que o modelo respondeu, para conferir a leitura antes de gravar. */
-  bruto?: string
+  /** Só na simulação: o que o modelo respondeu em cada tentativa, para conferir a leitura antes de gravar. */
+  bruto?: string[]
 }
 
 interface Contadores {
@@ -215,7 +211,7 @@ async function registrarFalha(admin: SupabaseClient, seg: Segmento, erro: string
 async function rodar(
   admin: SupabaseClient,
   chave: string,
-  opcoes: { simular: boolean; limite: number; contatos: string[] | null; esforco: Esforco },
+  opcoes: { simular: boolean; limite: number; contatos: string[] | null },
   detalhes: Detalhe[],
   cont: Contadores,
 ): Promise<{ status: 'ok' | 'parcial' | 'limite_groq'; aviso: string | null }> {
@@ -271,10 +267,12 @@ async function rodar(
     let motivo = ''
     let tokens = 0
     let tentativas = 0
-    let bruto = ''
+    const bruto: string[] = []
+    // Erro só na frase, na saúde ou na data: a correção mantém o resultado da 1ª resposta.
+    let manterResultado: string | undefined
 
     for (tentativas = 1; tentativas <= 2 && !veredito; tentativas++) {
-      const estimativa = Math.ceil(conversa.reduce((n, m) => n + m.content.length, 0) / 3) + TETO_SAIDA[opcoes.esforco]
+      const estimativa = Math.ceil(conversa.reduce((n, m) => n + m.content.length, 0) / 3) + MAX_COMPLETION
       const espera = ritmo.espera(estimativa)
       if (espera > ESPERA_MAXIMA_MS || Date.now() - inicio + espera > ORCAMENTO_MS) {
         detalhes.push({ ...base, erro: `limite de tokens por minuto: esperaria ${Math.round(espera / 1000)}s` })
@@ -283,7 +281,7 @@ async function rodar(
       }
       if (espera > 0) await dormir(espera)
 
-      const r = await chamarGroq(chave, conversa, ritmo, opcoes.esforco)
+      const r = await chamarGroq(chave, conversa, ritmo)
       if (r.tipo === 'limite') {
         detalhes.push({ ...base, erro: r.aviso })
         cont.adiados++
@@ -297,16 +295,18 @@ async function rodar(
         motivo = r.motivo
       } else {
         tokens += r.tokens
-        bruto = r.conteudo
-        const v = validarVeredito(r.conteudo, seg)
+        bruto.push(r.conteudo)
+        const v = validarVeredito(r.conteudo, seg, { manterResultado })
         if (v.ok) {
           veredito = v.veredito
           break
         }
         motivo = v.motivo
+        manterResultado = v.manterResultado
         conversa.push({ role: 'assistant', content: r.conteudo })
       }
-      conversa.push({ role: 'user', content: `Resposta inválida: ${motivo}. Responda de novo, só com o objeto JSON.` })
+      const manter = manterResultado ? ` Mantenha "resultado": "${manterResultado}".` : ''
+      conversa.push({ role: 'user', content: `Resposta inválida: ${motivo}.${manter} Responda de novo, só com o objeto JSON.` })
     }
     tentativas = Math.min(tentativas, 2)
 
@@ -352,7 +352,7 @@ async function rodar(
         tipo: veredito.tipo,
         resultado: veredito.resultado,
         observacao: veredito.observacao,
-        trecho_recusa: veredito.trechoRecusa,
+        trecho_cliente: veredito.trechoCliente,
         retomar_em: veredito.retomarEm,
       },
       p_message_ids: seg.messageIds,
@@ -411,8 +411,6 @@ Deno.serve(async (req: Request) => {
   if (body.acao !== 'rodar') return json({ error: "acao deve ser 'rodar'" }, 400)
 
   const simular = body.simular === true
-  const esforco: Esforco = body.esforco === 'medium' ? 'medium' : 'low'
-  if (esforco !== 'low' && !simular) return json({ error: 'esforco só vale com simular' }, 400)
   const pedido = Number(body.limite ?? LIMITE_CRON)
   const limite = Number.isInteger(pedido) && pedido > 0 ? Math.min(pedido, LIMITE_MAXIMO) : LIMITE_CRON
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -442,7 +440,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: rodada, error: erroRodada } = await admin
     .from('wa_analista_rodadas')
-    .insert({ origem: viaCron ? 'cron' : 'manual', simulacao: simular, modelo: esforco === 'low' ? MODELO : `${MODELO} (${esforco})` })
+    .insert({ origem: viaCron ? 'cron' : 'manual', simulacao: simular, modelo: MODELO })
     .select('id')
     .single()
   if (erroRodada || !rodada) return json({ error: `Falha ao abrir a rodada: ${erroRodada?.message}` }, 500)
@@ -455,7 +453,7 @@ Deno.serve(async (req: Request) => {
   try {
     const chave = Deno.env.get('GROQ_API_KEY')
     if (!chave) throw new Error('GROQ_API_KEY ausente nos secrets da função')
-    ;({ status, aviso } = await rodar(admin, chave, { simular, limite, contatos, esforco }, detalhes, cont))
+    ;({ status, aviso } = await rodar(admin, chave, { simular, limite, contatos }, detalhes, cont))
   } catch (e) {
     console.error('[whatsapp-analista]', e)
     status = 'erro'

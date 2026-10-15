@@ -66,6 +66,7 @@ export {
     MAX_MENSAGENS_PROMPT,
     MAX_OBSERVACAO,
     MAX_DIAS_RETOMADA,
+    DIAS_ADIAMENTO_SEM_PRAZO,
     referenciaDatas,
 } from './analista'
 export type { MensagemPendente, Segmento, Veredito, ValidacaoVeredito, ReferenciaDatas } from './analista'
