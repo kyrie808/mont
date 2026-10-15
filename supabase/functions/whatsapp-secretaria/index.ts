@@ -373,6 +373,29 @@ function respostaDaResolucao(r: Resolucao): Traduzido {
   }
 }
 
+/**
+ * Aviso de envio que não saiu, para o mesmo destino dos outros avisos da equipe. O texto
+ * vem pronto (o nó do n8n só envia): quem é o cliente e que a resposta NÃO chegou.
+ */
+async function avisoFalhaEnvio(
+  admin: SupabaseClient,
+  telefoneWa: string,
+  nome: string | null,
+  porque: string,
+): Promise<{ aviso_numero: string; aviso_texto: string }> {
+  const grupo = Deno.env.get('SECRETARIA_GRUPO_AVISO') ?? ''
+  let destino = grupo.endsWith('@g.us') ? grupo : '5511934417085@s.whatsapp.net'
+  // O número de dev (Luccas) também só aceita o LID: sem isto o aviso da falha falharia calado.
+  if (!destino.endsWith('@g.us')) {
+    const { data } = await admin.from('wa_lid_map').select('lid').eq('telefone_wa', destino.split('@')[0]).maybeSingle()
+    if (data?.lid) destino = data.lid
+  }
+  return {
+    aviso_numero: destino.endsWith('@lid') ? destino : destino.split('@')[0],
+    aviso_texto: `⚠️ A RESPOSTA NÃO CHEGOU AO CLIENTE — precisa de alguém\n\n${nome ?? 'Cliente'} (${telefoneWa})\nO WhatsApp recusou o envio (${porque}). Responda pelo celular.`,
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Método não permitido' }, 405)
@@ -707,7 +730,8 @@ Deno.serve(async (req: Request) => {
       let interacaoId = pedido.interacao_id as string | null
       // O que aconteceu ao gravar a interacao — vai na resposta pra `ok:true` nunca
       // significar "confirmei sem deixar rastro na timeline".
-      let timeline: 'atualizado' | 'rpc' | 'direto' | 'falhou'
+      let timeline: 'atualizado' | 'rpc' | 'ja_registrada' | 'falhou'
+      let erroTimeline: string | null = null
 
       if (interacaoId) {
         timeline = 'atualizado'
@@ -719,59 +743,58 @@ Deno.serve(async (req: Request) => {
           console.error('[secretaria] falha ao atualizar observacao da interacao existente:', erroUpdate.message)
         }
       } else {
-        const { data: pendentes } = await admin
-          .from('mensagens_whatsapp').select('message_id')
+        // Âncora: as mensagens desta conversa que o analista ainda não leu. A nota do
+        // pedido as consome — e o analista não escreve uma segunda nota sobre a mesma
+        // conversa. É a MESMA porta de escrita do analista (rpc_registrar_interacao_ia),
+        // com as mesmas regras: contato arquivado recusa, e a nota cita a frase do cliente.
+        const { data: pendentes, error: erroPendentes } = await admin
+          .from('mensagens_whatsapp').select('message_id, direcao, conteudo, tipo_midia, enviada_em')
           .eq('telefone_wa', telefoneWa).is('processado_em', null).eq('historico', false)
+          .order('enviada_em', { ascending: true })
+        if (erroPendentes) throw new Error(`Falha ao ler a conversa: ${erroPendentes.message}`)
 
-        const { data: novaId, error: erroRpc } = await admin.rpc('rpc_registrar_interacao_ia', {
-          p_telefone_wa: telefoneWa,
-          p_payload: { tipo: 'ponto_contato', sentido: 'entrada', resultado: 'aceitou', observacao },
-          p_message_ids: (pendentes ?? []).map((m) => m.message_id),
-        })
-        if (erroRpc) console.error('[secretaria] rpc_registrar_interacao_ia falhou ao confirmar pedido:', erroRpc.message)
+        const ids = (pendentes ?? []).map((m) => m.message_id as string)
+        // A frase que a nota cita: a última mensagem do CLIENTE com texto — a que levou a
+        // secretária a confirmar. A RPC confere que ela está numa mensagem de entrada.
+        const fala = [...(pendentes ?? [])].reverse().find((m) =>
+          m.direcao === 'entrada' && m.tipo_midia !== 'template_empresa' && typeof m.conteudo === 'string' && m.conteudo.trim())
 
-        interacaoId = (novaId as string | null) ?? null
-        timeline = interacaoId ? 'rpc' : 'falhou'
-
-        if (!interacaoId) {
-          // A RPC devolve NULL DE PROPOSITO quando nenhuma mensagem pendente ancora o
-          // registro — existe pra nao duplicar RESUMO DE CONVERSA com o que o W2 consome
-          // da MESMA fila (mensagens_whatsapp.processado_em). Mas um PEDIDO CONFIRMADO e
-          // evento proprio, nao resumo de conversa: precisa existir na timeline mesmo
-          // quando o W2 ja passou e esvaziou a fila. Por isso, sem ancora, inserimos a
-          // interacao direto em vez de deixar o pedido confirmar em silencio sem nunca
-          // aparecer no Kanban/perfil do cliente (era exatamente esse o bug: `ok:true`
-          // indistinguivel de sucesso, sem nenhuma linha em `interacoes`).
-          const { data: direto, error: erroDireto } = await admin
-            .from('interacoes')
-            .insert({
-              contato_id: contato.id,
+        if (ids.length === 0) {
+          // Sem âncora: o analista já registrou esta conversa. Sem segunda nota (era o
+          // insert direto daqui que duplicava). O pedido segue confirmado em wa_pedido.
+          timeline = 'ja_registrada'
+        } else {
+          const { data: r, error: erroRpc } = await admin.rpc('rpc_registrar_interacao_ia', {
+            p_contato_id: contato.id,
+            p_payload: {
               tipo: 'ponto_contato',
-              canal: 'whatsapp',
-              sentido: 'entrada',
               resultado: 'aceitou',
               observacao,
-              gerado_por_ia: true,
-            })
-            .select('id')
-            .single()
-
-          if (erroDireto) {
-            console.error('[secretaria] insert direto da interacao tambem falhou:', erroDireto.message)
+              trecho_cliente: fala ? (fala.conteudo as string).trim().slice(0, 150) : null,
+            },
+            p_message_ids: ids,
+          })
+          const g = r as { interacao_id?: string; ja_processada?: boolean } | null
+          if (erroRpc) {
+            erroTimeline = erroRpc.message
+            console.error('[secretaria] rpc_registrar_interacao_ia falhou ao confirmar pedido:', erroRpc.message)
+            timeline = 'falhou'
+          } else if (g?.ja_processada) {
+            timeline = 'ja_registrada'
           } else {
-            interacaoId = direto.id as string
-            timeline = 'direto'
+            interacaoId = g?.interacao_id ?? null
+            timeline = interacaoId ? 'rpc' : 'falhou'
           }
         }
       }
 
-      // Nem RPC nem insert direto conseguiram gravar a interacao: NAO marca o pedido
-      // como confirmado. `ok:true` aqui seria a agente dizer ao cliente que confirmou um
+      // A RPC recusou a nota: NAO marca o pedido como confirmado. `ok:true` aqui seria a agente dizer ao cliente que confirmou um
       // pedido que nunca apareceu na timeline nem moveu o Kanban.
       if (timeline === 'falhou') {
         return json({
           ok: false,
           motivo: 'falha_ao_registrar_timeline',
+          detalhe: erroTimeline,
           erro: 'nao foi possivel registrar o pedido na timeline do cliente',
         }, 500)
       }
@@ -834,6 +857,65 @@ Deno.serve(async (req: Request) => {
       }, 200)
     }
 
+    if (body.acao === 'falha_envio') {
+      // O W3 chama quando a Evolution recusa o envio ao TELEFONE (ex.: exists:false — o
+      // WhatsApp só conhece o contato pelo LID). Registra a falha (nada calado) e devolve o
+      // LID do wa_lid_map para a 2ª tentativa. Sem LID, devolve o aviso para a equipe.
+      const numero = typeof body.numero === 'string' ? body.numero : telefoneWa
+      const erro = typeof body.erro === 'string' ? body.erro.slice(0, 500) : null
+
+      const [{ data: contato }, { data: mapa }] = await Promise.all([
+        admin.from('contatos').select('id, nome').eq('telefone_wa', telefoneWa).maybeSingle(),
+        admin.from('wa_lid_map').select('lid').eq('telefone_wa', telefoneWa).maybeSingle(),
+      ])
+      const lid = mapa?.lid ?? null
+
+      const { data: falha, error } = await admin.from('wa_envio_falhas').insert({
+        telefone_wa: telefoneWa,
+        contato_id: contato?.id ?? null,
+        numero_tentado: numero,
+        erro,
+        lid,
+      }).select('id').single()
+      if (error) return json({ error: `Falha ao registrar a falha de envio: ${error.message}` }, 500)
+
+      console.error(`[secretaria] envio recusado para ${numero}; LID ${lid ?? 'inexistente'}; falha ${falha.id}`)
+      return json({
+        ok: true,
+        falha_id: falha.id,
+        lid,
+        ...(lid ? {} : await avisoFalhaEnvio(admin, telefoneWa, contato?.nome ?? null, 'sem LID para tentar de novo')),
+      }, 200)
+    }
+
+    if (body.acao === 'resultado_lid') {
+      // Resultado da 2ª tentativa (pelo LID). Fecha a linha da falha e, se nem o LID
+      // entregou, devolve o aviso para a equipe.
+      const falhaId = typeof body.falha_id === 'string' ? body.falha_id : ''
+      if (!falhaId) return json({ error: 'falha_id é obrigatório' }, 400)
+      const messageId = typeof body.message_id === 'string' && body.message_id ? body.message_id : null
+      const erroLid = typeof body.erro === 'string' ? body.erro.slice(0, 500) : null
+
+      const { data: falha, error } = await admin.from('wa_envio_falhas').update({
+        resolvido_por_lid: !!messageId,
+        message_id_lid: messageId,
+        erro_lid: messageId ? null : erroLid,
+        resolvido_em: messageId ? new Date().toISOString() : null,
+      }).eq('id', falhaId).select('telefone_wa, contato_id').single()
+      if (error) return json({ error: `Falha ao fechar a falha de envio: ${error.message}` }, 500)
+
+      if (messageId) return json({ ok: true, enviado: true, message_id: messageId }, 200)
+
+      const { data: contato } = falha.contato_id
+        ? await admin.from('contatos').select('nome').eq('id', falha.contato_id).maybeSingle()
+        : { data: null }
+      return json({
+        ok: true,
+        enviado: false,
+        ...(await avisoFalhaEnvio(admin, falha.telefone_wa, contato?.nome ?? null, 'nem pelo LID')),
+      }, 200)
+    }
+
     if (body.acao === 'destino_aviso') {
       // O id do grupo é constante VALIDADA, nunca campo livre: dos grupos visíveis na
       // conta, um tem 281 participantes (workshop externo). Id errado publicaria pedido
@@ -865,7 +947,7 @@ Deno.serve(async (req: Request) => {
       acoes: [
         'contexto', 'registrar_envio', 'consultar_produto', 'consultar_frete',
         'adicionar_item', 'alterar_quantidade', 'remover_item', 'confirmar_pedido',
-        'rascunhos_abandonados', 'preparar_envio', 'destino_aviso',
+        'rascunhos_abandonados', 'preparar_envio', 'destino_aviso', 'falha_envio', 'resultado_lid',
       ],
     }, 400)
   } catch (e) {
