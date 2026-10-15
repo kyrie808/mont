@@ -7,7 +7,8 @@ export type Canal = 'google' | 'instagram' | 'whatsapp' | 'outro'
 export type Sentido = 'saida' | 'entrada'
 // Resposta do cliente (só em beats de entrada). "Aguardando"/"Sem resposta" e a cadência
 // de follow-up são DERIVADOS na view (ver view_relacionamento_kanban).
-export type ResultadoPontoContato = 'respondeu' | 'aceitou' | 'recusou'
+// 'adiou' só a IA grava (o form não oferece); a edição de um adiamento o preserva.
+export type ResultadoPontoContato = 'respondeu' | 'aceitou' | 'recusou' | 'adiou'
 
 interface CriarFeedbackInput {
     contatoId: string
@@ -78,6 +79,8 @@ class InteracaoService {
         const update: Database['public']['Tables']['interacoes']['Update'] = {
             canal,
             resultado,
+            // A data de retomada só existe no adiamento (constraint interacoes_retomar_em_check).
+            ...(resultado !== 'adiou' ? { retomar_em: null } : {}),
             observacao: observacao ?? null,
             ...(sentido ? { sentido } : {}),
             ...(data ? { data } : {}),

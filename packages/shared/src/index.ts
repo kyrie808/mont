@@ -65,8 +65,10 @@ export {
     JANELA_ANALISE_MS,
     MAX_MENSAGENS_PROMPT,
     MAX_OBSERVACAO,
+    MAX_DIAS_RETOMADA,
+    referenciaDatas,
 } from './analista'
-export type { MensagemPendente, Segmento, Veredito, ValidacaoVeredito } from './analista'
+export type { MensagemPendente, Segmento, Veredito, ValidacaoVeredito, ReferenciaDatas } from './analista'
 
 // Secretária de WhatsApp — lógica pura (tempo de digitação, partição, gaiola)
 export {

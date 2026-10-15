@@ -1158,6 +1158,7 @@ export type Database = {
           id: string
           observacao: string | null
           resultado: string | null
+          retomar_em: string | null
           sentido: string
           tipo: string | null
         }
@@ -1171,6 +1172,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           resultado?: string | null
+          retomar_em?: string | null
           sentido?: string
           tipo?: string | null
         }
@@ -1184,6 +1186,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           resultado?: string | null
+          retomar_em?: string | null
           sentido?: string
           tipo?: string | null
         }
@@ -1452,6 +1455,9 @@ export type Database = {
       }
       mensagens_whatsapp: {
         Row: {
+          analise_falhas: number
+          analise_travada_em: string | null
+          analise_ultimo_erro: string | null
           contato_id: string | null
           conteudo: string | null
           criado_em: string
@@ -1468,6 +1474,9 @@ export type Database = {
           tipo_midia: string
         }
         Insert: {
+          analise_falhas?: number
+          analise_travada_em?: string | null
+          analise_ultimo_erro?: string | null
           contato_id?: string | null
           conteudo?: string | null
           criado_em?: string
@@ -1484,6 +1493,9 @@ export type Database = {
           tipo_midia?: string
         }
         Update: {
+          analise_falhas?: number
+          analise_travada_em?: string | null
+          analise_ultimo_erro?: string | null
           contato_id?: string | null
           conteudo?: string | null
           criado_em?: string
@@ -2509,6 +2521,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wa_analista_rodadas: {
+        Row: {
+          adiados: number
+          analisados: number
+          aviso: string | null
+          detalhes: Json
+          falhas: number
+          gravados: number
+          id: string
+          iniciada_em: string
+          modelo: string
+          origem: string
+          segmentos_prontos: number | null
+          simulacao: boolean
+          status: string
+          terminada_em: string | null
+          travados: number
+        }
+        Insert: {
+          adiados?: number
+          analisados?: number
+          aviso?: string | null
+          detalhes?: Json
+          falhas?: number
+          gravados?: number
+          id?: string
+          iniciada_em?: string
+          modelo: string
+          origem: string
+          segmentos_prontos?: number | null
+          simulacao?: boolean
+          status?: string
+          terminada_em?: string | null
+          travados?: number
+        }
+        Update: {
+          adiados?: number
+          analisados?: number
+          aviso?: string | null
+          detalhes?: Json
+          falhas?: number
+          gravados?: number
+          id?: string
+          iniciada_em?: string
+          modelo?: string
+          origem?: string
+          segmentos_prontos?: number | null
+          simulacao?: boolean
+          status?: string
+          terminada_em?: string | null
+          travados?: number
+        }
+        Relationships: []
       }
       wa_envios: {
         Row: {
@@ -3563,6 +3629,14 @@ export type Database = {
         Args: { p_sinal: number; p_venda_id: string }
         Returns: undefined
       }
+      fn_ia_destino_coluna: {
+        Args: {
+          p_coluna: Database["public"]["Enums"]["enum_relacionamento_status"]
+          p_resultado: string
+          p_sentido: string
+        }
+        Returns: Database["public"]["Enums"]["enum_relacionamento_status"]
+      }
       fn_mover_card_relacionamento: {
         Args: {
           p_contato_id: string
@@ -3574,6 +3648,13 @@ export type Database = {
       fn_purgar_conteudo_whatsapp: {
         Args: { p_meses?: number }
         Returns: number
+      }
+      fn_relacionamento_reaberto: {
+        Args: {
+          p_aba: Database["public"]["Enums"]["enum_relacionamento_aba"]
+          p_atraso: number
+        }
+        Returns: boolean
       }
       fn_slugify: { Args: { p: string }; Returns: string }
       fn_telefone_wa: { Args: { p_telefone: string }; Returns: string }
@@ -3665,6 +3746,19 @@ export type Database = {
         Args: { p_combo_id: string; p_itens: Json }
         Returns: undefined
       }
+      rpc_analista_previa: {
+        Args: {
+          p_coluna_simulada?: Database["public"]["Enums"]["enum_relacionamento_status"]
+          p_contato_id: string
+          p_resultado: string
+          p_sentido: string
+        }
+        Returns: Json
+      }
+      rpc_analista_registrar_falha: {
+        Args: { p_erro: string; p_limite?: number; p_message_ids: string[] }
+        Returns: Json
+      }
       rpc_indicados_do_indicador: {
         Args: { p_indicador_id: string }
         Returns: {
@@ -3688,12 +3782,8 @@ export type Database = {
         }[]
       }
       rpc_registrar_interacao_ia: {
-        Args: {
-          p_message_ids: string[]
-          p_payload: Json
-          p_telefone_wa: string
-        }
-        Returns: string
+        Args: { p_contato_id: string; p_message_ids: string[]; p_payload: Json }
+        Returns: Json
       }
       rpc_registrar_pedido_catalogo_wa: {
         Args: {

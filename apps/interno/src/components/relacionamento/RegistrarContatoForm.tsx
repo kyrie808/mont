@@ -55,7 +55,8 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
     const [canal, setCanal] = useState<Canal>(() => (interacao?.canal as Canal) ?? 'whatsapp')
     const [resultado, setResultado] = useState<ResultadoPontoContato>(() => {
         const r = interacao?.resultado
-        return r === 'aceitou' || r === 'recusou' ? r : 'respondeu'
+        // 'adiou' (só a IA grava) não tem botão: fica como está até o Gilmar escolher outra resposta.
+        return r === 'aceitou' || r === 'recusou' || r === 'adiou' ? r : 'respondeu'
     })
     const [observacao, setObservacao] = useState(() => interacao?.observacao ?? '')
     const [data, setData] = useState(() => (interacao ? isoToLocalDateTime(interacao.data) : nowLocalDateTime()))
@@ -92,7 +93,8 @@ export function RegistrarContatoForm({ contatoId, onClose, interacao }: Registra
             contatoId,
             canal,
             sentido,
-            resultado: isEntrada ? resultado : null,
+            // O adiamento vale nos dois sentidos: o trecho pode terminar com o nosso "boa viagem!".
+            resultado: isEntrada || resultado === 'adiou' ? resultado : null,
             observacao: observacao.trim() || undefined,
             data: new Date(data).toISOString(),
         }
