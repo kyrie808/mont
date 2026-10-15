@@ -72,7 +72,13 @@ function formatAbsoluto(dateStr: string): string {
     return `${d} · ${t}`
 }
 
-const RESPOSTA_LABEL: Record<string, string> = { respondeu: 'respondeu', aceitou: 'aceitou', recusou: 'recusou' }
+const RESPOSTA_LABEL: Record<string, string> = { respondeu: 'respondeu', aceitou: 'aceitou', recusou: 'recusou', adiou: 'adiou' }
+
+/** 'AAAA-MM-DD' → 'DD/MM' (data pura, sem fuso). */
+function formatDia(dia: string): string {
+    const [, m, d] = dia.split('-')
+    return `${d}/${m}`
+}
 
 function getEventTitle(item: Interacao): string {
     if (item.tipo === 'movimentacao_kanban') {
@@ -85,6 +91,11 @@ function getEventTitle(item: Interacao): string {
     }
     if (item.tipo === 'ponto_contato') {
         const canalLabel = item.canal ? (CANAL_LABEL[item.canal] ?? item.canal) : null
+        // Adiamento é resposta do cliente mesmo quando o trecho termina com a nossa mensagem.
+        if (item.resultado === 'adiou') {
+            const retomar = item.retomar_em ? `retomar em ${formatDia(item.retomar_em)}` : null
+            return ['Cliente adiou', canalLabel, retomar].filter(Boolean).join(' · ')
+        }
         if (item.sentido === 'entrada') {
             const resp = item.resultado ? (RESPOSTA_LABEL[item.resultado] ?? 'respondeu') : 'respondeu'
             return [`Cliente ${resp}`, canalLabel].filter(Boolean).join(' · ')

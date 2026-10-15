@@ -8,8 +8,14 @@ import {
     lerSourceId,
     extrairMensagensCruas,
     normalizarMensagem,
+    extrairPedidoCatalogo,
+    lidDaMensagem,
     isAnuncioPago,
     podeGravarAtribuicao,
+    agregarPorTelefone,
+    avancaUltimoContato,
+    isTipoAutomatico,
+    type MensagemNormalizada,
 } from '@mont/shared'
 
 // Camada pura: sem banco, sem rede, sem harness de integração.
@@ -286,6 +292,17 @@ describe('normalizarMensagem', () => {
         message: { conversation: 'bom dia' },
     }
 
+    it('templateMessage (mensagem automática de empresa) vira tipo próprio, sem texto', () => {
+        const m = normalizarMensagem({
+            ...base,
+            message: { templateMessage: { templateId: '1300213545463201', contextInfo: {} }, messageContextInfo: {} },
+        })!
+        expect(m.tipoMidia).toBe('template_empresa')
+        expect(m.conteudo).toBeNull()
+        expect(isTipoAutomatico(m.tipoMidia)).toBe(true)
+        expect(isTipoAutomatico('texto')).toBe(false)
+    })
+
     it('normaliza mensagem de entrada', () => {
         const m = normalizarMensagem(base)!
         expect(m.messageId).toBe('MSG1')
@@ -370,5 +387,198 @@ describe('podeGravarAtribuicao — a origem declarada por gente ganha', () => {
     it('origem ausente não é tratada como neutra', () => {
         expect(podeGravarAtribuicao(null, false)).toBe(false)
         expect(podeGravarAtribuicao(undefined, false)).toBe(false)
+    })
+})
+
+describe('pedido pelo catálogo do WhatsApp (orderMessage)', () => {
+    // Formato REAL capturado da Evolution em 14/10/2026 (o da Ana Paula), sem o
+    // thumbnail. Não traz produto_id nem quantidade por item — só o título com os
+    // nomes juntos, o total em milésimos e a contagem de itens.
+    const orderMessage = {
+        status: 1,
+        message: '',
+        orderId: '1090427210245925',
+        surface: 1,
+        itemCount: 3,
+        sellerJid: '116952647336153@lid',
+        orderTitle: '🍯 Doce de Leite Tradicional — 400g, 🪣 Massa Pão de Queijo — Baldinho 1kg',
+        catalogType: 'NATIVE',
+        totalAmount1000: { low: 90000, high: 0, unsigned: false },
+        totalCurrencyCode: 'BRL',
+    }
+    const crua = {
+        key: { remoteJid: '5511930990308@s.whatsapp.net', fromMe: false, id: 'PEDIDO1' },
+        pushName: 'Ana',
+        messageTimestamp: 1791976031,
+        message: { orderMessage },
+    }
+
+    it('extrai o pedido estruturado: id, título, itens e total em reais', () => {
+        expect(extrairPedidoCatalogo({ orderMessage })).toEqual({
+            orderId: '1090427210245925',
+            titulo: '🍯 Doce de Leite Tradicional — 400g, 🪣 Massa Pão de Queijo — Baldinho 1kg',
+            itensQtd: 3,
+            total: 90,
+            moeda: 'BRL',
+            observacao: null,
+        })
+    })
+
+    it('lê o total como número, string ou Long com parte alta', () => {
+        const total = (t: unknown) => extrairPedidoCatalogo({ orderMessage: { ...orderMessage, totalAmount1000: t } })!.total
+        expect(total(155500)).toBe(155.5)
+        expect(total('90000')).toBe(90)
+        expect(total({ low: 1000, high: 1 })).toBe((2 ** 32 + 1000) / 1000)
+    })
+
+    it('total ausente ou ilegível vira null — nunca zero inventado', () => {
+        const { totalAmount1000: _fora, ...semTotal } = orderMessage
+        expect(extrairPedidoCatalogo({ orderMessage: semTotal })!.total).toBeNull()
+        expect(extrairPedidoCatalogo({ orderMessage: { ...orderMessage, totalAmount1000: 'abc' } })!.total).toBeNull()
+    })
+
+    it('guarda o recado que o cliente escreveu junto do pedido', () => {
+        const p = extrairPedidoCatalogo({ orderMessage: { ...orderMessage, message: '  entrega à tarde  ' } })!
+        expect(p.observacao).toBe('entrega à tarde')
+    })
+
+    it('mensagem que não é pedido devolve null', () => {
+        expect(extrairPedidoCatalogo({ conversation: 'oi' })).toBeNull()
+        expect(extrairPedidoCatalogo(undefined)).toBeNull()
+    })
+
+    it("normaliza como tipo 'pedido' com conteúdo legível — o analista lia só [outro]", () => {
+        const m = normalizarMensagem(crua)!
+        expect(m.tipoMidia).toBe('pedido')
+        expect(m.conteudo).toBe(
+            '🛒 Pedido pelo catálogo do WhatsApp — 3 itens, total R$ 90,00: ' +
+                '🍯 Doce de Leite Tradicional — 400g, 🪣 Massa Pão de Queijo — Baldinho 1kg',
+        )
+        expect(m.pedido?.orderId).toBe('1090427210245925')
+    })
+
+    it('conteúdo usa singular, omite o que falta e anexa o recado', () => {
+        const m = normalizarMensagem({
+            ...crua,
+            message: {
+                orderMessage: {
+                    ...orderMessage,
+                    itemCount: 1,
+                    totalAmount1000: undefined,
+                    orderTitle: '',
+                    message: 'sem cebola',
+                },
+            },
+        })!
+        expect(m.conteudo).toBe('🛒 Pedido pelo catálogo do WhatsApp — 1 item — recado: "sem cebola"')
+    })
+
+    it('mensagem comum não carrega pedido', () => {
+        const m = normalizarMensagem({ ...crua, message: { conversation: 'oi' } })!
+        expect(m.pedido).toBeNull()
+    })
+})
+
+describe('envio pela API para contato em LID (send.message)', () => {
+    // Webhook real de 14/10, 23:50 (envio de teste da E2). A Evolution entrega o envio
+    // com o LID no remoteJid e SEM remoteJidAlt: o telefone não sai do próprio JID.
+    const enviada = {
+        key: { remoteJid: '136335482433638@lid', fromMe: true, id: '3EB015933235D0D35DBFDB' },
+        pushName: 'Você',
+        status: 'PENDING',
+        message: { conversation: 'Teste E2 do CRM (envio pela API). Pode ignorar.' },
+        messageType: 'conversation',
+        messageTimestamp: 1792032618,
+        source: 'web',
+    }
+    const body = { event: 'send.message', instance: 'mont', data: enviada }
+
+    it('o webhook send.message entrega uma mensagem, como o messages.upsert', () => {
+        expect(extrairMensagensCruas(body)).toHaveLength(1)
+    })
+
+    it('sem o mapa do LID, a mensagem não tem telefone e fica de fora', () => {
+        expect(normalizarMensagem(enviada)).toBeNull()
+    })
+
+    it('lidDaMensagem devolve o LID para o ingestor procurar no wa_lid_map', () => {
+        expect(lidDaMensagem(enviada)).toBe('136335482433638@lid')
+    })
+
+    it('com o telefone vindo do mapa, vira saída do contato certo', () => {
+        const m = normalizarMensagem(enviada, '5511934417085')
+        expect(m).toMatchObject({
+            messageId: '3EB015933235D0D35DBFDB',
+            telefoneWa: '5511934417085',
+            direcao: 'saida',
+            conteudo: 'Teste E2 do CRM (envio pela API). Pode ignorar.',
+            tipoMidia: 'texto',
+        })
+    })
+
+    it('JID de telefone, de grupo ou ausente não é LID', () => {
+        expect(lidDaMensagem({ key: { remoteJid: '5511934417085@s.whatsapp.net', id: 'x' } })).toBeNull()
+        expect(lidDaMensagem({ key: { remoteJid: '120363000000000000@g.us', id: 'x' } })).toBeNull()
+        expect(lidDaMensagem({ key: { id: 'x' } })).toBeNull()
+        expect(lidDaMensagem({})).toBeNull()
+    })
+})
+
+describe('agregarPorTelefone — 1 contato por conversa', () => {
+    const referral = { sourceType: 'ad', sourceId: '120200000000', ctwaClid: 'clid-1' }
+    function m(over: Partial<MensagemNormalizada>): MensagemNormalizada {
+        return {
+            messageId: 'x', telefoneWa: '5511999990000', direcao: 'entrada', conteudo: 'oi', tipoMidia: 'texto',
+            referral: null, enviadaEm: '2026-10-14T10:00:00.000Z', pushName: null, pedido: null, ...over,
+        }
+    }
+
+    it('referral de mensagem de SAÍDA não vale como atribuição', () => {
+        const ag = agregarPorTelefone([m({ direcao: 'saida', referral })]).get('5511999990000')
+        expect(ag?.referral).toBeNull()
+        expect(ag?.referralEm).toBeNull()
+    })
+
+    it('referral de entrada vale, e o mais antigo ganha mesmo com uma saída anterior com referral', () => {
+        const ag = agregarPorTelefone([
+            m({ direcao: 'saida', referral: { ...referral, ctwaClid: 'da-saida' }, enviadaEm: '2026-10-14T09:00:00.000Z' }),
+            m({ referral: { ...referral, ctwaClid: 'segundo' }, enviadaEm: '2026-10-14T11:00:00.000Z' }),
+            m({ referral, enviadaEm: '2026-10-14T10:00:00.000Z' }),
+        ]).get('5511999990000')
+        expect(ag?.referral).toEqual(referral)
+        expect(ag?.referralEm).toBe('2026-10-14T10:00:00.000Z')
+    })
+
+    it('mensagem automática de empresa (template) não cria contato nem avança ultimo_contato', () => {
+        const so = agregarPorTelefone([m({ tipoMidia: 'template_empresa', conteudo: null, pushName: 'Banco X' })])
+        expect(so.size).toBe(0)
+
+        const ag = agregarPorTelefone([
+            m({ enviadaEm: '2026-10-14T10:00:00.000Z', pushName: 'Valéria' }),
+            m({ tipoMidia: 'template_empresa', conteudo: null, enviadaEm: '2026-10-14T15:00:00.000Z' }),
+        ]).get('5511999990000')
+        expect(ag?.ultimaEm).toBe('2026-10-14T10:00:00.000Z')
+    })
+
+    it('última mensagem e nome (push name só da entrada)', () => {
+        const ag = agregarPorTelefone([
+            m({ direcao: 'saida', pushName: 'Mont', enviadaEm: '2026-10-14T12:00:00.000Z' }),
+            m({ pushName: 'Ana', enviadaEm: '2026-10-14T10:00:00.000Z' }),
+        ]).get('5511999990000')
+        expect(ag?.ultimaEm).toBe('2026-10-14T12:00:00.000Z')
+        expect(ag?.nome).toBe('Ana')
+    })
+})
+
+describe('avancaUltimoContato — compara instantes, não texto', () => {
+    it('mesmo instante em formatos diferentes NÃO avança (antes: ".000Z" > "+00:00" como texto)', () => {
+        expect(avancaUltimoContato('2026-10-14T18:40:12+00:00', '2026-10-14T18:40:12.000Z')).toBe(false)
+    })
+    it('instante posterior avança; anterior não', () => {
+        expect(avancaUltimoContato('2026-10-14T18:40:12+00:00', '2026-10-14T18:40:13.000Z')).toBe(true)
+        expect(avancaUltimoContato('2026-10-14T18:40:12+00:00', '2026-10-14T18:40:11.000Z')).toBe(false)
+    })
+    it('contato sem último contato sempre avança', () => {
+        expect(avancaUltimoContato(null, '2026-10-14T18:40:12.000Z')).toBe(true)
     })
 })

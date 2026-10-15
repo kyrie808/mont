@@ -112,11 +112,54 @@ export function isJidIgnorado(jid: string | null | undefined): boolean {
     )
 }
 
+/**
+ * O LID (`136335482433638@lid`) de uma mensagem crua, ou `null` se o `remoteJid` não
+ * for LID.
+ *
+ * Mensagem RECEBIDA de contato em LID chega com o telefone já no `remoteJid`, mas o
+ * envio pela API (`send.message`) chega com o LID e sem `remoteJidAlt`. Sem telefone, o
+ * `normalizarMensagem` descarta. O ingestor usa este LID para buscar o telefone no
+ * `wa_lid_map` e repassa como `telefoneForcado`.
+ */
+export function lidDaMensagem(crua: Json): string | null {
+    const key = isObj(crua.key) ? crua.key : null
+    const jid = key && typeof key.remoteJid === 'string' ? key.remoteJid : null
+    return jid && jid.endsWith('@lid') ? jid : null
+}
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export type TipoMidia =
     | 'texto' | 'audio' | 'imagem' | 'video'
-    | 'documento' | 'sticker' | 'localizacao' | 'contato' | 'outro'
+    | 'documento' | 'sticker' | 'localizacao' | 'contato' | 'pedido' | 'outro'
+    /** `templateMessage`: mensagem automática de empresa (banco, app, boas-vindas do WhatsApp Business). */
+    | 'template_empresa'
+
+/**
+ * Mensagem que nenhuma pessoa escreveu. Fica gravada (o registro é completo), mas não
+ * cria contato, não avança `ultimo_contato` e não vai para o analista.
+ */
+export function isTipoAutomatico(tipo: TipoMidia | string): boolean {
+    return tipo === 'template_empresa'
+}
+
+/**
+ * Pedido montado pelo cliente no catálogo NATIVO do WhatsApp (`orderMessage`).
+ *
+ * É só o que o WhatsApp entrega: título com os nomes dos itens juntos, contagem e
+ * total. NÃO há `produto_id` nem quantidade por item — por isso não cabe em
+ * `wa_pedido` (o rascunho estruturado da secretária) e vai para `wa_pedido_catalogo`.
+ */
+export interface PedidoCatalogo {
+    orderId: string | null
+    titulo: string | null
+    itensQtd: number | null
+    /** Em reais. `null` quando o WhatsApp não mandou ou mandou ilegível. */
+    total: number | null
+    moeda: string | null
+    /** O recado que o cliente escreveu junto do pedido, quando houver. */
+    observacao: string | null
+}
 
 export interface MensagemNormalizada {
     messageId: string
@@ -128,6 +171,8 @@ export interface MensagemNormalizada {
     referral: Record<string, unknown> | null
     enviadaEm: string // ISO
     pushName: string | null
+    /** Preenchido só quando `tipoMidia === 'pedido'`. */
+    pedido: PedidoCatalogo | null
 }
 
 // ─── Parsing ──────────────────────────────────────────────────────────────────
@@ -152,8 +197,72 @@ const MIDIA_POR_CHAVE: Record<string, TipoMidia> = {
     contactsArrayMessage: 'contato',
 }
 
+/**
+ * `totalAmount1000` (milésimos da moeda) → reais. Chega como número, string ou Long
+ * do protobuf (`{ low, high }`, com `low` em int32 com sinal).
+ */
+function lerMilesimos(raw: unknown): number | null {
+    let milesimos: number | null = null
+    if (typeof raw === 'number') milesimos = raw
+    else if (typeof raw === 'string' && /^\d+$/.test(raw)) milesimos = Number(raw)
+    else if (isObj(raw) && typeof raw.low === 'number') {
+        const high = typeof raw.high === 'number' ? raw.high : 0
+        milesimos = high * 2 ** 32 + (raw.low >>> 0)
+    }
+    if (milesimos === null || !Number.isFinite(milesimos) || milesimos < 0) return null
+    return milesimos / 1000
+}
+
+const textoOuNull = (v: unknown): string | null =>
+    typeof v === 'string' && v.trim() ? v.trim() : null
+
+/** Pedido do catálogo nativo do WhatsApp, ou `null` quando a mensagem não é um. */
+export function extrairPedidoCatalogo(message: unknown): PedidoCatalogo | null {
+    if (!isObj(message)) return null
+    const o = message.orderMessage
+    if (!isObj(o)) return null
+
+    return {
+        orderId: textoOuNull(o.orderId),
+        titulo: textoOuNull(o.orderTitle),
+        itensQtd: typeof o.itemCount === 'number' && Number.isInteger(o.itemCount) ? o.itemCount : null,
+        total: lerMilesimos(o.totalAmount1000),
+        moeda: textoOuNull(o.totalCurrencyCode),
+        observacao: textoOuNull(o.message),
+    }
+}
+
+/** `90` → `R$ 90,00`. Sem `Intl` de propósito: o resultado tem que ser idêntico no Deno e no Node. */
+function reais(valor: number): string {
+    const [inteiro, centavos] = valor.toFixed(2).split('.')
+    return `R$ ${inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${centavos}`
+}
+
+/**
+ * A linha que o analista e a secretária leem no lugar de `[outro]`.
+ * ⚠️ A migration `wa_pedido_catalogo` reescreveu os pedidos antigos com este MESMO
+ * formato em SQL — mudou aqui, os registros antigos ficam no formato velho.
+ */
+function descreverPedido(p: PedidoCatalogo): string {
+    const partes: string[] = []
+    if (p.itensQtd !== null) partes.push(`${p.itensQtd} ${p.itensQtd === 1 ? 'item' : 'itens'}`)
+    if (p.total !== null) partes.push(`total ${reais(p.total)}`)
+
+    let texto = '🛒 Pedido pelo catálogo do WhatsApp'
+    if (partes.length) texto += ` — ${partes.join(', ')}`
+    if (p.titulo) texto += `: ${p.titulo}`
+    if (p.observacao) texto += ` — recado: "${p.observacao}"`
+    return texto
+}
+
 function extrairTipoEConteudo(message: Json | undefined): { tipo: TipoMidia; conteudo: string | null } {
     if (!isObj(message)) return { tipo: 'outro', conteudo: null }
+
+    const pedido = extrairPedidoCatalogo(message)
+    if (pedido) return { tipo: 'pedido', conteudo: descreverPedido(pedido) }
+
+    // O texto do template vem cifrado (dataSharingContext); não há o que ler.
+    if (isObj(message.templateMessage)) return { tipo: 'template_empresa', conteudo: null }
 
     if (typeof message.conversation === 'string') {
         return { tipo: 'texto', conteudo: message.conversation }
@@ -392,5 +501,59 @@ export function normalizarMensagem(crua: Json, telefoneForcado?: string | null):
         referral: extrairReferral(crua),
         enviadaEm: lerTimestamp(crua.messageTimestamp),
         pushName: typeof crua.pushName === 'string' && crua.pushName ? crua.pushName : null,
+        pedido: tipo === 'pedido' ? extrairPedidoCatalogo(message) : null,
     }
+}
+
+// ─── Agregação por telefone (ingestor) ─────────────────────────────────────────
+
+export interface AgregadoTelefone {
+    ultimaEm: string
+    nome: string | null
+    referral: Record<string, unknown> | null
+    referralEm: string | null
+}
+
+/**
+ * Resume um lote de mensagens em 1 entrada por telefone: 1 contato por conversa, não 1
+ * por mensagem.
+ *
+ * Referral só conta em mensagem de ENTRADA. É o clique do CLIENTE no anúncio que atribui
+ * a conversa; um referral numa mensagem nossa (contexto citado, envio pela API) não diz
+ * de onde o cliente veio e não pode reescrever a origem nem enfileirar Lead na CAPI.
+ */
+export function agregarPorTelefone(mensagens: MensagemNormalizada[]): Map<string, AgregadoTelefone> {
+    const porTelefone = new Map<string, AgregadoTelefone>()
+
+    for (const m of mensagens) {
+        // Mensagem automática de empresa não é conversa: não cria contato (14/10: 4 "clientes"
+        // eram robôs de empresa) nem avança ultimo_contato. A mensagem segue gravada.
+        if (isTipoAutomatico(m.tipoMidia)) continue
+        const at = porTelefone.get(m.telefoneWa) ?? {
+            ultimaEm: m.enviadaEm, nome: null, referral: null, referralEm: null,
+        }
+        if (Date.parse(m.enviadaEm) > Date.parse(at.ultimaEm)) at.ultimaEm = m.enviadaEm
+        // pushName só existe em mensagem de entrada — o nome que a pessoa escolheu.
+        if (!at.nome && m.direcao === 'entrada' && m.pushName) at.nome = m.pushName
+        // O primeiro clique é o que vale: mantém o referral mais ANTIGO.
+        if (
+            m.direcao === 'entrada' && m.referral &&
+            (!at.referralEm || Date.parse(m.enviadaEm) < Date.parse(at.referralEm))
+        ) {
+            at.referral = m.referral
+            at.referralEm = m.enviadaEm
+        }
+        porTelefone.set(m.telefoneWa, at)
+    }
+
+    return porTelefone
+}
+
+/**
+ * `ultimo_contato` só avança. Compara INSTANTES: o banco devolve '...+00:00' e o
+ * normalizador produz '...000Z'; comparados como texto, o mesmo instante parecia mais
+ * novo e o contato era regravado à toa.
+ */
+export function avancaUltimoContato(atual: string | null, nova: string): boolean {
+    return !atual || Date.parse(nova) > Date.parse(atual)
 }

@@ -22,7 +22,11 @@
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
+  agregarPorTelefone,
+  avancaUltimoContato,
+  isTipoAutomatico,
   extrairMensagensCruas,
+  lidDaMensagem,
   normalizarMensagem,
   isAnuncioPago,
   podeGravarAtribuicao,
@@ -100,6 +104,27 @@ function telefoneNacional(canonico: string): string {
   return canonico.startsWith('55') ? canonico.slice(2) : canonico
 }
 
+/**
+ * Telefone de cada LID do lote, lido do `wa_lid_map`.
+ *
+ * O envio pela API para contato em LID chega com `remoteJid` = LID e sem
+ * `remoteJidAlt`. Sem esta consulta a mensagem era descartada, e a saída do
+ * operador sumia do histórico. LID que não está no mapa continua de fora; ele segue
+ * na tabela `Message` da Evolution para o backfill.
+ */
+async function telefonesDosLids(admin: SupabaseClient, cruas: Record<string, unknown>[]): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>()
+  const lids = [...new Set(cruas.map(lidDaMensagem).filter((l): l is string => l !== null))]
+  if (lids.length === 0) return mapa
+
+  for (const lote of chunks(lids, CHUNK)) {
+    const { data, error } = await admin.from('wa_lid_map').select('lid, telefone_wa').in('lid', lote)
+    if (error) throw new Error(`wa_lid_map: ${error.message}`)
+    for (const r of data ?? []) mapa.set(r.lid, r.telefone_wa)
+  }
+  return mapa
+}
+
 // ── Passo 1: log cru ──────────────────────────────────────────────────────────
 
 /**
@@ -130,6 +155,9 @@ async function gravarCruas(
       enviada_em: m.enviadaEm,
       historico: resgate !== null,
       lid: resgate?.lid ?? null,
+      // Mensagem automática de empresa (templateMessage) não é conversa: entra no registro
+      // já fora da fila do analista. O agregador também não cria contato por ela.
+      processado_em: isTipoAutomatico(m.tipoMidia) ? new Date().toISOString() : null,
     }))
 
     const { data, error } = await admin
@@ -189,29 +217,8 @@ async function casarContatos(
 ): Promise<ResumoContato> {
   const resumo: ResumoContato = { criados: 0, atualizados: 0, atribuicoes: 0 }
 
-  // Agrega por telefone: 1 contato por conversa, não 1 por mensagem.
-  interface Agregado {
-    ultimaEm: string
-    nome: string | null
-    referral: Record<string, unknown> | null
-    referralEm: string | null
-  }
-  const porTelefone = new Map<string, Agregado>()
-
-  for (const m of mensagens) {
-    const at = porTelefone.get(m.telefoneWa) ?? {
-      ultimaEm: m.enviadaEm, nome: null, referral: null, referralEm: null,
-    }
-    if (m.enviadaEm > at.ultimaEm) at.ultimaEm = m.enviadaEm
-    // pushName só existe em mensagem de entrada — o nome que a pessoa escolheu.
-    if (!at.nome && m.direcao === 'entrada' && m.pushName) at.nome = m.pushName
-    // O primeiro clique é o que vale: mantém o referral mais ANTIGO.
-    if (m.referral && (!at.referralEm || m.enviadaEm < at.referralEm)) {
-      at.referral = m.referral
-      at.referralEm = m.enviadaEm
-    }
-    porTelefone.set(m.telefoneWa, at)
-  }
+  // 1 contato por conversa, não 1 por mensagem. Referral só de entrada (ver a função).
+  const porTelefone = agregarPorTelefone(mensagens)
 
   const telefones = [...porTelefone.keys()]
   const existentes = new Map<
@@ -276,7 +283,7 @@ async function casarContatos(
     // quem foi cadastrado como indicação NUNCA vira anúncio, mesmo clicando num depois
     // (ver `podeGravarAtribuicao`). O referral segue guardado na mensagem.
     const gravarAtribuicao = veioDeAnuncio && podeGravarAtribuicao(atual.origem, !!atual.ctwa_clid)
-    const avancaContato = !atual.ultimo_contato || ag.ultimaEm > atual.ultimo_contato
+    const avancaContato = avancaUltimoContato(atual.ultimo_contato, ag.ultimaEm)
 
     if (!gravarAtribuicao && !avancaContato) continue
 
@@ -317,6 +324,40 @@ async function casarContatos(
   return resumo
 }
 
+// ── Passo 3: pedido do catálogo do WhatsApp ───────────────────────────────────
+
+/**
+ * `orderMessage` vira pedido pendente + nota na timeline, pela RPC (que é idempotente
+ * por `message_id`: reentrega do webhook e backfill não duplicam nada).
+ *
+ * Roda DEPOIS de `casarContatos` porque a RPC exige a mensagem já ligada ao contato.
+ * Falha aqui sobe como 500 de propósito: a Evolution reentrega, e um pedido de cliente
+ * não pode sumir em silêncio — foi exatamente o que acontecia quando ele virava "[outro]".
+ */
+async function registrarPedidos(admin: SupabaseClient, mensagens: MensagemNormalizada[]): Promise<number> {
+  let registrados = 0
+
+  for (const m of mensagens) {
+    if (!m.pedido || m.direcao !== 'entrada') continue
+
+    const { data, error } = await admin.rpc('rpc_registrar_pedido_catalogo_wa', {
+      p_message_id: m.messageId,
+      p_order_id: m.pedido.orderId,
+      p_titulo: m.pedido.titulo,
+      p_itens_qtd: m.pedido.itensQtd,
+      p_total: m.pedido.total,
+      p_moeda: m.pedido.moeda,
+      p_observacao: m.pedido.observacao,
+    })
+
+    if (error) throw new Error(`Falha ao registrar pedido ${m.messageId}: ${error.message}`)
+    // `null` = já estava registrado.
+    if (data) registrados++
+  }
+
+  return registrados
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -337,22 +378,7 @@ Deno.serve(async (req: Request) => {
 
   const resgate = lerResgate(body)
   const cruas = extrairMensagensCruas(body)
-  const mensagens: MensagemNormalizada[] = []
-  const payloadPorId = new Map<string, unknown>()
-
-  for (const crua of cruas) {
-    // No resgate o telefone vem pronto do resgatador; ao vivo sai do próprio JID.
-    const m = normalizarMensagem(crua, resgate?.telefone_wa)
-    if (!m) continue // grupo, status, sem id, telefone não-canonizável
-    mensagens.push(m)
-    payloadPorId.set(m.messageId, crua)
-  }
-
   const modo = Deno.env.get('INGESTOR_MODO') === 'ativo' ? 'ativo' : 'sombra'
-
-  if (mensagens.length === 0) {
-    return json({ ok: true, modo, recebidas: cruas.length, gravadas: 0, ignoradas: cruas.length }, 200)
-  }
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -360,6 +386,23 @@ Deno.serve(async (req: Request) => {
   )
 
   try {
+    const telefonePorLid = resgate ? new Map<string, string>() : await telefonesDosLids(admin, cruas)
+    const mensagens: MensagemNormalizada[] = []
+    const payloadPorId = new Map<string, unknown>()
+
+    for (const crua of cruas) {
+      // No resgate o telefone vem pronto do resgatador. Ao vivo sai do próprio JID ou,
+      // quando o JID é LID sem telefone (envio pela API), do wa_lid_map.
+      const m = normalizarMensagem(crua, resgate?.telefone_wa ?? telefonePorLid.get(lidDaMensagem(crua) ?? ''))
+      if (!m) continue // grupo, status, sem id, telefone não-canonizável, LID sem mapa
+      mensagens.push(m)
+      payloadPorId.set(m.messageId, crua)
+    }
+
+    if (mensagens.length === 0) {
+      return json({ ok: true, modo, recebidas: cruas.length, gravadas: 0, ignoradas: cruas.length }, 200)
+    }
+
     const gravadas = await gravarCruas(admin, mensagens, payloadPorId, resgate)
     const comReferral = mensagens.filter((m) => m.referral !== null).length
     const comAnuncioPago = mensagens.filter((m) => isAnuncioPago(m.referral)).length
@@ -399,6 +442,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const contatos = await casarContatos(admin, mensagens)
+    const pedidos = await registrarPedidos(admin, mensagens)
 
     return json({
       ok: true,
@@ -409,6 +453,7 @@ Deno.serve(async (req: Request) => {
       com_referral: comReferral,
       anuncio_pago: comAnuncioPago,
       contatos,
+      pedidos,
     }, 200)
   } catch (e) {
     // 500 faz a Evolution/n8n reentregar. Como a gravação é idempotente por

@@ -1158,6 +1158,7 @@ export type Database = {
           id: string
           observacao: string | null
           resultado: string | null
+          retomar_em: string | null
           sentido: string
           tipo: string | null
         }
@@ -1171,6 +1172,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           resultado?: string | null
+          retomar_em?: string | null
           sentido?: string
           tipo?: string | null
         }
@@ -1184,6 +1186,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           resultado?: string | null
+          retomar_em?: string | null
           sentido?: string
           tipo?: string | null
         }
@@ -1452,6 +1455,9 @@ export type Database = {
       }
       mensagens_whatsapp: {
         Row: {
+          analise_falhas: number
+          analise_travada_em: string | null
+          analise_ultimo_erro: string | null
           contato_id: string | null
           conteudo: string | null
           criado_em: string
@@ -1468,6 +1474,9 @@ export type Database = {
           tipo_midia: string
         }
         Insert: {
+          analise_falhas?: number
+          analise_travada_em?: string | null
+          analise_ultimo_erro?: string | null
           contato_id?: string | null
           conteudo?: string | null
           criado_em?: string
@@ -1484,6 +1493,9 @@ export type Database = {
           tipo_midia?: string
         }
         Update: {
+          analise_falhas?: number
+          analise_travada_em?: string | null
+          analise_ultimo_erro?: string | null
           contato_id?: string | null
           conteudo?: string | null
           criado_em?: string
@@ -2510,6 +2522,63 @@ export type Database = {
           },
         ]
       }
+      wa_analista_rodadas: {
+        Row: {
+          adiados: number
+          analisados: number
+          aviso: string | null
+          descartados: number
+          detalhes: Json
+          falhas: number
+          gravados: number
+          id: string
+          iniciada_em: string
+          modelo: string
+          origem: string
+          segmentos_prontos: number | null
+          simulacao: boolean
+          status: string
+          terminada_em: string | null
+          travados: number
+        }
+        Insert: {
+          adiados?: number
+          analisados?: number
+          aviso?: string | null
+          descartados?: number
+          detalhes?: Json
+          falhas?: number
+          gravados?: number
+          id?: string
+          iniciada_em?: string
+          modelo: string
+          origem: string
+          segmentos_prontos?: number | null
+          simulacao?: boolean
+          status?: string
+          terminada_em?: string | null
+          travados?: number
+        }
+        Update: {
+          adiados?: number
+          analisados?: number
+          aviso?: string | null
+          descartados?: number
+          detalhes?: Json
+          falhas?: number
+          gravados?: number
+          id?: string
+          iniciada_em?: string
+          modelo?: string
+          origem?: string
+          segmentos_prontos?: number | null
+          simulacao?: boolean
+          status?: string
+          terminada_em?: string | null
+          travados?: number
+        }
+        Relationships: []
+      }
       wa_envios: {
         Row: {
           contato_id: string | null
@@ -2693,8 +2762,140 @@ export type Database = {
             foreignKeyName: "wa_pedido_interacao_id_fkey"
             columns: ["interacao_id"]
             isOneToOne: false
+            referencedRelation: "aceitou_sem_venda"
+            referencedColumns: ["interacao_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: false
             referencedRelation: "interacoes"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_pedido_catalogo: {
+        Row: {
+          atualizado_em: string
+          contato_id: string
+          criado_em: string
+          id: string
+          interacao_id: string | null
+          itens_qtd: number | null
+          message_id: string
+          moeda: string | null
+          observacao: string | null
+          order_id: string | null
+          pedido_em: string
+          status: string
+          telefone_wa: string
+          titulo: string | null
+          total: number | null
+        }
+        Insert: {
+          atualizado_em?: string
+          contato_id: string
+          criado_em?: string
+          id?: string
+          interacao_id?: string | null
+          itens_qtd?: number | null
+          message_id: string
+          moeda?: string | null
+          observacao?: string | null
+          order_id?: string | null
+          pedido_em: string
+          status?: string
+          telefone_wa: string
+          titulo?: string | null
+          total?: number | null
+        }
+        Update: {
+          atualizado_em?: string
+          contato_id?: string
+          criado_em?: string
+          id?: string
+          interacao_id?: string | null
+          itens_qtd?: number | null
+          message_id?: string
+          moeda?: string | null
+          observacao?: string | null
+          order_id?: string | null
+          pedido_em?: string
+          status?: string
+          telefone_wa?: string
+          titulo?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: false
+            referencedRelation: "aceitou_sem_venda"
+            referencedColumns: ["interacao_id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: false
+            referencedRelation: "interacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_pedido_catalogo_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "mensagens_whatsapp"
+            referencedColumns: ["message_id"]
           },
         ]
       }
@@ -2763,6 +2964,71 @@ export type Database = {
       }
     }
     Views: {
+      aceitou_sem_venda: {
+        Row: {
+          aceitou_em: string | null
+          contato_id: string | null
+          gerado_por_ia: boolean | null
+          interacao_id: string | null
+          nome: string | null
+          observacao: string | null
+          status_relacionamento:
+            | Database["public"]["Enums"]["enum_relacionamento_status"]
+            | null
+          telefone: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "interacoes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+        ]
+      }
       contato_compras_resumo: {
         Row: {
           contato_id: string | null
@@ -3445,6 +3711,14 @@ export type Database = {
         Args: { p_sinal: number; p_venda_id: string }
         Returns: undefined
       }
+      fn_ia_destino_coluna: {
+        Args: {
+          p_coluna: Database["public"]["Enums"]["enum_relacionamento_status"]
+          p_resultado: string
+          p_sentido: string
+        }
+        Returns: Database["public"]["Enums"]["enum_relacionamento_status"]
+      }
       fn_mover_card_relacionamento: {
         Args: {
           p_contato_id: string
@@ -3456,6 +3730,13 @@ export type Database = {
       fn_purgar_conteudo_whatsapp: {
         Args: { p_meses?: number }
         Returns: number
+      }
+      fn_relacionamento_reaberto: {
+        Args: {
+          p_aba: Database["public"]["Enums"]["enum_relacionamento_aba"]
+          p_atraso: number
+        }
+        Returns: boolean
       }
       fn_slugify: { Args: { p: string }; Returns: string }
       fn_telefone_wa: { Args: { p_telefone: string }; Returns: string }
@@ -3547,6 +3828,27 @@ export type Database = {
         Args: { p_combo_id: string; p_itens: Json }
         Returns: undefined
       }
+      rpc_analista_descartar: {
+        Args: {
+          p_contato_id: string
+          p_message_ids: string[]
+          p_motivo: string
+        }
+        Returns: Json
+      }
+      rpc_analista_previa: {
+        Args: {
+          p_coluna_simulada?: Database["public"]["Enums"]["enum_relacionamento_status"]
+          p_contato_id: string
+          p_resultado: string
+          p_sentido: string
+        }
+        Returns: Json
+      }
+      rpc_analista_registrar_falha: {
+        Args: { p_erro: string; p_limite?: number; p_message_ids: string[] }
+        Returns: Json
+      }
       rpc_indicados_do_indicador: {
         Args: { p_indicador_id: string }
         Returns: {
@@ -3570,10 +3872,18 @@ export type Database = {
         }[]
       }
       rpc_registrar_interacao_ia: {
+        Args: { p_contato_id: string; p_message_ids: string[]; p_payload: Json }
+        Returns: Json
+      }
+      rpc_registrar_pedido_catalogo_wa: {
         Args: {
-          p_message_ids: string[]
-          p_payload: Json
-          p_telefone_wa: string
+          p_itens_qtd: number
+          p_message_id: string
+          p_moeda: string
+          p_observacao: string
+          p_order_id: string
+          p_titulo: string
+          p_total: number
         }
         Returns: string
       }
