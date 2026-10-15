@@ -132,7 +132,7 @@ export function lidDaMensagem(crua: Json): string | null {
 export type TipoMidia =
     | 'texto' | 'audio' | 'imagem' | 'video'
     | 'documento' | 'sticker' | 'localizacao' | 'contato' | 'pedido' | 'outro'
-    /** `templateMessage`: mensagem automática de empresa (banco, app, boas-vindas do WhatsApp Business). */
+    /** Automática de empresa: `templateMessage`, ou `interactiveMessage` (botões) RECEBIDA. */
     | 'template_empresa'
 
 /**
@@ -255,8 +255,16 @@ function descreverPedido(p: PedidoCatalogo): string {
     return texto
 }
 
-function extrairTipoEConteudo(message: Json | undefined): { tipo: TipoMidia; conteudo: string | null } {
+function extrairTipoEConteudo(message: Json | undefined, deNos: boolean): { tipo: TipoMidia; conteudo: string | null } {
     if (!isObj(message)) return { tipo: 'outro', conteudo: null }
+
+    // Mensagem com botões RECEBIDA é automática de empresa (pessoa não manda isso pelo app).
+    // As que NÓS enviamos (cobrança do catálogo, saudação automática) seguem como antes.
+    const interativa = message.interactiveMessage
+    if (!deNos && isObj(interativa)) {
+        const corpo = isObj(interativa.body) ? textoOuNull(interativa.body.text) : null
+        return { tipo: 'template_empresa', conteudo: corpo }
+    }
 
     const pedido = extrairPedidoCatalogo(message)
     if (pedido) return { tipo: 'pedido', conteudo: descreverPedido(pedido) }
@@ -490,12 +498,13 @@ export function normalizarMensagem(crua: Json, telefoneForcado?: string | null):
     if (!tel) return null
 
     const message = isObj(crua.message) ? crua.message : undefined
-    const { tipo, conteudo } = extrairTipoEConteudo(message)
+    const deNos = key.fromMe === true
+    const { tipo, conteudo } = extrairTipoEConteudo(message, deNos)
 
     return {
         messageId,
         telefoneWa: tel,
-        direcao: key.fromMe === true ? 'saida' : 'entrada',
+        direcao: deNos ? 'saida' : 'entrada',
         conteudo,
         tipoMidia: tipo,
         referral: extrairReferral(crua),

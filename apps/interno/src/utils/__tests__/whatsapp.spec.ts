@@ -303,6 +303,26 @@ describe('normalizarMensagem', () => {
         expect(isTipoAutomatico('texto')).toBe(false)
     })
 
+    it('interactiveMessage RECEBIDA (botões de empresa) é mensagem automática, com o texto legível', () => {
+        const m = normalizarMensagem({
+            ...base,
+            message: { interactiveMessage: { body: { text: 'Seu boleto vence amanhã' }, nativeFlowMessage: { buttons: [] } } },
+        })!
+        expect(m.direcao).toBe('entrada')
+        expect(m.tipoMidia).toBe('template_empresa')
+        expect(m.conteudo).toBe('Seu boleto vence amanhã')
+    })
+
+    it('interactiveMessage ENVIADA por nós (cobrança do catálogo, saudação automática) não muda', () => {
+        const m = normalizarMensagem({
+            ...base,
+            key: { ...base.key, fromMe: true },
+            message: { interactiveMessage: { nativeFlowMessage: { buttons: [{ name: 'review_and_pay' }] } } },
+        })!
+        expect(m.direcao).toBe('saida')
+        expect(m.tipoMidia).toBe('outro')
+    })
+
     it('normaliza mensagem de entrada', () => {
         const m = normalizarMensagem(base)!
         expect(m.messageId).toBe('MSG1')
