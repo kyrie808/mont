@@ -112,6 +112,21 @@ export function isJidIgnorado(jid: string | null | undefined): boolean {
     )
 }
 
+/**
+ * O LID (`136335482433638@lid`) de uma mensagem crua, ou `null` se o `remoteJid` não
+ * for LID.
+ *
+ * Mensagem RECEBIDA de contato em LID chega com o telefone já no `remoteJid`, mas o
+ * envio pela API (`send.message`) chega com o LID e sem `remoteJidAlt`. Sem telefone, o
+ * `normalizarMensagem` descarta. O ingestor usa este LID para buscar o telefone no
+ * `wa_lid_map` e repassa como `telefoneForcado`.
+ */
+export function lidDaMensagem(crua: Json): string | null {
+    const key = isObj(crua.key) ? crua.key : null
+    const jid = key && typeof key.remoteJid === 'string' ? key.remoteJid : null
+    return jid && jid.endsWith('@lid') ? jid : null
+}
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export type TipoMidia =

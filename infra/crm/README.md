@@ -301,12 +301,17 @@ antes do downgrade de 14/08:
 ```bash
 curl -s -X POST http://localhost:8080/webhook/set/mont -H "apikey: $EVOLUTION_API_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"webhook":{"enabled":true,"url":"http://n8n:5678/webhook/evolution","webhookByEvents":false,"webhookBase64":false,"events":["MESSAGES_UPSERT","MESSAGES_SET","CONNECTION_UPDATE"]}}'
+  -d '{"webhook":{"enabled":true,"url":"http://n8n:5678/webhook/evolution","webhookByEvents":false,"webhookBase64":false,"events":["MESSAGES_UPSERT","MESSAGES_SET","CONNECTION_UPDATE","SEND_MESSAGE"]}}'
 
 curl -s -X POST http://localhost:8080/settings/set/mont -H "apikey: $EVOLUTION_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"rejectCall":false,"groupsIgnore":false,"alwaysOnline":false,"readMessages":false,"readStatus":false,"syncFullHistory":true}'
 ```
+
+⚠️ `SEND_MESSAGE` **não é opcional**. O que sai pela API (secretária, avisos, envio
+manual) não volta pelo `MESSAGES_UPSERT`; sem esse evento a saída some do CRM. Foi
+ligado em 14/10/2026. Se o destino for um contato em LID, o webhook chega com o LID
+no `remoteJid` e sem telefone, e o ingestor resolve pelo `wa_lid_map`.
 
 ⚠️ `alwaysOnline: false` **não é detalhe**. Com `true`, o Baileys se anuncia online e o
 WhatsApp para de mandar notificação para o celular — o Gilmar deixa de ver mensagem de

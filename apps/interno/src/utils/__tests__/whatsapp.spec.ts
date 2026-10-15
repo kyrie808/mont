@@ -9,6 +9,7 @@ import {
     extrairMensagensCruas,
     normalizarMensagem,
     extrairPedidoCatalogo,
+    lidDaMensagem,
     isAnuncioPago,
     podeGravarAtribuicao,
 } from '@mont/shared'
@@ -460,5 +461,50 @@ describe('pedido pelo catálogo do WhatsApp (orderMessage)', () => {
     it('mensagem comum não carrega pedido', () => {
         const m = normalizarMensagem({ ...crua, message: { conversation: 'oi' } })!
         expect(m.pedido).toBeNull()
+    })
+})
+
+describe('envio pela API para contato em LID (send.message)', () => {
+    // Webhook real de 14/10, 23:50 (envio de teste da E2). A Evolution entrega o envio
+    // com o LID no remoteJid e SEM remoteJidAlt: o telefone não sai do próprio JID.
+    const enviada = {
+        key: { remoteJid: '136335482433638@lid', fromMe: true, id: '3EB015933235D0D35DBFDB' },
+        pushName: 'Você',
+        status: 'PENDING',
+        message: { conversation: 'Teste E2 do CRM (envio pela API). Pode ignorar.' },
+        messageType: 'conversation',
+        messageTimestamp: 1792032618,
+        source: 'web',
+    }
+    const body = { event: 'send.message', instance: 'mont', data: enviada }
+
+    it('o webhook send.message entrega uma mensagem, como o messages.upsert', () => {
+        expect(extrairMensagensCruas(body)).toHaveLength(1)
+    })
+
+    it('sem o mapa do LID, a mensagem não tem telefone e fica de fora', () => {
+        expect(normalizarMensagem(enviada)).toBeNull()
+    })
+
+    it('lidDaMensagem devolve o LID para o ingestor procurar no wa_lid_map', () => {
+        expect(lidDaMensagem(enviada)).toBe('136335482433638@lid')
+    })
+
+    it('com o telefone vindo do mapa, vira saída do contato certo', () => {
+        const m = normalizarMensagem(enviada, '5511934417085')
+        expect(m).toMatchObject({
+            messageId: '3EB015933235D0D35DBFDB',
+            telefoneWa: '5511934417085',
+            direcao: 'saida',
+            conteudo: 'Teste E2 do CRM (envio pela API). Pode ignorar.',
+            tipoMidia: 'texto',
+        })
+    })
+
+    it('JID de telefone, de grupo ou ausente não é LID', () => {
+        expect(lidDaMensagem({ key: { remoteJid: '5511934417085@s.whatsapp.net', id: 'x' } })).toBeNull()
+        expect(lidDaMensagem({ key: { remoteJid: '120363000000000000@g.us', id: 'x' } })).toBeNull()
+        expect(lidDaMensagem({ key: { id: 'x' } })).toBeNull()
+        expect(lidDaMensagem({})).toBeNull()
     })
 })

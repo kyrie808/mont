@@ -48,6 +48,7 @@ export {
     extrairMensagensCruas,
     normalizarMensagem,
     extrairPedidoCatalogo,
+    lidDaMensagem,
 } from './whatsapp'
 export type { TipoMidia, MensagemNormalizada, PedidoCatalogo } from './whatsapp'
 

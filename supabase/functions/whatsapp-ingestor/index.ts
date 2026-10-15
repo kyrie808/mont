@@ -23,6 +23,7 @@
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   extrairMensagensCruas,
+  lidDaMensagem,
   normalizarMensagem,
   isAnuncioPago,
   podeGravarAtribuicao,
@@ -98,6 +99,27 @@ function chunks<T>(arr: T[], tamanho: number): T[][] {
 /** `5511910049290` → `11910049290`, que é como os outros 783 contatos estão gravados. */
 function telefoneNacional(canonico: string): string {
   return canonico.startsWith('55') ? canonico.slice(2) : canonico
+}
+
+/**
+ * Telefone de cada LID do lote, lido do `wa_lid_map`.
+ *
+ * O envio pela API para contato em LID chega com `remoteJid` = LID e sem
+ * `remoteJidAlt`. Sem esta consulta a mensagem era descartada, e a saída do
+ * operador sumia do histórico. LID que não está no mapa continua de fora; ele segue
+ * na tabela `Message` da Evolution para o backfill.
+ */
+async function telefonesDosLids(admin: SupabaseClient, cruas: Record<string, unknown>[]): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>()
+  const lids = [...new Set(cruas.map(lidDaMensagem).filter((l): l is string => l !== null))]
+  if (lids.length === 0) return mapa
+
+  for (const lote of chunks(lids, CHUNK)) {
+    const { data, error } = await admin.from('wa_lid_map').select('lid, telefone_wa').in('lid', lote)
+    if (error) throw new Error(`wa_lid_map: ${error.message}`)
+    for (const r of data ?? []) mapa.set(r.lid, r.telefone_wa)
+  }
+  return mapa
 }
 
 // ── Passo 1: log cru ──────────────────────────────────────────────────────────
@@ -371,22 +393,7 @@ Deno.serve(async (req: Request) => {
 
   const resgate = lerResgate(body)
   const cruas = extrairMensagensCruas(body)
-  const mensagens: MensagemNormalizada[] = []
-  const payloadPorId = new Map<string, unknown>()
-
-  for (const crua of cruas) {
-    // No resgate o telefone vem pronto do resgatador; ao vivo sai do próprio JID.
-    const m = normalizarMensagem(crua, resgate?.telefone_wa)
-    if (!m) continue // grupo, status, sem id, telefone não-canonizável
-    mensagens.push(m)
-    payloadPorId.set(m.messageId, crua)
-  }
-
   const modo = Deno.env.get('INGESTOR_MODO') === 'ativo' ? 'ativo' : 'sombra'
-
-  if (mensagens.length === 0) {
-    return json({ ok: true, modo, recebidas: cruas.length, gravadas: 0, ignoradas: cruas.length }, 200)
-  }
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -394,6 +401,23 @@ Deno.serve(async (req: Request) => {
   )
 
   try {
+    const telefonePorLid = resgate ? new Map<string, string>() : await telefonesDosLids(admin, cruas)
+    const mensagens: MensagemNormalizada[] = []
+    const payloadPorId = new Map<string, unknown>()
+
+    for (const crua of cruas) {
+      // No resgate o telefone vem pronto do resgatador. Ao vivo sai do próprio JID ou,
+      // quando o JID é LID sem telefone (envio pela API), do wa_lid_map.
+      const m = normalizarMensagem(crua, resgate?.telefone_wa ?? telefonePorLid.get(lidDaMensagem(crua) ?? ''))
+      if (!m) continue // grupo, status, sem id, telefone não-canonizável, LID sem mapa
+      mensagens.push(m)
+      payloadPorId.set(m.messageId, crua)
+    }
+
+    if (mensagens.length === 0) {
+      return json({ ok: true, modo, recebidas: cruas.length, gravadas: 0, ignoradas: cruas.length }, 200)
+    }
+
     const gravadas = await gravarCruas(admin, mensagens, payloadPorId, resgate)
     const comReferral = mensagens.filter((m) => m.referral !== null).length
     const comAnuncioPago = mensagens.filter((m) => isAnuncioPago(m.referral)).length
