@@ -49,9 +49,12 @@ const MARCA_MIDIA = /^\[[a-z_]+\]$/
 /** Compra que depende de dinheiro/salário/pagamento: é adiamento, não aceite. */
 const CONDICAO_COMPRA =
     /(aguard|esper)\w*\s+(o\s+|a\s+|meu\s+|minha\s+)?(entrar|cair|receber|pagamento|sal[áa]rio|dinheiro|pix)|quando\s+(o\s+|a\s+|meu\s+|minha\s+)?(sal[áa]rio|dinheiro|pagamento|pix)\s+(entrar|cair)|entrar\s+(o\s+)?(\$|dinheiro|sal[áa]rio|pagamento)/
-/** Endereço e logística (o lugar deles é o cadastro e a venda). */
+/**
+ * Endereço (o lugar dele é o cadastro e a venda). Dia, horário e bairro da entrega ficam
+ * só no prompt: o Luccas aceitou o resíduo (15/10) para não multiplicar tentativas.
+ */
 const ENDERECO =
-    /\b(rua|avenida|av\.|travessa|alameda|bairro|cep|condom[ií]nio|bloco|apto|apartamento|portaria|porteiro|endere[çc]o)\b|\b\d{5}-?\d{3}\b|\b(entreg|envi|lev|cheg)\w*\s+(amanh[ãa]|hoje|cedo|de manh[ãa]|pela manh[ãa]|[àa] (tarde|noite)|[àa]s\s*\d)/i
+    /\b(rua|avenida|av\.|travessa|alameda|cep|condom[ií]nio|bloco|apto|apartamento|portaria)\b|\bn[º°o]\.?\s*\d+|\b\d{5}-?\d{3}\b/i
 /** "o cliente pediu para retomar/chamar/falar depois". */
 const PEDIU_RETOMAR = /\bpedi[ur]\w*\s+(para\s+|pra\s+)?(retomar|chamar|falar|procurar|voltar|lembrar|contatar|ligar)/i
 /** Um pedido de retomada escrito pelo próprio cliente. */
@@ -428,7 +431,7 @@ export function validarVeredito(
     if (ENDERECO.test(observacao) || (trechoCliente && ENDERECO.test(trechoCliente))) {
         return {
             ok: false,
-            motivo: 'a observacao ou o trecho_cliente tem endereço ou logística (rua, bairro, CEP, condomínio, bloco, apartamento, portaria, dia ou horário da entrega). NÃO mude o resultado: tire isso da observacao (registre só o pedido, o valor e a forma de pagamento; se a conversa for só sobre a entrega, algo como "Avisamos de um imprevisto na entrega; cliente concordou.") e, se for o caso, escolha outra frase do cliente',
+            motivo: 'a observacao ou o trecho_cliente tem endereço (rua, número, CEP, condomínio, bloco, apartamento, portaria). NÃO mude o resultado: tire o endereço da observacao e, se for o caso, escolha outra frase do cliente',
             ...manter,
         }
     }

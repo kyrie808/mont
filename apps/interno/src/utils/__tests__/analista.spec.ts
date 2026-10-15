@@ -328,16 +328,26 @@ describe('validarVeredito — auditoria das notas reais (15/10)', () => {
         'Cliente pediu 2 baldes, entrega no condomínio Tiradentes.',
         'Registrado endereço: Rua Nilo Peçanha 227, pedido de 1kg.',
         'Pediu para tocar na portaria e chamar a zeladora.',
-        'Cliente informou o bairro para cálculo de frete.',
         'Entrega no apartamento 44, bloco F.',
         'CEP 09810-580 confirmado.',
-        'Cliente pediu 2 baldes, dinheiro, entrega de manhã.',
-        'Fechou 1kg, entrega amanhã cedo, Pix.',
-        'Pediu entrega às 19h no mesmo endereço.',
-        'Desculpa pelo imprevisto, pão de queijo será enviado amanhã cedo; cliente aceitou.',
     ])('nota com endereço/logística volta para o modelo, mantendo o resultado: %s', (observacao) => {
         const s = seg([['nos', 'Qual o endereço?'], ['cliente', 'Pode ser amanhã']])
         const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao, trecho_cliente: 'Pode ser amanhã' }), s)
+        expect(r).toMatchObject({ ok: false, manterResultado: 'aceitou' })
+    })
+
+    it.each([
+        'Cliente pediu 2 baldes, dinheiro, entrega de manhã.',
+        'Cliente informou o bairro para cálculo de frete.',
+    ])('dia, horário e bairro da entrega passam (resíduo aceito em 15/10): %s', (observacao) => {
+        const s = seg([['nos', 'Qual o endereço?'], ['cliente', 'Pode ser amanhã']])
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao, trecho_cliente: 'Pode ser amanhã' }), s)
+        expect(r).toMatchObject({ ok: true })
+    })
+
+    it('número da casa conta como endereço', () => {
+        const s = seg([['nos', 'Qual o endereço?'], ['cliente', 'Pode ser amanhã']])
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao: 'Entrega no nº 227.', trecho_cliente: 'Pode ser amanhã' }), s)
         expect(r).toMatchObject({ ok: false, manterResultado: 'aceitou' })
     })
 
