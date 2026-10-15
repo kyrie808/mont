@@ -14,6 +14,7 @@ import {
     podeGravarAtribuicao,
     agregarPorTelefone,
     avancaUltimoContato,
+    isTipoAutomatico,
     type MensagemNormalizada,
 } from '@mont/shared'
 
@@ -291,6 +292,17 @@ describe('normalizarMensagem', () => {
         message: { conversation: 'bom dia' },
     }
 
+    it('templateMessage (mensagem automática de empresa) vira tipo próprio, sem texto', () => {
+        const m = normalizarMensagem({
+            ...base,
+            message: { templateMessage: { templateId: '1300213545463201', contextInfo: {} }, messageContextInfo: {} },
+        })!
+        expect(m.tipoMidia).toBe('template_empresa')
+        expect(m.conteudo).toBeNull()
+        expect(isTipoAutomatico(m.tipoMidia)).toBe(true)
+        expect(isTipoAutomatico('texto')).toBe(false)
+    })
+
     it('normaliza mensagem de entrada', () => {
         const m = normalizarMensagem(base)!
         expect(m.messageId).toBe('MSG1')
@@ -535,6 +547,17 @@ describe('agregarPorTelefone — 1 contato por conversa', () => {
         ]).get('5511999990000')
         expect(ag?.referral).toEqual(referral)
         expect(ag?.referralEm).toBe('2026-10-14T10:00:00.000Z')
+    })
+
+    it('mensagem automática de empresa (template) não cria contato nem avança ultimo_contato', () => {
+        const so = agregarPorTelefone([m({ tipoMidia: 'template_empresa', conteudo: null, pushName: 'Banco X' })])
+        expect(so.size).toBe(0)
+
+        const ag = agregarPorTelefone([
+            m({ enviadaEm: '2026-10-14T10:00:00.000Z', pushName: 'Valéria' }),
+            m({ tipoMidia: 'template_empresa', conteudo: null, enviadaEm: '2026-10-14T15:00:00.000Z' }),
+        ]).get('5511999990000')
+        expect(ag?.ultimaEm).toBe('2026-10-14T10:00:00.000Z')
     })
 
     it('última mensagem e nome (push name só da entrada)', () => {

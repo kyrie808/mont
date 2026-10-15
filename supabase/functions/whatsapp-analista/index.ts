@@ -14,6 +14,10 @@
 //   • simular = chama o LLM e calcula o movimento do card pela MESMA regra da trava
 //     (rpc_analista_previa), mas não grava interação, não marca mensagem, não conta falha.
 //   • contatos (só com simular) = amostra: só os segmentos desses contatos, na ordem.
+//   • reprocessar_desde (só com simular + contatos) = relê as conversas desses contatos a
+//     partir da data, MESMO já analisadas — para comparar o prompt novo com as notas gravadas.
+//   • Segmento de contato arquivado, ou em que o cliente só mandou mídia sem texto, sai da
+//     fila SEM nota e sem mexer no card (rpc_analista_descartar). Não gasta chamada ao LLM.
 //   • Toda rodada (simulada ou não) vira uma linha em `wa_analista_rodadas`.
 //
 // Nada é engolido: resposta inválida tenta mais uma vez e, se falhar de novo, conta falha
@@ -29,6 +33,7 @@
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   montarPromptUsuario,
+  motivoDescarte,
   PROMPT_SISTEMA,
   segmentar,
   validarVeredito,
@@ -163,7 +168,9 @@ interface Detalhe {
   fim: string
   mensagens: number
   sentido: 'entrada' | 'saida'
-  situacao: 'gravado' | 'simulado' | 'falha' | 'travado' | 'adiado' | 'ja_processado'
+  situacao: 'gravado' | 'simulado' | 'falha' | 'travado' | 'adiado' | 'ja_processado' | 'descartado'
+  /** Por que o segmento saiu da fila sem nota. */
+  descarte?: string
   tentativas?: number
   veredito?: Veredito
   movimento?: { aba: string | null; de: string | null; para: string | null }
@@ -181,9 +188,29 @@ interface Contadores {
   falhas: number
   travados: number
   adiados: number
+  descartados: number
 }
 
-async function lerFila(admin: SupabaseClient): Promise<MensagemPendente[]> {
+async function lerFila(
+  admin: SupabaseClient,
+  reprocessar: { contatos: string[]; desde: string } | null,
+): Promise<MensagemPendente[]> {
+  // Simulação de releitura: as conversas desses contatos, já analisadas ou não.
+  if (reprocessar) {
+    const { data, error } = await admin
+      .from('mensagens_whatsapp')
+      .select('message_id, contato_id, direcao, conteudo, tipo_midia, enviada_em, analise_falhas')
+      .in('contato_id', reprocessar.contatos)
+      .gte('enviada_em', reprocessar.desde)
+      .eq('historico', false)
+      .neq('tipo_midia', 'template_empresa')
+      .order('enviada_em', { ascending: true })
+      .limit(2000)
+      .returns<MensagemPendente[]>()
+    if (error) throw new Error(`Falha ao reler conversas: ${error.message}`)
+    return data ?? []
+  }
+
   const { data, error } = await admin
     .from('mensagens_whatsapp')
     .select('message_id, contato_id, direcao, conteudo, tipo_midia, enviada_em, analise_falhas')
@@ -191,6 +218,7 @@ async function lerFila(admin: SupabaseClient): Promise<MensagemPendente[]> {
     .eq('historico', false)
     .is('analise_travada_em', null)
     .not('contato_id', 'is', null)
+    .neq('tipo_midia', 'template_empresa')
     .order('enviada_em', { ascending: true })
     .limit(2000)
     .returns<MensagemPendente[]>()
@@ -211,22 +239,30 @@ async function registrarFalha(admin: SupabaseClient, seg: Segmento, erro: string
 async function rodar(
   admin: SupabaseClient,
   chave: string,
-  opcoes: { simular: boolean; limite: number; contatos: string[] | null },
+  opcoes: { simular: boolean; limite: number; contatos: string[] | null; reprocessarDesde: string | null },
   detalhes: Detalhe[],
   cont: Contadores,
 ): Promise<{ status: 'ok' | 'parcial' | 'limite_groq'; aviso: string | null }> {
   const inicio = Date.now()
   const filtro = opcoes.contatos ? new Set(opcoes.contatos) : null
-  const segmentos = segmentar(await lerFila(admin), { agoraMs: inicio })
+  const reprocessar = opcoes.reprocessarDesde && opcoes.contatos
+    ? { contatos: opcoes.contatos, desde: opcoes.reprocessarDesde }
+    : null
+  const segmentos = segmentar(await lerFila(admin, reprocessar), { agoraMs: inicio })
     .filter((s) => !filtro || filtro.has(s.contatoId))
   cont.segmentos_prontos = segmentos.length
 
-  const ids = [...new Set(segmentos.slice(0, opcoes.limite * 3).map((s) => s.contatoId))]
+  // Nome e arquivamento de TODOS os contatos da fila: o descarte não espera o limite.
+  const ids = [...new Set(segmentos.map((s) => s.contatoId))]
   const nomes = new Map<string, string | null>()
-  if (ids.length > 0) {
-    const { data, error } = await admin.from('contatos').select('id, nome').in('id', ids)
+  const arquivados = new Set<string>()
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await admin.from('contatos').select('id, nome, arquivado_em').in('id', ids.slice(i, i + 100))
     if (error) throw new Error(`Falha ao ler contatos: ${error.message}`)
-    for (const c of data ?? []) nomes.set(c.id, c.nome)
+    for (const c of data ?? []) {
+      nomes.set(c.id, c.nome)
+      if (c.arquivado_em) arquivados.add(c.id)
+    }
   }
 
   const ritmo = new Ritmo()
@@ -238,7 +274,6 @@ async function rodar(
   let tentados = 0
 
   for (const seg of segmentos) {
-    if (tentados >= opcoes.limite) break
     const base: Detalhe = {
       contato_id: seg.contatoId,
       nome: nomes.get(seg.contatoId) ?? null,
@@ -253,6 +288,32 @@ async function rodar(
       cont.adiados++
       continue
     }
+
+    // Sem nota e sem card: contato arquivado, ou cliente que só mandou mídia sem texto.
+    // Não conta no limite da rodada (não chama o LLM).
+    const descarte = motivoDescarte(seg, arquivados.has(seg.contatoId))
+    if (descarte) {
+      if (!opcoes.simular) {
+        const { error } = await admin.rpc('rpc_analista_descartar', {
+          p_contato_id: seg.contatoId,
+          p_message_ids: seg.messageIds,
+          p_motivo: descarte,
+        })
+        if (error) {
+          const travado = await registrarFalha(admin, seg, `descarte: ${error.message}`)
+          detalhes.push({ ...base, situacao: travado ? 'travado' : 'falha', erro: `descarte: ${error.message}` })
+          cont.falhas++
+          if (travado) cont.travados++
+          bloqueados.add(seg.contatoId)
+          continue
+        }
+      }
+      detalhes.push({ ...base, situacao: 'descartado', descarte })
+      cont.descartados++
+      continue
+    }
+
+    if (tentados >= opcoes.limite) break
     if (Date.now() - inicio > ORCAMENTO_MS) {
       return { status: 'parcial', aviso: `Tempo da rodada esgotado depois de ${tentados} segmentos; o resto fica para a próxima.` }
     }
@@ -320,7 +381,7 @@ async function rodar(
       }
       const erro = `veredito inválido após 2 tentativas: ${motivo}`
       const travado = opcoes.simular ? false : await registrarFalha(admin, seg, erro)
-      detalhes.push({ ...base, situacao: travado ? 'travado' : 'falha', tentativas, erro, tokens })
+      detalhes.push({ ...base, situacao: travado ? 'travado' : 'falha', tentativas, erro, tokens, ...(opcoes.simular ? { bruto } : {}) })
       cont.falhas++
       if (travado) cont.travados++
       bloqueados.add(seg.contatoId)
@@ -416,6 +477,12 @@ Deno.serve(async (req: Request) => {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const contatos = Array.isArray(body.contatos) ? body.contatos.filter((c): c is string => typeof c === 'string' && uuid.test(c)) : null
   if (contatos && !simular) return json({ error: 'contatos só vale com simular' }, 400)
+  const reprocessarDesde = typeof body.reprocessar_desde === 'string' && !Number.isNaN(Date.parse(body.reprocessar_desde))
+    ? new Date(body.reprocessar_desde).toISOString()
+    : null
+  if (reprocessarDesde && (!simular || !contatos?.length)) {
+    return json({ error: 'reprocessar_desde só vale com simular e contatos' }, 400)
+  }
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
@@ -446,14 +513,14 @@ Deno.serve(async (req: Request) => {
   if (erroRodada || !rodada) return json({ error: `Falha ao abrir a rodada: ${erroRodada?.message}` }, 500)
 
   const detalhes: Detalhe[] = []
-  const cont: Contadores = { segmentos_prontos: 0, analisados: 0, gravados: 0, falhas: 0, travados: 0, adiados: 0 }
+  const cont: Contadores = { segmentos_prontos: 0, analisados: 0, gravados: 0, falhas: 0, travados: 0, adiados: 0, descartados: 0 }
   let status: 'ok' | 'parcial' | 'limite_groq' | 'erro'
   let aviso: string | null
 
   try {
     const chave = Deno.env.get('GROQ_API_KEY')
     if (!chave) throw new Error('GROQ_API_KEY ausente nos secrets da função')
-    ;({ status, aviso } = await rodar(admin, chave, { simular, limite, contatos }, detalhes, cont))
+    ;({ status, aviso } = await rodar(admin, chave, { simular, limite, contatos, reprocessarDesde }, detalhes, cont))
   } catch (e) {
     console.error('[whatsapp-analista]', e)
     status = 'erro'

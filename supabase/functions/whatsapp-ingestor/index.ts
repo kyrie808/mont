@@ -24,6 +24,7 @@ import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
   agregarPorTelefone,
   avancaUltimoContato,
+  isTipoAutomatico,
   extrairMensagensCruas,
   lidDaMensagem,
   normalizarMensagem,
@@ -154,6 +155,9 @@ async function gravarCruas(
       enviada_em: m.enviadaEm,
       historico: resgate !== null,
       lid: resgate?.lid ?? null,
+      // Mensagem automática de empresa (templateMessage) não é conversa: entra no registro
+      // já fora da fila do analista. O agregador também não cria contato por ela.
+      processado_em: isTipoAutomatico(m.tipoMidia) ? new Date().toISOString() : null,
     }))
 
     const { data, error } = await admin

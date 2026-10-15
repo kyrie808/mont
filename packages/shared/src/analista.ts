@@ -38,7 +38,37 @@ export interface Segmento {
     /** Maior contador de falhas entre as mensagens do segmento. */
     falhas: number
     temMensagemDoCliente: boolean
+    /** O cliente escreveu algo além de mídia sem legenda ("[audio]", "[sticker]", "[outro]"). */
+    temTextoDoCliente: boolean
     mensagens: Array<{ de: 'cliente' | 'nos'; texto: string; em: string }>
+}
+
+/** A marca que uma mídia sem texto ganha na transcrição: "[audio]", "[sticker]", "[outro]"… */
+const MARCA_MIDIA = /^\[[a-z_]+\]$/
+
+/** Compra que depende de dinheiro/salário/pagamento: é adiamento, não aceite. */
+const CONDICAO_COMPRA =
+    /(aguard|esper)\w*\s+(o\s+|a\s+|meu\s+|minha\s+)?(entrar|cair|receber|pagamento|sal[áa]rio|dinheiro|pix)|quando\s+(o\s+|a\s+|meu\s+|minha\s+)?(sal[áa]rio|dinheiro|pagamento|pix)\s+(entrar|cair)|entrar\s+(o\s+)?(\$|dinheiro|sal[áa]rio|pagamento)/
+/** Endereço e logística (o lugar deles é o cadastro e a venda). */
+const ENDERECO =
+    /\b(rua|avenida|av\.|travessa|alameda|bairro|cep|condom[ií]nio|bloco|apto|apartamento|portaria|porteiro|endere[çc]o)\b|\b\d{5}-?\d{3}\b|\b(entreg|envi|lev|cheg)\w*\s+(amanh[ãa]|hoje|cedo|de manh[ãa]|pela manh[ãa]|[àa] (tarde|noite)|[àa]s\s*\d)/i
+/** "o cliente pediu para retomar/chamar/falar depois". */
+const PEDIU_RETOMAR = /\bpedi[ur]\w*\s+(para\s+|pra\s+)?(retomar|chamar|falar|procurar|voltar|lembrar|contatar|ligar)/i
+/** Um pedido de retomada escrito pelo próprio cliente. */
+const PEDIDO_DO_CLIENTE =
+    /\bme\s+(chama|chame|procura|procure|lembra|lembre|avisa|avise|liga|ligue|manda mensagem)\b|\bfala comigo\b|\bentra em contato\b|\bretoma\b|\bchama (depois|semana|amanh)/
+
+export type MotivoDescarte = 'contato_arquivado' | 'so_marcador'
+
+/**
+ * Segmento que não vira interação nem move card (decisão do Luccas, 15/10): contato
+ * arquivado, ou cliente que só mandou mídia sem texto — a "frase do cliente" seria uma
+ * marca, e não há o que citar. As mensagens saem da fila sem nota.
+ */
+export function motivoDescarte(seg: Segmento, arquivado: boolean): MotivoDescarte | null {
+    if (arquivado) return 'contato_arquivado'
+    if (seg.temMensagemDoCliente && !seg.temTextoDoCliente) return 'so_marcador'
+    return null
 }
 
 interface OpcoesSegmentar {
@@ -63,6 +93,8 @@ export function segmentar(linhas: MensagemPendente[], opcoes: OpcoesSegmentar): 
 
     const porContato = new Map<string, MensagemPendente[]>()
     for (const l of linhas) {
+        // Mensagem automática de empresa não é conversa (o ingestor já a tira da fila).
+        if (l.tipo_midia === 'template_empresa') continue
         const lista = porContato.get(l.contato_id) ?? []
         lista.push(l)
         porContato.set(l.contato_id, lista)
@@ -98,6 +130,7 @@ export function segmentar(linhas: MensagemPendente[], opcoes: OpcoesSegmentar): 
                 sentido: ultima.direcao,
                 falhas: Math.max(...g.map((m) => m.analise_falhas ?? 0)),
                 temMensagemDoCliente: g.some((m) => m.direcao === 'entrada'),
+                temTextoDoCliente: g.some((m) => m.direcao === 'entrada' && !!m.conteudo?.trim()),
                 mensagens: g.slice(-maxPrompt).map((m) => ({
                     de: m.direcao === 'entrada' ? 'cliente' : 'nos',
                     texto: m.conteudo ?? `[${m.tipo_midia}]`,
@@ -126,11 +159,17 @@ export const PROMPT_SISTEMA = [
     '- Escreva só o que está escrito na conversa. Não deduza. Atenção a quem é quem: em',
     '  "estou no médico com meu filho", quem está sendo atendido é o filho, não o cliente.',
     '- Atribua cada fala a quem a escreveu. O que está numa linha NÓS foi dito por nós: se',
-    '  NÓS escrevemos "quando voltar, me chama", a nota diz "combinamos retomar na volta", e',
-    '  não "o cliente pediu". Não diga que o cliente confirmou algo que ele não escreveu.',
+    '  NÓS escrevemos "quando voltar, me chama", a nota diz "sugerimos retomar na volta".',
+    '  Escreva "o cliente pediu…" só quando uma linha CLIENTE pede isso ("me chama semana que',
+    '  vem"). Não diga que o cliente confirmou algo que ele não escreveu.',
+    '- Não registre endereço, rua, número, bairro, CEP, condomínio, bloco, apartamento,',
+    '  portaria nem detalhe de entrega (dia, horário, como, taxa, entregador). Isso fica no',
+    '  cadastro do contato e na venda. Registre o que foi pedido, quanto e a forma de pagamento.',
+    '  Conversa só sobre a entrega (atraso, remarcação, "o entregador saiu"): diga o essencial',
+    '  sem dia nem hora. Ex.: "Avisamos de um imprevisto na entrega; cliente concordou."',
     '- Saúde (do cliente ou de outra pessoa): registre o mínimo. Não cite hospital, clínica,',
     '  doença nem exame. Ex.: o cliente escreve "estou na clínica com meu pai, depois te',
-    '  falo" -> observacao "Acompanhando o pai; pediu para retomar depois."',
+    '  falo" -> observacao "Acompanhando o pai; disse que fala depois."',
     '- As palavras "recusa", "recusou" ou "recusar" só podem aparecer na observacao quando o',
     '  resultado for "recusou".',
     '',
@@ -139,16 +178,19 @@ export const PROMPT_SISTEMA = [
     '',
     'resultado — a RESPOSTA DO CLIENTE. Decida assim (siga a ordem e pare na primeira que valer):',
     '  1. Não há nenhuma linha CLIENTE -> "nenhum".',
-    '  2. O cliente fechou ou confirmou um pedido ou uma entrega: escolheu produto ou',
-    '     quantidade, combinou pagamento, endereço ou horário. Vale mesmo quando o pedido foi',
-    '     montado em várias mensagens curtas ("sim", "pode ser", "então quero 2", "dinheiro",',
-    '     "pode ser amanhã") e mesmo que a última mensagem seja nossa -> "aceitou".',
+    '  2. O cliente fechou um pedido CONCRETO e SEM CONDIÇÃO: escolheu produto ou quantidade,',
+    '     combinou a entrega ou disse "pode mandar". Vale mesmo quando o pedido foi montado em',
+    '     várias mensagens curtas ("sim", "pode ser", "então quero 2", "dinheiro", "pode ser',
+    '     amanhã") e mesmo que a última mensagem seja nossa -> "aceitou". Compra que depende de',
+    '     algo ("só aguardar entrar o dinheiro", "quando o salário cair", "vou ver com meu',
+    '     marido") NÃO é "aceitou": é "adiou" (item 4).',
     '  3. Recusa EXPLÍCITA: "não quero", "não tenho interesse", "pode tirar meu número" ->',
     '     "recusou". Isso tira o cliente da lista por 30 dias. Um "não, obrigada" educado,',
     '     sozinho ou seguido de um motivo, NÃO é recusa explícita: siga para o item 4.',
     '  4. O cliente não fechou agora, mas não recusou: "agora não", "semana que vem", "depois',
-    '     eu vejo", "vou ver e te falo", "estou viajando", "estou sem tempo"; deu um motivo',
-    '     passageiro (viagem, compromisso, alguém doente); ou ficou combinado retomar depois',
+    '     eu vejo", "vou ver e te falo", "estou viajando", "estou sem tempo"; quer, mas depende',
+    '     de dinheiro, salário ou de outra pessoa; deu um motivo passageiro (viagem,',
+    '     compromisso, alguém doente); ou ficou combinado retomar depois',
     '     ("quando puder, me chama"). "Não, obrigada" seguido de um motivo passageiro também',
     '     conta -> "adiou". Adiamento NÃO é recusa.',
     '  5. Qualquer outra resposta do cliente (dúvida, agradecimento, comentário), sem pedido',
@@ -168,8 +210,8 @@ export const PROMPT_SISTEMA = [
     'cliente (de uma linha CLIENTE, nunca de uma linha NÓS) que justifica o resultado. Pode ser',
     'só um pedaço de uma mensagem. Curta, até 100 caracteres, sem detalhe de saúde. Escolha a',
     'frase DEPOIS de decidir o resultado; nunca mude o resultado para caber uma frase. Em',
-    '"recusou", é a frase da recusa. Se o cliente',
-    'só mandou mídia, copie a marca dela (ex.: "[audio]"). O sistema acrescenta no fim da nota',
+    '"recusou", é a frase da recusa. Copie sempre um TEXTO que o cliente escreveu, nunca a marca',
+    'de uma mídia ("[audio]", "[sticker]"), e sem endereço. O sistema acrescenta no fim da nota',
     'Cliente: "<trecho_cliente>" — não repita a frase na observacao. Em "nenhum": null.',
 ].join('\n')
 
@@ -346,7 +388,21 @@ export function validarVeredito(
         if (resultado === 'recusou' && /^n[ãa]o[\s,]*obrigad[oa]s?[\s.!]*$/.test(normalizarTrecho(trecho))) {
             return { ok: false, motivo: '"não, obrigada" sozinho não é recusa explícita; se o cliente deu um motivo passageiro, o resultado é "adiou"' }
         }
+        // A marca de uma mídia não é frase do cliente quando ele também escreveu.
+        if (MARCA_MIDIA.test(trecho) && seg.temTextoDoCliente) {
+            return { ok: false, motivo: `trecho_cliente "${trecho}" é a marca de uma mídia; copie um TEXTO que o cliente escreveu`, ...manter }
+        }
         trechoCliente = trecho
+    }
+
+    const textoCliente = normalizarTrecho(
+        seg.mensagens.filter((m) => m.de === 'cliente').map((m) => m.texto).join(' '),
+    )
+
+    // Compra condicionada não é aceite (Brasilio, 14/10: "Sim com certeza só aguardar
+    // entrar $" virou "aceitou" e o card esperaria uma venda que depende do dinheiro dele).
+    if (resultado === 'aceitou' && CONDICAO_COMPRA.test(textoCliente)) {
+        return { ok: false, motivo: 'o cliente condicionou a compra (dinheiro, salário, pagamento): o resultado é "adiou", não "aceitou"' }
     }
 
     // "Cliente recusou o pedido" numa nota de adiamento: quem lê a timeline acredita na
@@ -362,7 +418,27 @@ export function validarVeredito(
     if (saude.test(observacao) || (trechoCliente && saude.test(trechoCliente))) {
         return {
             ok: false,
-            motivo: 'a observacao ou o trecho_cliente cita hospital, clínica, doença ou exame. NÃO mude o resultado: reescreva a observacao só com o mínimo (ex.: "acompanhando a mãe; pediu para retomar depois"; se for só o endereço de entrega, diga "local de trabalho") e, no trecho_cliente, copie outro PEDAÇO da mensagem do cliente sem a parte de saúde',
+            motivo: 'a observacao ou o trecho_cliente cita hospital, clínica, doença ou exame. NÃO mude o resultado: reescreva a observacao só com o mínimo (ex.: "acompanhando a mãe; retomar depois") e, no trecho_cliente, copie outro PEDAÇO da mensagem do cliente sem a parte de saúde',
+            ...manter,
+        }
+    }
+
+    // Endereço e logística ficam no cadastro e na venda, não na nota (Graciane, 12/10:
+    // "condomínio Tiradentes" — ela tinha dito "Não é em condomínio").
+    if (ENDERECO.test(observacao) || (trechoCliente && ENDERECO.test(trechoCliente))) {
+        return {
+            ok: false,
+            motivo: 'a observacao ou o trecho_cliente tem endereço ou logística (rua, bairro, CEP, condomínio, bloco, apartamento, portaria, dia ou horário da entrega). NÃO mude o resultado: tire isso da observacao (registre só o pedido, o valor e a forma de pagamento; se a conversa for só sobre a entrega, algo como "Avisamos de um imprevisto na entrega; cliente concordou.") e, se for o caso, escolha outra frase do cliente',
+            ...manter,
+        }
+    }
+
+    // "O cliente pediu para retomar" só quando a frase DELE pede (Andreia, 14/10: quem
+    // escreveu "quando voltar, me chama" fomos nós).
+    if (PEDIU_RETOMAR.test(observacao) && !PEDIDO_DO_CLIENTE.test(textoCliente)) {
+        return {
+            ok: false,
+            motivo: 'a observacao diz que o cliente pediu para retomar, mas nenhuma linha CLIENTE pede isso; se a sugestão veio de NÓS, escreva "sugerimos retomar…"',
             ...manter,
         }
     }

@@ -4,6 +4,7 @@ import {
     validarVeredito,
     montarPromptUsuario,
     referenciaDatas,
+    motivoDescarte,
     DIAS_ADIAMENTO_SEM_PRAZO,
     PROMPT_SISTEMA,
     type MensagemPendente,
@@ -95,6 +96,7 @@ function seg(mensagens: Array<[('cliente' | 'nos'), string]>): Segmento {
         sentido: mensagens[mensagens.length - 1][0] === 'cliente' ? 'entrada' : 'saida',
         falhas: 0,
         temMensagemDoCliente: mensagens.some(([de]) => de === 'cliente'),
+        temTextoDoCliente: mensagens.some(([de, texto]) => de === 'cliente' && !/^\[[a-z_]+\]$/.test(texto)),
         mensagens: mensagens.map(([de, texto]) => ({ de, texto, em: '2026-10-14T10:00:00Z' })),
     }
 }
@@ -215,7 +217,7 @@ describe('validarVeredito — o que pode ir para a RPC', () => {
 
     it('nota de saúde no mínimo passa', () => {
         const r = validarVeredito(
-            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe; pediu para retomar depois.', trecho_cliente: 'nem tive tempo de responder' }),
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Acompanhando a mãe; sugerimos retomar depois.', trecho_cliente: 'nem tive tempo de responder' }),
             zelia,
         )
         expect(r).toMatchObject({ ok: true, veredito: { resultado: 'adiou' } })
@@ -321,6 +323,97 @@ describe('validarVeredito — frase do cliente entre aspas (respondeu/aceitou/ad
     })
 })
 
+describe('validarVeredito — auditoria das notas reais (15/10)', () => {
+    it.each([
+        'Cliente pediu 2 baldes, entrega no condomínio Tiradentes.',
+        'Registrado endereço: Rua Nilo Peçanha 227, pedido de 1kg.',
+        'Pediu para tocar na portaria e chamar a zeladora.',
+        'Cliente informou o bairro para cálculo de frete.',
+        'Entrega no apartamento 44, bloco F.',
+        'CEP 09810-580 confirmado.',
+        'Cliente pediu 2 baldes, dinheiro, entrega de manhã.',
+        'Fechou 1kg, entrega amanhã cedo, Pix.',
+        'Pediu entrega às 19h no mesmo endereço.',
+        'Desculpa pelo imprevisto, pão de queijo será enviado amanhã cedo; cliente aceitou.',
+    ])('nota com endereço/logística volta para o modelo, mantendo o resultado: %s', (observacao) => {
+        const s = seg([['nos', 'Qual o endereço?'], ['cliente', 'Pode ser amanhã']])
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao, trecho_cliente: 'Pode ser amanhã' }), s)
+        expect(r).toMatchObject({ ok: false, manterResultado: 'aceitou' })
+    })
+
+    it('frase do cliente com endereço também volta', () => {
+        const s = seg([['nos', 'Qual o endereço?'], ['cliente', 'Rua Nilo Peçanha 227'], ['cliente', 'Pode ser amanhã']])
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao: 'Fechou 1kg.', trecho_cliente: 'Rua Nilo Peçanha 227' }), s)
+        expect(r).toMatchObject({ ok: false, manterResultado: 'aceitou' })
+    })
+
+    it('"cliente pediu para retomar" quando quem sugeriu fomos NÓS volta para o modelo', () => {
+        const andreia = seg([['nos', 'Essa é a semana do seu balde'], ['cliente', 'Estou viajando'], ['nos', 'Quando voltar, é só me chamar']])
+        const errada = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Está viajando e pediu para retomar quando voltar.', trecho_cliente: 'Estou viajando' }),
+            andreia,
+        )
+        expect(errada).toMatchObject({ ok: false, manterResultado: 'adiou' })
+        const certa = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Está viajando; sugerimos retomar na volta.', trecho_cliente: 'Estou viajando' }),
+            andreia,
+        )
+        expect(certa).toMatchObject({ ok: true })
+    })
+
+    it('"cliente pediu para retomar" vale quando a frase DELE pede', () => {
+        const s = seg([['nos', 'Quer o balde?'], ['cliente', 'Agora não, me chama semana que vem']])
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'adiou', observacao: 'Pediu para retomar na semana que vem.', retomar_em: '2026-10-19', trecho_cliente: 'me chama semana que vem' }),
+            s,
+        )
+        expect(r).toMatchObject({ ok: true })
+    })
+
+    it('Brasilio: compra condicionada a dinheiro não é "aceitou"', () => {
+        const brasilio = seg([['nos', 'Quer que eu já separe o seu?'], ['cliente', 'Sim com certeza só aguardar entrar $'], ['nos', 'Combinado! Quando quiser, é só chamar']])
+        const r = validarVeredito(
+            JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao: 'Cliente confirmou pedido.', trecho_cliente: 'Sim com certeza só aguardar entrar $' }),
+            brasilio,
+        )
+        expect(r).toMatchObject({ ok: false })
+        expect(r.ok === false && r.manterResultado).toBeFalsy()
+    })
+
+    it('frase do cliente não pode ser a marca de mídia quando ele escreveu texto', () => {
+        const s = seg([['nos', 'Quer o balde?'], ['cliente', '[audio]'], ['cliente', 'Isso, pode mandar']])
+        const r = validarVeredito(JSON.stringify({ tipo: 'ponto_contato', resultado: 'aceitou', observacao: 'Fechou o balde.', trecho_cliente: '[audio]' }), s)
+        expect(r).toMatchObject({ ok: false, manterResultado: 'aceitou' })
+    })
+})
+
+describe('motivoDescarte — o que não vira interação nem move card', () => {
+    it('contato arquivado', () => {
+        expect(motivoDescarte(seg([['cliente', 'oi']]), true)).toBe('contato_arquivado')
+    })
+
+    it('cliente só mandou marca de mídia ([outro], [sticker], [audio])', () => {
+        const s = segmentar([
+            { message_id: 'a', contato_id: A, direcao: 'saida', conteudo: 'Quer o balde?', tipo_midia: 'texto', enviada_em: '2026-10-14T10:00:00Z', analise_falhas: 0 },
+            { message_id: 'b', contato_id: A, direcao: 'entrada', conteudo: null, tipo_midia: 'sticker', enviada_em: '2026-10-14T10:01:00Z', analise_falhas: 0 },
+        ], { agoraMs: AGORA })[0]
+        expect(s.temTextoDoCliente).toBe(false)
+        expect(motivoDescarte(s, false)).toBe('so_marcador')
+    })
+
+    it('só mensagens nossas, ou cliente com texto: segue para o analista', () => {
+        expect(motivoDescarte(seg([['nos', 'oferta']]), false)).toBeNull()
+        expect(motivoDescarte(seg([['nos', 'oferta'], ['cliente', 'quero']]), false)).toBeNull()
+    })
+
+    it('mensagem automática de empresa nem entra no segmento', () => {
+        const segs = segmentar([
+            { message_id: 't', contato_id: A, direcao: 'entrada', conteudo: null, tipo_midia: 'template_empresa', enviada_em: '2026-10-14T10:00:00Z', analise_falhas: 0 },
+        ], { agoraMs: AGORA })
+        expect(segs).toHaveLength(0)
+    })
+})
+
 describe('validarVeredito — adiou e retomar_em', () => {
     // fim do segmento: 14/10 19:10Z = 14/10 16:10 em Brasília (quarta-feira)
     const lena = seg([['nos', 'O balde de 4kg sai R$ 75'], ['cliente', 'Vou ver se consigo pegar amanhã viu'], ['cliente', 'Pra fim de semana']])
@@ -406,7 +499,7 @@ describe('prompt', () => {
         expect(PROMPT_SISTEMA).toContain('retomar_em')
         expect(PROMPT_SISTEMA).toContain('quem é quem')
         expect(PROMPT_SISTEMA).toContain('Atribua cada fala a quem a escreveu')
-        expect(PROMPT_SISTEMA).toContain('confirmou um pedido ou uma entrega')
+        expect(PROMPT_SISTEMA).toContain('CONCRETO e SEM CONDIÇÃO')
         expect(PROMPT_SISTEMA).toContain('só podem aparecer na observacao quando o')
     })
 

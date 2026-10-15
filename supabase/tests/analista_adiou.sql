@@ -3,16 +3,13 @@
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA" (ver supabase/tests/meta_eventos_triggers.sql): um único
 -- DO-block que SEMPRE termina em RAISE EXCEPTION. Nada do que a suíte cria ou altera chega
--- a ser gravado — inclusive as interações que A6–A8 registram nos clientes REAIS (Maria
--- Perdigão, Zélia, Lena) com as mensagens reais deles: é o caminho de escrita de verdade,
--- dentro desta transação.
+-- a ser gravado.
 --
 -- COMO RODAR: cole o arquivo inteiro no `execute_sql` do MCP do Supabase. O resultado
 -- SEMPRE vem como erro P0001:
 --   SUITE_OK     analista_adiou n/n | ...  → tudo passou
 --   SUITE_FALHOU analista_adiou k/n | ...  → veja o caso com "ok": false
 --
--- Depende da data: A8 supõe que o dia seguinte à conversa da Lena (14/10) já chegou.
 
 DO $suite$
 DECLARE
@@ -166,78 +163,9 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'A5 em_negociacao: follow_up só no dia combinado', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- ── A6: Maria Perdigão (REAL) — aceitou com venda pendente vai a em_negociacao ───
-  total := total + 1;
-  BEGIN
-    SELECT id INTO v_real FROM public.contatos WHERE nome = 'Maria Perdigão' AND arquivado_em IS NULL;
-    SELECT array_agg(message_id ORDER BY enviada_em) INTO v_ids
-      FROM public.mensagens_whatsapp
-     WHERE contato_id = v_real AND processado_em IS NULL AND NOT historico
-       AND enviada_em >= '2026-10-14 15:00-03' AND enviada_em < '2026-10-14 17:00-03';
-    IF cardinality(v_ids) IS DISTINCT FROM 21 THEN RAISE EXCEPTION 'segmento da Maria com % mensagens (esperado 21)', cardinality(v_ids); END IF;
-    SELECT coluna_efetiva INTO v_col FROM public.view_relacionamento_kanban WHERE contato_id = v_real;
-    IF v_col <> 'follow_up' THEN RAISE EXCEPTION 'Maria antes: % (esperado follow_up)', v_col; END IF;
-    IF NOT EXISTS (SELECT 1 FROM public.vendas WHERE contato_id = v_real AND status = 'pendente') THEN RAISE EXCEPTION 'Maria sem venda pendente'; END IF;
-
-    r := public.rpc_registrar_interacao_ia(v_real,
-           '{"tipo":"ponto_contato","resultado":"aceitou","observacao":"Fechou 1kg de pão de queijo congelado (bolinha 50g) para amanhã, Pix na entrega, R$ 35.","trecho_cliente":"Pode ser amanhã"}',
-           v_ids);
-    IF r->>'sentido' <> 'saida' THEN RAISE EXCEPTION 'sentido %', r->>'sentido'; END IF;
-    IF r->>'coluna_antes' <> 'follow_up' OR r->>'coluna_depois' <> 'em_negociacao' OR r->>'status_depois' <> 'em_negociacao' THEN
-      RAISE EXCEPTION 'Maria: %', r;
-    END IF;
-    passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'A6 Maria aceitou: follow_up → em_negociacao (gravação real)', 'ok', true,
-      'mov', r->>'coluna_antes' || ' → ' || (r->>'coluna_depois'));
-  EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'A6 Maria aceitou: follow_up → em_negociacao (gravação real)', 'ok', false, 'erro', SQLERRM);
-  END;
-
-  -- ── A7: Zélia (REAL) — adiou sem data: continua contatado, cadência dá follow_up ──
-  total := total + 1;
-  BEGIN
-    SELECT id INTO v_real FROM public.contatos WHERE nome = 'Zélia' AND arquivado_em IS NULL;
-    SELECT array_agg(message_id ORDER BY enviada_em) INTO v_ids
-      FROM public.mensagens_whatsapp
-     WHERE contato_id = v_real AND processado_em IS NULL AND NOT historico;
-    SELECT tentativas INTO n FROM public.view_relacionamento_kanban WHERE contato_id = v_real;
-
-    r := public.rpc_registrar_interacao_ia(v_real,
-           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Acompanhando a mãe; pediu para retomar depois.","retomar_em":null,"trecho_cliente":"nem tive tempo de mandar mensagem pra vc"}',
-           v_ids);
-    SELECT tentativas, coluna_efetiva INTO v_tent, v_col FROM public.view_relacionamento_kanban WHERE contato_id = v_real;
-    IF r->>'resultado' <> 'adiou' OR r->>'status_depois' <> 'contatado' THEN RAISE EXCEPTION 'Zélia: %', r; END IF;
-    IF v_tent <> n + 1 THEN RAISE EXCEPTION 'tentativas % → % (esperado +1)', n, v_tent; END IF;
-    -- Sem prazo claro: lembrete no dia da conversa + 7 (14/10 → 21/10). Até lá, contatado.
-    IF r->>'retomar_em' <> '2026-10-21' THEN RAISE EXCEPTION 'Zélia retomar_em %', r->>'retomar_em'; END IF;
-    IF v_col <> 'contatado' THEN RAISE EXCEPTION 'Zélia coluna % (esperado contatado até 21/10)', v_col; END IF;
-    IF r->>'observacao' NOT LIKE '%Cliente: "nem tive tempo de mandar mensagem pra vc"' THEN RAISE EXCEPTION 'citação: %', r->>'observacao'; END IF;
-    passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'A7 Zélia adiou sem prazo: lembrete em 7 dias e frase do cliente citada (gravação real)', 'ok', true,
-      'tentativas', n || ' → ' || v_tent);
-  EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'A7 Zélia adiou sem prazo: lembrete em 7 dias e frase do cliente citada (gravação real)', 'ok', false, 'erro', SQLERRM);
-  END;
-
-  -- ── A8: Lena (REAL) — adiou para amanhã (15/10): em_negociacao, follow_up no dia ──
-  total := total + 1;
-  BEGIN
-    SELECT id INTO v_real FROM public.contatos WHERE nome = 'Lena' AND arquivado_em IS NULL;
-    SELECT array_agg(message_id ORDER BY enviada_em) INTO v_ids
-      FROM public.mensagens_whatsapp
-     WHERE contato_id = v_real AND processado_em IS NULL AND NOT historico;
-
-    r := public.rpc_registrar_interacao_ia(v_real,
-           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Vai ver se pega o balde de 4kg amanhã ou no fim de semana.","retomar_em":"2026-10-15","trecho_cliente":"Vou ver se consigo pegar amanhã viu"}',
-           v_ids);
-    IF r->>'retomar_em' <> '2026-10-15' OR r->>'status_depois' <> 'em_negociacao' THEN RAISE EXCEPTION 'Lena: %', r; END IF;
-    IF current_date >= date '2026-10-15' AND r->>'coluna_depois' <> 'follow_up' THEN RAISE EXCEPTION 'Lena coluna %', r->>'coluna_depois'; END IF;
-    passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'A8 Lena adiou com data: follow_up no dia (gravação real)', 'ok', true,
-      'mov', (r->>'coluna_antes') || ' → ' || (r->>'coluna_depois'));
-  EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'A8 Lena adiou com data: follow_up no dia (gravação real)', 'ok', false, 'erro', SQLERRM);
-  END;
+  -- A6–A8 (Maria, Zélia e Lena, gravação REAL das mensagens pendentes) rodaram em 15/10
+  -- antes de o cron ligar, todos OK (commit 51836d7). Depois do cron essas mensagens foram
+  -- analisadas de verdade; a regra que eles provavam segue coberta por A2–A5 e A9.
 
   -- ── A9: RPC barra "recusa" na nota fora de recusou; data fora da janela degrada ──
   total := total + 1;
@@ -256,11 +184,11 @@ BEGIN
     IF NOT ok THEN RAISE EXCEPTION 'nota com "recusou" passou num adiamento'; END IF;
 
     r := public.rpc_registrar_interacao_ia(v_c2,
-           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Está viajando; retomar na volta.","retomar_em":"2027-03-01","trecho_cliente":"[audio]"}',
+           '{"tipo":"ponto_contato","resultado":"adiou","observacao":"Está viajando; retomar na volta.","retomar_em":"2027-03-01","trecho_cliente":"Não obrigada"}',
            ARRAY['SUITE_AD_1', 'SUITE_AD_2', 'SUITE_AD_3']);
-    -- Data fora da janela cai para o lembrete de 7 dias (14/10 → 21/10); áudio citado pela marca.
+    -- Data fora da janela cai para o lembrete de 7 dias (14/10 → 21/10).
     IF r->>'resultado' <> 'adiou' OR r->>'retomar_em' <> '2026-10-21' OR r->>'degradou' IS NULL THEN RAISE EXCEPTION 'janela: %', r; END IF;
-    IF r->>'observacao' <> 'Está viajando; retomar na volta. Cliente: "[audio]"' THEN RAISE EXCEPTION 'citação: %', r->>'observacao'; END IF;
+    IF r->>'observacao' <> 'Está viajando; retomar na volta. Cliente: "Não obrigada"' THEN RAISE EXCEPTION 'citação: %', r->>'observacao'; END IF;
     passou := passou + 1;
     resultados := resultados || jsonb_build_object('caso', 'A9 nota sem recusa fora de recusou; retomar_em fora da janela vira 7 dias', 'ok', true);
   EXCEPTION WHEN others THEN
@@ -275,11 +203,6 @@ BEGIN
      WHERE p.interacao_id IS NOT NULL AND m.processado_em IS NULL AND NOT m.historico;
     IF n <> 0 THEN RAISE EXCEPTION '% pedido(s) com nota ainda na fila', n; END IF;
 
-    SELECT id INTO v_real FROM public.contatos WHERE nome = 'Ana Paula Barbosa Firmo';
-    SELECT count(*) INTO n FROM public.mensagens_whatsapp
-     WHERE contato_id = v_real AND processado_em IS NULL AND NOT historico
-       AND enviada_em >= '2026-10-14 08:00-03' AND enviada_em < '2026-10-14 09:00-03';
-    IF n <> 14 THEN RAISE EXCEPTION 'resto da conversa das 08:27 na fila: % (esperado 14)', n; END IF;
 
     -- Pedido novo: a RPC da E1 já tira a mensagem da fila ao gravar a nota.
     INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id)
@@ -357,6 +280,92 @@ BEGIN
   EXCEPTION WHEN others THEN
     IF current_user = 'authenticated' THEN RESET ROLE; END IF;
     resultados := resultados || jsonb_build_object('caso', 'A12 aceitou_sem_venda: 24h a 72h, venda a partir do dia do aceite', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── A13: contato arquivado — descarte sem nota; a RPC recusa nota da IA ────────
+  total := total + 1;
+  BEGIN
+    UPDATE public.contatos SET arquivado_em = now() WHERE id = v_c3;
+    INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id) VALUES
+      ('55' || c_tel || '03', 'SUITE_AD_ARQ', 'entrada', 'oi, tudo bem?', 'texto', '{}', '2026-10-15 12:00:00+00', v_c3);
+    ok := false;
+    BEGIN
+      PERFORM public.rpc_registrar_interacao_ia(v_c3, '{"resultado":"respondeu","observacao":"Oi.","trecho_cliente":"oi, tudo bem?"}', ARRAY['SUITE_AD_ARQ']);
+    EXCEPTION WHEN check_violation THEN ok := true;
+    END;
+    IF NOT ok THEN RAISE EXCEPTION 'RPC deu nota para contato arquivado'; END IF;
+    r := public.rpc_analista_descartar(v_c3, ARRAY['SUITE_AD_ARQ'], 'contato_arquivado');
+    IF (SELECT processado_em FROM public.mensagens_whatsapp WHERE message_id = 'SUITE_AD_ARQ') IS NULL THEN RAISE EXCEPTION 'descarte não tirou da fila: %', r; END IF;
+    -- Motivo falso não passa: v_c1 não está arquivado.
+    INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id) VALUES
+      ('55' || c_tel || '01', 'SUITE_AD_NAO', 'entrada', 'quero sim', 'texto', '{}', '2026-10-15 12:00:00+00', v_c1);
+    ok := false;
+    BEGIN
+      PERFORM public.rpc_analista_descartar(v_c1, ARRAY['SUITE_AD_NAO'], 'contato_arquivado');
+    EXCEPTION WHEN check_violation THEN ok := true;
+    END;
+    IF NOT ok THEN RAISE EXCEPTION 'descartou contato que não está arquivado'; END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'A13 arquivado: sem nota da IA, descarte conferido', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'A13 arquivado: sem nota da IA, descarte conferido', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── A14: cliente só com marca de mídia — descarte; com texto, não ──────────────
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id) VALUES
+      ('55' || c_tel || '01', 'SUITE_AD_M1', 'saida',   'Quer o balde?', 'texto',   '{}', '2026-10-15 13:00:00+00', v_c1),
+      ('55' || c_tel || '01', 'SUITE_AD_M2', 'entrada', NULL,            'sticker', '{}', '2026-10-15 13:01:00+00', v_c1);
+    ok := false;
+    BEGIN
+      PERFORM public.rpc_registrar_interacao_ia(v_c1, '{"resultado":"respondeu","observacao":"Mandou figurinha.","trecho_cliente":"[sticker]"}', ARRAY['SUITE_AD_M1', 'SUITE_AD_M2']);
+    EXCEPTION WHEN check_violation THEN ok := true;
+    END;
+    IF NOT ok THEN RAISE EXCEPTION 'nota com frase = marca de mídia passou'; END IF;
+    r := public.rpc_analista_descartar(v_c1, ARRAY['SUITE_AD_M1', 'SUITE_AD_M2'], 'so_marcador');
+    IF (r->>'mensagens')::int <> 2 THEN RAISE EXCEPTION 'descarte: %', r; END IF;
+    ok := false;
+    BEGIN
+      PERFORM public.rpc_analista_descartar(v_c1, ARRAY['SUITE_AD_NAO'], 'so_marcador');
+    EXCEPTION WHEN check_violation THEN ok := true;
+    END;
+    IF NOT ok THEN RAISE EXCEPTION 'descartou segmento com texto do cliente'; END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'A14 só marca de mídia: sem nota; com texto, não descarta', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'A14 só marca de mídia: sem nota; com texto, não descarta', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── A15: templateMessage reclassificado e fora da fila ──────────────────────────
+  total := total + 1;
+  BEGIN
+    SELECT count(*) INTO n FROM public.mensagens_whatsapp
+     WHERE payload -> 'message' ? 'templateMessage'
+       AND (tipo_midia <> 'template_empresa' OR processado_em IS NULL);
+    IF n <> 0 THEN RAISE EXCEPTION '% templateMessage fora do tipo ou na fila', n; END IF;
+    INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id) VALUES
+      ('55' || c_tel || '01', 'SUITE_AD_T1', 'entrada', NULL, 'template_empresa', '{}', '2026-10-15 14:00:00+00', v_c1);
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'A15 template_empresa aceito e o histórico reclassificado', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'A15 template_empresa aceito e o histórico reclassificado', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── A16: pedido do catálogo de contato arquivado: registra o pedido, sem nota ────
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.mensagens_whatsapp (telefone_wa, message_id, direcao, conteudo, tipo_midia, payload, enviada_em, contato_id)
+    VALUES ('55' || c_tel || '03', 'SUITE_AD_PED2', 'entrada', '🛒 Pedido — 1 item', 'pedido', '{}', now() - interval '1 hour', v_c3);
+    SELECT count(*) INTO n FROM public.interacoes WHERE contato_id = v_c3;
+    PERFORM public.rpc_registrar_pedido_catalogo_wa('SUITE_AD_PED2', NULL, NULL, 1, 30, 'BRL', NULL);
+    IF NOT EXISTS (SELECT 1 FROM public.wa_pedido_catalogo WHERE message_id = 'SUITE_AD_PED2' AND interacao_id IS NULL) THEN RAISE EXCEPTION 'pedido não registrado (ou com nota)'; END IF;
+    IF (SELECT count(*) FROM public.interacoes WHERE contato_id = v_c3) <> n THEN RAISE EXCEPTION 'arquivado ganhou nota da IA'; END IF;
+    IF (SELECT processado_em FROM public.mensagens_whatsapp WHERE message_id = 'SUITE_AD_PED2') IS NULL THEN RAISE EXCEPTION 'pedido ficou na fila'; END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'A16 pedido de arquivado: registrado, sem nota', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'A16 pedido de arquivado: registrado, sem nota', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── Fim: SEMPRE aborta. Não existe caminho que grave. ───────────────────────────

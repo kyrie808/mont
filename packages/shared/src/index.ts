@@ -51,6 +51,7 @@ export {
     lidDaMensagem,
     agregarPorTelefone,
     avancaUltimoContato,
+    isTipoAutomatico,
 } from './whatsapp'
 export type { TipoMidia, MensagemNormalizada, PedidoCatalogo, AgregadoTelefone } from './whatsapp'
 
@@ -67,9 +68,10 @@ export {
     MAX_OBSERVACAO,
     MAX_DIAS_RETOMADA,
     DIAS_ADIAMENTO_SEM_PRAZO,
+    motivoDescarte,
     referenciaDatas,
 } from './analista'
-export type { MensagemPendente, Segmento, Veredito, ValidacaoVeredito, ReferenciaDatas } from './analista'
+export type { MensagemPendente, Segmento, Veredito, ValidacaoVeredito, ReferenciaDatas, MotivoDescarte } from './analista'
 
 // Secretária de WhatsApp — lógica pura (tempo de digitação, partição, gaiola)
 export {

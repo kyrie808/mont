@@ -132,6 +132,16 @@ export function lidDaMensagem(crua: Json): string | null {
 export type TipoMidia =
     | 'texto' | 'audio' | 'imagem' | 'video'
     | 'documento' | 'sticker' | 'localizacao' | 'contato' | 'pedido' | 'outro'
+    /** `templateMessage`: mensagem automática de empresa (banco, app, boas-vindas do WhatsApp Business). */
+    | 'template_empresa'
+
+/**
+ * Mensagem que nenhuma pessoa escreveu. Fica gravada (o registro é completo), mas não
+ * cria contato, não avança `ultimo_contato` e não vai para o analista.
+ */
+export function isTipoAutomatico(tipo: TipoMidia | string): boolean {
+    return tipo === 'template_empresa'
+}
 
 /**
  * Pedido montado pelo cliente no catálogo NATIVO do WhatsApp (`orderMessage`).
@@ -250,6 +260,9 @@ function extrairTipoEConteudo(message: Json | undefined): { tipo: TipoMidia; con
 
     const pedido = extrairPedidoCatalogo(message)
     if (pedido) return { tipo: 'pedido', conteudo: descreverPedido(pedido) }
+
+    // O texto do template vem cifrado (dataSharingContext); não há o que ler.
+    if (isObj(message.templateMessage)) return { tipo: 'template_empresa', conteudo: null }
 
     if (typeof message.conversation === 'string') {
         return { tipo: 'texto', conteudo: message.conversation }
@@ -513,6 +526,9 @@ export function agregarPorTelefone(mensagens: MensagemNormalizada[]): Map<string
     const porTelefone = new Map<string, AgregadoTelefone>()
 
     for (const m of mensagens) {
+        // Mensagem automática de empresa não é conversa: não cria contato (14/10: 4 "clientes"
+        // eram robôs de empresa) nem avança ultimo_contato. A mensagem segue gravada.
+        if (isTipoAutomatico(m.tipoMidia)) continue
         const at = porTelefone.get(m.telefoneWa) ?? {
             ultimaEm: m.enviadaEm, nome: null, referral: null, referralEm: null,
         }

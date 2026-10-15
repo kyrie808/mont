@@ -2527,6 +2527,7 @@ export type Database = {
           adiados: number
           analisados: number
           aviso: string | null
+          descartados: number
           detalhes: Json
           falhas: number
           gravados: number
@@ -2544,6 +2545,7 @@ export type Database = {
           adiados?: number
           analisados?: number
           aviso?: string | null
+          descartados?: number
           detalhes?: Json
           falhas?: number
           gravados?: number
@@ -2561,6 +2563,7 @@ export type Database = {
           adiados?: number
           analisados?: number
           aviso?: string | null
+          descartados?: number
           detalhes?: Json
           falhas?: number
           gravados?: number
@@ -3824,6 +3827,14 @@ export type Database = {
       replace_combo_componentes: {
         Args: { p_combo_id: string; p_itens: Json }
         Returns: undefined
+      }
+      rpc_analista_descartar: {
+        Args: {
+          p_contato_id: string
+          p_message_ids: string[]
+          p_motivo: string
+        }
+        Returns: Json
       }
       rpc_analista_previa: {
         Args: {
