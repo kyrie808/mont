@@ -257,6 +257,31 @@ docker compose -f infra/crm/docker-compose.yml down -v   # ⚠️ APAGA a sessã
 `down -v` destrói o volume `evolution_instances` e obriga a parear o número de novo —
 pedindo o celular do Gilmar outra vez. Pensar duas vezes.
 
+## Backfill — repor o que o webhook não entregou
+
+`scripts/backfill-evolution.ts` lê a tabela `Message` da Evolution a partir de uma data e
+manda **direto ao ingestor**, em lotes, sem passar pelo n8n. Pelo W1 a secretária (W3) seria
+acionada por mensagem antiga.
+
+```bash
+# simulação: só lê a Evolution e conta por dia/direção, sem rede
+deno run --allow-run=docker --allow-read --allow-net=herlvujykltxnwqmwmyx.supabase.co \
+  infra/crm/scripts/backfill-evolution.ts --desde 2026-10-12T00:00:00-03:00
+# gravação: mesma linha + --gravar (lê INGESTOR_SECRET de infra/crm/.env, sem imprimir)
+```
+
+- **Idempotente**: índice único em `message_id`; a segunda rodada grava 0.
+- **LID**: a tabela guarda `remoteJid` = LID + `remoteJidAlt` = telefone; o script devolve o
+  telefone ao `remoteJid`, como o webhook ao vivo faz. LID sem telefone vai como está e o
+  ingestor resolve pelo `wa_lid_map`.
+- Grupo/status/newsletter não saem da máquina.
+- `ultimo_contato` só avança. Nenhum contato muda de origem nem de coluna do kanban; as
+  interações saem depois, pelo analista.
+- Quantas já existem no Supabase: conferir por SQL antes de gravar.
+
+Primeira execução: 15/10/2026, desde 12/10: 251 lidas, 235 enviadas, **33 gravadas**
+(reativação de 12/10 e follow-up de 14/10, enviados pela API); segunda rodada, 0.
+
 ## Runbook — trocar de versão / reparear o WhatsApp
 
 Só faça isto com o **Gilmar acordado**: o passo do QR não tem como ser feito sozinho.
