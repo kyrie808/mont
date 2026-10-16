@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { montarAvisoEntrega, avisosDevidos, pagamentoIndefinido, type VendaAviso } from '@mont/shared'
+import { montarAvisoEntrega, avisosDevidos, pagamentoIndefinido, alertaEquipe, type VendaAviso } from '@mont/shared'
 
 // Camada pura: o texto do aviso no grupo #ENTREGAS e a regra de quando ele sai.
 
@@ -159,5 +159,39 @@ describe('avisosDevidos — quando o aviso sai', () => {
             { ...base, dataEntregaPrevista: '2026-10-15' },
             { ...base, dataEntregaPrevista: '2026-10-18' },
         ], agora)).toEqual([])
+    })
+})
+
+/*
+ * Ajuste do Luccas (16/10/2026): o alerta de ATRASO (7h30) para a Equipe fica desligado por
+ * flag — o aviso atrasado continua saindo no #ENTREGAS. O de pagamento indefinido segue.
+ */
+describe('alertaEquipe — o que vai para o grupo Equipe junto com um aviso', () => {
+    const comAtraso = { alertaAtraso: true }
+    const semAtraso = { alertaAtraso: false }
+
+    it('atrasado com a flag LIGADA: alerta de atraso', () => {
+        expect(alertaEquipe(valeria, true, comAtraso)).toContain('não tinha sido avisada no #ENTREGAS ontem às 19h')
+    })
+
+    it('atrasado com a flag DESLIGADA: nada vai para a Equipe', () => {
+        expect(alertaEquipe(valeria, true, semAtraso)).toBeNull()
+    })
+
+    it('pagamento indefinido alerta mesmo com a flag de atraso desligada', () => {
+        const texto = alertaEquipe({ ...valeria, formaPagamento: 'venda' }, true, semAtraso)
+        expect(texto).toContain('SEM forma de pagamento definida')
+        expect(texto).not.toContain('ontem às 19h')
+    })
+
+    it('em dia e com forma definida: nada', () => {
+        expect(alertaEquipe(valeria, false, comAtraso)).toBeNull()
+    })
+
+    it('os dois motivos juntos num alerta só', () => {
+        const texto = alertaEquipe({ ...valeria, formaPagamento: 'venda' }, true, comAtraso)!
+        expect(texto.startsWith('⚠️ AVISO DE ENTREGA — ATENÇÃO')).toBe(true)
+        expect(texto).toContain('ontem às 19h')
+        expect(texto).toContain('SEM forma de pagamento definida')
     })
 })

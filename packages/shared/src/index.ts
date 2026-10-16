@@ -134,5 +134,5 @@ export type {
 } from './types'
 
 // Aviso de entrega no grupo #ENTREGAS — texto e regra de quando sai
-export { montarAvisoEntrega, avisosDevidos, pagamentoIndefinido, HORA_LOTE_MIN, HORA_SEGURANCA_MIN } from './avisoEntrega'
+export { montarAvisoEntrega, avisosDevidos, pagamentoIndefinido, alertaEquipe, HORA_LOTE_MIN, HORA_SEGURANCA_MIN } from './avisoEntrega'
 export type { VendaAviso, ClienteAviso } from './avisoEntrega'

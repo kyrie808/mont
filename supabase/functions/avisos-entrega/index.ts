@@ -16,12 +16,21 @@
 // cliente (nome, telefone, endereço) em outro grupo.
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
-import { avisosDevidos, montarAvisoEntrega, pagamentoIndefinido, type VendaAviso } from '../../../packages/shared/src/avisoEntrega.ts'
+import { alertaEquipe, avisosDevidos, montarAvisoEntrega, type VendaAviso } from '../../../packages/shared/src/avisoEntrega.ts'
 
 /** 🚘 #ENTREGAS - MONT DISTRIBUIDORA — o aviso para o entregador. */
 const GRUPO_ENTREGAS = '120363426226842631@g.us'
 /** 🧀 Equipe Mont Distribuidora 🛵 — alertas (7h30, 21h), Luccas e Gilmar. */
 const GRUPO_EQUIPE = '120363129541953733@g.us'
+
+// Alertas para a Equipe que dá para desligar sem código (Luccas, 16/10/2026: desligados).
+// Ligar: `npx supabase secrets set AVISOS_ALERTA_ATRASO_EQUIPE=true` (idem AVISOS_LISTA_21H_EQUIPE).
+// Sempre ligados, sem flag: o alerta de FALHA de envio ao #ENTREGAS e o de pagamento indefinido.
+const flagLigada = (nome: string) => Deno.env.get(nome)?.trim().toLowerCase() === 'true'
+/** Venda de hoje que perdeu o lote das 19h: o aviso sai às 7h30 no #ENTREGAS; isto é só o recado à Equipe. */
+const ALERTA_ATRASO_EQUIPE = 'AVISOS_ALERTA_ATRASO_EQUIPE'
+/** Lista das 21h com as entregas do dia ainda não marcadas como entregues. */
+const LISTA_21H_EQUIPE = 'AVISOS_LISTA_21H_EQUIPE'
 
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -128,12 +137,8 @@ Deno.serve(async (req: Request) => {
         const v = porId.get(vendaId)!
         const nome = v.cliente.nome.trim()
         const dia = diaMes(v.dataEntregaPrevista!)
-        // Motivos de alerta para a Equipe: o lote das 19h falhou (rede de segurança das 7h30)
-        // e/ou a venda chegou sem forma de pagamento definida.
-        const motivos = [
-          ...(atrasado ? [`A entrega de HOJE (${dia}) de ${nome} não tinha sido avisada no #ENTREGAS ontem às 19h. Mandei agora (7h30). Confiram com o entregador.`] : []),
-          ...(pagamentoIndefinido(v) ? [`A entrega de ${dia} de ${nome} foi avisada SEM forma de pagamento definida. Confirmem com o entregador como cobrar.`] : []),
-        ]
+        // O aviso atrasado sai no #ENTREGAS de qualquer jeito; o recado à Equipe depende da flag.
+        const alerta = alertaEquipe(v, atrasado, { alertaAtraso: flagLigada(ALERTA_ATRASO_EQUIPE) })
         return {
           venda_id: vendaId,
           destino: GRUPO_ENTREGAS,
@@ -141,10 +146,8 @@ Deno.serve(async (req: Request) => {
           // Se o envio ao #ENTREGAS falhar, o n8n avisa a Equipe com este texto.
           falha_destino: GRUPO_EQUIPE,
           falha_texto: `⚠️ NÃO CONSEGUI MANDAR O AVISO DE ENTREGA no #ENTREGAS\n\n${nome} — entrega ${dia}. Mandem à mão; vou tentar de novo em 5 minutos.`,
-          alertar: motivos.length > 0,
-          ...(motivos.length > 0
-            ? { alerta_destino: GRUPO_EQUIPE, alerta_texto: `⚠️ AVISO DE ENTREGA — ATENÇÃO\n\n${motivos.join('\n\n')}` }
-            : {}),
+          alertar: alerta !== null,
+          ...(alerta !== null ? { alerta_destino: GRUPO_EQUIPE, alerta_texto: alerta } : {}),
         }
       })
       return json({ ok: true, devidos }, 200)
@@ -163,6 +166,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (body.acao === 'nao_entregues') {
+      if (!flagLigada(LISTA_21H_EQUIPE)) return json({ ok: true, enviar: false, desligado: LISTA_21H_EQUIPE }, 200)
       const hoje = hojeBrasilia()
       const vendas = await lerVendas(vendasComAviso(admin).eq('status', 'pendente').eq('data_entrega_prevista', hoje))
       if (vendas.length === 0) return json({ ok: true, enviar: false }, 200)

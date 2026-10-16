@@ -146,6 +146,31 @@ export function montarAvisoEntrega(v: VendaAviso): string {
 
 // ─── Quando o aviso sai ────────────────────────────────────────────────────────
 
+/** Quais alertas para a Equipe estão ligados (flags da Edge Function, sem código para religar). */
+export interface OpcoesAlertaEquipe {
+    /** Venda de hoje que perdeu o lote das 19h e saiu às 7h30. */
+    alertaAtraso: boolean
+}
+
+/**
+ * O alerta que acompanha um aviso no grupo Equipe, ou null se não há o que alertar.
+ * Pagamento indefinido sempre alerta (decisão de 16/10); o atraso depende da flag.
+ * O aviso no #ENTREGAS sai de qualquer jeito — isto é só o recado para a Equipe.
+ */
+export function alertaEquipe(v: VendaAviso, atrasado: boolean, opcoes: OpcoesAlertaEquipe): string | null {
+    const nome = v.cliente.nome.trim()
+    const dia = v.dataEntregaPrevista ? diaMes(v.dataEntregaPrevista) : 'data indefinida'
+    const motivos = [
+        ...(atrasado && opcoes.alertaAtraso
+            ? [`A entrega de HOJE (${dia}) de ${nome} não tinha sido avisada no #ENTREGAS ontem às 19h. Mandei agora (7h30). Confiram com o entregador.`]
+            : []),
+        ...(pagamentoIndefinido(v)
+            ? [`A entrega de ${dia} de ${nome} foi avisada SEM forma de pagamento definida. Confirmem com o entregador como cobrar.`]
+            : []),
+    ]
+    return motivos.length > 0 ? `⚠️ AVISO DE ENTREGA — ATENÇÃO\n\n${motivos.join('\n\n')}` : null
+}
+
 const fmtDia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' })
 const fmtHora = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 
