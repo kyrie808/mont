@@ -1,5 +1,5 @@
 {
-  "name": "W5 â€” Avisos de entrega (#ENTREGAS)",
+  "name": "W5 — Avisos de entrega (#ENTREGAS)",
   "nodes": [
     {
       "id": "a-cada-5",
@@ -93,7 +93,7 @@
         }
       },
       "onError": "continueRegularOutput",
-      "notes": "destino vem da Edge Function (constante validada no codigo: 120363426226842631@g.us). onError continua para cair no Saiu? e avisar a Equipe â€” nada calado."
+      "notes": "destino vem da Edge Function (constante validada no codigo: 120363426226842631@g.us). onError continua para cair no Saiu? e avisar a Equipe — nada calado."
     },
     {
       "id": "saiu",
@@ -225,7 +225,7 @@
     },
     {
       "id": "falha-equipe",
-      "name": "Falha â†’ avisar a Equipe",
+      "name": "Falha → avisar a Equipe",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
@@ -252,11 +252,11 @@
         }
       },
       "onError": "continueRegularOutput",
-      "notes": "O aviso nao saiu: a venda NAO e marcada, entao a proxima passada (5 min) tenta de novo â€” e a Equipe fica sabendo agora."
+      "notes": "O aviso nao saiu: a venda NAO e marcada, entao a proxima passada (5 min) tenta de novo — e a Equipe fica sabendo agora."
     },
     {
       "id": "as-21h",
-      "name": "Ã€s 21h",
+      "name": "Às 21h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -276,7 +276,7 @@
     },
     {
       "id": "nao-entregues",
-      "name": "NÃ£o entregues hoje",
+      "name": "Não entregues hoje",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
@@ -305,7 +305,7 @@
     },
     {
       "id": "tem-lista",
-      "name": "Tem pendÃªncia?",
+      "name": "Tem pendência?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -424,7 +424,7 @@
         ],
         [
           {
-            "node": "Falha â†’ avisar a Equipe",
+            "node": "Falha → avisar a Equipe",
             "type": "main",
             "index": 0
           }
@@ -454,29 +454,29 @@
         []
       ]
     },
-    "Ã€s 21h": {
+    "Às 21h": {
       "main": [
         [
           {
-            "node": "NÃ£o entregues hoje",
+            "node": "Não entregues hoje",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "NÃ£o entregues hoje": {
+    "Não entregues hoje": {
       "main": [
         [
           {
-            "node": "Tem pendÃªncia?",
+            "node": "Tem pendência?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tem pendÃªncia?": {
+    "Tem pendência?": {
       "main": [
         [
           {
