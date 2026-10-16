@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import type { VendaUpdate } from '@mont/shared'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
 import { toDomainVenda, type VendaRowWithRelations } from './mappers'
-import { isToday } from 'date-fns'
+import { isToday, format } from 'date-fns'
 import { filtroBuscaContato } from '../utils/telefone'
 
 /**
@@ -84,16 +84,16 @@ export const vendaService = {
         if (includePending && (startDate || endDate)) {
             const conditions: string[] = []
             if (startDate && endDate) {
-                const startStr = startDate.toISOString().split('T')[0]
-                const endStr = endDate.toISOString().split('T')[0]
+                const startStr = format(startDate, 'yyyy-MM-dd')
+                const endStr = format(endDate, 'yyyy-MM-dd')
                 conditions.push(`and(data.gte.${startStr},data.lte.${endStr})`)
             }
             conditions.push(`status.eq.pendente`)
             conditions.push(`pago.eq.false`)
             query = query.or(conditions.join(','))
         } else {
-            if (startDate) query = query.gte('data', startDate.toISOString().split('T')[0])
-            if (endDate) query = query.lte('data', endDate.toISOString().split('T')[0])
+            if (startDate) query = query.gte('data', format(startDate, 'yyyy-MM-dd'))
+            if (endDate) query = query.lte('data', format(endDate, 'yyyy-MM-dd'))
         }
 
         const { data, error } = await query

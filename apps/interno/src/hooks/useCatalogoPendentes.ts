@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Tables } from '@mont/shared'
+import { hojeBrasilia } from '@mont/shared'
 
 export type CatalogoPendente = Tables<'cat_pedidos_pendentes_vinculacao'> & {
     cat_pedidos: Tables<'cat_pedidos'>
@@ -55,7 +56,7 @@ export function useCatalogoPendentes() {
             // 2. Criar a venda manualmente
             const vendaInsert: any = {
                 contato_id: contatoId,
-                data: pedido.criado_em ? new Date(pedido.criado_em).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                data: pedido.criado_em ? hojeBrasilia(new Date(pedido.criado_em)) : hojeBrasilia(),
                 total: pedido.total || 0,
                 forma_pagamento: pedido.metodo_pagamento || 'pix',
                 status: 'pendente',

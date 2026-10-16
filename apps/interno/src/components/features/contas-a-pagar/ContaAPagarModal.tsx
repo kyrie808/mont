@@ -7,7 +7,7 @@ import { Modal, ModalActions, Button, Input, Select } from '../../ui'
 import { usePlanoDeContas } from '../../../hooks/usePlanoDeContas'
 import { useContas } from '../../../hooks/useContas'
 import { useToast } from '../../ui/Toast'
-import { formatCurrency, cn } from '@mont/shared'
+import { formatCurrency, cn, hojeBrasilia } from '@mont/shared'
 import { addMonths, format, parseISO } from 'date-fns'
 
 const schema = z.object({
@@ -83,7 +83,7 @@ function gerarPreviewParcelas(
     return parcelas
 }
 
-const hojeISO = () => new Date().toISOString().split('T')[0]
+const hojeISO = () => hojeBrasilia()
 
 export function ContaAPagarModal({ isOpen, onClose, onSave }: ContaAPagarModalProps) {
     const toast = useToast()
