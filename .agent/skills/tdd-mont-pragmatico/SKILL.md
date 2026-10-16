@@ -91,7 +91,7 @@ async function criarContato(nome = 'Cliente Teste') {
 
 ## Janela de execução
 
-- ✅ Execução manual: `pnpm --filter interno test`.
+- ✅ Execução manual: `pnpm --filter interno test:integration` (flag explícita; `pnpm --filter interno test` é só unit/component e EXCLUI `*.integration.test.ts`). Sem a flag, `createTestClient()` recusa antes de logar.
 - ❌ NUNCA em CI automático.
 - ❌ NUNCA enquanto o Gilmar está logado e usando o sistema (asserções podem ler dado mudando ao vivo — agora não há risco de PERDA de dado, mas há de teste flaky).
 - Janela ideal: madrugada ou final de semana.
