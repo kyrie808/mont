@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store, Tag, Clock } from 'lucide-react'
+import { ShoppingCart, Calendar, Gift, Truck, ChevronRight, Store, Tag, Clock, QrCode, CreditCard, Banknote, CheckCircle2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { addDays, format } from 'date-fns'
 import { vendaSchema, type VendaFormData } from '../../../../schemas/venda'
 import { useEntregadores } from '../../../../hooks/useEntregadores'
+import { useContas } from '../../../../hooks/useContas'
 import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
-import type { OpcoesEntrega } from './pos/FinalizarVendaDrawer'
+import type { OpcoesEntrega, PagamentoImediato } from './pos/FinalizarVendaDrawer'
 
 interface CheckoutSidebarProps {
     onBack: () => void
-    onConfirm: (data: VendaFormData, pagamento?: undefined, opcoes?: OpcoesEntrega) => Promise<void>
+    onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato, opcoes?: OpcoesEntrega) => Promise<void>
     total: number
     contatoId: string
     contatoNome: string
@@ -24,6 +25,15 @@ const SALE_TYPES = [
     { id: 'fiado', label: 'Fiado', icon: Calendar },
     { id: 'brinde', label: 'Brinde', icon: Gift },
 ] as const
+
+// Entrega com data prevista: como o cliente paga. "Já pago" registra o pagamento agora.
+const PAGAMENTOS_ENTREGA = [
+    { id: 'pix', label: 'Pix', icon: QrCode },
+    { id: 'cartao', label: 'Cartão', icon: CreditCard },
+    { id: 'dinheiro', label: 'Dinheiro', icon: Banknote },
+    { id: 'ja_pago', label: 'Já pago', icon: CheckCircle2 },
+] as const
+type PagamentoEntrega = (typeof PAGAMENTOS_ENTREGA)[number]['id']
 
 export function CheckoutSidebar({
     onBack,
@@ -48,6 +58,11 @@ export function CheckoutSidebar({
      */
     const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrego_depois' | 'entrega'>('retirada')
     const { entregadores } = useEntregadores()
+    const { contas } = useContas()
+    const contasAtivas = contas.filter((c) => c.ativo !== false)
+    const [pagamentoEntrega, setPagamentoEntrega] = useState<PagamentoEntrega | null>(null)
+    const [metodoPago, setMetodoPago] = useState<PagamentoImediato['metodo']>('pix')
+    const [contaId, setContaId] = useState('')
 
     const {
         register,
@@ -71,6 +86,7 @@ export function CheckoutSidebar({
             entregador_id: null,
             observacao_entregador: '',
             data_entrega_prevista: null,
+            pagamento_na_entrega: null,
             dinheiro_na_entrega: false
         }
     })
@@ -78,6 +94,17 @@ export function CheckoutSidebar({
     const formaPagamento = watch('forma_pagamento')
     const entregadorId = watch('entregador_id')
     const dinheiroNaEntrega = watch('dinheiro_na_entrega')
+    const dataEntregaPrevista = watch('data_entrega_prevista')
+    // Entrega com data prevista e venda comum: o aviso do #ENTREGAS precisa dizer como cobrar,
+    // então a forma de pagamento é obrigatória (fiado e brinde já dizem por si).
+    const exigePagamento = tipoEntrega === 'entrega' && !!dataEntregaPrevista && formaPagamento === 'venda'
+    const pagamentoFaltando = exigePagamento && (!pagamentoEntrega || (pagamentoEntrega === 'ja_pago' && !contaId))
+
+    const escolherPagamentoEntrega = (opcao: PagamentoEntrega) => {
+        setPagamentoEntrega(opcao)
+        setValue('pagamento_na_entrega', opcao === 'ja_pago' ? null : opcao)
+        setValue('dinheiro_na_entrega', opcao === 'dinheiro')
+    }
     const taxaEntregaValue = watch('taxa_entrega') || 0
     const descontoValue = watch('desconto') || 0
     // Produto com piso 0 (espelha o clamp da RPC) + frete.
@@ -85,6 +112,8 @@ export function CheckoutSidebar({
 
     useEffect(() => {
         setTipoEntrega('retirada')
+        setPagamentoEntrega(null)
+        setContaId('')
         reset({
             contato_id: contatoId,
             data: format(new Date(), 'yyyy-MM-dd'),
@@ -98,6 +127,7 @@ export function CheckoutSidebar({
             entregador_id: null,
             observacao_entregador: '',
             data_entrega_prevista: null,
+            pagamento_na_entrega: null,
             dinheiro_na_entrega: false
         })
     }, [contatoId, items, reset])
@@ -111,6 +141,8 @@ export function CheckoutSidebar({
             setValue('entregador_id', null)
             setValue('observacao_entregador', '')
             setValue('data_entrega_prevista', null)
+            setValue('pagamento_na_entrega', null)
+            setPagamentoEntrega(null)
             setValue('dinheiro_na_entrega', false)
         }
     }
@@ -127,7 +159,12 @@ export function CheckoutSidebar({
     const onSubmit = async (data: VendaFormData) => {
         try {
             setIsSubmitting(true)
-            await onConfirm(data, undefined, { entregaImediata: tipoEntrega === 'retirada' })
+            const pagamento: PagamentoImediato | undefined = exigePagamento && pagamentoEntrega === 'ja_pago'
+                ? { metodo: metodoPago, contaId }
+                : undefined
+            // Fora da exigência (sem data, fiado, brinde), a escolha não vale.
+            const dados: VendaFormData = exigePagamento ? data : { ...data, pagamento_na_entrega: null }
+            await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada' })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
         } finally {
@@ -325,9 +362,71 @@ export function CheckoutSidebar({
                                     className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
                                 />
                             </div>
+                            {exigePagamento && (
+                                <div className="space-y-2">
+                                    <span className="text-xs font-medium text-muted-foreground block">
+                                        Como o cliente vai pagar?
+                                    </span>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {PAGAMENTOS_ENTREGA.map((opt) => {
+                                            const Icon = opt.icon
+                                            const isSelected = pagamentoEntrega === opt.id
+                                            return (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    aria-pressed={isSelected}
+                                                    onClick={() => escolherPagamentoEntrega(opt.id)}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-xl border transition-all gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                                                        isSelected
+                                                            ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
+                                                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                                    )}
+                                                >
+                                                    <Icon className="w-4 h-4" />
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight">{opt.label}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    {pagamentoEntrega === 'ja_pago' && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <select
+                                                aria-label="Como foi pago"
+                                                value={metodoPago}
+                                                onChange={(e) => setMetodoPago(e.target.value as PagamentoImediato['metodo'])}
+                                                className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                            >
+                                                <option value="pix">Pix</option>
+                                                <option value="dinheiro">Dinheiro</option>
+                                                <option value="cartao">Cartão</option>
+                                            </select>
+                                            <select
+                                                aria-label="Conta que recebeu"
+                                                value={contaId}
+                                                onChange={(e) => setContaId(e.target.value)}
+                                                className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                            >
+                                                <option value="">Conta…</option>
+                                                {contasAtivas.map((ct) => (
+                                                    <option key={ct.id} value={ct.id}>{ct.nome}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {pagamentoFaltando && (
+                                        <p className="text-[11px] font-medium text-warning-strong">
+                                            {pagamentoEntrega === 'ja_pago'
+                                                ? 'Escolha a conta que recebeu o pagamento.'
+                                                : 'Com data de entrega, diga como o cliente vai pagar: o entregador precisa saber o que cobrar.'}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             <div>
                                 <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                                    Observação para o entregador
+                                    Instrução para o entregador (horário, portaria, maquininha)
                                 </label>
                                 <textarea
                                     {...register('observacao_entregador')}
@@ -336,7 +435,9 @@ export function CheckoutSidebar({
                                     placeholder="Ex: Aguardar confirmação de pagamento para entregar."
                                 />
                             </div>
-                            {/* Pagamento em dinheiro na entrega: só aqui o entregador vê "receber R$ X". */}
+                            {/* Pagamento em dinheiro na entrega: só aqui o entregador vê "receber R$ X".
+                                Com data prevista, a escolha acima já diz isso — o checkbox sai. */}
+                            {!exigePagamento && (
                             <label className="flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-border bg-background px-3 py-2.5">
                                 <input
                                     type="checkbox"
@@ -346,6 +447,7 @@ export function CheckoutSidebar({
                                 />
                                 <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
                             </label>
+                            )}
                         </div>
                     )}
                 </div>
@@ -384,7 +486,7 @@ export function CheckoutSidebar({
                     </button>
                     <Button
                         onClick={handleSubmit(onSubmit)}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || pagamentoFaltando}
                         className="flex-1 py-6 text-lg font-black uppercase tracking-tight shadow-elevated shadow-primary/20"
                     >
                         {isSubmitting ? 'Processando...' : 'CONFIRMAR VENDA'}

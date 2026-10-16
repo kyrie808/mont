@@ -22,7 +22,7 @@ export function VendaDetalhe() {
     const navigate = useNavigate()
     const toast = useToast()
     const { venda, loading, error, refetch } = useVenda(id)
-    const { deleteVenda, cancelVenda, addPagamento, updateVendaStatus, deleteUltimoPagamento } = useVendas()
+    const { deleteVenda, cancelVenda, addPagamento, updateVendaStatus, deleteUltimoPagamento, updateVenda } = useVendas()
 
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showCancelModal, setShowCancelModal] = useState(false)
@@ -34,6 +34,18 @@ export function VendaDetalhe() {
     const [showUndoPaymentConfirm, setShowUndoPaymentConfirm] = useState(false)
 
     // Handlers
+    const handleRemarcar = async (data: string | null) => {
+        if (!venda) return false
+        const success = (await updateVenda(venda.id, { dataEntregaPrevista: data })) !== null
+        if (success) {
+            await refetch()
+            toast.success(data ? 'Entrega remarcada — o aviso da nova data vai para o #ENTREGAS' : 'Data prevista removida')
+        } else {
+            toast.error('Erro ao remarcar a entrega')
+        }
+        return success
+    }
+
     const handleDelete = async () => {
         if (!venda) return
         setIsDeleting(true)
@@ -160,7 +172,9 @@ export function VendaDetalhe() {
 
                 <VendaInfoCliente contato={venda.contato} />
 
-                {venda.entregadorId && <VendaInfoEntrega venda={venda} />}
+                {(venda.entregadorId || venda.dataEntregaPrevista) && (
+                    <VendaInfoEntrega key={venda.dataEntregaPrevista ?? ''} venda={venda} onRemarcar={handleRemarcar} />
+                )}
 
                 {venda.notaEntregador && (
                     <div className="mt-4 rounded-xl border border-border bg-card p-4">

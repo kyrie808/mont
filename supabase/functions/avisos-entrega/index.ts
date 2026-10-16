@@ -16,7 +16,7 @@
 // cliente (nome, telefone, endereço) em outro grupo.
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
-import { avisosDevidos, montarAvisoEntrega, type VendaAviso } from '../../../packages/shared/src/avisoEntrega.ts'
+import { avisosDevidos, montarAvisoEntrega, pagamentoIndefinido, type VendaAviso } from '../../../packages/shared/src/avisoEntrega.ts'
 
 /** 🚘 #ENTREGAS - MONT DISTRIBUIDORA — o aviso para o entregador. */
 const GRUPO_ENTREGAS = '120363426226842631@g.us'
@@ -124,23 +124,26 @@ Deno.serve(async (req: Request) => {
         .gte('data_entrega_prevista', hoje)
         .lte('data_entrega_prevista', somarDias(hoje, 1)))
       const porId = new Map(vendas.map((v) => [v.id, v]))
-      const devidos = avisosDevidos(vendas, Date.now()).map(({ vendaId, alertar }) => {
+      const devidos = avisosDevidos(vendas, Date.now()).map(({ vendaId, alertar: atrasado }) => {
         const v = porId.get(vendaId)!
+        const nome = v.cliente.nome.trim()
+        const dia = diaMes(v.dataEntregaPrevista!)
+        // Motivos de alerta para a Equipe: o lote das 19h falhou (rede de segurança das 7h30)
+        // e/ou a venda chegou sem forma de pagamento definida.
+        const motivos = [
+          ...(atrasado ? [`A entrega de HOJE (${dia}) de ${nome} não tinha sido avisada no #ENTREGAS ontem às 19h. Mandei agora (7h30). Confiram com o entregador.`] : []),
+          ...(pagamentoIndefinido(v) ? [`A entrega de ${dia} de ${nome} foi avisada SEM forma de pagamento definida. Confirmem com o entregador como cobrar.`] : []),
+        ]
         return {
           venda_id: vendaId,
           destino: GRUPO_ENTREGAS,
           texto: montarAvisoEntrega(v),
           // Se o envio ao #ENTREGAS falhar, o n8n avisa a Equipe com este texto.
           falha_destino: GRUPO_EQUIPE,
-          falha_texto: `⚠️ NÃO CONSEGUI MANDAR O AVISO DE ENTREGA no #ENTREGAS
-
-${v.cliente.nome.trim()} — entrega ${diaMes(v.dataEntregaPrevista!)}. Mandem à mão; vou tentar de novo em 5 minutos.`,
-          alertar,
-          ...(alertar
-            ? {
-                alerta_destino: GRUPO_EQUIPE,
-                alerta_texto: `⚠️ AVISO DE ENTREGA ATRASADO\n\nA entrega de HOJE (${diaMes(v.dataEntregaPrevista!)}) de ${v.cliente.nome.trim()} não tinha sido avisada no #ENTREGAS ontem às 19h. Mandei agora (7h30). Confiram com o entregador.`,
-              }
+          falha_texto: `⚠️ NÃO CONSEGUI MANDAR O AVISO DE ENTREGA no #ENTREGAS\n\n${nome} — entrega ${dia}. Mandem à mão; vou tentar de novo em 5 minutos.`,
+          alertar: motivos.length > 0,
+          ...(motivos.length > 0
+            ? { alerta_destino: GRUPO_EQUIPE, alerta_texto: `⚠️ AVISO DE ENTREGA — ATENÇÃO\n\n${motivos.join('\n\n')}` }
             : {}),
         }
       })

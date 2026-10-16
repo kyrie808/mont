@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { montarAvisoEntrega, avisosDevidos, type VendaAviso } from '@mont/shared'
+import { montarAvisoEntrega, avisosDevidos, pagamentoIndefinido, type VendaAviso } from '@mont/shared'
 
 // Camada pura: o texto do aviso no grupo #ENTREGAS e a regra de quando ele sai.
 
@@ -76,10 +76,24 @@ describe('montarAvisoEntrega — o formato do grupo #ENTREGAS', () => {
         expect(texto).toContain('*Valor a ser cobrado:* R$35 (frete já incluso ⚠️)')
     })
 
-    it('venda já paga: "Já foi pago !!!" e nada a cobrar', () => {
+    it('venda já paga: "Já foi pago !!!" e NÃO COBRAR', () => {
         const texto = montarAvisoEntrega({ ...valeria, pago: true, valorPago: 135 })
         expect(texto).toContain('*Pagamento:* Já foi pago !!!')
-        expect(texto).toContain('*Valor a ser cobrado:* R$0 (frete já incluso ⚠️)')
+        expect(texto).toContain('*Valor a ser cobrado:* NÃO COBRAR — já foi pago ✅')
+    })
+
+    it('fiado: "Fiado ⚠️" e NÃO COBRAR, com o valor que vai para a conta do cliente', () => {
+        const texto = montarAvisoEntrega({ ...valeria, formaPagamento: 'fiado', total: 35 })
+        expect(texto).toContain('*Pagamento:* Fiado ⚠️')
+        expect(texto).toContain('*Valor a ser cobrado:* NÃO COBRAR — fiado (R$35 na conta do cliente)')
+    })
+
+    it('forma de pagamento indefinida ("venda"): avisa NÃO DEFINIDO e pede alerta', () => {
+        const v = { ...valeria, formaPagamento: 'venda' }
+        expect(montarAvisoEntrega(v)).toContain('*Pagamento:* ⚠️ NÃO DEFINIDO — confirmar com a equipe')
+        expect(pagamentoIndefinido(v)).toBe(true)
+        expect(pagamentoIndefinido(valeria)).toBe(false)
+        expect(pagamentoIndefinido({ ...v, pago: true })).toBe(false)
     })
 
     it('pagamento parcial: cobra só o que falta, com centavos quando houver', () => {

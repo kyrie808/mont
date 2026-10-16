@@ -163,7 +163,9 @@ export function NovaVenda() {
         const vendaData = {
             contatoId: data.contato_id || selectedContato?.id || '',
             data: data.data,
-            formaPagamento: data.forma_pagamento,
+            // Com data prevista, o formulário exige como o cliente paga na entrega; essa é a
+            // forma real da venda (a intenção 'venda' sozinha não diz ao entregador o que cobrar).
+            formaPagamento: data.pagamento_na_entrega ?? data.forma_pagamento,
             taxaEntrega: data.taxa_entrega,
             itens: data.itens.map(it => ({
                 produtoId: it.produto_id,
@@ -175,7 +177,7 @@ export function NovaVenda() {
             entregadorId: data.entregador_id ?? null,
             observacaoEntregador: data.observacao_entregador ?? null,
             dataEntregaPrevista: data.data_entrega_prevista || null,
-            dinheiroNaEntrega: data.dinheiro_na_entrega ?? false,
+            dinheiroNaEntrega: data.pagamento_na_entrega ? data.pagamento_na_entrega === 'dinheiro' : (data.dinheiro_na_entrega ?? false),
             desconto: data.desconto ?? 0,
             status,
         }

@@ -83,6 +83,18 @@ function quantidade(q: number): string {
     return Number.isInteger(q) ? String(q) : String(q).replace('.', ',')
 }
 
+/** Formas que dizem ao entregador como cobrar. 'venda' é só a intenção do checkout. */
+const FORMAS_DEFINIDAS = new Set(['cartao', 'pix', 'dinheiro', 'fiado', 'brinde'])
+
+/**
+ * A venda chegou ao aviso sem dizer como o cliente paga (forma 'venda' e não paga). O
+ * formulário exige a forma quando há data prevista; se mesmo assim chegar, o aviso sai
+ * com NÃO DEFINIDO e a Equipe é alertada (decisão do Luccas, 16/10).
+ */
+export function pagamentoIndefinido(v: VendaAviso): boolean {
+    return !v.pago && !FORMAS_DEFINIDAS.has(v.formaPagamento)
+}
+
 /** A linha de pagamento como a equipe escreve. Paga = "Já foi pago !!!". */
 function pagamentoLinha(v: VendaAviso): string {
     if (v.pago) return 'Já foi pago !!!'
@@ -90,10 +102,18 @@ function pagamentoLinha(v: VendaAviso): string {
         case 'cartao': return 'Vai ser pago no cartão ⚠️'
         case 'pix': return 'Pix na entrega ⚠️'
         case 'dinheiro': return 'Dinheiro na entrega ⚠️'
-        case 'fiado': return 'Fiado (paga depois) ⚠️'
+        case 'fiado': return 'Fiado ⚠️'
         case 'brinde': return 'Brinde, não cobrar ⚠️'
-        default: return `${v.formaPagamento} ⚠️`
+        default: return '⚠️ NÃO DEFINIDO — confirmar com a equipe'
     }
+}
+
+/** O que o entregador cobra. Pago e fiado: NÃO COBRAR, em letra que não deixa dúvida. */
+function cobrarLinha(v: VendaAviso): string {
+    if (v.pago) return 'NÃO COBRAR — já foi pago ✅'
+    const saldo = v.total - v.valorPago
+    if (v.formaPagamento === 'fiado') return `NÃO COBRAR — fiado (${valorCobrado(saldo)} na conta do cliente)`
+    return `${valorCobrado(saldo)} (frete já incluso ⚠️)`
 }
 
 /** 'AAAA-MM-DD' → 'DD/MM'. */
@@ -103,7 +123,6 @@ function diaMes(d: string): string {
 }
 
 export function montarAvisoEntrega(v: VendaAviso): string {
-    const aCobrar = v.pago ? 0 : v.total - v.valorPago
     return [
         `*🚗Entrega ${v.dataEntregaPrevista ? diaMes(v.dataEntregaPrevista) : '??/??'}🚗*`,
         '🧀 *Novo Pedido — Mont Distribuidora*',
@@ -121,7 +140,7 @@ export function montarAvisoEntrega(v: VendaAviso): string {
         LINHA,
         `*Frete:* ${reais(v.taxaEntrega ?? 0)}`,
         `*Pagamento:* ${pagamentoLinha(v)}`,
-        `*Valor a ser cobrado:* ${valorCobrado(aCobrar)} (frete já incluso ⚠️)`,
+        `*Valor a ser cobrado:* ${cobrarLinha(v)}`,
     ].join('\n')
 }
 

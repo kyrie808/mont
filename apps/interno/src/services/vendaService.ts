@@ -160,6 +160,9 @@ export const vendaService = {
         if (data.taxaEntrega !== undefined) vUpdate.taxa_entrega = data.taxaEntrega
         if (data.status) vUpdate.status = data.status
         if (data.pago !== undefined) vUpdate.pago = data.pago
+        // Remarcação: o trigger trg_venda_remarcada_reabre_aviso zera aviso_grupo_enviado_em
+        // e o aviso da nova data sai no #ENTREGAS.
+        if (data.dataEntregaPrevista !== undefined) vUpdate.data_entrega_prevista = data.dataEntregaPrevista
 
         const { error } = await supabase.from('vendas').update(vUpdate).eq('id', id)
         if (error) throw error
