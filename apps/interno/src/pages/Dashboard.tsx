@@ -2,29 +2,33 @@
 import {
     Bell,
     TrendingUp,
-    TrendingDown,
-    ArrowUp,
-    ShoppingBag,
-    Package,
-    Truck,
-    CheckCircle2,
     DollarSign,
     ShoppingCart,
-    Wallet,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useDashboardFilter } from '../hooks/useDashboardFilter'
 import { useMonthPickerBinding } from '../hooks/useMonthPickerBinding'
 import { dashboardService } from '../services/dashboardService'
-import { formatCurrency } from '@mont/shared'
+import { cn, formatCurrency } from '@mont/shared'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { KpiCardDesktop } from '@/components/dashboard/KpiCardDesktop'
 import { isMesEmCurso } from '../utils/calculations'
+import {
+    corSemaforo,
+    diaDoMesBrasilia,
+    diasNoMes,
+    resolverMetaFaturamento,
+    ritmoDaMeta,
+    semaforoAReceber,
+} from '../utils/metasMensais'
+import { useMetaMensal } from '@/hooks/useMetaMensal'
+import { IndicadorMetaDiaria } from '@/components/dashboard/IndicadorMetaDiaria'
 import { AlertasFinanceiroWidget } from '@/components/dashboard/AlertasFinanceiroWidget'
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel'
 import { useAlertasContasAPagar } from '@/hooks/useAlertasContasAPagar'
@@ -47,7 +51,7 @@ export function Dashboard() {
     const { month, year } = useDashboardFilter()
 
 
-    const { data: metrics, isLoading: isLoadingMetrics, refetch } = useDashboardMetrics(month, year)
+    const { data: metrics, isLoading: isLoadingMetrics } = useDashboardMetrics(month, year)
     const { alertas: aPagarAlertas, count: countPagar, refetch: refetchPagar } = useAlertasContasAPagar()
     const { alertas: esfriando, count: countEsfriando, refetch: refetchEsfriando } = useClientesEsfriando()
     const { alertas: aEntregar, count: countAEntregar, refetch: refetchAEntregar } = useVendasAEntregar()
@@ -61,8 +65,38 @@ export function Dashboard() {
         lucroBruto: 0, lucroLiquido: 0, vendas: 0, itens: 0, meses: 0,
     })
     const [isLoadingLucro, setIsLoadingLucro] = useState(true)
+    const queryClient = useQueryClient()
 
-    const isLoading = isLoadingMetrics || isLoadingLucro
+    // Metas fixas (metas_mensais). "Hoje" sempre de Brasília.
+    const hojeBR = diaDoMesBrasilia()
+    const mesCorrenteBR = hojeBR.ano === year && hojeBR.mes === month
+    const { data: metaDoMes, isLoading: isLoadingMeta } = useMetaMensal(year, month)
+    // A Receber é backlog de HOJE (todos os meses) → o teto é o do mês corrente.
+    const { data: metaMesCorrente } = useMetaMensal(hojeBR.ano, hojeBR.mes)
+
+    const isLoading = isLoadingMetrics || isLoadingLucro || isLoadingMeta
+
+    const faturadoMes = metrics?.financial?.faturamento_mes_atual || 0
+    const metaFaturamento = resolverMetaFaturamento(metaDoMes ?? null, metas.faturamento)
+    const metaFaixaFaturamento = metaFaturamento.tipo === 'fixa'
+        ? {
+            faixa: metaFaturamento.faixa,
+            ritmo: ritmoDaMeta({
+                faturado: faturadoMes,
+                meta: metaFaturamento.faixa,
+                dia: hojeBR.dia,
+                diasNoMes: diasNoMes(year, month),
+                emCurso: mesCorrenteBR,
+            }),
+            media: metas.faturamento,
+            emCurso: mesCorrenteBR,
+        }
+        : undefined
+
+    const limiteAReceber = metaMesCorrente?.meta_a_receber_max != null ? Number(metaMesCorrente.meta_a_receber_max) : null
+    const semaforoLimite = semaforoAReceber(aReceberGlobal.total_a_receber, limiteAReceber)
+    const notaLimite = limiteAReceber !== null ? `limite: ${formatCurrency(limiteAReceber)}` : undefined
+    const corLimite = semaforoLimite ? corSemaforo[semaforoLimite].texto : undefined
 
     useEffect(() => {
         const fetchData = async () => {
@@ -107,9 +141,16 @@ export function Dashboard() {
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true)
-        await Promise.all([refetch(), refetchPagar(), refetchEsfriando(), refetchAEntregar(), refetchCapi()])
+        await Promise.all([
+            refetchPagar(), refetchEsfriando(), refetchAEntregar(), refetchCapi(),
+            // mês escolhido + mês corrente do indicador (podem ser queries diferentes)
+            queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] }),
+            queryClient.invalidateQueries({ queryKey: ['meta_mensal'] }),
+            queryClient.invalidateQueries({ queryKey: ['pedidos_do_dia'] }),
+            queryClient.invalidateQueries({ queryKey: ['sugestao_metas'] }),
+        ])
         setIsRefreshing(false)
-    }, [refetch, refetchPagar, refetchEsfriando, refetchAEntregar, refetchCapi])
+    }, [refetchPagar, refetchEsfriando, refetchAEntregar, refetchCapi, queryClient])
 
     const aReceberAlertas = metrics?.financial?.alertas_financeiros ?? []
     // Badge do sino = contas a pagar (vencendo/vencidas) + recebíveis atrasados
@@ -156,6 +197,9 @@ export function Dashboard() {
                 {/* Main Content */}
                 <main className="w-full flex flex-col gap-6 px-4 lg:px-6 pb-24 lg:pb-8">
 
+                    {/* Meta do dia (mês corrente de Brasília, independe do MonthPicker) */}
+                    <IndicadorMetaDiaria />
+
                     {/* Month Picker Navigation */}
                     <MonthPicker selectedMonth={selectedMonthStr} onMonthSelect={handleMonthSelect} />
 
@@ -172,7 +216,6 @@ export function Dashboard() {
                         <KpiCard
                             title="Faturamento"
                             value={formatCurrency(metrics?.financial?.faturamento_mes_atual || 0)}
-                            progress={100}
                             trend={isMesEmCurso(year, month) ? 'mês em curso' : `${metrics?.financial?.variacao_percentual?.toFixed(1) || 0}%`}
                             trendDirection={isMesEmCurso(year, month) ? 'neutral' : (metrics?.financial?.variacao_percentual || 0) >= 0 ? 'up' : 'down'}
                             icon={TrendingUp}
@@ -186,11 +229,6 @@ export function Dashboard() {
                         <KpiCard
                             title="Receita de Frete"
                             value={formatCurrency(metrics?.financial?.receita_frete_mes_atual || 0)}
-                            progress={100}
-                            trend="100% margem"
-                            trendDirection="neutral"
-                            trendColor="green"
-                            icon={Truck}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -200,12 +238,9 @@ export function Dashboard() {
                         <KpiCard
                             title="Lucro Bruto"
                             value={formatCurrency(lucroData.lucro_bruto)}
-                            progress={100}
-                            trend={lucroData.receita_bruta > 0
-                                ? `${((lucroData.lucro_bruto / lucroData.receita_bruta) * 100).toFixed(1)}%`
-                                : '0%'}
-                            trendDirection="neutral"
-                            icon={DollarSign}
+                            subtitle={`${lucroData.receita_bruta > 0
+                                ? ((lucroData.lucro_bruto / lucroData.receita_bruta) * 100).toFixed(1)
+                                : '0'}% de margem`}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -215,11 +250,8 @@ export function Dashboard() {
                         <KpiCard
                             title="Lucro Líquido"
                             value={formatCurrency(lucroData.lucro_liquido)}
-                            progress={100}
-                            trend={`${lucroData.margem_liquida_pct.toFixed(1)}%`}
-                            trendDirection={lucroData.lucro_liquido >= 0 ? "up" : "down"}
-                            trendColor={lucroData.lucro_liquido >= 0 ? "green" : "red"}
-                            icon={Wallet}
+                            subtitle={`${lucroData.margem_liquida_pct.toFixed(1)}% de margem`}
+                            subtitleClassName={lucroData.lucro_liquido >= 0 ? 'text-semantic-green' : 'text-destructive'}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -229,10 +261,6 @@ export function Dashboard() {
                         <KpiCard
                             title="Ticket Médio"
                             value={formatCurrency(metrics?.financial?.ticket_medio_mes_atual || 0)}
-                            progress={75}
-                            trend={isMesEmCurso(year, month) ? 'mês em curso' : 'Estável'}
-                            trendDirection="neutral"
-                            icon={ArrowUp}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -242,11 +270,8 @@ export function Dashboard() {
                         <KpiCard
                             title="A Receber"
                             value={formatCurrency(aReceberGlobal.total_a_receber)}
-                            progress={50}
-                            trend={`— ${aReceberGlobal.total_contatos_abertos} clientes a receber`}
-                            trendDirection="neutral"
-                            trendColor={aReceberGlobal.total_contatos_abertos > 0 ? "yellow" : "green"}
-                            icon={TrendingDown}
+                            subtitle={`${aReceberGlobal.total_contatos_abertos} clientes a receber${notaLimite ? ` · ${notaLimite}` : ''}`}
+                            subtitleClassName={corLimite}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -257,11 +282,7 @@ export function Dashboard() {
                         <KpiCard
                             title="Liquidado no Mês"
                             value={formatCurrency(liquidadoData.total_liquidado)}
-                            progress={100}
-                            trend={`${liquidadoData.vendas_liquidadas} quitadas`}
-                            trendDirection="neutral"
-                            trendColor="green"
-                            icon={Wallet}
+                            subtitle={`${liquidadoData.vendas_liquidadas} quitadas`}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -279,8 +300,13 @@ export function Dashboard() {
                             className="col-span-2"
                             loading={isLoading}
                             onClick={() => navigate('/vendas?status=entregue')}
-                            tooltip="Receita de PRODUTO das vendas entregues no mês (sem frete)."
-                            meta={{ current: metrics?.financial?.faturamento_mes_atual || 0, goal: metas.faturamento, emCurso: isMesEmCurso(year, month) }}
+                            tooltip="Receita de PRODUTO das vendas entregues no mês (sem frete). Meta fixa do mês: barra até o alvo, traço = mínima; cor pelo ritmo dos dias corridos."
+                            metaFaixa={metaFaixaFaturamento}
+                            meta={metaFaturamento.tipo === 'media'
+                                ? { current: faturadoMes, goal: metaFaturamento.media, emCurso: isMesEmCurso(year, month) }
+                                : undefined}
+                            nota={metaFaturamento.tipo === 'media' ? metaFaturamento.aviso : undefined}
+                            notaClassName="text-warning-strong"
                         />
                         <KpiCardDesktop
                             title="Receita de Frete"
@@ -318,6 +344,8 @@ export function Dashboard() {
                             // senão a lista vem escopada no mês e não bate com o número do card.
                             onClick={() => navigate('/vendas?pagamento=pendente&emAberto=1')}
                             subtitle={`${aReceberGlobal.total_contatos_abertos} clientes · ${formatCurrency(aReceberGlobal.a_receber_mes)} de ${selectedMonthStr.toLowerCase()}`}
+                            nota={notaLimite}
+                            notaClassName={cn('font-bold', corLimite)}
                             tooltip="Total de fiado em aberto de TODOS os meses — dívida não tem mês, e a maior parte dela é de meses anteriores. O valor do mês selecionado aparece como contexto."
                         />
                         <KpiCardDesktop
@@ -343,10 +371,7 @@ export function Dashboard() {
                         <KpiCard
                             title="Vendas"
                             value={(metrics?.financial?.vendas_mes_atual || 0).toString()}
-                            progress={70}
-                            trend="Mês"
-                            trendDirection="up"
-                            icon={ShoppingBag}
+                            subtitle="entregues no mês"
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -358,10 +383,6 @@ export function Dashboard() {
                         <KpiCard
                             title="Itens"
                             value={(metrics?.operational?.total_itens || 0).toString()}
-                            progress={65}
-                            trend="Vol"
-                            trendDirection="neutral"
-                            icon={Package}
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -370,10 +391,7 @@ export function Dashboard() {
                         <KpiCard
                             title="Pendentes"
                             value={(metrics?.operational?.entregas_pendentes_total || 0).toString()}
-                            progress={100}
-                            trend="Total"
-                            trendDirection="neutral"
-                            icon={Truck}
+                            subtitle="a entregar · todos os meses"
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}
@@ -383,10 +401,7 @@ export function Dashboard() {
                         <KpiCard
                             title="Entregues"
                             value={(metrics?.operational?.entregas_hoje_realizadas || 0).toString()}
-                            progress={100}
-                            trend="Hoje"
-                            trendDirection="up"
-                            icon={CheckCircle2}
+                            subtitle="hoje"
                             className="col-span-1"
                             variant="compact"
                             loading={isLoading}

@@ -1,5 +1,6 @@
 import { Info, type LucideIcon } from 'lucide-react'
 import { cn, formatCurrency } from '@mont/shared'
+import { corSemaforo, rotuloSemaforo, rotuloSemaforoFechado, type FaixaMeta, type RitmoMeta } from '@/utils/metasMensais'
 
 /** Meta pela média histórica: current vs goal (média). */
 export interface KpiMeta {
@@ -14,20 +15,34 @@ export interface KpiMeta {
     unit?: 'brl' | 'num'
 }
 
+/** Meta fixa (metas_mensais): duas marcas, mínima e alvo, semáforo pelo ritmo. */
+export interface KpiMetaFaixa {
+    faixa: FaixaMeta
+    ritmo: RitmoMeta
+    /** Média dos meses fechados — só referência. */
+    media: number
+    emCurso: boolean
+}
+
 interface KpiCardDesktopProps {
     title: string
     value: string
     icon?: LucideIcon
     /** Se presente → barra = % da meta (média) + badge vs média. Senão, usa `subtitle`. */
     meta?: KpiMeta
+    /** Meta fixa do mês (tem precedência sobre `meta`). */
+    metaFaixa?: KpiMetaFaixa
     subtitle?: string
+    /** Linha extra abaixo do conteúdo (aviso de mês sem meta, limite do A Receber). */
+    nota?: string
+    notaClassName?: string
     onClick?: () => void
     tooltip?: string
     loading?: boolean
     className?: string
 }
 
-function KpiTooltip({ tooltip }: { tooltip: string }) {
+export function KpiTooltip({ tooltip }: { tooltip: string }) {
     return (
         <div className="group/tooltip relative flex items-center">
             <Info className="h-3 w-3 cursor-help text-muted-foreground transition-colors hover:text-primary" />
@@ -96,7 +111,43 @@ function MetaRow({ meta }: { meta: KpiMeta }) {
     )
 }
 
-export function KpiCardDesktop({ title, value, meta, subtitle, onClick, tooltip, loading, className }: KpiCardDesktopProps) {
+/** % pra exibir: piso, pra 99,6% nunca aparecer como "100%" sem ter batido. */
+const pctPiso = (pct: number) => `${Math.floor(pct)}%`
+
+function MetaFaixaRow({ metaFaixa }: { metaFaixa: KpiMetaFaixa }) {
+    const { faixa, ritmo, media, emCurso } = metaFaixa
+    const cor = corSemaforo[ritmo.semaforo]
+    const fillPct = Math.min(ritmo.pctAlvo, 100) // a barra vai até o alvo
+    const marcaMinima = (faixa.minima / faixa.alvo) * 100
+
+    return (
+        <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Mínima {formatCurrency(faixa.minima)} · <b className="tabular-nums text-foreground">{pctPiso(ritmo.pctMinima)}</b></span>
+                <span>Alvo {formatCurrency(faixa.alvo)} · <b className="tabular-nums text-foreground">{pctPiso(ritmo.pctAlvo)}</b></span>
+            </div>
+            <div className="relative h-1.5 w-full rounded-full bg-muted">
+                <div className={cn('h-full rounded-full transition-all duration-500', cor.barra)} style={{ width: `${fillPct}%` }} />
+                <div
+                    aria-hidden
+                    className="absolute -top-0.5 h-2.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground/60"
+                    style={{ left: `${marcaMinima}%` }}
+                />
+            </div>
+            <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">
+                    média: {formatCurrency(media)}
+                    {emCurso && <> · projeção {formatCurrency(ritmo.projecao)}</>}
+                </span>
+                <span className={cn('font-bold', cor.texto)}>
+                    {(emCurso ? rotuloSemaforo : rotuloSemaforoFechado)[ritmo.semaforo]}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+export function KpiCardDesktop({ title, value, meta, metaFaixa, subtitle, nota, notaClassName, onClick, tooltip, loading, className }: KpiCardDesktopProps) {
     if (loading) return <div className={cn('h-[112px] w-full animate-pulse rounded-xl bg-muted', className)} />
 
     return (
@@ -114,11 +165,14 @@ export function KpiCardDesktop({ title, value, meta, subtitle, onClick, tooltip,
             </div>
             <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{value}</p>
 
-            {meta ? (
+            {metaFaixa ? (
+                <MetaFaixaRow metaFaixa={metaFaixa} />
+            ) : meta ? (
                 <MetaRow meta={meta} />
             ) : subtitle ? (
                 <p className="mt-2 text-xs font-medium text-muted-foreground">{subtitle}</p>
             ) : null}
+            {nota && <p className={cn('mt-1.5 text-[11px] font-medium text-muted-foreground', notaClassName)}>{nota}</p>}
         </div>
     )
 }

@@ -10,6 +10,7 @@ export {
     formatDate,
     formatDateTime,
     formatRelativeDate,
+    hojeBrasilia,
     getWhatsAppLink,
     formatWeight,
     pluralize,
@@ -131,6 +132,7 @@ export type {
     Secao,
     SecaoInsert,
     SecaoUpdate,
+    MetaMensal,
 } from './types'
 
 // Aviso de entrega no grupo #ENTREGAS — texto e regra de quando sai

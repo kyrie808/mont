@@ -76,6 +76,18 @@ export function formatDateTime(date: string | Date): string {
     }).format(d)
 }
 
+const fmtDiaBrasilia = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+})
+
+/**
+ * O dia de hoje em Brasília, 'AAAA-MM-DD' — independente do fuso do aparelho ou do
+ * servidor. Depois das 21h o UTC já virou o dia; aqui não. `now` injetável pra teste.
+ */
+export function hojeBrasilia(now: Date = new Date()): string {
+    return fmtDiaBrasilia.format(now)
+}
+
 /**
  * Formatar data relativa (ex: "há 3 dias")
  */

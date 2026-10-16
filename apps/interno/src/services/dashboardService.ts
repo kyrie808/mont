@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import type { MetaMensal } from '@mont/shared'
 
 type HomeFinanceiroRow = any
 type HomeOperacionalRow = any
@@ -326,7 +327,42 @@ export const dashboardService = {
             itens: media(op.map((r) => Number(r.total_itens) || 0)),
             meses: Math.max(fin.length, lucro.length, op.length),
         }
-    }
+    },
+
+    /** Meta fixa do mês (tabela `metas_mensais`, mes = dia 1). null = mês sem meta. */
+    async getMetaMensal(ano: number, mes: number): Promise<MetaMensal | null> {
+        const { data, error } = await supabase
+            .from('metas_mensais')
+            .select('*')
+            .eq('mes', `${ano}-${String(mes).padStart(2, '0')}-01`)
+            .maybeSingle()
+        if (error) throw error
+        return data
+    },
+
+    /**
+     * Pedidos do dia (`dia` = 'AAAA-MM-DD' de Brasília): qualquer status exceto cancelada,
+     * sem brinde. Conta pendentes de propósito — é o esforço de venda do dia, não o faturado.
+     */
+    async getPedidosDoDia(dia: string): Promise<number> {
+        const { count, error } = await supabase
+            .from('vendas')
+            .select('id', { count: 'exact', head: true })
+            .eq('data', dia)
+            .neq('status', 'cancelada')
+            .neq('forma_pagamento', 'brinde')
+        if (error) throw error
+        return count ?? 0
+    },
+
+    /** Sugestão de metas pro mês (só cálculo, `sugerir_metas`). null = mês anterior sem meta. */
+    async getSugestaoMetas(ano: number, mes: number): Promise<{ meta_minima: number; meta_alvo: number } | null> {
+        const { data, error } = await supabase
+            .rpc('sugerir_metas', { p_mes: `${ano}-${String(mes).padStart(2, '0')}-01` })
+            .maybeSingle()
+        if (error) throw error
+        return data ? { meta_minima: Number(data.meta_minima), meta_alvo: Number(data.meta_alvo) } : null
+    },
 }
 
 // Pure business logic extracted for testing
