@@ -39,8 +39,10 @@ pnpm turbo build --filter=catalogo        # Build catalog only
 pnpm turbo build --filter=interno         # Build internal only
 
 # Tests (NO Docker — integration runs against PRODUCTION as the dedicated test account)
-pnpm --filter interno test                # Unit/component (jsdom) + integration
+pnpm --filter interno test                # Unit/component (jsdom) ONLY — never touches the DB
+pnpm --filter interno test:integration    # + integration (PRODUCTION) — explicit flag (= RUN_INTEGRATION=1)
 # Integration authenticates as teste@teste.com; cleanup scoped by created_by.
+# *.integration.test.ts is excluded without the flag, and createTestClient() refuses without it.
 # Never run while Gilmar is using the system. See skill tdd-mont-pragmatico.
 
 # Type checking
