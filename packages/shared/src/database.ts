@@ -1708,6 +1708,36 @@ export type Database = {
           },
         ]
       }
+      metas_mensais: {
+        Row: {
+          atualizado_em: string
+          criado_em: string
+          mes: string
+          meta_a_receber_max: number | null
+          meta_alvo: number
+          meta_minima: number
+          observacao: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          criado_em?: string
+          mes: string
+          meta_a_receber_max?: number | null
+          meta_alvo: number
+          meta_minima: number
+          observacao?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          criado_em?: string
+          mes?: string
+          meta_a_receber_max?: number | null
+          meta_alvo?: number
+          meta_minima?: number
+          observacao?: string | null
+        }
+        Relationships: []
+      }
       origens: {
         Row: {
           ativo: boolean
@@ -4083,6 +4113,16 @@ export type Database = {
           respondeu: number
           sem_resposta: number
           tentativas: number
+        }[]
+      }
+      sugerir_metas: {
+        Args: { p_mes: string }
+        Returns: {
+          bateu_alvo: boolean
+          bateu_minima: boolean
+          faturado_mes_anterior: number
+          meta_alvo: number
+          meta_minima: number
         }[]
       }
       update_purchase_order_with_items: {

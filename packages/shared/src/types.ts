@@ -47,3 +47,6 @@ export type SeloVariant = 'mais_vendido' | 'oferta' | 'queridinho'
 export type Secao = Table<'cat_secoes'>
 export type SecaoInsert = Insert<'cat_secoes'>
 export type SecaoUpdate = Update<'cat_secoes'>
+
+// Meta fixa de faturamento por mês (mínima/alvo) — painel do interno
+export type MetaMensal = Table<'metas_mensais'>

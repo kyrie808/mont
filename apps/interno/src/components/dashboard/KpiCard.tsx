@@ -6,8 +6,12 @@ import { SmartProgressBar } from './SmartProgressBar'
 export interface KpiCardProps {
     title: string
     value: string
+    /** Sem `progress` → sem barra (o Dashboard não mostra barra que não reflete número real). */
     progress?: number
     trend?: string
+    /** Linha de contexto com dado real (usada quando não há barra/tendência). */
+    subtitle?: string
+    subtitleClassName?: string
     trendDirection?: 'up' | 'down' | 'neutral'
     targetLabel?: string
     icon?: LucideIcon
@@ -36,8 +40,10 @@ function KpiTooltip({ tooltip }: { tooltip: string }) {
 export function KpiCard({
     title,
     value,
-    progress = 0,
+    progress,
     trend = '',
+    subtitle,
+    subtitleClassName,
     trendDirection = 'neutral',
     targetLabel,
     icon: Icon,
@@ -89,6 +95,7 @@ export function KpiCard({
                         </div>
                         <span className="text-2xl font-bold text-foreground mt-1">{value}</span>
 
+                        {progress !== undefined && (
                         <SmartProgressBar
                             progress={progress}
                             progressColor={progressColor}
@@ -99,6 +106,10 @@ export function KpiCard({
                             iconColor={iconColor}
                             className="mt-1"
                         />
+                        )}
+                        {subtitle && (
+                            <span className={cn("text-xs font-medium text-muted-foreground mt-1", subtitleClassName)}>{subtitle}</span>
+                        )}
                     </div>
                 ) : (
                     // Default Layout (Revenue)
@@ -111,14 +122,21 @@ export function KpiCard({
                                 </div>
                                 <span className="text-2xl font-bold text-foreground mt-1">{value}</span>
                             </div>
+                            {trend && (
                             <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-bold", getTrendColors())}>
                                 <TrendIcon className="size-3.5" /> {trend}
                             </span>
+                            )}
                         </div>
                         {/* Progress Bar */}
+                        {progress !== undefined && (
                         <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-2">
                             <div className={cn("h-full rounded-full", progressColor)} style={{ width: `${progress}%` }}></div>
                         </div>
+                        )}
+                        {subtitle && (
+                            <span className={cn("text-xs font-medium text-muted-foreground mt-2 block", subtitleClassName)}>{subtitle}</span>
+                        )}
                         {targetLabel && (
                             <span className="text-xs text-muted-foreground mt-2 block font-medium">{targetLabel}</span>
                         )}
