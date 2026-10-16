@@ -70,6 +70,7 @@ export function CheckoutSidebar({
             data_prevista_pagamento: null,
             entregador_id: null,
             observacao_entregador: '',
+            data_entrega_prevista: null,
             dinheiro_na_entrega: false
         }
     })
@@ -96,6 +97,7 @@ export function CheckoutSidebar({
             data_prevista_pagamento: null,
             entregador_id: null,
             observacao_entregador: '',
+            data_entrega_prevista: null,
             dinheiro_na_entrega: false
         })
     }, [contatoId, items, reset])
@@ -108,6 +110,7 @@ export function CheckoutSidebar({
             setValue('taxa_entrega', 0)
             setValue('entregador_id', null)
             setValue('observacao_entregador', '')
+            setValue('data_entrega_prevista', null)
             setValue('dinheiro_na_entrega', false)
         }
     }
@@ -310,6 +313,17 @@ export function CheckoutSidebar({
                                         <option key={ent.id} value={ent.id}>{ent.nome}</option>
                                     ))}
                                 </select>
+                            </div>
+                            <div>
+                                <label htmlFor="data-entrega-prevista" className="text-xs font-medium text-muted-foreground block mb-1.5">
+                                    Data prevista de entrega
+                                </label>
+                                <input
+                                    id="data-entrega-prevista"
+                                    type="date"
+                                    {...register('data_entrega_prevista')}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                />
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-muted-foreground block mb-1.5">

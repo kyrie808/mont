@@ -140,6 +140,7 @@ export const vendaService = {
             p_data_prevista_pagamento: data.dataPrevistaPagamento ?? undefined,
             p_entregador_id: data.entregadorId ?? undefined,
             p_observacao_entregador: data.observacaoEntregador ?? undefined,
+            p_data_entrega_prevista: data.dataEntregaPrevista || undefined,
             p_dinheiro_na_entrega: data.dinheiroNaEntrega ?? false,
             p_desconto: data.desconto ?? 0,
             // Retirada nasce 'entregue' — a baixa de estoque (e a despesa, se

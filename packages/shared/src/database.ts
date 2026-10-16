@@ -2352,6 +2352,7 @@ export type Database = {
       vendas: {
         Row: {
           atualizado_em: string
+          aviso_grupo_enviado_em: string | null
           cat_pedido_id: string | null
           contato_id: string
           created_by: string | null
@@ -2359,6 +2360,7 @@ export type Database = {
           custo_total: number | null
           data: string
           data_entrega: string | null
+          data_entrega_prevista: string | null
           data_prevista_pagamento: string | null
           desconto: number
           dinheiro_acertado_em: string | null
@@ -2385,6 +2387,7 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string
+          aviso_grupo_enviado_em?: string | null
           cat_pedido_id?: string | null
           contato_id: string
           created_by?: string | null
@@ -2392,6 +2395,7 @@ export type Database = {
           custo_total?: number | null
           data?: string
           data_entrega?: string | null
+          data_entrega_prevista?: string | null
           data_prevista_pagamento?: string | null
           desconto?: number
           dinheiro_acertado_em?: string | null
@@ -2418,6 +2422,7 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string
+          aviso_grupo_enviado_em?: string | null
           cat_pedido_id?: string | null
           contato_id?: string
           created_by?: string | null
@@ -2425,6 +2430,7 @@ export type Database = {
           custo_total?: number | null
           data?: string
           data_entrega?: string | null
+          data_entrega_prevista?: string | null
           data_prevista_pagamento?: string | null
           desconto?: number
           dinheiro_acertado_em?: string | null
@@ -2578,6 +2584,98 @@ export type Database = {
           travados?: number
         }
         Relationships: []
+      }
+      wa_envio_falhas: {
+        Row: {
+          contato_id: string | null
+          criado_em: string
+          erro: string | null
+          erro_lid: string | null
+          id: string
+          lid: string | null
+          message_id_lid: string | null
+          numero_tentado: string
+          resolvido_em: string | null
+          resolvido_por_lid: boolean | null
+          telefone_wa: string
+        }
+        Insert: {
+          contato_id?: string | null
+          criado_em?: string
+          erro?: string | null
+          erro_lid?: string | null
+          id?: string
+          lid?: string | null
+          message_id_lid?: string | null
+          numero_tentado: string
+          resolvido_em?: string | null
+          resolvido_por_lid?: boolean | null
+          telefone_wa: string
+        }
+        Update: {
+          contato_id?: string | null
+          criado_em?: string
+          erro?: string | null
+          erro_lid?: string | null
+          id?: string
+          lid?: string | null
+          message_id_lid?: string | null
+          numero_tentado?: string
+          resolvido_em?: string | null
+          resolvido_por_lid?: boolean | null
+          telefone_wa?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "wa_envio_falhas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+        ]
       }
       wa_envios: {
         Row: {
@@ -3622,6 +3720,7 @@ export type Database = {
         Args: {
           p_contato_id: string
           p_data: string
+          p_data_entrega_prevista?: string
           p_data_prevista_pagamento?: string
           p_desconto?: number
           p_dinheiro_na_entrega?: boolean

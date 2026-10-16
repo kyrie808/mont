@@ -111,6 +111,7 @@ export function FinalizarVendaDrawer({
             data_prevista_pagamento: null,
             entregador_id: null,
             observacao_entregador: '',
+            data_entrega_prevista: null,
             dinheiro_na_entrega: false,
         },
     })
@@ -132,6 +133,7 @@ export function FinalizarVendaDrawer({
         setValue('taxa_entrega', 0)
         setValue('entregador_id', null)
         setValue('observacao_entregador', '')
+        setValue('data_entrega_prevista', null)
         setValue('dinheiro_na_entrega', false)
     }
 
@@ -177,6 +179,7 @@ export function FinalizarVendaDrawer({
             data_prevista_pagamento: null,
             entregador_id: null,
             observacao_entregador: '',
+            data_entrega_prevista: null,
             dinheiro_na_entrega: false,
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -242,6 +245,15 @@ export function FinalizarVendaDrawer({
                         ))}
                     </select>
                 </div>
+            </div>
+            <div>
+                <label htmlFor="data-entrega-prevista-pdv" className="mb-1.5 block text-sm font-medium text-muted-foreground">Data prevista de entrega</label>
+                <input
+                    id="data-entrega-prevista-pdv"
+                    type="date"
+                    {...register('data_entrega_prevista')}
+                    className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                />
             </div>
             <div>
                 <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Observação para o entregador</label>

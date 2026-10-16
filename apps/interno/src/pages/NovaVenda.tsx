@@ -174,6 +174,7 @@ export function NovaVenda() {
             dataPrevistaPagamento: data.data_prevista_pagamento,
             entregadorId: data.entregador_id ?? null,
             observacaoEntregador: data.observacao_entregador ?? null,
+            dataEntregaPrevista: data.data_entrega_prevista || null,
             dinheiroNaEntrega: data.dinheiro_na_entrega ?? false,
             desconto: data.desconto ?? 0,
             status,
