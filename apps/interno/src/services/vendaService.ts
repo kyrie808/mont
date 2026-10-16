@@ -140,6 +140,7 @@ export const vendaService = {
             p_data_prevista_pagamento: data.dataPrevistaPagamento ?? undefined,
             p_entregador_id: data.entregadorId ?? undefined,
             p_observacao_entregador: data.observacaoEntregador ?? undefined,
+            p_data_entrega_prevista: data.dataEntregaPrevista || undefined,
             p_dinheiro_na_entrega: data.dinheiroNaEntrega ?? false,
             p_desconto: data.desconto ?? 0,
             // Retirada nasce 'entregue' — a baixa de estoque (e a despesa, se
@@ -159,6 +160,9 @@ export const vendaService = {
         if (data.taxaEntrega !== undefined) vUpdate.taxa_entrega = data.taxaEntrega
         if (data.status) vUpdate.status = data.status
         if (data.pago !== undefined) vUpdate.pago = data.pago
+        // Remarcação: o trigger trg_venda_remarcada_reabre_aviso zera aviso_grupo_enviado_em
+        // e o aviso da nova data sai no #ENTREGAS.
+        if (data.dataEntregaPrevista !== undefined) vUpdate.data_entrega_prevista = data.dataEntregaPrevista
 
         const { error } = await supabase.from('vendas').update(vUpdate).eq('id', id)
         if (error) throw error

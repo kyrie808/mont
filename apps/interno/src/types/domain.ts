@@ -142,6 +142,10 @@ export interface DomainVenda {
     /** Entregador atribuído (null = retirada) + nome, pro card "Entrega". */
     entregadorId?: string | null
     entregadorNome?: string | null
+    /** Dia previsto da entrega ('AAAA-MM-DD'); ≠ da data real de entrega. */
+    dataEntregaPrevista?: string | null
+    /** Quando o aviso saiu no grupo #ENTREGAS (null = ainda não saiu). */
+    avisoGrupoEnviadoEm?: string | null
 }
 
 // Creation/Update types (Domain-side)
@@ -173,6 +177,8 @@ export interface CreateVenda {
     // Entrega: entregador atribuído (null/undefined = retirada) + nota pro entregador.
     entregadorId?: string | null
     observacaoEntregador?: string | null
+    // Dia previsto da entrega ('AAAA-MM-DD'): alimenta o aviso automático no grupo #ENTREGAS.
+    dataEntregaPrevista?: string | null
     // Pagamento em dinheiro na entrega (o entregador coleta o total).
     dinheiroNaEntrega?: boolean
     // Desconto em R$ sobre o produto.

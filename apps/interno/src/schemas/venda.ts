@@ -27,6 +27,12 @@ export const vendaSchema = z.object({
     // Entrega: entregador atribuído (null = retirada) + nota livre pro entregador.
     entregador_id: z.string().uuid().optional().nullable(),
     observacao_entregador: z.string().optional().nullable(),
+    // Dia previsto da entrega ('AAAA-MM-DD'). Com ele a venda entra no aviso automático
+    // do grupo #ENTREGAS; sem ele, fica de fora.
+    data_entrega_prevista: z.string().optional().nullable(),
+    // Como o cliente paga NA ENTREGA, quando a venda tem data prevista (o aviso do
+    // #ENTREGAS diz ao entregador o que cobrar). Vira a forma_pagamento da venda.
+    pagamento_na_entrega: z.enum(['pix', 'cartao', 'dinheiro']).optional().nullable(),
     // Cliente combinou pagar em dinheiro na entrega (o entregador coleta o total).
     dinheiro_na_entrega: z.boolean().optional().default(false),
 }).refine((data) => {

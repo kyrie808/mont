@@ -202,7 +202,9 @@ export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
         dataPrevistaPagamento: dbVenda.data_prevista_pagamento,
         notaEntregador: dbVenda.nota_entregador ?? null,
         entregadorId: dbVenda.entregador_id ?? null,
-        entregadorNome: dbVenda.entregador?.nome ?? null
+        entregadorNome: dbVenda.entregador?.nome ?? null,
+        dataEntregaPrevista: dbVenda.data_entrega_prevista ?? null,
+        avisoGrupoEnviadoEm: dbVenda.aviso_grupo_enviado_em ?? null
     }
 }
 

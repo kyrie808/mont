@@ -61,6 +61,14 @@ const RECEBIMENTOS = [
 
 type Recebimento = (typeof RECEBIMENTOS)[number]['id']
 
+// Entrega com data prevista e "Receber depois": como o cliente paga NA ENTREGA.
+const PAGAMENTOS_NA_ENTREGA = [
+    { id: 'pix', label: 'PIX', icon: QrCode },
+    { id: 'cartao', label: 'Cartão', icon: CreditCard },
+    { id: 'dinheiro', label: 'Dinheiro', icon: Banknote },
+] as const
+type PagamentoNaEntrega = (typeof PAGAMENTOS_NA_ENTREGA)[number]['id']
+
 export function FinalizarVendaDrawer({
     isOpen,
     onClose,
@@ -78,6 +86,7 @@ export function FinalizarVendaDrawer({
     const [recebimento, setRecebimento] = useState<Recebimento>('depois')
     const [contaId, setContaId] = useState('')
     const [valorRecebido, setValorRecebido] = useState(0)
+    const [pagamentoNaEntrega, setPagamentoNaEntrega] = useState<PagamentoNaEntrega | null>(null)
 
     const { entregadores } = useEntregadores()
     const { contas } = useContas()
@@ -111,6 +120,8 @@ export function FinalizarVendaDrawer({
             data_prevista_pagamento: null,
             entregador_id: null,
             observacao_entregador: '',
+            data_entrega_prevista: null,
+            pagamento_na_entrega: null,
             dinheiro_na_entrega: false,
         },
     })
@@ -125,6 +136,10 @@ export function FinalizarVendaDrawer({
 
     const podePagarAgora = tipoVenda === 'balcao' || tipoVenda === 'entrega'
     const isPayNow = podePagarAgora && recebimento !== 'depois'
+    // Entrega com data prevista que não é paga agora: o aviso do #ENTREGAS precisa dizer
+    // como cobrar, então a forma na entrega é obrigatória ("Já pago" = pagar agora, acima).
+    const dataEntregaPrevista = watch('data_entrega_prevista')
+    const exigePagamentoNaEntrega = tipoVenda === 'entrega' && tipoEntrega === 'entrega' && !!dataEntregaPrevista && !isPayNow
     const troco = recebimento === 'dinheiro' && valorRecebido > totalGeral ? valorRecebido - totalGeral : 0
 
     // Zera os campos de entrega (usado ao voltar p/ retirada / trocar de tipo).
@@ -132,6 +147,9 @@ export function FinalizarVendaDrawer({
         setValue('taxa_entrega', 0)
         setValue('entregador_id', null)
         setValue('observacao_entregador', '')
+        setValue('data_entrega_prevista', null)
+        setValue('pagamento_na_entrega', null)
+        setPagamentoNaEntrega(null)
         setValue('dinheiro_na_entrega', false)
     }
 
@@ -165,6 +183,7 @@ export function FinalizarVendaDrawer({
         setRecebimento('depois')
         setContaId('')
         setValorRecebido(0)
+        setPagamentoNaEntrega(null)
         reset({
             contato_id: contatoId,
             data: format(new Date(), 'yyyy-MM-dd'),
@@ -177,6 +196,8 @@ export function FinalizarVendaDrawer({
             data_prevista_pagamento: null,
             entregador_id: null,
             observacao_entregador: '',
+            data_entrega_prevista: null,
+            pagamento_na_entrega: null,
             dinheiro_na_entrega: false,
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,9 +216,13 @@ export function FinalizarVendaDrawer({
         const pagamento: PagamentoImediato | undefined = isPayNow
             ? { metodo: recebimento as PagamentoImediato['metodo'], contaId }
             : undefined
+        // A forma na entrega só vale quando é exigida (entrega com data, não paga agora).
+        const dados: VendaFormData = exigePagamentoNaEntrega
+            ? { ...data, pagamento_na_entrega: pagamentoNaEntrega, dinheiro_na_entrega: pagamentoNaEntrega === 'dinheiro' }
+            : { ...data, pagamento_na_entrega: null }
         try {
             setIsSubmitting(true)
-            await onConfirm(data, pagamento, { entregaImediata: tipoEntrega === 'retirada' })
+            await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada' })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
         } finally {
@@ -205,7 +230,7 @@ export function FinalizarVendaDrawer({
         }
     }
 
-    const canConfirm = !isSubmitting && !(isPayNow && !contaId)
+    const canConfirm = !isSubmitting && !(isPayNow && !contaId) && !(exigePagamentoNaEntrega && !pagamentoNaEntrega)
 
     // Detalhes da Entrega (reutilizado pelo tipo Entrega e pelo sub-toggle de Fiado/Brinde).
     // Padrão limpo do DS: label acima + input minimalista, sem boxes preenchidos.
@@ -244,7 +269,16 @@ export function FinalizarVendaDrawer({
                 </div>
             </div>
             <div>
-                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Observação para o entregador</label>
+                <label htmlFor="data-entrega-prevista-pdv" className="mb-1.5 block text-sm font-medium text-muted-foreground">Data prevista de entrega</label>
+                <input
+                    id="data-entrega-prevista-pdv"
+                    type="date"
+                    {...register('data_entrega_prevista')}
+                    className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                />
+            </div>
+            <div>
+                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">Instrução para o entregador (horário, portaria, maquininha)</label>
                 <textarea
                     {...register('observacao_entregador')}
                     rows={2}
@@ -252,6 +286,8 @@ export function FinalizarVendaDrawer({
                     placeholder="Ex: Aguardar confirmação de pagamento para entregar."
                 />
             </div>
+            {/* Com data prevista, a forma na entrega (no bloco Pagamento) já diz isso. */}
+            {!exigePagamentoNaEntrega && (
             <label className="flex cursor-pointer select-none items-center gap-2.5">
                 <input
                     type="checkbox"
@@ -261,6 +297,7 @@ export function FinalizarVendaDrawer({
                 />
                 <span className="text-sm text-foreground">Pagamento em dinheiro na entrega</span>
             </label>
+            )}
         </div>
     )
 
@@ -324,6 +361,40 @@ export function FinalizarVendaDrawer({
                     )
                 })}
             </div>
+
+            {exigePagamentoNaEntrega && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <span className="block text-xs font-medium text-muted-foreground">Na entrega, o cliente paga com</span>
+                    <div className="grid grid-cols-3 gap-2">
+                        {PAGAMENTOS_NA_ENTREGA.map((opt) => {
+                            const Icon = opt.icon
+                            const isSelected = pagamentoNaEntrega === opt.id
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    onClick={() => setPagamentoNaEntrega(opt.id)}
+                                    className={cn(
+                                        'flex items-center justify-center gap-2 rounded-xl border p-2.5 transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                                        isSelected
+                                            ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
+                                            : 'border-border bg-background text-muted-foreground hover:bg-muted',
+                                    )}
+                                >
+                                    <Icon className="size-4" />
+                                    <span className="text-xs font-bold uppercase tracking-wider">{opt.label}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                    {!pagamentoNaEntrega && (
+                        <p className="text-[11px] font-medium text-warning-strong">
+                            Com data de entrega, diga como o cliente vai pagar (ou marque o pagamento agora, acima): o entregador precisa saber o que cobrar.
+                        </p>
+                    )}
+                </div>
+            )}
 
             {isPayNow && (
                 <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3 animate-in fade-in slide-in-from-top-2 duration-200">
