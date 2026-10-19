@@ -165,8 +165,9 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 
 **Onda 2** — banco e Edge Function no ar em 19/10/2026 (migration `20261019205333_agenda_ajustes_e_avisos`; `avisos-agenda` v1, `verify_jwt=false`); W6 importado no n8n **desativado** (`6NoH3eU6Dk4D9vT7`)
 - [x] Texto simulado conferido contra o banco (`simular` da função publicada = cálculo só-leitura: 22 vencimentos atrasados / R$ 1.265,00 antes da Joelma). Falta a sua aprovação do texto final
-- [ ] Primeira mensagem das 8h recebida de verdade (o cron só liga com a sua liberação)
-- [ ] Segundo disparo no mesmo dia bloqueado
+- [x] **Pronto, desligado por decisão em 19/10** (Luccas): W6 fica importado e inativo no n8n, Edge Function no ar; nada é enviado. Não apagar — religa no futuro com o roteiro de `infra/crm/README.md` (seção W6)
+- [ ] Primeira mensagem das 8h recebida de verdade (quando religar)
+- [ ] Segundo disparo no mesmo dia bloqueado (quando religar)
 
 **Onda 3**
 - [ ] 13/11 mostra os vencimentos com total igual ao banco

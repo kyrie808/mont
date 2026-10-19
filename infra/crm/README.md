@@ -229,9 +229,10 @@ está desenhado mas **ainda não foi exercitado** — vale forçar um erro antes
 ## O workflow n8n (W6) — Agenda do dia às 8h
 
 **`W6 — Agenda do dia (Equipe, 8h)`** — arquivo `workflows/w6-aviso-agenda.json`.
-⚠️ **Ainda NÃO importado nem ativo** (19/10/2026): liga só depois da Onda 2 aprovada
-(migration `agenda_avisos_enviados` aplicada, Edge Function `avisos-agenda` no ar e texto
-da simulação aprovado). Planejamento em `docs/agenda-retornos/`.
+⚠️ **Importado e DESLIGADO por decisão do Luccas (19/10/2026)** — id n8n `6NoH3eU6Dk4D9vT7`.
+Está pronto (migration aplicada, Edge Function `avisos-agenda` v1 no ar, texto da simulação
+conferido), mas não envia nada. Não apagar: para religar, seguir o roteiro abaixo.
+Planejamento em `docs/agenda-retornos/`.
 
 ```
 Cron 0 8 * * 1-6 ──► avisos-agenda {do_dia} ──► Tem aviso? ──► Evolution sendText ──► Saiu?
