@@ -1,6 +1,6 @@
 -- Suíte: Agenda de Retornos — tabela lembretes, trg_venda_fecha_lembretes (venda paga fecha,
 -- cancelada cancela, estorno/descancelamento reabrem) e as leituras agenda_itens,
--- agenda_atrasados, agenda_sem_data. Migration: 20261019161813_agenda_lembretes.sql.
+-- agenda_atrasados, agenda_sem_data. Migration: 20261019195019_agenda_lembretes.sql.
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA" (ver meta_eventos_triggers.sql): um único DO-block que
 -- SEMPRE termina em RAISE EXCEPTION. A exceção aborta a transação inteira — contato, venda,

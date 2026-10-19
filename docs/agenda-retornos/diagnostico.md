@@ -233,7 +233,7 @@ Testes novos: T14 (dono da cobrança, nas formas de 1 e 2 parcelas e nos atrasad
 
 ## 13. Onda 1 — como testar e aplicar
 
-Arquivos: `supabase/migrations/20261019161813_agenda_lembretes.sql` e `supabase/tests/agenda_lembretes.sql`.
+Arquivos: `supabase/migrations/20261019195019_agenda_lembretes.sql` e `supabase/tests/agenda_lembretes.sql`.
 
 1. **Backup:** `.\supabase\scripts\dump-prod.ps1` (na raiz do repo, no PowerShell).
 2. **Ensaio sem aplicar:** no SQL Editor, cole **a migração inteira e, logo abaixo, o teste inteiro**, numa execução só. O RAISE do teste desfaz tudo, inclusive a migração.
@@ -241,3 +241,14 @@ Arquivos: `supabase/migrations/20261019161813_agenda_lembretes.sql` e `supabase/
    - Depois rode `SELECT to_regclass('public.lembretes');`. Tem que voltar **NULL** (nada ficou).
 3. **Aplicar** (com sua autorização): pelo `apply_migration` do MCP, para registrar no histórico de migrações.
 4. **Conferência pós-aplicação:** rode só o teste de novo (`SUITE_OK 21/21`) e a consulta do rodapé do arquivo de teste. As contagens têm que bater com `contagens_antes`.
+
+### Resultado da aplicação (19/10/2026)
+
+- Dump antes: `supabase/backups/dumps/dump-{schema,data}-20261019-164407.sql`.
+- Ensaio (migração + suíte numa execução, rodado no Cowork): `SUITE_OK 21/21`; `to_regclass('public.lembretes')` = NULL depois; contagens iguais.
+- Aplicada pelo `apply_migration`. O histórico registrou a versão **`20261019195019`**, e o arquivo foi renomeado para `supabase/migrations/20261019195019_agenda_lembretes.sql`.
+- Suíte de novo, contra o banco migrado: `SUITE_OK 21/21`. Números reais: 13/11 = 31 / R$ 1.875,00; novembro = 45 / R$ 2.863,00; atrasados = **26 / R$ 1.570,00** (no ensaio eram 27 / R$ 1.605,00: um pagamento real de R$ 35 entrou às 16:51 numa venda prevista para 10/09); sem data = 29 / R$ 2.324,90 (fiado 9, venda 14, pix 5, cartão 1).
+- Rodapé depois da suíte igual a `contagens_antes` (956 contatos, 1.846 vendas, 1.390 pagamentos, 1.729 lançamentos, 3 contas, saldo R$ 31.274,50, 509 interações, 592 eventos Meta, 0 lembretes).
+- Tipos regenerados (`packages/shared/src/database.ts`). O gerador do MCP não emite o bloco `graphql_public` (sem uso no código). Os aliases `Lembrete`, `LembreteInsert`, `OrigemItemAgenda`, `ItemAgenda` e `ItemSemData` estão em `types.ts`. `ItemAgenda` corrige a nulidade, porque o gerador marca toda coluna de RETURNS TABLE como não-nula.
+- `tsc --noEmit` verde (interno e catálogo) e `pnpm turbo build` verde (os 2 apps).
+- `NOTIFY pgrst, 'reload schema'` feito. Prova: anon em `/rpc/agenda_sem_data` e em `/lembretes` recebe 42501 (o PostgREST conhece os dois; o REVOKE vale).

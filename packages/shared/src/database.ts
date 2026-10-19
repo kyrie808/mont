@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_users: {
@@ -1446,6 +1421,139 @@ export type Database = {
           },
           {
             foreignKeyName: "lancamentos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lembretes: {
+        Row: {
+          atualizado_em: string
+          concluido_em: string | null
+          concluido_por: string | null
+          contato_id: string | null
+          created_by: string | null
+          criado_em: string
+          data: string
+          descricao: string | null
+          hora: string | null
+          id: string
+          motivo_conclusao: string | null
+          origem: string
+          responsavel: string | null
+          situacao: string
+          tipo: string
+          titulo: string
+          updated_by: string | null
+          valor: number | null
+          venda_id: string | null
+          vezes_reagendado: number
+        }
+        Insert: {
+          atualizado_em?: string
+          concluido_em?: string | null
+          concluido_por?: string | null
+          contato_id?: string | null
+          created_by?: string | null
+          criado_em?: string
+          data: string
+          descricao?: string | null
+          hora?: string | null
+          id?: string
+          motivo_conclusao?: string | null
+          origem?: string
+          responsavel?: string | null
+          situacao?: string
+          tipo: string
+          titulo: string
+          updated_by?: string | null
+          valor?: number | null
+          venda_id?: string | null
+          vezes_reagendado?: number
+        }
+        Update: {
+          atualizado_em?: string
+          concluido_em?: string | null
+          concluido_por?: string | null
+          contato_id?: string | null
+          created_by?: string | null
+          criado_em?: string
+          data?: string
+          descricao?: string | null
+          hora?: string | null
+          id?: string
+          motivo_conclusao?: string | null
+          origem?: string
+          responsavel?: string | null
+          situacao?: string
+          tipo?: string
+          titulo?: string
+          updated_by?: string | null
+          valor?: number | null
+          venda_id?: string | null
+          vezes_reagendado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "lembretes_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "lembretes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_projecao_recebimentos"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "lembretes_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
@@ -3710,6 +3818,60 @@ export type Database = {
           saldo_repasse: number
         }[]
       }
+      agenda_atrasados: {
+        Args: never
+        Returns: {
+          atrasado: boolean
+          contato_id: string
+          contato_nome: string
+          contato_telefone: string
+          data: string
+          descricao: string
+          forma_pagamento: string
+          hora: string
+          id: string
+          origem: string
+          situacao: string
+          tipo: string
+          titulo: string
+          valor: number
+          venda_id: string
+        }[]
+      }
+      agenda_itens: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          atrasado: boolean
+          contato_id: string
+          contato_nome: string
+          contato_telefone: string
+          data: string
+          descricao: string
+          forma_pagamento: string
+          hora: string
+          id: string
+          origem: string
+          situacao: string
+          tipo: string
+          titulo: string
+          valor: number
+          venda_id: string
+        }[]
+      }
+      agenda_sem_data: {
+        Args: never
+        Returns: {
+          contato_id: string
+          contato_nome: string
+          contato_telefone: string
+          data_venda: string
+          dias_em_aberto: number
+          forma_pagamento: string
+          status: string
+          valor: number
+          venda_id: string
+        }[]
+      }
       criar_obrigacao_parcelada: {
         Args: {
           p_credor: string
@@ -4276,9 +4438,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       enum_relacionamento_aba: ["reativacao", "recompra", "cobranca", "leads"],

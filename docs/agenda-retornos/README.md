@@ -154,13 +154,13 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 ## Checkpoints
 
 **Onda 0**
-- [ ] Relatório de diagnóstico recebido, com caminhos de arquivo
-- [ ] Plano das ondas aprovado
+- [x] Relatório de diagnóstico recebido, com caminhos de arquivo ([diagnostico.md](diagnostico.md))
+- [x] Plano das ondas aprovado
 
-**Onda 1**
-- [ ] Dump do schema feito antes
-- [ ] SQL revisado e bloco de teste com ROLLBACK passando no SQL Editor
-- [ ] Migração aplicada e SELECT de conferência feito
+**Onda 1** — no ar em 19/10/2026 (migration `20261019195019_agenda_lembretes`)
+- [x] Dump do schema feito antes (`dump-*-20261019-164407.sql`)
+- [x] SQL revisado e bloco de teste passando no SQL Editor (ensaio migração + suíte: `SUITE_OK agenda_lembretes 21/21`, nada persistiu)
+- [x] Migração aplicada e SELECT de conferência feito (suíte de novo no banco migrado: 21/21; contagens iguais às de antes)
 - [ ] Claude grava os retornos de 19/10: Ana Maria 07/11 e 07/12, Patrícia, Vilma, Ritinha e Andrea com o Gilmar
 
 **Onda 2**

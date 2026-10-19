@@ -133,6 +133,11 @@ export type {
     SecaoInsert,
     SecaoUpdate,
     MetaMensal,
+    Lembrete,
+    LembreteInsert,
+    OrigemItemAgenda,
+    ItemAgenda,
+    ItemSemData,
 } from './types'
 
 // Aviso de entrega no grupo #ENTREGAS — texto e regra de quando sai

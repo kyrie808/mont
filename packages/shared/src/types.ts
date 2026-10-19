@@ -50,3 +50,38 @@ export type SecaoUpdate = Update<'cat_secoes'>
 
 // Meta fixa de faturamento por mês (mínima/alvo) — painel do interno
 export type MetaMensal = Table<'metas_mensais'>
+
+// Agenda de Retornos — tabela lembretes e as leituras agenda_itens / agenda_atrasados /
+// agenda_sem_data (migration 20261019195019_agenda_lembretes).
+export type Lembrete = Table<'lembretes'>
+export type LembreteInsert = Insert<'lembretes'>
+
+type RetornoFn<T extends keyof Database['public']['Functions']> =
+    Database['public']['Functions'][T]['Returns'] extends (infer R)[] ? R : never
+
+export type OrigemItemAgenda = 'lembrete' | 'vencimento' | 'entrega' | 'conta_pagar' | 'retomada'
+
+/**
+ * Um item de agenda_itens() / agenda_atrasados() (mesmo formato nas duas).
+ * O gerador do Supabase marca toda coluna de RETURNS TABLE como não-nula; aqui fica a
+ * nulidade real: hora (dia inteiro), tipo (só lembrete), contato_* (conta a pagar e
+ * lembrete sem cliente), venda_id, forma_pagamento, descricao e valor podem vir NULL.
+ */
+export type ItemAgenda = Omit<
+    RetornoFn<'agenda_itens'>,
+    'origem' | 'hora' | 'descricao' | 'tipo' | 'contato_id' | 'contato_nome' | 'contato_telefone' | 'venda_id' | 'forma_pagamento' | 'valor'
+> & {
+    origem: OrigemItemAgenda
+    hora: string | null
+    descricao: string | null
+    tipo: string | null
+    contato_id: string | null
+    contato_nome: string | null
+    contato_telefone: string | null
+    venda_id: string | null
+    forma_pagamento: string | null
+    valor: number | null
+}
+
+/** Uma venda em aberto sem data de agenda_sem_data() (todas as colunas vêm preenchidas). */
+export type ItemSemData = RetornoFn<'agenda_sem_data'>
