@@ -258,7 +258,7 @@ Arquivos: `supabase/migrations/20261019195019_agenda_lembretes.sql` e `supabase/
 Arquivos:
 - `packages/shared/src/avisoAgenda.ts` (texto puro) + `apps/interno/src/utils/__tests__/avisoAgenda.spec.ts` (9 testes)
 - `supabase/functions/avisos-agenda/index.ts`: ações `simular { dia? }`, `do_dia`, `marcar_enviado { dia, message_id }`; destino é só a constante `GRUPO_EQUIPE`
-- ~~`20261019171134_agenda_avisos_enviados.sql`~~ → virou `supabase/migrations/20261019203806_agenda_ajustes_e_avisos.sql` (§15) + `supabase/tests/agenda_avisos_enviados.sql` (3 casos)
+- ~~`20261019171134_agenda_avisos_enviados.sql`~~ → virou `supabase/migrations/20261019205333_agenda_ajustes_e_avisos.sql` (§15) + `supabase/tests/agenda_avisos_enviados.sql` (3 casos)
 - `supabase/config.toml`: `[functions.avisos-agenda] verify_jwt = false`
 - `infra/crm/workflows/w6-aviso-agenda.json` (validado pelo n8n-mcp: 0 erros; **não importado**) e seção do W6 em `infra/crm/README.md`
 
@@ -273,7 +273,7 @@ Escolhas a conferir:
 
 ## 15. Ajustes da revisão da Onda 2 (19/10/2026, nada aplicado)
 
-Uma migração só: `supabase/migrations/20261019203806_agenda_ajustes_e_avisos.sql`. Ela substitui a `20261019171134`, que nunca foi aplicada. Ganhou timestamp UTC depois da `20261019195019`, de que depende.
+Uma migração só: `supabase/migrations/20261019205333_agenda_ajustes_e_avisos.sql`. Ela substitui a `20261019171134`, que nunca foi aplicada. Ganhou timestamp UTC depois da `20261019195019`, de que depende.
 
 1. **"Não cobrar".** `contatos.cobranca_suspensa boolean NOT NULL DEFAULT false` + `cobranca_suspensa_motivo text`. Vendas de contato suspenso saem de vencimentos (`agenda_itens`), atrasados e sem data. A dívida continua no sistema. **Entrega e lembretes desse contato continuam na agenda** (entregar não é cobrar; lembrete é decisão explícita). A migração não marca ninguém: a Joelma fica para o Cowork.
 2. **Dono = qualquer lembrete pendente ligado à venda**, nas três leituras (vencimentos, atrasados e também sem data, pela mesma regra). O fechamento automático continua só para parcela/cobrança (`trg_venda_fecha_lembretes` intocado). ⚠️ O dono é decidido por `venda_id`: lembrete ligado só ao contato não esconde a venda. Hoje, "Andrea — Pix de R$ 135" e "conferir as 16 vendas" não têm venda ligada, então a venda da Andrea Santos continua nos vencimentos atrasados.
@@ -288,3 +288,13 @@ Testes: `agenda_lembretes.sql` agora tem **23 casos**:
 - **E0:** confere `cobranca_suspensa` nos corpos das funções e a coluna `responsavel`.
 
 Também nesta branch: a trava da integração (`d37a9d5`, cherry-pick de `9141ed3`) e o ajuste de tipo do guard (`30f507b`, só esse arquivo do `6a35c22`). O resto da `fix/fuso-brasilia` não entrou.
+
+### Resultado da aplicação da Onda 2 (19/10/2026)
+
+- Dump antes: `dump-*-20261019-174528.sql`. Ensaios do Cowork: 23/23 e 3/3, nada persistiu.
+- Aplicada pelo `apply_migration`, que registrou a versão **`20261019205333`**. Arquivo renomeado para bater.
+- Suítes de novo, contra o banco migrado: `agenda_lembretes` **23/23** (13/11 = 31 / R$ 1.875,00; nov = 44 / R$ 2.798,00; atrasados = 22 / R$ 1.265,00; sem data = 20 / R$ 1.489,90) e `agenda_avisos_enviados` **3/3**. Rodapé igual a `contagens_antes` (956 / 1.846 / 1.390 / 1.734 / 3 contas / R$ 31.424,50 / 509 / 592 / 17 lembretes; 0 avisos; 0 suspensos).
+- `database.ts` regenerado (+29 linhas: tabela, 2 colunas, `responsavel`). `deno check` 0 erros (avisos-agenda e avisos-entrega). `tsc` verde nos 2 apps e `turbo build` verde. `NOTIFY pgrst` feito.
+- Edge Function `avisos-agenda` publicada pela CLI com `--no-verify-jwt`, a partir de `feat/agenda-retornos`: v1, `verify_jwt=false`. Sem segredo → 401 do código (não do gateway). Com segredo, ação inválida → lista `simular / do_dia / marcar_enviado`. `INGESTOR_SECRET` já existia no projeto (secrets valem para todas as funções).
+- W6 importado no n8n pela API: id `6NoH3eU6Dk4D9vT7`, **inativo, nunca executado**. Credenciais e `onError` conferidos.
+

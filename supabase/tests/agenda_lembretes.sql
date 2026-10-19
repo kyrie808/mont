@@ -1,7 +1,7 @@
 -- Suíte: Agenda de Retornos — tabela lembretes, trg_venda_fecha_lembretes (venda paga fecha,
 -- cancelada cancela, estorno/descancelamento reabrem) e as leituras agenda_itens,
 -- agenda_atrasados, agenda_sem_data. Migrations: 20261019195019_agenda_lembretes.sql e
--- 20261019203806_agenda_ajustes_e_avisos.sql ("não cobrar", dono = qualquer lembrete
+-- 20261019205333_agenda_ajustes_e_avisos.sql ("não cobrar", dono = qualquer lembrete
 -- pendente, responsavel nas leituras).
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA" (ver meta_eventos_triggers.sql): um único DO-block que
@@ -36,7 +36,7 @@
 --     Caixa real DENTRO da transação — o rollback desfaz; "saldo_contas" na contagem prova.
 --
 -- Dados fictícios: telefones com prefixo 119000019 (a suíte aborta se já existir).
--- ENSAIO da 20261019203806: a de lembretes já está aplicada — cole só a 20261019203806
+-- ENSAIO da 20261019205333: a de lembretes já está aplicada — cole só a 20261019205333
 -- e esta suíte na mesma execução.
 -- Datas relativas a hoje em Brasília (c_hoje), para a suíte valer em qualquer dia.
 
@@ -75,7 +75,7 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                   WHERE table_schema = 'public' AND table_name = 'contatos' AND column_name = 'cobranca_suspensa') THEN
-    RAISE EXCEPTION 'SUITE_ABORTADA: falta a migration 20261019203806_agenda_ajustes_e_avisos (contatos.cobranca_suspensa) — aplique antes, ou cole junto com esta suíte';
+    RAISE EXCEPTION 'SUITE_ABORTADA: falta a migration 20261019205333_agenda_ajustes_e_avisos (contatos.cobranca_suspensa) — aplique antes, ou cole junto com esta suíte';
   END IF;
 
   antes := jsonb_build_object(

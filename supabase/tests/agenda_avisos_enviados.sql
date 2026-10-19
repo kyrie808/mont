@@ -1,5 +1,5 @@
 -- Suíte: agenda_avisos_enviados (marca do aviso diário das 8h da Agenda).
--- Migration: 20261019203806_agenda_ajustes_e_avisos.sql (seção 4).
+-- Migration: 20261019205333_agenda_ajustes_e_avisos.sql (seção 4).
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA" (ver agenda_lembretes.sql): um único DO-block que SEMPRE
 -- termina em RAISE EXCEPTION — nada do que a suíte grava sobrevive. Resultado esperado:

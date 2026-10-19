@@ -35,6 +35,27 @@ export type Database = {
         }
         Relationships: []
       }
+      agenda_avisos_enviados: {
+        Row: {
+          destino: string
+          dia: string
+          enviado_em: string
+          message_id: string | null
+        }
+        Insert: {
+          destino: string
+          dia: string
+          enviado_em?: string
+          message_id?: string | null
+        }
+        Update: {
+          destino?: string
+          dia?: string
+          enviado_em?: string
+          message_id?: string | null
+        }
+        Relationships: []
+      }
       campanha_meta_metricas: {
         Row: {
           campanha_id: string
@@ -808,6 +829,8 @@ export type Database = {
           campanha_id: string | null
           cep: string | null
           cidade: string | null
+          cobranca_suspensa: boolean
+          cobranca_suspensa_motivo: string | null
           complemento: string | null
           created_by: string | null
           criado_em: string
@@ -849,6 +872,8 @@ export type Database = {
           campanha_id?: string | null
           cep?: string | null
           cidade?: string | null
+          cobranca_suspensa?: boolean
+          cobranca_suspensa_motivo?: string | null
           complemento?: string | null
           created_by?: string | null
           criado_em?: string
@@ -890,6 +915,8 @@ export type Database = {
           campanha_id?: string | null
           cep?: string | null
           cidade?: string | null
+          cobranca_suspensa?: boolean
+          cobranca_suspensa_motivo?: string | null
           complemento?: string | null
           created_by?: string | null
           criado_em?: string
@@ -3831,6 +3858,7 @@ export type Database = {
           hora: string
           id: string
           origem: string
+          responsavel: string
           situacao: string
           tipo: string
           titulo: string
@@ -3851,6 +3879,7 @@ export type Database = {
           hora: string
           id: string
           origem: string
+          responsavel: string
           situacao: string
           tipo: string
           titulo: string

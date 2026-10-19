@@ -163,9 +163,9 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 - [x] Migração aplicada e SELECT de conferência feito (suíte de novo no banco migrado: 21/21; contagens iguais às de antes)
 - [x] Claude grava os retornos de 19/10: Ana Maria 07/11 e 07/12, Patrícia, Vilma, Ritinha e Andrea com o Gilmar (17 lembretes com `origem='claude'`: parcelas da Ana Maria, cobranças de 21/10 e pendências do Gilmar em 20/10)
 
-**Onda 2**
-- [ ] Texto simulado conferido contra o banco
-- [ ] Primeira mensagem das 8h recebida de verdade
+**Onda 2** — banco e Edge Function no ar em 19/10/2026 (migration `20261019205333_agenda_ajustes_e_avisos`; `avisos-agenda` v1, `verify_jwt=false`); W6 importado no n8n **desativado** (`6NoH3eU6Dk4D9vT7`)
+- [x] Texto simulado conferido contra o banco (`simular` da função publicada = cálculo só-leitura: 22 vencimentos atrasados / R$ 1.265,00 antes da Joelma). Falta a sua aprovação do texto final
+- [ ] Primeira mensagem das 8h recebida de verdade (o cron só liga com a sua liberação)
 - [ ] Segundo disparo no mesmo dia bloqueado
 
 **Onda 3**
