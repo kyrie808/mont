@@ -161,7 +161,7 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 - [x] Dump do schema feito antes (`dump-*-20261019-164407.sql`)
 - [x] SQL revisado e bloco de teste passando no SQL Editor (ensaio migração + suíte: `SUITE_OK agenda_lembretes 21/21`, nada persistiu)
 - [x] Migração aplicada e SELECT de conferência feito (suíte de novo no banco migrado: 21/21; contagens iguais às de antes)
-- [ ] Claude grava os retornos de 19/10: Ana Maria 07/11 e 07/12, Patrícia, Vilma, Ritinha e Andrea com o Gilmar
+- [x] Claude grava os retornos de 19/10: Ana Maria 07/11 e 07/12, Patrícia, Vilma, Ritinha e Andrea com o Gilmar (17 lembretes com `origem='claude'`: parcelas da Ana Maria, cobranças de 21/10 e pendências do Gilmar em 20/10)
 
 **Onda 2**
 - [ ] Texto simulado conferido contra o banco

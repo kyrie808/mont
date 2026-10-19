@@ -252,3 +252,21 @@ Arquivos: `supabase/migrations/20261019195019_agenda_lembretes.sql` e `supabase/
 - Tipos regenerados (`packages/shared/src/database.ts`). O gerador do MCP não emite o bloco `graphql_public` (sem uso no código). Os aliases `Lembrete`, `LembreteInsert`, `OrigemItemAgenda`, `ItemAgenda` e `ItemSemData` estão em `types.ts`. `ItemAgenda` corrige a nulidade, porque o gerador marca toda coluna de RETURNS TABLE como não-nula.
 - `tsc --noEmit` verde (interno e catálogo) e `pnpm turbo build` verde (os 2 apps).
 - `NOTIFY pgrst, 'reload schema'` feito. Prova: anon em `/rpc/agenda_sem_data` e em `/lembretes` recebe 42501 (o PostgREST conhece os dois; o REVOKE vale).
+
+## 14. Onda 2 — aviso diário das 8h (entregue em 19/10/2026, nada aplicado)
+
+Arquivos:
+- `packages/shared/src/avisoAgenda.ts` (texto puro) + `apps/interno/src/utils/__tests__/avisoAgenda.spec.ts` (9 testes)
+- `supabase/functions/avisos-agenda/index.ts`: ações `simular { dia? }`, `do_dia`, `marcar_enviado { dia, message_id }`; destino é só a constante `GRUPO_EQUIPE`
+- `supabase/migrations/20261019171134_agenda_avisos_enviados.sql` + `supabase/tests/agenda_avisos_enviados.sql` (3 casos)
+- `supabase/config.toml`: `[functions.avisos-agenda] verify_jwt = false`
+- `infra/crm/workflows/w6-aviso-agenda.json` (validado pelo n8n-mcp: 0 erros; **não importado**) e seção do W6 em `infra/crm/README.md`
+
+Escolhas a conferir:
+- **Responsável:** `agenda_itens` não devolve `responsavel`. A Edge Function busca na própria `lembretes` pelos ids. A Onda 3 também vai precisar dele (detalhe do item), então vale acrescentar a coluna em `agenda_itens` na migração da Onda 3; aí a busca extra sai.
+- **Linha do lembrete:** o nome do cliente só vai na frente se o título ainda não cita nenhuma palavra do nome. Sob o grupo "Gilmar:", o prefixo "Gilmar: " do título sai.
+- **Simular dia futuro:** atrasados = `agenda_atrasados()` de agora + o que vence de hoje até a véspera (lembrete pendente e vencimento). Simular dia passado é recusado.
+- **Contas a pagar e retomadas de amanhã** não entram no texto (fora do que foi pedido).
+- **Falha de envio:** o recado vai para o próprio grupo Equipe e pode falhar junto. O registro fica na execução com erro do n8n.
+- **Dois disparos simultâneos** (segundos de diferença) ainda podem enviar duas vezes, porque o `do_dia` checa e o `marcar_enviado` grava depois. Para o cron de uma vez ao dia, mais reexecução manual, a marca segura. É o mesmo molde do W5.
+- `deno check` da Edge Function: só falha porque `agenda_avisos_enviados` ainda não está nos tipos gerados. Contra uma cópia dos tipos com a tabela, passa limpo. Depois de aplicar a migração: regenerar `database.ts` e rodar de novo.

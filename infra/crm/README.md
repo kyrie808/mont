@@ -226,6 +226,38 @@ Verificado ponta a ponta: POST no webhook do n8n → linha em `mensagens_whatsap
 payload completo. O caminho de FALHA (ingestor 500 → n8n propaga → Evolution reentrega)
 está desenhado mas **ainda não foi exercitado** — vale forçar um erro antes do cutover.
 
+## O workflow n8n (W6) — Agenda do dia às 8h
+
+**`W6 — Agenda do dia (Equipe, 8h)`** — arquivo `workflows/w6-aviso-agenda.json`.
+⚠️ **Ainda NÃO importado nem ativo** (19/10/2026): liga só depois da Onda 2 aprovada
+(migration `agenda_avisos_enviados` aplicada, Edge Function `avisos-agenda` no ar e texto
+da simulação aprovado). Planejamento em `docs/agenda-retornos/`.
+
+```
+Cron 0 8 * * 1-6 ──► avisos-agenda {do_dia} ──► Tem aviso? ──► Evolution sendText ──► Saiu?
+                                                  │ não: fim       sim ──► avisos-agenda {marcar_enviado}
+                                                  │                não ──► recado curto na Equipe
+```
+
+- **Segunda a sábado, 8h, America/Sao_Paulo** (o timezone está nas settings do workflow).
+- **Só o grupo Equipe.** O destino vem da Edge Function, que tem o JID como constante
+  validada — o workflow não escolhe para onde manda. Nenhum cliente e nenhum número pessoal.
+- **Uma vez por dia.** `do_dia` não devolve texto se o dia já tem marca em
+  `agenda_avisos_enviados`; `marcar_enviado` grava com ON CONFLICT DO NOTHING. Rodar de novo
+  no mesmo dia (manual ou cron) termina em `enviar: false, motivo: 'ja_enviado'`.
+- **Dia vazio não envia** (`motivo: 'vazio'`).
+- **Falha no envio:** tenta um recado curto no próprio grupo Equipe. Se o problema for o
+  WhatsApp, o recado falha junto — aí só a execução com erro no n8n registra
+  (`saveDataErrorExecution: all`). Sucesso também fica salvo (roda uma vez por dia).
+- Credenciais existentes: **Ingestor Mont (x-ingestor-secret)** para a Edge Function e
+  **Evolution API (apikey)** para o envio. Nenhuma chave no JSON.
+- O texto e as regras moram em `packages/shared/src/avisoAgenda.ts` (testes em
+  `apps/interno/src/utils/__tests__/avisoAgenda.spec.ts`).
+
+**Antes de ativar:** rodar a ação `simular` (com `dia` = amanhã) e conferir o texto contra
+o banco; importar; executar uma vez à mão e confirmar a mensagem no grupo e a linha em
+`agenda_avisos_enviados`; executar de novo e ver `ja_enviado`; só então ativar o cron.
+
 ## MCP: os dois são coisas diferentes
 
 O n8n 2.33 traz um **Instance-level MCP** nativo (Settings → Instance-level MCP). Ele
