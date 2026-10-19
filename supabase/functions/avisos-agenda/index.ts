@@ -49,15 +49,7 @@ async function agendaAtrasados(admin: Admin): Promise<LinhaAgenda[]> {
   return data ?? []
 }
 
-/** agenda_itens não traz o responsável; ele vem da própria tabela lembretes. */
-async function responsaveis(admin: Admin, ids: string[]): Promise<Map<string, string | null>> {
-  if (ids.length === 0) return new Map()
-  const { data, error } = await admin.from('lembretes').select('id, responsavel').in('id', ids)
-  if (error) throw new Error(`Falha ao ler responsáveis: ${error.message}`)
-  return new Map((data ?? []).map((l) => [l.id, l.responsavel]))
-}
-
-function paraAviso(l: LinhaAgenda, resp: Map<string, string | null>): ItemAvisoAgenda {
+function paraAviso(l: LinhaAgenda): ItemAvisoAgenda {
   return {
     origem: l.origem,
     data: l.data,
@@ -66,7 +58,8 @@ function paraAviso(l: LinhaAgenda, resp: Map<string, string | null>): ItemAvisoA
     situacao: l.situacao,
     contatoNome: l.contato_nome ?? null,
     valor: l.valor === null || l.valor === undefined ? null : Number(l.valor),
-    responsavel: l.origem === 'lembrete' ? resp.get(l.id) ?? null : null,
+    // agenda_itens/agenda_atrasados já trazem o responsável (NULL fora de lembrete).
+    responsavel: l.responsavel ?? null,
   }
 }
 
@@ -84,13 +77,11 @@ async function montarTexto(admin: Admin, dia: string): Promise<string | null> {
     dia > hoje ? agendaItens(admin, hoje, somarDias(dia, -1)) : Promise.resolve([] as LinhaAgenda[]),
   ])
   const atrasados = [...atrasadosAgora, ...aVencerAteVespera.filter(entraNosAtrasados)]
-  const todos = [...atrasados, ...doDia, ...amanha]
-  const resp = await responsaveis(admin, [...new Set(todos.filter((l) => l.origem === 'lembrete').map((l) => l.id))])
   return montarAvisoAgenda({
     dia,
-    atrasados: atrasados.map((l) => paraAviso(l, resp)),
-    doDia: doDia.map((l) => paraAviso(l, resp)),
-    amanha: amanha.map((l) => paraAviso(l, resp)),
+    atrasados: atrasados.map(paraAviso),
+    doDia: doDia.map(paraAviso),
+    amanha: amanha.map(paraAviso),
   })
 }
 

@@ -1,6 +1,8 @@
 -- Suíte: Agenda de Retornos — tabela lembretes, trg_venda_fecha_lembretes (venda paga fecha,
 -- cancelada cancela, estorno/descancelamento reabrem) e as leituras agenda_itens,
--- agenda_atrasados, agenda_sem_data. Migration: 20261019195019_agenda_lembretes.sql.
+-- agenda_atrasados, agenda_sem_data. Migrations: 20261019195019_agenda_lembretes.sql e
+-- 20261019203806_agenda_ajustes_e_avisos.sql ("não cobrar", dono = qualquer lembrete
+-- pendente, responsavel nas leituras).
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA" (ver meta_eventos_triggers.sql): um único DO-block que
 -- SEMPRE termina em RAISE EXCEPTION. A exceção aborta a transação inteira — contato, venda,
@@ -34,6 +36,8 @@
 --     Caixa real DENTRO da transação — o rollback desfaz; "saldo_contas" na contagem prova.
 --
 -- Dados fictícios: telefones com prefixo 119000019 (a suíte aborta se já existir).
+-- ENSAIO da 20261019203806: a de lembretes já está aplicada — cole só a 20261019203806
+-- e esta suíte na mesma execução.
 -- Datas relativas a hoje em Brasília (c_hoje), para a suíte valer em qualquer dia.
 
 DO $suite$
@@ -68,6 +72,10 @@ DECLARE
 BEGIN
   IF to_regclass('public.lembretes') IS NULL THEN
     RAISE EXCEPTION 'SUITE_ABORTADA: public.lembretes não existe — aplique a migration antes, ou cole a migration junto com esta suíte na mesma execução';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'public' AND table_name = 'contatos' AND column_name = 'cobranca_suspensa') THEN
+    RAISE EXCEPTION 'SUITE_ABORTADA: falta a migration 20261019203806_agenda_ajustes_e_avisos (contatos.cobranca_suspensa) — aplique antes, ou cole junto com esta suíte';
   END IF;
 
   antes := jsonb_build_object(
@@ -125,12 +133,19 @@ BEGIN
       IF pg_get_functiondef(t::regprocedure) NOT LIKE '%forma_pagamento <> ''brinde''%' THEN
         RAISE EXCEPTION '% não exclui brinde', t;
       END IF;
+      IF pg_get_functiondef(t::regprocedure) NOT LIKE '%NOT c.cobranca_suspensa%' THEN
+        RAISE EXCEPTION '% não respeita cobranca_suspensa', t;
+      END IF;
     END LOOP;
+    SELECT count(*) INTO n FROM pg_proc p
+     WHERE p.oid IN ('public.agenda_itens(date,date)'::regprocedure, 'public.agenda_atrasados()'::regprocedure)
+       AND 'responsavel' = ANY (p.proargnames);
+    IF n <> 2 THEN RAISE EXCEPTION 'agenda_itens/agenda_atrasados sem a coluna responsavel (% de 2)', n; END IF;
 
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'E0 estrutura: RLS, policies, grants, triggers, fuso e brinde', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'E0 estrutura: RLS, policies, grants, triggers, fuso, brinde, não cobrar e responsavel', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'E0 estrutura: RLS, policies, grants, triggers, fuso e brinde', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'E0 estrutura: RLS, policies, grants, triggers, fuso, brinde, não cobrar e responsavel', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- Daqui pra frente, tudo roda como a conta-teste.
@@ -143,10 +158,9 @@ BEGIN
   END IF;
 
   -- ── R1/R2/R3: dados REAIS — a função bate com SELECT direto (antes de criar qualquer coisa) ─
-  -- O SELECT direto aplica as mesmas regras da função: em aberto, não cancelada, sem brinde e
-  -- sem lembrete pendente de parcela/cobrança (o lembrete é o dono da cobrança). No ensaio a
-  -- tabela lembretes nasce vazia, então hoje a exclusão não muda nada; ela passa a valer
-  -- quando os lembretes de 19/10 forem gravados.
+  -- O SELECT direto aplica as mesmas regras da função: em aberto, não cancelada, sem brinde,
+  -- sem lembrete pendente ligado (qualquer tipo: o lembrete é o dono da venda na agenda) e
+  -- sem cliente com a cobrança suspensa.
   total := total + 1;
   BEGIN
     SELECT count(*), COALESCE(sum(a.valor), 0) INTO n, s
@@ -156,8 +170,8 @@ BEGIN
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
        AND v.data_prevista_pagamento = '2026-11-13'
-       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
-                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp WHERE lp.venda_id = v.id AND lp.situacao = 'pendente')
+       AND NOT (SELECT c.cobranca_suspensa FROM public.contatos c WHERE c.id = v.contato_id);
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION '13/11: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('vencimentos_13_11', n, 'valor_13_11', s);
 
@@ -175,8 +189,8 @@ BEGIN
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
        AND v.data_prevista_pagamento BETWEEN '2026-11-01' AND '2026-11-30'
-       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
-                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp WHERE lp.venda_id = v.id AND lp.situacao = 'pendente')
+       AND NOT (SELECT c.cobranca_suspensa FROM public.contatos c WHERE c.id = v.contato_id);
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION 'nov: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('vencimentos_nov', n, 'valor_nov', s);
 
@@ -194,8 +208,8 @@ BEGIN
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
        AND v.data_prevista_pagamento < c_hoje
-       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
-                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp WHERE lp.venda_id = v.id AND lp.situacao = 'pendente')
+       AND NOT (SELECT c.cobranca_suspensa FROM public.contatos c WHERE c.id = v.contato_id);
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION 'atrasados: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('vencimentos_atrasados', n, 'valor_atrasados', s);
 
@@ -204,8 +218,8 @@ BEGIN
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
        AND v.data_prevista_pagamento IS NULL
-       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
-                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp WHERE lp.venda_id = v.id AND lp.situacao = 'pendente')
+       AND NOT (SELECT c.cobranca_suspensa FROM public.contatos c WHERE c.id = v.contato_id);
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION 'sem data: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('sem_data', n, 'valor_sem_data', s,
       'sem_data_por_forma', (SELECT jsonb_object_agg(x.forma_pagamento, x.n)
@@ -769,11 +783,15 @@ BEGIN
       RAISE EXCEPTION 'controle: venda sem previsão e sem lembrete devia estar no sem_data';
     END IF;
 
-    -- Pendência interna não é dona da cobrança: a venda continua sem data.
+    -- Pendência interna também é dona (venda em análise): sai do sem data; resolvida, volta.
     INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
-    VALUES ('Suite conferir T17', c_hoje + 2, 'pendencia_interna', v_venda);
+    VALUES ('Suite conferir T17', c_hoje + 2, 'pendencia_interna', v_venda) RETURNING id INTO v_l2;
+    IF EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda) THEN
+      RAISE EXCEPTION 'venda com pendência interna continuou no sem_data';
+    END IF;
+    UPDATE public.lembretes SET situacao = 'feito' WHERE id = v_l2;
     IF NOT EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda) THEN
-      RAISE EXCEPTION 'pendência interna tirou a venda do sem_data';
+      RAISE EXCEPTION 'feita a pendência, a venda não voltou ao sem_data';
     END IF;
 
     INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
@@ -789,9 +807,107 @@ BEGIN
     END IF;
 
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'T17 sem data: cobrança pendente tira a venda; feita, volta', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'T17 sem data: lembrete pendente (pendência ou cobrança) tira a venda; feito, volta', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'T17 sem data: cobrança pendente tira a venda; feita, volta', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'T17 sem data: lembrete pendente (pendência ou cobrança) tira a venda; feito, volta', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── T18: "não cobrar" — cobrança suspensa tira as vendas da agenda de cobrança ─────
+  -- A dívida continua no sistema; só sai de vencimentos, atrasados e sem data. Entrega e
+  -- lembretes do cliente continuam.
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite Agenda T18 padrão', c_tel || '18', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato2;
+    IF (SELECT c.cobranca_suspensa FROM public.contatos c WHERE c.id = v_contato2) THEN
+      RAISE EXCEPTION 'contato novo nasceu com cobrança suspensa';
+    END IF;
+
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem, cobranca_suspensa, cobranca_suspensa_motivo)
+    VALUES ('Suite Agenda T18', c_tel || '19', 'B2C', 'cliente', 'direto', true, 'Suite: pediram para não cobrar')
+    RETURNING id INTO v_contato;
+    -- A: vence no futuro · B: já venceu · C: sem previsão · D: entrega pendente
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje, 'entregue', 'fiado', 65, false, 'sistema', c_hoje + 28) RETURNING id INTO v_venda;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje - 20, 'entregue', 'fiado', 65, false, 'sistema', c_hoje - 2) RETURNING id INTO v_venda2;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem)
+    VALUES (v_contato, c_hoje - 20, 'entregue', 'fiado', 65, false, 'sistema') RETURNING id INTO v_venda3;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_entrega_prevista)
+    VALUES (v_contato, c_hoje, 'pendente', 'fiado', 40, false, 'sistema', c_hoje + 28) RETURNING id INTO v_i;
+    INSERT INTO public.lembretes (titulo, data, tipo, contato_id)
+    VALUES ('Suite ligar para a T18', c_hoje + 28, 'retorno_comercial', v_contato) RETURNING id INTO v_l1;
+
+    IF EXISTS (SELECT 1 FROM public.agenda_itens(c_hoje + 28, c_hoje + 28) a WHERE a.origem = 'vencimento' AND a.id = v_venda) THEN
+      RAISE EXCEPTION 'cobrança suspensa apareceu como vencimento';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.agenda_atrasados() a WHERE a.id = v_venda2) THEN
+      RAISE EXCEPTION 'cobrança suspensa apareceu nos atrasados';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda3) THEN
+      RAISE EXCEPTION 'cobrança suspensa apareceu no sem data';
+    END IF;
+    SELECT count(*) INTO n FROM public.agenda_itens(c_hoje + 28, c_hoje + 28) a
+     WHERE (a.origem = 'entrega' AND a.id = v_i) OR (a.origem = 'lembrete' AND a.id = v_l1);
+    IF n <> 2 THEN RAISE EXCEPTION 'entrega/lembrete do cliente suspenso sumiram (% de 2)', n; END IF;
+
+    -- Volta a cobrar → as três voltam.
+    UPDATE public.contatos SET cobranca_suspensa = false, cobranca_suspensa_motivo = NULL WHERE id = v_contato;
+    SELECT count(*) INTO n FROM public.agenda_itens(c_hoje + 28, c_hoje + 28) a WHERE a.origem = 'vencimento' AND a.id = v_venda;
+    SELECT n + count(*) INTO n FROM public.agenda_atrasados() a WHERE a.origem = 'vencimento' AND a.id = v_venda2;
+    SELECT n + count(*) INTO n FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda3;
+    IF n <> 3 THEN RAISE EXCEPTION 'tirada a suspensão, voltaram % de 3', n; END IF;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'T18 cobrança suspensa: fora de vencimento/atrasado/sem data; entrega e lembrete ficam', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'T18 cobrança suspensa: fora de vencimento/atrasado/sem data; entrega e lembrete ficam', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── T19: pendência interna também é dona da venda; responsavel volta nas leituras ──
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite Agenda T19', c_tel || '20', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje, 'entregue', 'fiado', 70, false, 'sistema', c_hoje + 29) RETURNING id INTO v_venda;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje - 20, 'entregue', 'fiado', 45, false, 'sistema', c_hoje - 3) RETURNING id INTO v_venda2;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id, responsavel)
+    VALUES ('Suite venda em análise', c_hoje + 29, 'pendencia_interna', v_venda, 'gilmar') RETURNING id INTO v_l1;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id, responsavel)
+    VALUES ('Suite conferir pagamento', c_hoje - 1, 'pendencia_interna', v_venda2, 'luccas') RETURNING id INTO v_l2;
+
+    -- Em análise: o vencimento sai; o lembrete aparece, com o responsável.
+    IF EXISTS (SELECT 1 FROM public.agenda_itens(c_hoje + 29, c_hoje + 29) a WHERE a.origem = 'vencimento' AND a.id = v_venda) THEN
+      RAISE EXCEPTION 'venda em análise apareceu como vencimento';
+    END IF;
+    IF (SELECT a.responsavel FROM public.agenda_itens(c_hoje + 29, c_hoje + 29) a WHERE a.origem = 'lembrete' AND a.id = v_l1) IS DISTINCT FROM 'gilmar' THEN
+      RAISE EXCEPTION 'agenda_itens sem o responsável do lembrete';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.agenda_atrasados() a WHERE a.origem = 'vencimento' AND a.id = v_venda2) THEN
+      RAISE EXCEPTION 'venda em análise apareceu nos vencimentos atrasados';
+    END IF;
+    IF (SELECT a.responsavel FROM public.agenda_atrasados() a WHERE a.origem = 'lembrete' AND a.id = v_l2) IS DISTINCT FROM 'luccas' THEN
+      RAISE EXCEPTION 'agenda_atrasados sem o responsável do lembrete';
+    END IF;
+
+    -- Pendência resolvida e a venda segue em aberto → o vencimento volta, sem responsável.
+    UPDATE public.lembretes SET situacao = 'feito' WHERE id = v_l1;
+    SELECT count(*) INTO n FROM public.agenda_itens(c_hoje + 29, c_hoje + 29) a
+     WHERE a.origem = 'vencimento' AND a.id = v_venda AND a.valor = 70 AND a.responsavel IS NULL;
+    IF n <> 1 THEN RAISE EXCEPTION 'feita a pendência, o vencimento não voltou (ou veio com responsável)'; END IF;
+
+    -- O fechamento automático continua só para parcela e cobrança: venda paga não fecha a pendência.
+    UPDATE public.vendas SET pago = true WHERE id = v_venda2;
+    IF (SELECT l.situacao FROM public.lembretes l WHERE l.id = v_l2) <> 'pendente' THEN
+      RAISE EXCEPTION 'venda paga fechou a pendência interna';
+    END IF;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'T19 pendência interna é dona da venda; responsavel nas leituras; não fecha sozinha', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'T19 pendência interna é dona da venda; responsavel nas leituras; não fecha sozinha', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── T13: RLS — não-admin não lê, não grava e recebe agenda vazia ──────────────────

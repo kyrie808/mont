@@ -258,15 +258,33 @@ Arquivos: `supabase/migrations/20261019195019_agenda_lembretes.sql` e `supabase/
 Arquivos:
 - `packages/shared/src/avisoAgenda.ts` (texto puro) + `apps/interno/src/utils/__tests__/avisoAgenda.spec.ts` (9 testes)
 - `supabase/functions/avisos-agenda/index.ts`: ações `simular { dia? }`, `do_dia`, `marcar_enviado { dia, message_id }`; destino é só a constante `GRUPO_EQUIPE`
-- `supabase/migrations/20261019171134_agenda_avisos_enviados.sql` + `supabase/tests/agenda_avisos_enviados.sql` (3 casos)
+- ~~`20261019171134_agenda_avisos_enviados.sql`~~ → virou `supabase/migrations/20261019203806_agenda_ajustes_e_avisos.sql` (§15) + `supabase/tests/agenda_avisos_enviados.sql` (3 casos)
 - `supabase/config.toml`: `[functions.avisos-agenda] verify_jwt = false`
 - `infra/crm/workflows/w6-aviso-agenda.json` (validado pelo n8n-mcp: 0 erros; **não importado**) e seção do W6 em `infra/crm/README.md`
 
 Escolhas a conferir:
-- **Responsável:** `agenda_itens` não devolve `responsavel`. A Edge Function busca na própria `lembretes` pelos ids. A Onda 3 também vai precisar dele (detalhe do item), então vale acrescentar a coluna em `agenda_itens` na migração da Onda 3; aí a busca extra sai.
+- ~~**Responsável:** a Edge Function buscava na `lembretes` pelos ids~~ → resolvido no ajuste 3 da §15: `agenda_itens`/`agenda_atrasados` devolvem `responsavel`.
 - **Linha do lembrete:** o nome do cliente só vai na frente se o título ainda não cita nenhuma palavra do nome. Sob o grupo "Gilmar:", o prefixo "Gilmar: " do título sai.
 - **Simular dia futuro:** atrasados = `agenda_atrasados()` de agora + o que vence de hoje até a véspera (lembrete pendente e vencimento). Simular dia passado é recusado.
 - **Contas a pagar e retomadas de amanhã** não entram no texto (fora do que foi pedido).
 - **Falha de envio:** o recado vai para o próprio grupo Equipe e pode falhar junto. O registro fica na execução com erro do n8n.
 - **Dois disparos simultâneos** (segundos de diferença) ainda podem enviar duas vezes, porque o `do_dia` checa e o `marcar_enviado` grava depois. Para o cron de uma vez ao dia, mais reexecução manual, a marca segura. É o mesmo molde do W5.
 - `deno check` da Edge Function: só falha porque `agenda_avisos_enviados` ainda não está nos tipos gerados. Contra uma cópia dos tipos com a tabela, passa limpo. Depois de aplicar a migração: regenerar `database.ts` e rodar de novo.
+
+## 15. Ajustes da revisão da Onda 2 (19/10/2026, nada aplicado)
+
+Uma migração só: `supabase/migrations/20261019203806_agenda_ajustes_e_avisos.sql`. Ela substitui a `20261019171134`, que nunca foi aplicada. Ganhou timestamp UTC depois da `20261019195019`, de que depende.
+
+1. **"Não cobrar".** `contatos.cobranca_suspensa boolean NOT NULL DEFAULT false` + `cobranca_suspensa_motivo text`. Vendas de contato suspenso saem de vencimentos (`agenda_itens`), atrasados e sem data. A dívida continua no sistema. **Entrega e lembretes desse contato continuam na agenda** (entregar não é cobrar; lembrete é decisão explícita). A migração não marca ninguém: a Joelma fica para o Cowork.
+2. **Dono = qualquer lembrete pendente ligado à venda**, nas três leituras (vencimentos, atrasados e também sem data, pela mesma regra). O fechamento automático continua só para parcela/cobrança (`trg_venda_fecha_lembretes` intocado). ⚠️ O dono é decidido por `venda_id`: lembrete ligado só ao contato não esconde a venda. Hoje, "Andrea — Pix de R$ 135" e "conferir as 16 vendas" não têm venda ligada, então a venda da Andrea Santos continua nos vencimentos atrasados.
+3. **`responsavel`** no fim do RETURNS TABLE de `agenda_itens` e `agenda_atrasados` (DROP + CREATE; GRANT/REVOKE refeitos). A Edge Function lê direto, sem a busca extra. `ItemAgenda` (types.ts) ganhou `responsavel: string | null`.
+4. **`agenda_avisos_enviados`**: igual à versão anterior.
+
+Testes: `agenda_lembretes.sql` agora tem **23 casos**:
+- **T18 (novo):** cobrança suspensa fica fora de vencimento, atraso e sem data; entrega e lembrete ficam; tirando a suspensão, tudo volta.
+- **T19 (novo):** pendência interna é dona da venda; `responsavel` aparece nas leituras; venda paga não fecha a pendência.
+- **T17 (reescrito):** pendência e cobrança tiram a venda do sem data.
+- **R1 a R3:** aplicam as regras novas no SELECT direto.
+- **E0:** confere `cobranca_suspensa` nos corpos das funções e a coluna `responsavel`.
+
+Também nesta branch: a trava da integração (`d37a9d5`, cherry-pick de `9141ed3`) e o ajuste de tipo do guard (`30f507b`, só esse arquivo do `6a35c22`). O resto da `fix/fuso-brasilia` não entrou.

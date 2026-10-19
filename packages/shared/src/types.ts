@@ -65,11 +65,11 @@ export type OrigemItemAgenda = 'lembrete' | 'vencimento' | 'entrega' | 'conta_pa
  * Um item de agenda_itens() / agenda_atrasados() (mesmo formato nas duas).
  * O gerador do Supabase marca toda coluna de RETURNS TABLE como não-nula; aqui fica a
  * nulidade real: hora (dia inteiro), tipo (só lembrete), contato_* (conta a pagar e
- * lembrete sem cliente), venda_id, forma_pagamento, descricao e valor podem vir NULL.
+ * lembrete sem cliente), venda_id, forma_pagamento, descricao, valor e responsavel podem vir NULL.
  */
 export type ItemAgenda = Omit<
     RetornoFn<'agenda_itens'>,
-    'origem' | 'hora' | 'descricao' | 'tipo' | 'contato_id' | 'contato_nome' | 'contato_telefone' | 'venda_id' | 'forma_pagamento' | 'valor'
+    'origem' | 'hora' | 'descricao' | 'tipo' | 'contato_id' | 'contato_nome' | 'contato_telefone' | 'venda_id' | 'forma_pagamento' | 'valor' | 'responsavel'
 > & {
     origem: OrigemItemAgenda
     hora: string | null
@@ -81,6 +81,8 @@ export type ItemAgenda = Omit<
     venda_id: string | null
     forma_pagamento: string | null
     valor: number | null
+    /** luccas | gilmar | equipe no lembrete; NULL nas camadas (migration 20261019203806). */
+    responsavel: string | null
 }
 
 /** Uma venda em aberto sem data de agenda_sem_data() (todas as colunas vêm preenchidas). */
