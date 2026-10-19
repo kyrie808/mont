@@ -227,7 +227,7 @@ Antes: `.\supabase\scripts\dump-prod.ps1`.
 Testes novos: T14 (dono da cobrança, nas formas de 1 e 2 parcelas e nos atrasados), T15 (entrega de brinde com valor 0) e T16 (cobrança recusada em venda paga ou cancelada, inclusive ao religar). R1 a R3 passaram a aplicar a regra de exclusão no SELECT direto. O T2 agora confere que o vencimento não duplica a parcela pendente. O T11 confere que valor 0 e valor negativo são recusados.
 
 **Para você decidir depois (não implementado):**
-- `agenda_sem_data()` **não** aplica a regra de dono da cobrança. Uma venda sem previsão que já tem parcela/cobrança pendente continua contada como "sem data", embora na prática já tenha data. Se quiser, é a mesma linha de `NOT EXISTS`.
+- ~~`agenda_sem_data()` não aplica a regra de dono da cobrança~~ → **aplicado (19/10):** venda com parcela/cobrança pendente sai do "sem data", porque a data dela está no lembrete. Teste T17; o R3 aplica a mesma regra no SELECT direto.
 - Reabrir à mão (feito → pendente) uma cobrança cuja venda já foi paga **não é bloqueado**: a regra cobre nascer e religar. Bloquear a reabertura esbarraria no descancelamento de venda paga, que reabre e fecha de novo no mesmo trigger.
 - Cobrança ligada a **brinde** é aceita. Ela nunca fecharia sozinha, porque brinde nunca fica pago. Dá para recusar com a mesma regra ("Essa venda é brinde").
 
@@ -237,7 +237,7 @@ Arquivos: `supabase/migrations/20261019161813_agenda_lembretes.sql` e `supabase/
 
 1. **Backup:** `.\supabase\scripts\dump-prod.ps1` (na raiz do repo, no PowerShell).
 2. **Ensaio sem aplicar:** no SQL Editor, cole **a migração inteira e, logo abaixo, o teste inteiro**, numa execução só. O RAISE do teste desfaz tudo, inclusive a migração.
-   - Esperado: erro `P0001` começando com `SUITE_OK agenda_lembretes 20/20`.
+   - Esperado: erro `P0001` começando com `SUITE_OK agenda_lembretes 21/21`.
    - Depois rode `SELECT to_regclass('public.lembretes');`. Tem que voltar **NULL** (nada ficou).
 3. **Aplicar** (com sua autorização): pelo `apply_migration` do MCP, para registrar no histórico de migrações.
-4. **Conferência pós-aplicação:** rode só o teste de novo (`SUITE_OK 20/20`) e a consulta do rodapé do arquivo de teste. As contagens têm que bater com `contagens_antes`.
+4. **Conferência pós-aplicação:** rode só o teste de novo (`SUITE_OK 21/21`) e a consulta do rodapé do arquivo de teste. As contagens têm que bater com `contagens_antes`.

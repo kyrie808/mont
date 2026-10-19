@@ -490,7 +490,7 @@ COMMENT ON FUNCTION public.agenda_atrasados() IS
   'Faixa de Atrasados da Agenda: lembretes pendentes com data < hoje e vendas em aberto (sem brinde, sem lembrete pendente de parcela/cobrança) com previsão de pagamento < hoje. Hoje = Brasília.';
 
 -- "X em aberto sem data": vendas não pagas, não canceladas, sem brinde, sem previsão de
--- pagamento — hoje não aparecem em lugar nenhum. A tela conta e quebra por forma_pagamento
+-- pagamento e sem lembrete pendente de parcela/cobrança — hoje não aparecem em lugar nenhum. A tela conta e quebra por forma_pagamento
 -- (decisão D8: todo não-brinde, não só fiado) e abre esta lista para preencher a data.
 CREATE OR REPLACE FUNCTION public.agenda_sem_data()
 RETURNS TABLE (
@@ -520,11 +520,17 @@ AS $$
      AND v.status <> 'cancelada'
      AND v.forma_pagamento <> 'brinde'
      AND v.data_prevista_pagamento IS NULL
+     AND NOT EXISTS (
+           -- Com parcela/cobrança pendente a venda já tem data: a do lembrete (dono da cobrança).
+           SELECT 1 FROM public.lembretes lp
+            WHERE lp.venda_id = v.id
+              AND lp.situacao = 'pendente'
+              AND lp.tipo IN ('parcela', 'cobranca'))
    ORDER BY v.forma_pagamento, v.data
 $$;
 
 COMMENT ON FUNCTION public.agenda_sem_data() IS
-  'Vendas em aberto (sem brinde, não canceladas) sem previsão de pagamento. Contagem e quebra por forma_pagamento saem desta lista. dias_em_aberto conta a partir de hoje em Brasília.';
+  'Vendas em aberto (sem brinde, não canceladas, sem lembrete pendente de parcela/cobrança) sem previsão de pagamento. Contagem e quebra por forma_pagamento saem desta lista. dias_em_aberto conta a partir de hoje em Brasília.';
 
 -- Funções nascem executáveis por PUBLIC; anon nunca chama.
 REVOKE EXECUTE ON FUNCTION public.agenda_itens(date, date) FROM PUBLIC, anon;

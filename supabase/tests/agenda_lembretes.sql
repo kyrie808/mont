@@ -203,7 +203,9 @@ BEGIN
     SELECT count(*), COALESCE(sum(v.total - COALESCE(v.valor_pago, 0)), 0) INTO n2, s2
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
-       AND v.data_prevista_pagamento IS NULL;
+       AND v.data_prevista_pagamento IS NULL
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
+                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION 'sem data: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('sem_data', n, 'valor_sem_data', s,
       'sem_data_por_forma', (SELECT jsonb_object_agg(x.forma_pagamento, x.n)
@@ -753,6 +755,43 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'T16 parcela/cobrança recusada em venda paga ou cancelada', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'T16 parcela/cobrança recusada em venda paga ou cancelada', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── T17: sem data — a venda com parcela/cobrança pendente sai (a data está no lembrete) ─
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite Agenda T17', c_tel || '17', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem)
+    VALUES (v_contato, c_hoje - 3, 'entregue', 'fiado', 55, false, 'sistema') RETURNING id INTO v_venda;
+
+    IF NOT EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda) THEN
+      RAISE EXCEPTION 'controle: venda sem previsão e sem lembrete devia estar no sem_data';
+    END IF;
+
+    -- Pendência interna não é dona da cobrança: a venda continua sem data.
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
+    VALUES ('Suite conferir T17', c_hoje + 2, 'pendencia_interna', v_venda);
+    IF NOT EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda) THEN
+      RAISE EXCEPTION 'pendência interna tirou a venda do sem_data';
+    END IF;
+
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
+    VALUES ('Suite cobrar T17', c_hoje + 2, 'cobranca', v_venda) RETURNING id INTO v_l1;
+    IF EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda) THEN
+      RAISE EXCEPTION 'venda com cobrança pendente continuou no sem_data';
+    END IF;
+
+    -- Feita a cobrança e a venda ainda em aberto, volta a ser "sem data".
+    UPDATE public.lembretes SET situacao = 'feito' WHERE id = v_l1;
+    IF NOT EXISTS (SELECT 1 FROM public.agenda_sem_data() a WHERE a.venda_id = v_venda) THEN
+      RAISE EXCEPTION 'feita a cobrança, a venda em aberto não voltou ao sem_data';
+    END IF;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'T17 sem data: cobrança pendente tira a venda; feita, volta', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'T17 sem data: cobrança pendente tira a venda; feita, volta', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── T13: RLS — não-admin não lê, não grava e recebe agenda vazia ──────────────────
