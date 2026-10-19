@@ -81,7 +81,7 @@ export type ItemAgenda = Omit<
     venda_id: string | null
     forma_pagamento: string | null
     valor: number | null
-    /** luccas | gilmar | equipe no lembrete; NULL nas camadas (migration 20261019203806). */
+    /** luccas | gilmar | equipe no lembrete; NULL nas camadas (migration 20261019205333). */
     responsavel: string | null
 }
 
