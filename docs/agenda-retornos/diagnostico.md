@@ -208,7 +208,7 @@ Antes: `.\supabase\scripts\dump-prod.ps1`.
 |---|---|---|
 | Cancelamento | Fecha como `cancelado` só os lembretes **parcela/cobranca** da venda. Pendência interna, retorno comercial e "outro" continuam pendentes. | Uma pendência ligada a venda cancelada (ex.: "devolver o dinheiro") continua sendo trabalho. O prompt 01 fala do mesmo conjunto do pagamento. |
 | Venda paga e depois cancelada | Os lembretes fechados como `venda_paga` ficam feitos. O `cancelVenda` zera `pago`, mas isso não é tratado como estorno. | Foram pagos de fato. |
-| Brinde nas Entregas | Fora, como você pediu ("excluem brinde"). | ⚠️ Brinde também é entrega. Hoje nenhum brinde fica pendente (o `fn_brinde_invariante` faz brinde nascer entregue), então o efeito prático é zero. Se isso mudar, é uma linha. |
+| Brinde nas Entregas | ~~Fora de tudo~~ → **corrigido no ajuste 2 abaixo**: entra na camada entrega, com valor 0. | Brinde é entrega de verdade, só não é dinheiro. |
 | Contas a pagar atrasadas | **Não** entram em `agenda_atrasados` (D9 = lembretes + vencimentos). Aparecem no próprio dia, com `atrasado = true`. | Hoje há 3 parcelas do Gilmar (abr–jun, R$ 3.497,50) em aberto. |
 | Lembrete cancelado | Não volta em `agenda_itens`. Pendente e feito voltam, com `situacao`. | Cancelado não é compromisso. |
 | `vezes_reagendado` | Controlado pelo banco: soma 1 a cada mudança de data de um pendente; ignora valor vindo da tela. | Assim o contador não mente. |
@@ -216,7 +216,20 @@ Antes: `.\supabase\scripts\dump-prod.ps1`.
 | Cliente do lembrete | Com `venda_id` e sem `contato_id`, o banco preenche o cliente da venda. Cliente diferente do da venda é recusado. | Evita um lembrete apontando para o cliente errado. |
 | Retomadas | Mesmo critério da cadência do `view_relacionamento_kanban`: vale o `retomar_em` da última saída/adiamento depois da última resposta do cliente. Contato arquivado, resolvido ou recusou fica fora. | Respondeu, a retomada some. Sem cópia. |
 | "Sem data" | `agenda_sem_data()` devolve a **lista** (com `forma_pagamento` e `dias_em_aberto`). Contagem e quebra saem dela. | A tela precisa da lista para "abrir e preencher". |
-| `valor` | Nas vendas: `total − valor_pago`. Na conta a pagar: `saldo_devedor`. No lembrete ligado a venda em aberto: o em aberto da venda. | Prompt 03: o valor vem da função. |
+| `valor` | Nas vendas: `total − valor_pago` (0 na entrega de brinde). Na conta a pagar: `saldo_devedor`. No lembrete: `lembretes.valor` (parcela combinada); sem ele, o em aberto da venda ligada. | Prompt 03: o valor vem da função. |
+
+### Ajustes da revisão da migração (19/10/2026)
+
+1. **Uma dívida, um item.** `lembretes.valor numeric(10,2)`, com `CHECK (valor IS NULL OR valor > 0)`, guarda o valor da parcela combinada. Em `agenda_itens`, o lembrete mostra `COALESCE(l.valor, em aberto da venda)`. Na camada vencimento de `agenda_itens` e no grupo vencimento de `agenda_atrasados`, **sai a venda que tem lembrete PENDENTE de parcela/cobrança**: o lembrete passa a ser o dono da cobrança. Feito o último lembrete pendente, o vencimento volta, se a venda continuar em aberto. Caso real: Ana Maria, previsão 07/11, duas parcelas de R$ 32,50 (07/11 e 07/12). Enquanto a 2ª parcela estiver pendente, o vencimento continua escondido.
+2. **Brinde nas entregas.** Brinde continua fora de vencimentos, atrasados e sem data (não é dinheiro a receber), mas **entra na camada entrega com valor 0**. Isto corrige o "brinde fora de tudo" registrado antes.
+3. **Cobrança em venda fechada.** `fn_lembretes_regras` recusa parcela/cobrança que nasce, ou é religada (troca de `venda_id` ou de `tipo`), numa venda já paga ("Essa venda já está paga") ou cancelada ("Essa venda está cancelada"). Pendência interna e os outros tipos continuam permitidos. A reabertura feita pelo trigger da venda não passa por essa regra: ela só acontece quando a venda volta a ficar em aberto.
+
+Testes novos: T14 (dono da cobrança, nas formas de 1 e 2 parcelas e nos atrasados), T15 (entrega de brinde com valor 0) e T16 (cobrança recusada em venda paga ou cancelada, inclusive ao religar). R1 a R3 passaram a aplicar a regra de exclusão no SELECT direto. O T2 agora confere que o vencimento não duplica a parcela pendente. O T11 confere que valor 0 e valor negativo são recusados.
+
+**Para você decidir depois (não implementado):**
+- `agenda_sem_data()` **não** aplica a regra de dono da cobrança. Uma venda sem previsão que já tem parcela/cobrança pendente continua contada como "sem data", embora na prática já tenha data. Se quiser, é a mesma linha de `NOT EXISTS`.
+- Reabrir à mão (feito → pendente) uma cobrança cuja venda já foi paga **não é bloqueado**: a regra cobre nascer e religar. Bloquear a reabertura esbarraria no descancelamento de venda paga, que reabre e fecha de novo no mesmo trigger.
+- Cobrança ligada a **brinde** é aceita. Ela nunca fecharia sozinha, porque brinde nunca fica pago. Dá para recusar com a mesma regra ("Essa venda é brinde").
 
 ## 13. Onda 1 — como testar e aplicar
 
@@ -224,7 +237,7 @@ Arquivos: `supabase/migrations/20261019161813_agenda_lembretes.sql` e `supabase/
 
 1. **Backup:** `.\supabase\scripts\dump-prod.ps1` (na raiz do repo, no PowerShell).
 2. **Ensaio sem aplicar:** no SQL Editor, cole **a migração inteira e, logo abaixo, o teste inteiro**, numa execução só. O RAISE do teste desfaz tudo, inclusive a migração.
-   - Esperado: erro `P0001` começando com `SUITE_OK agenda_lembretes 17/17`.
+   - Esperado: erro `P0001` começando com `SUITE_OK agenda_lembretes 20/20`.
    - Depois rode `SELECT to_regclass('public.lembretes');`. Tem que voltar **NULL** (nada ficou).
 3. **Aplicar** (com sua autorização): pelo `apply_migration` do MCP, para registrar no histórico de migrações.
-4. **Conferência pós-aplicação:** rode só o teste de novo (`SUITE_OK 17/17`) e a consulta do rodapé do arquivo de teste. As contagens têm que bater com `contagens_antes`.
+4. **Conferência pós-aplicação:** rode só o teste de novo (`SUITE_OK 20/20`) e a consulta do rodapé do arquivo de teste. As contagens têm que bater com `contagens_antes`.

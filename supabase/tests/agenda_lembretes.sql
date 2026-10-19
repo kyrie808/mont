@@ -29,8 +29,8 @@
 --   • nextval: a única sequência do schema é cat_pedidos.numero_pedido. As vendas da suíte
 --     não têm cat_pedido_id, então sync_venda_to_cat_pedido não toca em cat_pedidos.
 --   • Estoque: as vendas da suíte não têm itens_venda, então nada é baixado nem devolvido.
---   • Os pagamentos entram numa conta criada pela própria suíte (inativa). Exceção: o brinde
---     da T6 nasce entregue (fn_brinde_invariante) e fn_brinde_lanca_despesa lança a saída no
+--   • Os pagamentos entram numa conta criada pela própria suíte (inativa). Exceção: os brindes
+--     da T6 e da T15 nascem entregues (fn_brinde_invariante) e fn_brinde_lanca_despesa lança a saída no
 --     Caixa real DENTRO da transação — o rollback desfaz; "saldo_contas" na contagem prova.
 --
 -- Dados fictícios: telefones com prefixo 119000019 (a suíte aborta se já existir).
@@ -143,6 +143,10 @@ BEGIN
   END IF;
 
   -- ── R1/R2/R3: dados REAIS — a função bate com SELECT direto (antes de criar qualquer coisa) ─
+  -- O SELECT direto aplica as mesmas regras da função: em aberto, não cancelada, sem brinde e
+  -- sem lembrete pendente de parcela/cobrança (o lembrete é o dono da cobrança). No ensaio a
+  -- tabela lembretes nasce vazia, então hoje a exclusão não muda nada; ela passa a valer
+  -- quando os lembretes de 19/10 forem gravados.
   total := total + 1;
   BEGIN
     SELECT count(*), COALESCE(sum(a.valor), 0) INTO n, s
@@ -151,7 +155,9 @@ BEGIN
     SELECT count(*), COALESCE(sum(v.total - COALESCE(v.valor_pago, 0)), 0) INTO n2, s2
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
-       AND v.data_prevista_pagamento = '2026-11-13';
+       AND v.data_prevista_pagamento = '2026-11-13'
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
+                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION '13/11: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('vencimentos_13_11', n, 'valor_13_11', s);
 
@@ -168,7 +174,9 @@ BEGIN
     SELECT count(*), COALESCE(sum(v.total - COALESCE(v.valor_pago, 0)), 0) INTO n2, s2
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
-       AND v.data_prevista_pagamento BETWEEN '2026-11-01' AND '2026-11-30';
+       AND v.data_prevista_pagamento BETWEEN '2026-11-01' AND '2026-11-30'
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
+                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION 'nov: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('vencimentos_nov', n, 'valor_nov', s);
 
@@ -185,7 +193,9 @@ BEGIN
     SELECT count(*), COALESCE(sum(v.total - COALESCE(v.valor_pago, 0)), 0) INTO n2, s2
       FROM public.vendas v
      WHERE NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
-       AND v.data_prevista_pagamento < c_hoje;
+       AND v.data_prevista_pagamento < c_hoje
+       AND NOT EXISTS (SELECT 1 FROM public.lembretes lp
+                        WHERE lp.venda_id = v.id AND lp.situacao = 'pendente' AND lp.tipo IN ('parcela', 'cobranca'));
     IF n <> n2 OR s <> s2 THEN RAISE EXCEPTION 'atrasados: função %/R$ %, SELECT %/R$ %', n, s, n2, s2; END IF;
     v_real := v_real || jsonb_build_object('vencimentos_atrasados', n, 'valor_atrasados', s);
 
@@ -260,15 +270,17 @@ BEGIN
     IF (SELECT l.situacao FROM public.lembretes l WHERE l.id = v_l1) <> 'pendente' THEN
       RAISE EXCEPTION 'parcial fechou o lembrete';
     END IF;
-    SELECT a.valor INTO s FROM public.agenda_itens(c_hoje + 21, c_hoje + 21) a WHERE a.origem = 'vencimento' AND a.id = v_venda;
-    IF s IS DISTINCT FROM 70 THEN RAISE EXCEPTION 'vencimento valor = % (esperado 70)', s; END IF;
+    -- Lembrete sem valor próprio mostra o em aberto da venda; o vencimento não duplica.
     SELECT a.valor INTO s FROM public.agenda_itens(c_hoje + 21, c_hoje + 21) a WHERE a.origem = 'lembrete' AND a.id = v_l1;
     IF s IS DISTINCT FROM 70 THEN RAISE EXCEPTION 'lembrete valor = % (esperado 70)', s; END IF;
+    IF EXISTS (SELECT 1 FROM public.agenda_itens(c_hoje + 21, c_hoje + 21) a WHERE a.origem = 'vencimento' AND a.id = v_venda) THEN
+      RAISE EXCEPTION 'vencimento duplicou a parcela pendente';
+    END IF;
 
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'T2 pagamento parcial não fecha; valor em aberto 70', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'T2 pagamento parcial não fecha; lembrete mostra o em aberto 70', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'T2 pagamento parcial não fecha; valor em aberto 70', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'T2 pagamento parcial não fecha; lembrete mostra o em aberto 70', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── T3: estorno reabre SÓ o que o pagamento fechou ────────────────────────────────
@@ -565,11 +577,21 @@ BEGIN
       RAISE EXCEPTION 'aceitou origem inválida';
     EXCEPTION WHEN check_violation THEN NULL;
     END;
+    BEGIN
+      INSERT INTO public.lembretes (titulo, data, tipo, valor) VALUES ('Suite valor zero', c_hoje, 'outro', 0);
+      RAISE EXCEPTION 'aceitou valor 0';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    BEGIN
+      INSERT INTO public.lembretes (titulo, data, tipo, valor) VALUES ('Suite valor negativo', c_hoje, 'outro', -5);
+      RAISE EXCEPTION 'aceitou valor negativo';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
 
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'T11 integridade: cliente da venda e vocabulário', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'T11 integridade: cliente da venda, vocabulário e valor positivo', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'T11 integridade: cliente da venda e vocabulário', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'T11 integridade: cliente da venda, vocabulário e valor positivo', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── T12: retomada (interacoes.retomar_em) aparece; some quando o cliente responde ──
@@ -597,6 +619,140 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'T12 retomada aparece e some com a resposta', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'T12 retomada aparece e some com a resposta', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── T14: uma dívida, um item — a parcela pendente é a dona da cobrança ─────────────
+  -- Forma da Ana Maria: venda de R$ 65 com previsão no dia X e parcela de R$ 32,50 no dia X.
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite Agenda T14', c_tel || '14', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
+
+    -- (a) uma parcela: só o lembrete aparece, com o valor da parcela; feita, o vencimento volta
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje, 'entregue', 'fiado', 65, false, 'sistema', c_hoje + 26) RETURNING id INTO v_venda;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id, valor)
+    VALUES ('Suite 1ª parcela', c_hoje + 26, 'parcela', v_venda, 32.50) RETURNING id INTO v_l1;
+
+    SELECT count(*) INTO n FROM public.agenda_itens(c_hoje + 26, c_hoje + 26) a WHERE a.venda_id = v_venda;
+    IF n <> 1 THEN RAISE EXCEPTION '(a) esperado só o lembrete no dia, vieram % itens da venda', n; END IF;
+    SELECT a.valor INTO s FROM public.agenda_itens(c_hoje + 26, c_hoje + 26) a WHERE a.origem = 'lembrete' AND a.id = v_l1;
+    IF s IS DISTINCT FROM 32.50 THEN RAISE EXCEPTION '(a) lembrete valor = % (esperado 32,50)', s; END IF;
+
+    UPDATE public.lembretes SET situacao = 'feito' WHERE id = v_l1;
+
+    SELECT a.valor INTO s FROM public.agenda_itens(c_hoje + 26, c_hoje + 26) a WHERE a.origem = 'vencimento' AND a.id = v_venda;
+    IF s IS DISTINCT FROM 65 THEN RAISE EXCEPTION '(a) feito o lembrete, vencimento = % (esperado 65, a venda segue em aberto)', s; END IF;
+
+    -- (b) duas parcelas (07/11 e 07/12 da Ana Maria): feita a 1ª, a 2ª ainda é a dona
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje, 'entregue', 'fiado', 65, false, 'sistema', c_hoje + 26) RETURNING id INTO v_venda2;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id, valor)
+    VALUES ('Suite parcela 1/2', c_hoje + 26, 'parcela', v_venda2, 32.50) RETURNING id INTO v_l2;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id, valor)
+    VALUES ('Suite parcela 2/2', c_hoje + 56, 'parcela', v_venda2, 32.50) RETURNING id INTO v_l3;
+
+    SELECT count(*), sum(a.valor) INTO n, s FROM public.agenda_itens(c_hoje + 26, c_hoje + 56) a WHERE a.venda_id = v_venda2;
+    IF n <> 2 OR s <> 65 THEN RAISE EXCEPTION '(b) esperado 2 parcelas somando 65, veio %/%', n, s; END IF;
+    UPDATE public.lembretes SET situacao = 'feito' WHERE id = v_l2;
+    IF EXISTS (SELECT 1 FROM public.agenda_itens(c_hoje + 26, c_hoje + 56) a WHERE a.origem = 'vencimento' AND a.id = v_venda2) THEN
+      RAISE EXCEPTION '(b) vencimento voltou com a 2ª parcela ainda pendente';
+    END IF;
+
+    -- (c) atrasados: venda vencida ontem com cobrança pendente sai do grupo vencimento
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje - 10, 'entregue', 'fiado', 40, false, 'sistema', c_hoje - 1) RETURNING id INTO v_venda3;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
+    VALUES ('Suite cobrar ontem', c_hoje - 1, 'cobranca', v_venda3) RETURNING id INTO v_l1;
+    SELECT count(*) INTO n FROM public.agenda_atrasados() a WHERE a.origem = 'vencimento' AND a.id = v_venda3;
+    IF n <> 0 THEN RAISE EXCEPTION '(c) vencimento duplicou a cobrança nos atrasados'; END IF;
+    SELECT count(*) INTO n FROM public.agenda_atrasados() a WHERE a.origem = 'lembrete' AND a.id = v_l1 AND a.valor = 40;
+    IF n <> 1 THEN RAISE EXCEPTION '(c) cobrança atrasada fora dos atrasados (ou sem o em aberto 40)'; END IF;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'T14 parcela pendente é dona da cobrança; feita, o vencimento volta', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'T14 parcela pendente é dona da cobrança; feita, o vencimento volta', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── T15: entrega de brinde aparece, com valor 0 (e continua fora dos vencimentos) ──
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite Agenda T15', c_tel || '15', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
+    -- Brinde nasce entregue (fn_brinde_invariante); volta a pendente com entrega marcada.
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem, data_prevista_pagamento)
+    VALUES (v_contato, c_hoje, 'pendente', 'brinde', 45, false, 'sistema', c_hoje + 27) RETURNING id INTO v_venda;
+    UPDATE public.vendas SET status = 'pendente', data_entrega_prevista = c_hoje + 27 WHERE id = v_venda;
+
+    SELECT count(*) INTO n FROM public.agenda_itens(c_hoje + 27, c_hoje + 27) a
+     WHERE a.origem = 'entrega' AND a.id = v_venda AND a.valor = 0 AND a.forma_pagamento = 'brinde';
+    IF n <> 1 THEN RAISE EXCEPTION 'entrega de brinde não apareceu com valor 0'; END IF;
+    SELECT count(*) INTO n FROM public.agenda_itens(c_hoje + 27, c_hoje + 27) a WHERE a.origem = 'vencimento' AND a.id = v_venda;
+    IF n <> 0 THEN RAISE EXCEPTION 'brinde apareceu como vencimento'; END IF;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'T15 entrega de brinde com valor 0, fora dos vencimentos', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'T15 entrega de brinde com valor 0, fora dos vencimentos', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── T16: parcela/cobrança não nasce nem é religada em venda paga ou cancelada ──────
+  total := total + 1;
+  BEGIN
+    INSERT INTO public.contatos (nome, telefone, tipo, status, origem)
+    VALUES ('Suite Agenda T16', c_tel || '16', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
+    -- paga
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem)
+    VALUES (v_contato, c_hoje, 'entregue', 'pix', 50, true, 'sistema') RETURNING id INTO v_venda;
+    -- cancelada
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem)
+    VALUES (v_contato, c_hoje, 'pendente', 'fiado', 50, false, 'sistema') RETURNING id INTO v_venda2;
+    UPDATE public.vendas SET status = 'cancelada', pago = false WHERE id = v_venda2;
+    -- em aberto
+    INSERT INTO public.vendas (contato_id, data, status, forma_pagamento, total, pago, origem)
+    VALUES (v_contato, c_hoje, 'entregue', 'fiado', 50, false, 'sistema') RETURNING id INTO v_venda3;
+
+    BEGIN
+      INSERT INTO public.lembretes (titulo, data, tipo, venda_id) VALUES ('Suite cobrar paga', c_hoje, 'cobranca', v_venda);
+      RAISE EXCEPTION 'aceitou cobrança em venda paga';
+    EXCEPTION WHEN check_violation THEN
+      IF SQLERRM <> 'Essa venda já está paga' THEN RAISE EXCEPTION 'mensagem errada (paga): %', SQLERRM; END IF;
+    END;
+    BEGIN
+      INSERT INTO public.lembretes (titulo, data, tipo, venda_id) VALUES ('Suite parcela cancelada', c_hoje, 'parcela', v_venda2);
+      RAISE EXCEPTION 'aceitou parcela em venda cancelada';
+    EXCEPTION WHEN check_violation THEN
+      IF SQLERRM <> 'Essa venda está cancelada' THEN RAISE EXCEPTION 'mensagem errada (cancelada): %', SQLERRM; END IF;
+    END;
+
+    -- Pendência interna em venda paga ou cancelada pode.
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
+    VALUES ('Suite conferir paga', c_hoje, 'pendencia_interna', v_venda) RETURNING id INTO v_l1;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
+    VALUES ('Suite devolver', c_hoje, 'pendencia_interna', v_venda2);
+
+    -- Religar: virar cobrança numa venda paga não pode; levar a cobrança da venda em aberto
+    -- para a paga, também não.
+    BEGIN
+      UPDATE public.lembretes SET tipo = 'cobranca' WHERE id = v_l1;
+      RAISE EXCEPTION 'aceitou virar cobrança em venda paga';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    INSERT INTO public.lembretes (titulo, data, tipo, venda_id)
+    VALUES ('Suite cobrar aberta', c_hoje, 'cobranca', v_venda3) RETURNING id INTO v_l2;
+    BEGIN
+      UPDATE public.lembretes SET venda_id = v_venda WHERE id = v_l2;
+      RAISE EXCEPTION 'aceitou religar cobrança para venda paga';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    -- Editar outra coisa de uma cobrança já ligada não dispara a regra.
+    UPDATE public.lembretes SET titulo = 'Suite cobrar aberta (editado)' WHERE id = v_l2;
+
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'T16 parcela/cobrança recusada em venda paga ou cancelada', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'T16 parcela/cobrança recusada em venda paga ou cancelada', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── T13: RLS — não-admin não lê, não grava e recebe agenda vazia ──────────────────

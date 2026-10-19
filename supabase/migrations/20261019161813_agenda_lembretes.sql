@@ -17,8 +17,12 @@
 --
 -- Fuso: o banco roda em UTC. "Hoje" é SEMPRE (now() AT TIME ZONE 'America/Sao_Paulo')::date,
 -- fixado aqui dentro, para não depender do ALTER DATABASE ainda pendente (fix/fuso-brasilia).
--- Brinde (pago=false, entregue) nunca é dinheiro a receber: forma_pagamento='brinde' fica de
--- fora de todas as leituras.
+-- Brinde (pago=false, entregue) nunca é dinheiro a receber: fica fora de vencimentos,
+-- atrasados e sem data. Mas é uma entrega de verdade: entra na camada entrega, com valor 0.
+-- Uma dívida, um item: venda com lembrete PENDENTE de parcela/cobrança sai da camada
+-- vencimento — o lembrete passa a ser o dono da cobrança (ex.: Ana Maria, previsão 07/11 e
+-- duas parcelas de R$ 32,50 em 07/11 e 07/12). Feito o último, o vencimento volta, se a
+-- venda continuar em aberto.
 -- Valores em REAIS (numeric), como o resto do banco.
 --
 -- Teste: supabase/tests/agenda_lembretes.sql (transação descartada, nada persiste).
@@ -40,6 +44,8 @@ CREATE TABLE public.lembretes (
   -- (vendaService.deleteVenda apaga a venda direto). O lembrete fica, sem o vínculo.
   contato_id        uuid REFERENCES public.contatos (id) ON DELETE SET NULL,
   venda_id          uuid REFERENCES public.vendas (id) ON DELETE SET NULL,
+  -- Valor combinado da parcela/cobrança. NULL = a Agenda mostra o em aberto da venda.
+  valor             numeric(10,2),
   -- Texto e não FK: o sistema tem um login de admin só, auth.uid() não diz quem é quem.
   responsavel       text,
   situacao          text NOT NULL DEFAULT 'pendente',
@@ -65,6 +71,7 @@ CREATE TABLE public.lembretes (
     motivo_conclusao IS NULL OR motivo_conclusao IN ('manual', 'venda_paga', 'venda_cancelada')),
   CONSTRAINT lembretes_origem_check CHECK (origem IN ('manual', 'automacao', 'claude')),
   CONSTRAINT lembretes_vezes_reagendado_check CHECK (vezes_reagendado >= 0),
+  CONSTRAINT lembretes_valor_positivo CHECK (valor IS NULL OR valor > 0),
   -- Pendente não tem conclusão; feito/cancelado sempre têm quando e por quê.
   -- (concluido_por pode ser NULL: conclusão feita pelo Claude via SQL não tem auth.uid().)
   CONSTRAINT lembretes_conclusao_coerente CHECK (
@@ -83,6 +90,8 @@ COMMENT ON TABLE public.lembretes IS
 COMMENT ON COLUMN public.lembretes.hora IS 'NULL = dia inteiro.';
 COMMENT ON COLUMN public.lembretes.tipo IS
   'parcela | cobranca (fecham sozinhos quando a venda é paga) | pendencia_interna | retorno_comercial (combinado fora do WhatsApp; os do WhatsApp vêm de interacoes.retomar_em) | outro';
+COMMENT ON COLUMN public.lembretes.valor IS
+  'Valor combinado da parcela (ex.: R$ 32,50 de uma venda de R$ 65). NULL = agenda_itens mostra o em aberto da venda.';
 COMMENT ON COLUMN public.lembretes.responsavel IS 'luccas | gilmar | equipe. Texto porque o sistema tem um login de admin só.';
 COMMENT ON COLUMN public.lembretes.motivo_conclusao IS
   'manual | venda_paga | venda_cancelada. Os dois últimos são gravados pelo trigger trg_venda_fecha_lembretes, e só esses ele reabre.';
@@ -102,6 +111,9 @@ CREATE TRIGGER tr_lembretes_audit
 
 -- Na linha, antes de gravar:
 --   • venda ligada → o cliente é o da venda (preenche se vazio; recusa se for outro cliente);
+--   • parcela/cobrança não nasce nem é religada (venda_id ou tipo mudando) numa venda já paga
+--     ou cancelada — seria cobrança que nunca fecha. Pendência interna e outros tipos podem.
+--     Reabrir não passa por aqui: o trigger da venda só reabre quando ela volta a ficar em aberto;
 --   • mudar a data de um pendente soma 1 em vezes_reagendado (a tela não controla o contador);
 --   • concluir (feito/cancelado) carimba quando e quem, motivo 'manual' se ninguém disse outro;
 --   • reabrir (pendente) apaga a conclusão.
@@ -111,18 +123,34 @@ LANGUAGE plpgsql
 SET search_path TO ''
 AS $$
 DECLARE
-  v_contato_da_venda uuid;
+  v_venda record;
+  v_religou boolean;
 BEGIN
   IF NEW.venda_id IS NOT NULL AND (
        TG_OP = 'INSERT'
        OR NEW.venda_id IS DISTINCT FROM OLD.venda_id
-       OR NEW.contato_id IS DISTINCT FROM OLD.contato_id) THEN
-    SELECT v.contato_id INTO v_contato_da_venda FROM public.vendas v WHERE v.id = NEW.venda_id;
+       OR NEW.contato_id IS DISTINCT FROM OLD.contato_id
+       OR NEW.tipo IS DISTINCT FROM OLD.tipo) THEN
+    SELECT v.contato_id, v.pago, v.status INTO v_venda FROM public.vendas v WHERE v.id = NEW.venda_id;
+
     IF NEW.contato_id IS NULL THEN
-      NEW.contato_id := v_contato_da_venda;
-    ELSIF NEW.contato_id IS DISTINCT FROM v_contato_da_venda THEN
+      NEW.contato_id := v_venda.contato_id;
+    ELSIF NEW.contato_id IS DISTINCT FROM v_venda.contato_id THEN
       RAISE EXCEPTION 'Lembrete ligado a uma venda de outro cliente'
         USING ERRCODE = '23514';
+    END IF;
+
+    v_religou := TG_OP = 'INSERT'
+                 OR NEW.venda_id IS DISTINCT FROM OLD.venda_id
+                 OR NEW.tipo IS DISTINCT FROM OLD.tipo;
+    IF v_religou AND NEW.tipo IN ('parcela', 'cobranca') THEN
+      IF v_venda.status = 'cancelada' THEN
+        RAISE EXCEPTION 'Essa venda está cancelada'
+          USING ERRCODE = '23514', HINT = 'Parcela e cobrança só podem ser ligadas a venda em aberto.';
+      ELSIF v_venda.pago THEN
+        RAISE EXCEPTION 'Essa venda já está paga'
+          USING ERRCODE = '23514', HINT = 'Parcela e cobrança só podem ser ligadas a venda em aberto.';
+      END IF;
     END IF;
   END IF;
 
@@ -268,8 +296,9 @@ REVOKE ALL ON public.lembretes FROM anon;
 --   atrasado         pendente com data < hoje (Brasília) — calculado aqui, a tela não recalcula
 --   contato_*        cliente (id, nome, telefone para o WhatsApp)
 --   venda_id, forma_pagamento
---   valor            em aberto (total − valor_pago) nas vendas; saldo devedor na conta a pagar;
---                    no lembrete ligado a venda em aberto, o em aberto dela; senão NULL
+--   valor            em aberto (total − valor_pago) nas vendas; 0 na entrega de brinde; saldo
+--                    devedor na conta a pagar; no lembrete, o valor combinado (lembretes.valor)
+--                    ou, sem ele, o em aberto da venda ligada; senão NULL
 
 CREATE OR REPLACE FUNCTION public.agenda_itens(p_inicio date, p_fim date)
 RETURNS TABLE (
@@ -320,8 +349,9 @@ AS $$
   SELECT 'lembrete'::text, l.id, l.data, l.hora, l.titulo, l.descricao, l.tipo, l.situacao,
          (l.situacao = 'pendente' AND l.data < h.dia),
          l.contato_id, c.nome, c.telefone, l.venda_id, v.forma_pagamento,
-         CASE WHEN v.id IS NOT NULL AND NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
-              THEN v.total - COALESCE(v.valor_pago, 0) END
+         COALESCE(l.valor,
+                  CASE WHEN v.id IS NOT NULL AND NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
+                       THEN v.total - COALESCE(v.valor_pago, 0) END)
     FROM public.lembretes l
     CROSS JOIN hoje h
     LEFT JOIN public.contatos c ON c.id = l.contato_id
@@ -330,7 +360,8 @@ AS $$
      AND l.situacao <> 'cancelado'
 
   UNION ALL
-  -- Vencimentos: previsão de pagamento de venda em aberto. Some sozinho quando a venda é paga.
+  -- Vencimentos: previsão de pagamento de venda em aberto. Some sozinho quando a venda é paga,
+  -- e enquanto houver lembrete pendente de parcela/cobrança ligado a ela.
   SELECT 'vencimento', v.id, v.data_prevista_pagamento, NULL::time, c.nome, v.observacoes, NULL::text, 'pendente',
          (v.data_prevista_pagamento < h.dia),
          c.id, c.nome, c.telefone, v.id, v.forma_pagamento, v.total - COALESCE(v.valor_pago, 0)
@@ -341,18 +372,24 @@ AS $$
      AND v.status <> 'cancelada'
      AND v.forma_pagamento <> 'brinde'
      AND v.data_prevista_pagamento BETWEEN p_inicio AND p_fim
+     AND NOT EXISTS (
+           -- O lembrete pendente de parcela/cobrança é o dono desta dívida: um item só.
+           SELECT 1 FROM public.lembretes lp
+            WHERE lp.venda_id = v.id
+              AND lp.situacao = 'pendente'
+              AND lp.tipo IN ('parcela', 'cobranca'))
 
   UNION ALL
   -- Entregas previstas de venda ainda pendente. Some quando a venda é entregue.
+  -- Brinde entra: é uma entrega de verdade, só não é dinheiro (valor 0).
   SELECT 'entrega', v.id, v.data_entrega_prevista, NULL::time, c.nome, v.observacao_entregador, NULL::text, 'pendente',
          (v.data_entrega_prevista < h.dia),
          c.id, c.nome, c.telefone, v.id, v.forma_pagamento,
-         CASE WHEN v.pago THEN 0 ELSE v.total - COALESCE(v.valor_pago, 0) END
+         CASE WHEN v.pago OR v.forma_pagamento = 'brinde' THEN 0 ELSE v.total - COALESCE(v.valor_pago, 0) END
     FROM public.vendas v
     JOIN public.contatos c ON c.id = v.contato_id
     CROSS JOIN hoje h
    WHERE v.status = 'pendente'
-     AND v.forma_pagamento <> 'brinde'
      AND v.data_entrega_prevista BETWEEN p_inicio AND p_fim
 
   UNION ALL
@@ -385,9 +422,11 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.agenda_itens(date, date) IS
-  'Agenda: tudo entre p_inicio e p_fim (inclusive) numa lista só — lembretes (sem os cancelados), vencimentos, entregas previstas, contas a pagar, retomadas. Sem brinde. Hoje = Brasília.';
+  'Agenda: tudo entre p_inicio e p_fim (inclusive) numa lista só — lembretes (sem os cancelados), vencimentos (sem brinde; sem a venda que tem lembrete pendente de parcela/cobrança), entregas previstas (brinde com valor 0), contas a pagar, retomadas. Hoje = Brasília.';
 
 -- Faixa de Atrasados: dois grupos (origem = lembrete | vencimento), mesmo formato de item.
+-- A mesma regra de dono da cobrança de agenda_itens: venda com parcela/cobrança pendente
+-- aparece pelo lembrete (no grupo lembrete, se a data dele já passou), não pelo vencimento.
 -- Contas a pagar atrasadas não entram (decisão D9: lembretes + vencimentos); elas aparecem
 -- no próprio dia, com atrasado = true, em agenda_itens.
 CREATE OR REPLACE FUNCTION public.agenda_atrasados()
@@ -417,8 +456,9 @@ AS $$
   )
   SELECT 'lembrete'::text, l.id, l.data, l.hora, l.titulo, l.descricao, l.tipo, l.situacao, true,
          l.contato_id, c.nome, c.telefone, l.venda_id, v.forma_pagamento,
-         CASE WHEN v.id IS NOT NULL AND NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
-              THEN v.total - COALESCE(v.valor_pago, 0) END
+         COALESCE(l.valor,
+                  CASE WHEN v.id IS NOT NULL AND NOT v.pago AND v.status <> 'cancelada' AND v.forma_pagamento <> 'brinde'
+                       THEN v.total - COALESCE(v.valor_pago, 0) END)
     FROM public.lembretes l
     CROSS JOIN hoje h
     LEFT JOIN public.contatos c ON c.id = l.contato_id
@@ -436,12 +476,18 @@ AS $$
      AND v.status <> 'cancelada'
      AND v.forma_pagamento <> 'brinde'
      AND v.data_prevista_pagamento < h.dia
+     AND NOT EXISTS (
+           -- O lembrete pendente de parcela/cobrança é o dono desta dívida: um item só.
+           SELECT 1 FROM public.lembretes lp
+            WHERE lp.venda_id = v.id
+              AND lp.situacao = 'pendente'
+              AND lp.tipo IN ('parcela', 'cobranca'))
 
   ORDER BY 1, 3, 4 NULLS FIRST, 5
 $$;
 
 COMMENT ON FUNCTION public.agenda_atrasados() IS
-  'Faixa de Atrasados da Agenda: lembretes pendentes com data < hoje e vendas em aberto (sem brinde) com previsão de pagamento < hoje. Hoje = Brasília.';
+  'Faixa de Atrasados da Agenda: lembretes pendentes com data < hoje e vendas em aberto (sem brinde, sem lembrete pendente de parcela/cobrança) com previsão de pagamento < hoje. Hoje = Brasília.';
 
 -- "X em aberto sem data": vendas não pagas, não canceladas, sem brinde, sem previsão de
 -- pagamento — hoje não aparecem em lugar nenhum. A tela conta e quebra por forma_pagamento
