@@ -14,6 +14,7 @@ import {
     Receipt,
     Settings,
     BarChart3,
+    CalendarDays,
     Megaphone,
     Plus,
     type LucideIcon,
@@ -44,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
             { label: 'Nova Venda',  path: NOVA_VENDA_PATH,     icon: Plus },
             { label: 'Vendas',      path: '/vendas',           icon: ShoppingCart },
             { label: 'Entregas',    path: '/entregas',         icon: Truck },
+            { label: 'Agenda',      path: '/agenda',           icon: CalendarDays },
         ],
     },
     {

@@ -169,10 +169,10 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 - [ ] Primeira mensagem das 8h recebida de verdade (quando religar)
 - [ ] Segundo disparo no mesmo dia bloqueado (quando religar)
 
-**Onda 3**
-- [ ] 13/11 mostra os vencimentos com total igual ao banco
-- [ ] Criar, reagendar, marcar feito e excluir funcionando
-- [ ] Lembrete some dos pendentes quando a venda é paga
+**Onda 3** — tela do Mês (desktop) em `#/agenda`, branch `feat/agenda-retornos` (19/10/2026, não mergeada)
+- [x] 13/11 mostra os vencimentos com total igual ao banco (chip agregado "31 vencimentos · R$ 1.875,00"; 07/11 só o lembrete da Ana Maria, R$ 32,50)
+- [x] Criar, reagendar, marcar feito e excluir funcionando (testado pela tela com um lembrete `[TESTE]`, apagado no fim; os 17 reais intocados)
+- [ ] Lembrete some dos pendentes quando a venda é paga (regra no banco provada no T1 da suíte; pela tela, conferir com uma venda real quando ela for paga — a query relê ao voltar para a aba)
 
 **Onda 4**
 - [ ] Gilmar usa pelo celular sem ajuda
