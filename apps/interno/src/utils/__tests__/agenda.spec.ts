@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import type { ItemAgenda } from '@mont/shared'
 import {
     TODAS_LIGADAS, CHAVE_CAMADAS, bateBusca, chipsPorDia, cortarChips, gradeDoMes, horaCurta, intervaloDaGrade,
-    lerCamadas, nomeDoMes, quebraPorForma, resumirAtrasados, rotuloDoItem, salvarCamadas, somarDias, somarMeses,
+    lerCamadas, nomeCurto, nomeDoMes, quebraPorForma, restoDoTitulo, resumirAtrasados, rotuloDoItem, rotuloDoLembrete,
+    salvarCamadas, somarDias, somarMeses, valorCurto,
 } from '../agenda'
 
 // Camada pura da tela Agenda: grade do mês, chips por dia, camadas e persistência.
@@ -164,5 +165,39 @@ describe('textos e resumos', () => {
             { forma: 'fiado', quantidade: 1, valor: 5 },
             { forma: 'pix', quantidade: 1, valor: 10 },
         ])
+    })
+})
+
+describe('rótulo curto do lembrete (cliente primeiro)', () => {
+    // Títulos e nomes no formato dos lembretes reais de outubro/2026.
+    const casos: Array<[string, string | null, string]> = [
+        ['Retomar cobrança — Simone', 'Simone Araujo de Oliveira', 'Simone · cobrança'],
+        ['Gilmar: Andrea — Pix de R$ 135 em 17/10', 'Andrea Santos', 'Andrea · Gilmar'],
+        ['Ana Maria — 1ª parcela', 'Ana Maria Oliveira da Silva', 'Ana Maria · 1ª parcela'],
+        ['Retomar cobrança — Carol', 'Caroline Gomes (Carol)', 'Carol · cobrança'],
+        ['Retomar cobrança — Rosângela Maradona', 'Rosangela Maradona', 'Rosangela Maradona · cobrança'],
+        ['Gilmar: depósito de R$ 30 da Patrícia', 'Patricia Mara Botias (Copa)', 'Patricia · Gilmar'],
+        ['Cobrar Ana Maria Oliveira da Silva', 'Ana Maria Oliveira da Silva', 'Ana Maria Oliveira da Silva · Cobrar'],
+        ['Ligar sobre o pedido', 'João Pedro', 'João · Ligar sobre o pedido'],
+        ['Gilmar: conferir as 16 vendas "venda/pix" sem pagamento', null, 'Gilmar: conferir as 16 vendas "venda/pix" sem pagamento'],
+    ]
+    it.each(casos)('%s', (titulo, contato_nome, esperado) => {
+        expect(rotuloDoLembrete({ titulo, contato_nome })).toBe(esperado)
+    })
+
+    it('nome como palavra inteira: "Ana" não bate dentro de "Banana"', () => {
+        expect(nomeCurto('Ana Souza', 'Levar banana')).toBe('Ana')
+        expect(restoDoTitulo('Levar banana', 'Ana')).toBe('Levar banana')
+    })
+})
+
+describe('valor curto do chip', () => {
+    const semNbsp = (s: string) => s.replace(/\u00a0/g, ' ')
+    it('inteiro sem centavos, quebrado com centavos', () => {
+        expect(semNbsp(valorCurto(885))).toBe('R$ 885')
+        expect(semNbsp(valorCurto(1875))).toBe('R$ 1.875')
+        expect(semNbsp(valorCurto(32.5))).toBe('R$ 32,50')
+        // Soma de centavos em ponto flutuante (0,1 + 0,2…) não vira 'R$ 885,00'.
+        expect(semNbsp(valorCurto(884.9999999999))).toBe('R$ 885')
     })
 })

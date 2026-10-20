@@ -173,6 +173,8 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 - [x] 13/11 mostra os vencimentos com total igual ao banco (chip agregado "31 vencimentos · R$ 1.875,00"; 07/11 só o lembrete da Ana Maria, R$ 32,50)
 - [x] Criar, reagendar, marcar feito e excluir funcionando (testado pela tela com um lembrete `[TESTE]`, apagado no fim; os 17 reais intocados)
 - [ ] Lembrete some dos pendentes quando a venda é paga (regra no banco provada no T1 da suíte; pela tela, conferir com uma venda real quando ela for paga — a query relê ao voltar para a aba)
+- [x] Legibilidade dos chips (ajuste pós-print): lembrete mostra o cliente primeiro com ícone do tipo ("Simone · cobrança", "Ana Maria · 1ª parcela R$ 32,50"), título inteiro no tooltip; agregado "15 · R$ 885" com o ícone da camada; tudo em uma linha
+- [ ] **Segurança: trocar a senha da conta-teste (`teste@teste.com`)** — o agente leu o `.env.local` para logar no navegador durante a Onda 3 e a senha ficou no histórico da sessão. Quem troca: Luccas. Depois de trocar, atualizar o `apps/interno/.env.local` (fora do git). Regra daqui em diante: o agente não lê `.env.local` nem outro arquivo de credencial sem perguntar antes.
 
 **Onda 4**
 - [ ] Gilmar usa pelo celular sem ajuda

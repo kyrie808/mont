@@ -2,8 +2,8 @@ import { forwardRef, useState, type ComponentPropsWithoutRef, type ReactNode } f
 import { ArrowLeft, X } from 'lucide-react'
 import { cn, formatCurrency, type ItemAgenda } from '@mont/shared'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui'
-import { camadaDoItem, horaCurta, rotuloDoItem, type ChipAgenda } from '../../../utils/agenda'
-import { VISUAL_CAMADA } from './camadasVisual'
+import { camadaDoItem, horaCurta, rotuloDoItem, rotuloDoLembrete, valorCurto, type ChipAgenda } from '../../../utils/agenda'
+import { ICONE_CAMADA, ICONE_TIPO, tipoDoLembrete, VISUAL_CAMADA } from './camadasVisual'
 import { DetalheItem } from './DetalheItem'
 import type { PrefillLembrete } from './CriacaoRapida'
 
@@ -13,25 +13,49 @@ const baseChip =
     'flex w-full min-w-0 items-center gap-1 rounded-md border-l-[3px] px-1.5 py-[3px] text-left text-xs leading-tight text-foreground ' +
     'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
-/** O chip na célula do mês (Google: barra colorida com o título). */
+/**
+ * O chip na célula do mês (Google: barra colorida com o título), sempre em UMA linha.
+ * Lembrete: ícone do tipo + cliente primeiro ('Simone · cobrança'); o título inteiro fica no tooltip.
+ */
 const ChipBotao = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<'button'> & { item: ItemAgenda }>(
     ({ item, className, ...props }, ref) => {
         const feito = item.situacao === 'feito'
+        const camada = camadaDoItem(item)
+        const ehLembrete = item.origem === 'lembrete'
+        const Icone = ehLembrete ? ICONE_TIPO[tipoDoLembrete(item.tipo)] : null
+        const valor = item.origem === 'retomada' ? null : item.valor
+        const dica = ehLembrete
+            ? item.titulo
+            : `${rotuloDoItem(item)}${valor !== null ? ` · ${formatCurrency(valor)}` : ''}`
         return (
             <button
                 ref={ref}
                 type="button"
-                className={cn(baseChip, VISUAL_CAMADA[camadaDoItem(item)].chip, feito && 'opacity-55', className)}
+                title={dica}
+                className={cn(baseChip, VISUAL_CAMADA[camada].chip, feito && 'opacity-55', className)}
                 {...props}
             >
+                {Icone && <Icone className={cn('size-3 shrink-0', VISUAL_CAMADA[camada].icone)} aria-hidden="true" />}
                 {item.hora && <span className="shrink-0 font-semibold tabular-nums">{horaCurta(item.hora)}</span>}
-                {/* Nome e valor num texto só: o nome vem primeiro e o corte (…) cai no fim. */}
-                <span className={cn('truncate', feito && 'line-through', item.atrasado && 'font-semibold text-destructive')}>
-                    {rotuloDoItem(item)}
-                    {item.valor !== null && item.origem !== 'retomada' && (
-                        <span className="font-normal tabular-nums text-muted-foreground"> · {formatCurrency(item.valor)}</span>
-                    )}
-                </span>
+                {ehLembrete ? (
+                    <>
+                        {/* Lembrete: o texto encolhe (…), o valor fica sempre inteiro. */}
+                        <span className={cn('truncate', feito && 'line-through', item.atrasado && 'font-semibold text-destructive')}>
+                            {rotuloDoLembrete(item)}
+                        </span>
+                        {valor !== null && (
+                            <span className="shrink-0 tabular-nums text-muted-foreground">{valorCurto(valor)}</span>
+                        )}
+                    </>
+                ) : (
+                    /* Nome e valor num texto só: o nome vem primeiro e o corte (…) cai no fim. */
+                    <span className={cn('truncate', feito && 'line-through', item.atrasado && 'font-semibold text-destructive')}>
+                        {rotuloDoItem(item)}
+                        {valor !== null && (
+                            <span className="font-normal tabular-nums text-muted-foreground"> · {formatCurrency(valor)}</span>
+                        )}
+                    </span>
+                )}
             </button>
         )
     },
@@ -119,7 +143,9 @@ export function ListaComDetalhe({
     )
 }
 
-/** Vários vencimentos no mesmo dia → um chip "N vencimentos · R$ X" (total do banco). */
+const IconeVencimentos = ICONE_CAMADA.vencimentos
+
+/** Vários vencimentos no mesmo dia → um chip "N · R$ X" com o ícone da camada (total do banco). */
 export function ChipVencimentosAgregado({
     itens, total, onCriarRetorno,
 }: { itens: ItemAgenda[]; total: number; onCriarRetorno: CriarRetorno }) {
@@ -130,12 +156,15 @@ export function ChipVencimentosAgregado({
             <PopoverTrigger asChild>
                 <button
                     type="button"
+                    title={`${itens.length} vencimentos · ${formatCurrency(total)}`}
+                    aria-label={`${itens.length} vencimentos · ${formatCurrency(total)}`}
                     onClick={(e) => e.stopPropagation()}
                     className={cn(baseChip, VISUAL_CAMADA.vencimentos.chip, 'font-semibold')}
                 >
-                    {/* Agregado pode quebrar em 2 linhas: contagem e total sempre inteiros. */}
-                    <span className={cn('line-clamp-2', atrasado && 'text-destructive')}>
-                        {itens.length} vencimentos · {formatCurrency(total)}
+                    <IconeVencimentos className={cn('size-3 shrink-0', VISUAL_CAMADA.vencimentos.icone)} aria-hidden="true" />
+                    {/* Curto para caber em uma linha: '15 · R$ 885'. O tooltip diz "15 vencimentos". */}
+                    <span className={cn('truncate tabular-nums', atrasado && 'text-destructive')}>
+                        {itens.length} · {valorCurto(total)}
                     </span>
                 </button>
             </PopoverTrigger>

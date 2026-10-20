@@ -214,6 +214,77 @@ export function rotuloDoItem(item: ItemAgenda): string {
     }
 }
 
+/** Palavras do texto sem acento, caixa ou pontuação ('Rosângela — 1ª' → 'rosangela 1ª'). */
+function palavrasNormais(s: string): string {
+    return normal(s).replace(/[^\p{L}\p{N}ªº]+/gu, ' ').trim()
+}
+
+/** O título cita o termo como palavra(s) inteira(s)? ('Ana' não bate dentro de 'Banana'.) */
+function citaPalavras(texto: string, termo: string): boolean {
+    const t = palavrasNormais(termo)
+    return t !== '' && ` ${palavrasNormais(texto)} `.includes(` ${t} `)
+}
+
+/**
+ * Como o cliente aparece no título do lembrete: o maior começo do nome cadastrado que o
+ * título cita ('Ana Maria Oliveira da Silva' + 'Ana Maria — 1ª parcela' → 'Ana Maria'),
+ * senão o apelido entre parênteses ('Caroline Gomes (Carol)' → 'Carol'), senão o primeiro nome.
+ */
+export function nomeCurto(contatoNome: string, titulo: string): string {
+    const palavras = contatoNome.replace(/\([^)]*\)/g, ' ').trim().split(/\s+/).filter(Boolean)
+    for (let n = palavras.length; n > 0; n--) {
+        const comeco = palavras.slice(0, n).join(' ')
+        if (citaPalavras(titulo, comeco)) return comeco
+    }
+    const apelido = contatoNome.match(/\(([^)]+)\)/)?.[1]?.trim()
+    if (apelido && citaPalavras(titulo, apelido)) return apelido
+    return palavras[0] ?? contatoNome
+}
+
+const SEPARADORES_TITULO = /\s*[—–:|·]\s*|\s+-\s+/
+
+/** Tira do trecho as palavras do nome ('Cobrar Ana Maria' − 'Ana Maria' → 'Cobrar'). */
+function tirarNome(trecho: string, nome: string): string {
+    const alvo = palavrasNormais(nome)
+    const palavras = trecho.split(/\s+/)
+    const n = alvo.split(' ').length
+    for (let i = 0; i + n <= palavras.length; i++) {
+        if (palavrasNormais(palavras.slice(i, i + n).join(' ')) === alvo) {
+            return [...palavras.slice(0, i), ...palavras.slice(i + n)].join(' ').trim()
+        }
+    }
+    return trecho
+}
+
+/**
+ * O resto do título, curto: o primeiro trecho (entre '—', ':', '·'…) que não é o nome.
+ *   'Retomar cobrança — Simone'          → 'cobrança' (o verbo não cabe; o ícone já diz o tipo)
+ *   'Gilmar: Andrea — Pix de R$ 135…'    → 'Gilmar'
+ *   'Ana Maria — 1ª parcela'             → '1ª parcela'
+ */
+export function restoDoTitulo(titulo: string, nome: string): string {
+    const trechos = titulo.split(SEPARADORES_TITULO).map((t) => t.trim()).filter(Boolean)
+    const resto = trechos.find((t) => !citaPalavras(t, nome)) ?? tirarNome(trechos[0] ?? '', nome)
+    return resto.replace(/^retomar\s+/i, '').trim()
+}
+
+/** Texto do chip de um lembrete: o cliente primeiro ('Simone · cobrança'); sem cliente, o título. */
+export function rotuloDoLembrete(item: Pick<ItemAgenda, 'titulo' | 'contato_nome'>): string {
+    if (!item.contato_nome?.trim()) return item.titulo
+    const nome = nomeCurto(item.contato_nome, item.titulo)
+    const resto = restoDoTitulo(item.titulo, nome)
+    return resto ? `${nome} · ${resto}` : nome
+}
+
+/** Valor que cabe no chip: 'R$ 885' quando é inteiro, 'R$ 32,50' quando tem centavos. */
+export function valorCurto(valor: number): string {
+    const v = Math.round(valor * 100) / 100
+    const casas = Number.isInteger(v) ? 0 : 2
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas,
+    }).format(v)
+}
+
 // ─── Faixa de Atrasados e lista simples ─────────────────────────────────────────
 
 export interface ResumoAtrasados {
