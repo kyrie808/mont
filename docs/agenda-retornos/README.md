@@ -169,7 +169,8 @@ Como não há ambiente de teste, toda migração segue o protocolo: dump do sche
 - [ ] Primeira mensagem das 8h recebida de verdade (quando religar)
 - [ ] Segundo disparo no mesmo dia bloqueado (quando religar)
 
-**Onda 3** — tela do Mês (desktop) em `#/agenda`, branch `feat/agenda-retornos` (19/10/2026, não mergeada)
+**Onda 3** — tela do Mês (desktop) em `#/agenda` — **publicada em produção em 19/10/2026** (merge `f64f91f` na main; Vercel `mont-interno`, `mont-catalogo` e `mont-entregador` Ready; `fix/fuso-brasilia` ficou de fora)
+- [x] No ar: `sistema.montdistribuidora.com.br/#/agenda` mostra "Atrasados: 20 vencimentos · R$ 1.135,00" e "19 em aberto sem data · R$ 1.370,00", console sem erros; catálogo abre (200); W5 (avisos de entrega) ativo e W6 (aviso das 8h) desligado
 - [x] 13/11 mostra os vencimentos com total igual ao banco (chip agregado "31 vencimentos · R$ 1.875,00"; 07/11 só o lembrete da Ana Maria, R$ 32,50)
 - [x] Criar, reagendar, marcar feito e excluir funcionando (testado pela tela com um lembrete `[TESTE]`, apagado no fim; os 17 reais intocados)
 - [ ] Lembrete some dos pendentes quando a venda é paga (regra no banco provada no T1 da suíte; pela tela, conferir com uma venda real quando ela for paga — a query relê ao voltar para a aba)
