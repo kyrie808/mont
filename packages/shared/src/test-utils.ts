@@ -34,6 +34,14 @@ function env(key: string): string {
  * Falha alto se o login não der ou se a conta logada não for a conta-teste esperada.
  */
 export async function createTestClient(): Promise<TestClient> {
+  // Trava: integração só roda com flag explícita (o vite.config exclui *.integration.test.ts
+  // sem ela; isto cobre um teste de integração que esqueça o sufixo).
+  const flag = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.RUN_INTEGRATION
+  if (flag !== '1') {
+    throw new Error(
+      '[test-utils] teste de integração (PRODUÇÃO) sem RUN_INTEGRATION=1 — rode `pnpm --filter interno test:integration`.',
+    )
+  }
   const client = createClient<Database>(env('VITE_SUPABASE_URL'), env('VITE_SUPABASE_ANON_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   })

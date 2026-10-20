@@ -133,8 +133,17 @@ export type {
     SecaoInsert,
     SecaoUpdate,
     MetaMensal,
+    Lembrete,
+    LembreteInsert,
+    OrigemItemAgenda,
+    ItemAgenda,
+    ItemSemData,
 } from './types'
 
 // Aviso de entrega no grupo #ENTREGAS — texto e regra de quando sai
 export { montarAvisoEntrega, avisosDevidos, pagamentoIndefinido, alertaEquipe, HORA_LOTE_MIN, HORA_SEGURANCA_MIN } from './avisoEntrega'
 export type { VendaAviso, ClienteAviso } from './avisoEntrega'
+
+// Aviso diário da Agenda no grupo Equipe — texto e regra de atraso
+export { montarAvisoAgenda, entraNosAtrasados, MAX_NOMES_VENCIMENTO } from './avisoAgenda'
+export type { ItemAvisoAgenda, EntradaAvisoAgenda } from './avisoAgenda'

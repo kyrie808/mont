@@ -37,11 +37,11 @@ Para a camada unit + component: nenhum pré-requisito.
 ## Comandos
 
 ```bash
-# Suíte completa (requer Docker + supabase start)
+# Padrão: só unit + component (jsdom) — nunca toca o banco
 pnpm --filter interno test
 
-# Apenas unit + component (sem Docker)
-pnpm --filter interno exec vitest run src/utils src/components src/services/__tests__
+# Com integração (roda contra a PRODUÇÃO como a conta-teste) — flag explícita obrigatória
+pnpm --filter interno test:integration    # = vitest run --mode integration (ou RUN_INTEGRATION=1)
 
 # Um arquivo específico
 pnpm --filter interno exec vitest run src/utils/fiado.test.ts

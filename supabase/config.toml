@@ -432,3 +432,8 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.avisos-entrega]
 verify_jwt = false
+
+# Aviso diario da Agenda (W6, 8h). Sem esta entrada o deploy liga verify_jwt e o
+# gateway devolve 401 antes do codigo: o cron morre em silencio (footgun registrado).
+[functions.avisos-agenda]
+verify_jwt = false

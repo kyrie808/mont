@@ -31,6 +31,7 @@ const Menu = lazy(() => import('./pages/Menu').then(m => ({ default: m.Menu })))
 const CatalogoPendentes = lazy(() => import('./pages/CatalogoPendentes').then(m => ({ default: m.CatalogoPendentes })))
 const Relatorios = lazy(() => import('./pages/Relatorios').then(m => ({ default: m.Relatorios })))
 const Campanhas = lazy(() => import('./pages/Campanhas').then(m => ({ default: m.Campanhas })))
+const Agenda = lazy(() => import('./pages/Agenda').then(m => ({ default: m.Agenda })))
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
 
 function PageFallback() {
@@ -73,6 +74,7 @@ function App() {
               <Route path="/contas-a-pagar" element={<ContasAPagar />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/campanhas" element={<Campanhas />} />
+              <Route path="/agenda" element={<Agenda />} />
 
               {/* Redirects */}
               <Route path="/clientes" element={<Navigate to="/contatos" replace />} />
