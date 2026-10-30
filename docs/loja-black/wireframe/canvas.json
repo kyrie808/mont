@@ -1,0 +1,27 @@
+{"v":3,"createdOnFiles":{"v":1,"at":"2026-10-29T09:15:00Z"},"title":"Wireframe — Loja Mont (Black)","launch":{"view":"canvas"},"pages":[],
+"boards":{
+"Main.dc.html":{"x":0,"y":0,"w":390,"h":2800,"title":"01 Loja (página única)","is_interactive":true},
+"Produto.dc.html":{"x":470,"y":0,"w":390,"h":844,"title":"02 Produto (painel)","is_interactive":true},
+"Combo.dc.html":{"x":940,"y":0,"w":390,"h":844,"title":"03 Combo — escolher sabores","is_interactive":true},
+"Sacola.dc.html":{"x":1410,"y":0,"w":390,"h":844,"title":"04 Sacola + frete","is_interactive":true},
+"Dados.dc.html":{"x":1880,"y":0,"w":390,"h":844,"title":"05 Seus dados","is_interactive":true},
+"Pagamento.dc.html":{"x":470,"y":1500,"w":390,"h":844,"title":"06 Pagamento","is_interactive":true},
+"Confirmado.dc.html":{"x":940,"y":1500,"w":390,"h":844,"title":"07 Pedido confirmado","is_interactive":true},
+"Status.dc.html":{"x":1410,"y":1500,"w":390,"h":844,"title":"08 Acompanhar pedido","is_interactive":true},
+"Conta.dc.html":{"x":1880,"y":1500,"w":390,"h":844,"title":"09 Área do cliente (fase 2)","is_interactive":true}
+},
+"order":["Main.dc.html","Produto.dc.html","Combo.dc.html","Sacola.dc.html","Dados.dc.html","Pagamento.dc.html","Confirmado.dc.html","Status.dc.html","Conta.dc.html"],
+"notes":{
+"t1":{"x":0,"y":-300,"text":"Loja Mont · Black 2026 — escolher e montar","kind":"title1","maxW":2270},
+"t2":{"x":470,"y":1220,"text":"Pagamento e depois da compra","kind":"title1","maxW":1800},
+"n1":{"x":470,"y":884,"w":360,"text":"Produto abre como painel por cima da loja (não troca de página). Preço e botão aparecem sem rolar."},
+"n2":{"x":940,"y":884,"w":360,"text":"Sabores vêm do estoque do sistema; esgotado fica desabilitado. O botão só libera com 6/6. Confirmar com o Gilmar se geleias entram nos combos."},
+"n3":{"x":1410,"y":884,"w":360,"text":"Frete pela tabela de bairros (falta definir a tabela). 'Leva junto?' é a oferta de última hora: 1 item barato, 1 toque."},
+"n4":{"x":1880,"y":884,"w":360,"text":"Sem código de verificação na Black, a tela NUNCA mostra nome ou endereço salvos de um número digitado (vazaria dados de cliente). O pedido é ligado ao cadastro pelo celular só no servidor. Rua preenche pelo CEP. Autorização de ofertas no WhatsApp é separada e começa desmarcada (LGPD)."},
+"n5":{"x":470,"y":2384,"w":360,"text":"Na Black a loja só aceita pagar agora (Pix ou cartão pela InfinitePay): pedido só é separado com pagamento aprovado. Contar os cliques em 'Prefere pagar na entrega?' para saber se a opção volta. Pedido não pago: lembrete no WhatsApp aos 15 min e cancelamento aos 30 min (estoque liberado). Fiado nunca é opção na loja."},
+"n6":{"x":940,"y":2384,"w":360,"text":"O pedido só vira 'pago' depois que o sistema confere o pagamento na InfinitePay, não só pelo aviso automático."},
+"n7":{"x":1410,"y":2384,"w":360,"text":"Cada mudança de status também vai por WhatsApp. '4ª parada' depende de a rota ter ordem no sistema."},
+"n8":{"x":1880,"y":2384,"w":360,"text":"Fase 2 (depois da Black): login com código no WhatsApp, Saldo Mont único (cashback, bônus e depósito), repetir pedido."},
+"n9":{"x":0,"y":2860,"w":390,"text":"A barra 'Ver sacola' fica fixa no rodapé enquanto a pessoa rola. Kit Top: R$ 100 ou R$ 89, ainda pendente."}
+},
+"designSystems":[]}

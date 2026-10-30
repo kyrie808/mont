@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Combo Família — escolher sabores</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2C1810}a:hover{color:#3D2B22}
+.ph{background:#EFE7DC;border:1px dashed #C9B9A6;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;color:#6B5A4E;font-size:10px;box-sizing:border-box}
+.st{display:flex;align-items:center;height:40px;border-radius:20px;border:1.5px solid #2C1810}
+.st button{width:44px;height:38px;border:0;background:transparent;color:#2C1810;font:700 18px 'DM Sans',sans-serif;cursor:pointer}
+.st button:disabled{color:#C9B9A6;cursor:default}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FAF7F2; font-family: 'DM Sans', sans-serif; color: #2C1810">
+<header style="height: 56px; padding: 0 8px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #E6DDD2">
+<a href="Main.dc.html" aria-label="Voltar" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 22px">←</a>
+<span style="font-size: 16px; font-weight: 700">Montar combo</span>
+</header>
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 12px">
+<div class="ph" style="width: 72px; height: 72px; flex-shrink: 0">foto combo</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'Anton', sans-serif; font-size: 24px; text-transform: uppercase; line-height: 1">Combo Família</span>
+<span style="font-size: 13px; color: #6B5A4E">9 itens · separado: a partir de R$ 269</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 26px; line-height: 1.1">R$ 199</span>
+</div>
+</div>
+<div style="background: #EFE7DC; border-radius: 12px; padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 700">Já incluso</span>
+<span>1 balde de massa 4 kg · 2 baldinhos de massa 1 kg</span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px">
+<div style="display: flex; flex-direction: column">
+<span style="font-size: 17px; font-weight: 700">Escolha 6 doces de 680 g</span>
+<span style="font-size: 12px; color: #6B5A4E">Pode repetir sabor</span>
+</div>
+<span style="height: 30px; padding: 0 12px; border-radius: 15px; background: {{badgeBg}}; color: {{badgeInk}}; font-size: 14px; font-weight: 700; display: flex; align-items: center">{{chosen}}/6</span>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{flavors}}" as="f" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #E6DDD2">
+<div class="ph" style="width: 44px; height: 44px; flex-shrink: 0">pote</div>
+<span style="flex: 1; font-size: 15px; font-weight: 500; color: {{f.ink}}">{{f.nome}}</span>
+<sc-if value="{{f.out}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 700; color: #6B5A4E; padding-right: 8px">Esgotado</span></sc-if>
+<sc-if value="{{f.ok}}" hint-placeholder-val="{{true}}"><div class="st"><button aria-label="Tirar um" onClick="{{f.dec}}" disabled="{{f.noDec}}">−</button><span style="min-width: 16px; text-align: center; font-weight: 700">{{f.q}}</span><button aria-label="Pôr mais um" onClick="{{f.inc}}" disabled="{{full}}">+</button></div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 20px; background: #FAF7F2; border-top: 1px solid #E6DDD2">
+<sc-if value="{{full}}" hint-placeholder-val="{{false}}">
+<a href="Main.dc.html" style="height: 56px; border-radius: 28px; background: #E8923A; color: #2C1810; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-decoration: none">Pôr na sacola · R$ 199</a>
+</sc-if>
+<sc-if value="{{notFull}}" hint-placeholder-val="{{true}}">
+<button disabled style="width: 100%; height: 56px; border-radius: 28px; border: 0; background: #E6DDD2; color: #6B5A4E; font: 700 16px 'DM Sans', sans-serif">{{falta}}</button>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { q: { dl: 2, coco: 2, cocada: 1 } }; }
+  renderVals() {
+    const q = this.state.q || {};
+    const list = [
+      { id: 'dl', nome: 'Doce de leite' },
+      { id: 'coco', nome: 'Doce de leite com coco' },
+      { id: 'cocada', nome: 'Cocada cremosa' },
+      { id: 'ameixa', nome: 'Ameixa' },
+      { id: 'milho', nome: 'Milho', out: true }
+    ];
+    const chosen = list.reduce((s, f) => s + (q[f.id] || 0), 0);
+    const full = chosen >= 6;
+    const set = (id, n) => this.setState({ q: Object.assign({}, q, { [id]: Math.max(0, n) }) });
+    const flavors = list.map((f) => {
+      const n = q[f.id] || 0;
+      return {
+        nome: f.nome, q: n, out: !!f.out, ok: !f.out, noDec: n === 0,
+        ink: f.out ? '#6B5A4E' : '#2C1810',
+        inc: () => { if (!full) set(f.id, n + 1); },
+        dec: () => set(f.id, n - 1)
+      };
+    });
+    const left = 6 - chosen;
+    return {
+      flavors, chosen, full, notFull: !full,
+      falta: left === 1 ? 'Falta escolher 1 doce' : 'Faltam ' + left + ' doces',
+      badgeBg: full ? '#2E7D32' : '#2C1810', badgeInk: '#FAF7F2'
+    };
+  }
+}
+</script>
+</body>
+</html>
