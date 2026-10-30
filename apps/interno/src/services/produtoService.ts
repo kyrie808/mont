@@ -203,6 +203,18 @@ export class ProdutoService {
         }))
     }
 
+    /* COMBOS COM ESCOLHA DE SABOR (combo_grupos) — vendidos só pela loja (apps/loja).
+       O Jarvis não registra sabor escolhido, então a Nova Venda não oferece esses combos. */
+    async getCombosComEscolha(): Promise<string[]> {
+        const { data, error } = await supabase
+            .from('combo_grupos')
+            .select('combo_id')
+
+        if (error) throw error
+
+        return [...new Set((data || []).map((row) => row.combo_id))]
+    }
+
     // Substitui toda a composição do combo de forma ATÔMICA (RPC: delete+insert numa
     // transação). Itens vazio = limpa (desfaz o combo). Evita o estado "combo vazio"
     // que o delete+insert client-side deixava se o insert falhasse após o delete.

@@ -60,6 +60,16 @@ export function useProdutos(includeInactive: boolean = false) {
     }
 }
 
+/** Ids dos combos com escolha de sabor (só a loja vende). Vazio enquanto carrega. */
+export function useCombosComEscolha() {
+    const { data, isLoading: loading } = useQuery({
+        queryKey: ['combos-com-escolha'],
+        queryFn: () => produtoService.getCombosComEscolha(),
+    })
+
+    return { ids: data ?? [], loading }
+}
+
 export function useProduto(id: string | undefined) {
     const { data: produto, isLoading: loading, error, refetch } = useQuery({
         queryKey: ['produto', id],

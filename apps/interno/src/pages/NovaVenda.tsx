@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
-import { useProdutos } from '../hooks/useProdutos'
+import { useCombosComEscolha, useProdutos } from '../hooks/useProdutos'
 import { useCartStore } from '../stores/useCartStore'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
@@ -35,7 +35,14 @@ export function NovaVenda() {
     const isEditing = Boolean(id)
     const toast = useToast()
 
-    const { produtos, loading: loadingProdutos } = useProdutos()
+    const { produtos: todosProdutos, loading: loadingTodosProdutos } = useProdutos()
+    // Combos com escolha de sabor (Combo Família, Balde + doce, 3 doces…) são vendidos só pela loja.
+    const { ids: combosComEscolha, loading: loadingCombos } = useCombosComEscolha()
+    const produtos = useMemo(
+        () => todosProdutos.filter((p) => !combosComEscolha.includes(p.id)),
+        [todosProdutos, combosComEscolha]
+    )
+    const loadingProdutos = loadingTodosProdutos || loadingCombos
     const { getVendaById, createVenda } = useVendas()
     const { getContatoById } = useContatos()
 
