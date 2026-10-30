@@ -113,8 +113,11 @@ export async function carregarVitrine(): Promise<Vitrine> {
 
     // Disponibilidade (decisão P5): chave manual; doces também exigem estoque livre.
     const disponivelNaVitrine = new Map<string, boolean>()
+    // Nome de exibição (loja_vitrine.nome_loja) vale também nos itens fixos e nos sabores dos combos.
+    const nomeNaLoja = new Map<string, string>()
     for (const l of ativas) {
         disponivelNaVitrine.set(l.produto_id, l.disponivel && (!l.usa_estoque || temEstoqueLivre(l.produto.estoque_atual)))
+        nomeNaLoja.set(l.produto_id, l.nome_loja ?? l.produto.nome)
     }
 
     const produtoDaLinha = (l: (typeof ativas)[number]): ProdutoLoja => {
@@ -122,7 +125,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
         return {
             id: l.produto_id,
             slug: l.produto.slug,
-            nome: l.nome_loja ?? l.produto.nome,
+            nome: nomeNaLoja.get(l.produto_id) ?? l.produto.nome,
             subtitulo: l.produto.subtitulo,
             descricao: l.produto.descricao,
             imagemUrl: imagens.get(l.produto_id) ?? null,
@@ -138,7 +141,11 @@ export async function carregarVitrine(): Promise<Vitrine> {
     const fixosDisponiveis = new Map<string, boolean>()
     for (const f of fixosRes.data ?? []) {
         const lista = fixosPorCombo.get(f.combo_id) ?? []
-        lista.push({ produtoId: f.componente.id, nome: f.componente.nome, quantidade: f.quantidade })
+        lista.push({
+            produtoId: f.componente.id,
+            nome: nomeNaLoja.get(f.componente.id) ?? f.componente.nome,
+            quantidade: f.quantidade,
+        })
         fixosPorCombo.set(f.combo_id, lista)
         const ok = disponivelNaVitrine.get(f.componente.id) ?? f.componente.ativo
         fixosDisponiveis.set(f.combo_id, (fixosDisponiveis.get(f.combo_id) ?? true) && ok)
@@ -150,7 +157,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
             .sort((a, b) => a.ordem - b.ordem)
             .map((o) => ({
                 produtoId: o.produto_id,
-                nome: o.produto.nome,
+                nome: nomeNaLoja.get(o.produto_id) ?? o.produto.nome,
                 imagemUrl: imagens.get(o.produto_id) ?? null,
                 disponivel:
                     disponivelNaVitrine.get(o.produto_id) ?? (o.produto.ativo && temEstoqueLivre(o.produto.estoque_atual)),
@@ -180,19 +187,23 @@ export async function carregarVitrine(): Promise<Vitrine> {
             const preco = precos.get(l.produto_id)
             if (!preco) continue
             const grupos = gruposPorCombo.get(l.produto_id) ?? []
+            const fixos = fixosPorCombo.get(l.produto_id) ?? []
+            // Combo só de itens fixos (ex.: Dupla Zero) vai direto para a sacola.
+            // Com grupos, cada grupo precisa de sabores livres suficientes; grupo sem sabores = "em definição".
             const montavel =
-                grupos.length > 0 &&
-                grupos.every((g) => {
-                    const livres = g.opcoes.filter((o) => o.disponivel).length
-                    return g.permiteRepetir ? livres >= 1 : livres >= g.quantidade
-                })
+                grupos.length === 0
+                    ? fixos.length > 0
+                    : grupos.every((g) => {
+                          const livres = g.opcoes.filter((o) => o.disponivel).length
+                          return g.permiteRepetir ? livres >= 1 : livres >= g.quantidade
+                      })
             const combo: ComboLoja = {
                 ...base,
                 precoDe: null,
                 disponivel: base.disponivel && (fixosDisponiveis.get(l.produto_id) ?? true),
                 resumo: l.resumo,
                 ancora: preco.ancora,
-                fixos: fixosPorCombo.get(l.produto_id) ?? [],
+                fixos,
                 grupos,
                 montavel,
             }

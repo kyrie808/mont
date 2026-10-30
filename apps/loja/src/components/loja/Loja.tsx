@@ -9,7 +9,7 @@ import { Foto } from '@/components/Foto'
 import { IconeSacola } from '@/components/IconeSacola'
 import { Seletor } from '@/components/Seletor'
 import { diaMesSP, linkWhatsApp, reais } from '@/lib/formato'
-import { catalogoDa, resumirSacola } from '@/lib/sacola/calculo'
+import { catalogoDa, resumirSacola, totalDeItens } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
 import type { ComboLoja, ProdutoLoja, Vitrine } from '@/lib/vitrine/tipos'
@@ -142,11 +142,8 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
 
     const campanha = vitrine.campanha
     const hero = campanha ? vitrine.hero : null
-    // "9 itens" só quando o combo está completo (fixos + grupos de escolha); sem grupos, só o nome.
-    const fraseHero =
-        hero && hero.montavel
-            ? `${hero.nome}, ${hero.fixos.reduce((s, f) => s + f.quantidade, 0) + hero.grupos.reduce((s, g) => s + g.quantidade, 0)} itens.`
-            : `${hero?.nome ?? ''}.`
+    // "Combo Família, 9 itens.": a composição é fixa; só os sabores podem estar pendentes.
+    const fraseHero = hero ? `${hero.nome}, ${totalDeItens(hero)} itens.` : ''
 
     return (
         <div className="relative pb-[100px]">
@@ -275,7 +272,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 <a href={linkWhatsApp(whatsapp)} target="_blank" rel="noopener noreferrer" className="font-bold">
                     Falar com a Mont no WhatsApp
                 </a>
-                <a href="#privacidade">Política de privacidade</a>
+                <Link href="/privacidade">Política de privacidade</Link>
             </footer>
 
             {resumo.quantidadeItens > 0 && (

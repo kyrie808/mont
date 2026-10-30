@@ -76,14 +76,24 @@ export function resumirSacola(itens: ItemSacola[], catalogo: Catalogo): ResumoSa
     }
 }
 
-/** "Balde 4 kg · 2 baldinhos 1 kg · Doce de leite ×2 …": fixos primeiro, depois cada sabor escolhido. */
+/** "Baldinho de massa 1 kg ×2"; com 1 unidade, só o nome. */
+export function rotuloItem(nome: string, quantidade: number): string {
+    return quantidade > 1 ? `${nome} ×${quantidade}` : nome
+}
+
+/** "Balde de massa 4 kg · Baldinho de massa 1 kg ×2 · Doce de leite … ×2": fixos primeiro, depois cada sabor escolhido. */
 export function descreverCombo(combo: ComboLoja, escolhas: Escolha[]): string {
-    const partes = combo.fixos.map((f) => `${f.quantidade} ${f.nome}`)
+    const partes = combo.fixos.map((f) => rotuloItem(f.nome, f.quantidade))
     for (const g of combo.grupos) {
         for (const e of escolhas.filter((x) => x.grupoId === g.id)) {
             const opcao = g.opcoes.find((o) => o.produtoId === e.produtoId)
-            if (opcao) partes.push(`${opcao.nome} ×${e.quantidade}`)
+            if (opcao) partes.push(rotuloItem(opcao.nome, e.quantidade))
         }
     }
     return partes.join(' · ')
+}
+
+/** Itens do combo pela composição: fixos + o que se escolhe nos grupos (Combo Família = 1 + 2 + 6 = 9). */
+export function totalDeItens(combo: ComboLoja): number {
+    return combo.fixos.reduce((s, f) => s + f.quantidade, 0) + combo.grupos.reduce((s, g) => s + g.quantidade, 0)
 }

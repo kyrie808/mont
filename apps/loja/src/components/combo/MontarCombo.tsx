@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Foto } from '@/components/Foto'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
+import { rotuloItem, totalDeItens } from '@/lib/sacola/calculo'
 import type { Escolha } from '@/lib/sacola/esquema'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
@@ -46,9 +47,8 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
     const definir = (grupoId: string, produtoId: string, n: number) =>
         setQ((atual) => ({ ...atual, [grupoId]: { ...atual[grupoId], [produtoId]: Math.max(0, n) } }))
 
-    const totalItens = combo.fixos.reduce((s, f) => s + f.quantidade, 0) + combo.grupos.reduce((s, g) => s + g.quantidade, 0)
     const linhaInfo = [
-        combo.montavel ? `${totalItens} itens` : null,
+        `${totalDeItens(combo)} itens`,
         combo.ancora !== null ? `separado: a partir de ${reais(combo.ancora)}` : null,
     ]
         .filter(Boolean)
@@ -103,12 +103,8 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                 {combo.fixos.length > 0 && (
                     <div className="flex flex-col gap-0.5 rounded-xl bg-areia px-3 py-2.5 text-[13px]">
                         <span className="font-bold">Já incluso</span>
-                        <span>{combo.fixos.map((f) => `${f.quantidade} ${f.nome}`).join(' · ')}</span>
+                        <span>{combo.fixos.map((f) => rotuloItem(f.nome, f.quantidade)).join(' · ')}</span>
                     </div>
-                )}
-
-                {combo.grupos.length === 0 && (
-                    <p className="mt-1 text-[13px] text-texto-suave">Os sabores deste combo ainda estão sendo definidos.</p>
                 )}
 
                 {combo.grupos.map((g) => {
@@ -127,6 +123,9 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                                     {n}/{g.quantidade}
                                 </span>
                             </div>
+                            {g.opcoes.length === 0 && (
+                                <p className="mt-2 text-[13px] text-texto-suave">Os sabores ainda estão sendo definidos.</p>
+                            )}
                             <div className="flex flex-col">
                                 {g.opcoes.map((o) => {
                                     const qtd = q[g.id]?.[o.produtoId] ?? 0

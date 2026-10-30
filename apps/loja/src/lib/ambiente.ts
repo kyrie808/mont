@@ -4,8 +4,6 @@ const esquemaAmbiente = z.object({
     NEXT_PUBLIC_SUPABASE_URL: z.url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().regex(/^55\d{10,11}$/, 'Número no formato 55DDNNNNNNNNN'),
-    // Só fora de produção: simula o "agora" para conferir a campanha antes de ela começar.
-    LOJA_AGORA: z.iso.datetime({ offset: true }).optional(),
 })
 
 export type Ambiente = z.infer<typeof esquemaAmbiente>
@@ -18,7 +16,6 @@ export function ambiente(): Ambiente {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
-        LOJA_AGORA: process.env.LOJA_AGORA || undefined,
     })
     if (!resultado.success) {
         const campos = resultado.error.issues.map((i) => i.path.join('.')).join(', ')
@@ -28,12 +25,17 @@ export function ambiente(): Ambiente {
     return cache
 }
 
+const esquemaAgoraSimulado = z.iso.datetime({ offset: true })
+
 /**
- * Instante usado para decidir qual campanha vale. Em produção é sempre o relógio.
- * Fora dela, LOJA_AGORA permite ver a Black antes de 03/11 (ex.: 2026-11-05T10:00:00-03:00).
+ * Instante usado para decidir qual campanha vale.
+ *
+ * LOJA_AGORA simula o "agora" (ex.: 2026-11-05T10:00:00-03:00) para conferir a Black antes de 03/11,
+ * no dev e nos previews da Vercel. Em produção (VERCEL_ENV=production) é ignorado SEMPRE — nem é lido —
+ * e vale só o relógio.
  */
 export function instanteDeReferencia(): Date {
-    const { LOJA_AGORA } = ambiente()
-    if (process.env.NODE_ENV !== 'production' && LOJA_AGORA) return new Date(LOJA_AGORA)
-    return new Date()
+    if (process.env.VERCEL_ENV === 'production') return new Date()
+    const simulado = esquemaAgoraSimulado.safeParse(process.env.LOJA_AGORA)
+    return simulado.success ? new Date(simulado.data) : new Date()
 }
