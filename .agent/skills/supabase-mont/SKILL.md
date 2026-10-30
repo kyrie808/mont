@@ -31,8 +31,13 @@ Aprendido dos advisors (05/06/2026). Aplicar SEMPRE, pra não reproduzir débito
 - **FK nova:** criar índice de cobertura na coluna FK.
 - **Depois de QUALQUER DDL:** rodar MCP `get_advisors` (security + performance) e `NOTIFY pgrst, 'reload schema'`.
 
-### Intencional — NÃO "consertar"
-Policies de INSERT públicas em `cat_pedidos`, `cat_itens_pedido`, `contatos` = checkout do catálogo público (anon cria pedido/contato). `criar_pedido` executável por anon = idem. NÃO remover sem verificar o fluxo do catálogo (`criar_pedido` é SECURITY DEFINER — pode tornar as policies redundantes, mas confirmar antes).
+### Remediado em 29/10/2026 (migration `20261029211837_catalogo_fecha_escrita_publica`)
+A antiga regra "INSERT público e `criar_pedido` por anon são intencionais" **caiu**: a premissa (checkout do catálogo chama como anon) estava obsoleta desde 01/04/2026 — o único chamador, `apps/catalogo/src/app/api/pedidos/route.ts`, usa **service role**. Com a chave pública dava para criar pedido/venda com qualquer preço e sobrescrever nome/endereço de contato real pelo telefone.
+- `criar_pedido`: EXECUTE só `service_role` (revogado de `PUBLIC`, `anon`, `authenticated`).
+- Removidas as policies `Public insert orders` (`cat_pedidos`), `Public insert items` (`cat_itens_pedido`), `Public insert access` (`contatos`). Admin escreve pelas policies de admin; Edge Functions e rotas do catálogo usam service role; funções `SECURITY DEFINER` ignoram RLS.
+- `anon` sem `INSERT/UPDATE/DELETE` nessas 3 tabelas (defesa em profundidade).
+- **NÃO reabrir** escrita pública nessas tabelas nem devolver `criar_pedido` a anon. Checkout público novo (ex.: `apps/loja`) = server action/route handler com service role chamando RPC própria, nunca anon. Rollback (só se o checkout quebrar): `supabase/rollbacks/20261029211837_catalogo_fecha_escrita_publica.rollback.sql`.
+- Pendente (Fase 2 da loja, junto com o endereço no pedido): `criar_pedido` ainda sobrescreve nome/endereço de contato existente quando chamado pela rota legítima.
 
 ### Remediado em 05/06/2026 (migration `20260605231500_security_lint_cleanup`)
 - `rpc_perfil_extras`: revogado `anon`/`PUBLIC` (tinha escapado do hardening de maio).
@@ -40,10 +45,10 @@ Policies de INSERT públicas em `cat_pedidos`, `cat_itens_pedido`, `contatos` = 
 - Bucket `products`: removida a policy de SELECT público amplo (listagem). `getPublicUrl` não depende dela; escrita segue admin-only.
 
 ### Aceito com controle — NÃO revogar
-12 funções `SECURITY DEFINER` executáveis por `authenticated` (10 financeiras/admin + `is_admin` + `criar_pedido`). **Já têm guard `is_admin()` interno** (verificado no corpo) — `is_admin()` consulta `public.admin_users`, então não-admin barra. Revogar `authenticated` quebraria o `apps/interno` (chama via sessão autenticada). O guard interno É o controle correto; o lint `0029` é aceito.
+11 funções `SECURITY DEFINER` executáveis por `authenticated` (10 financeiras/admin + `is_admin`; `criar_pedido` saiu desta lista em 29/10/2026 — virou só `service_role` e, na verdade, nunca teve guard `is_admin`). **Já têm guard `is_admin()` interno** (verificado no corpo) — `is_admin()` consulta `public.admin_users`, então não-admin barra. Revogar `authenticated` quebraria o `apps/interno` (chama via sessão autenticada). O guard interno É o controle correto; o lint `0029` é aceito.
 
 ### ⚠️ GATE pré-área-do-cliente
-Quando clientes passarem a logar (viram `authenticated`), confirmar que o modelo de auth do cliente NUNCA os insere em `public.admin_users` — é isso que mantém o guard `is_admin` válido contra as 12 funções acima. Levantar este gate quando o trabalho da área do cliente começar.
+Quando clientes passarem a logar (viram `authenticated`), confirmar que o modelo de auth do cliente NUNCA os insere em `public.admin_users` — é isso que mantém o guard `is_admin` válido contra as 11 funções acima. Levantar este gate quando o trabalho da área do cliente começar.
 
 ### Débito conhecido remanescente (trilha de performance, sob demanda)
 Policies duplas (`Admin full access` + `Authenticated read`), FKs sem índice, índices de auditoria não usados, leaked-password protection (toggle no Dashboard). Prioridade menor que segurança.
