@@ -50,6 +50,11 @@
     - Cocada cremosa e cocada com maracujá
     - Doce de milho
   - **Geleias:** só no Kit Top.
+- **DECIDIDO (30/10):** a **Dupla Zero é FIXA**: 1 doce de leite zero 400 g + 1 brigadeiro de colher zero 400 g, **sem grupo de escolha** (vale a composição atual em `produto_componentes`). Substitui o "2 zero 400 g à escolha" do BRIEFING.
+- **DECIDIDO (30/10):** a **composição** dos combos com escolha é fixa; só os **sabores** estão pendentes. Os grupos foram criados sem opções (migration `20261030053815_loja_combos_composicao`):
+  - Combo Família: balde 4 kg ×1 + baldinho 1 kg ×2 + "Escolha 6 doces de 680 g" (9 itens);
+  - Balde + doce: balde 4 kg ×1 + "Escolha 1 doce de 680 g";
+  - 3 doces: "Escolha 3 doces de 680 g".
 - **Âncora "separado: a partir de"** = soma dos avulsos no preço Black com o sabor mais barato do grupo:
   - Combo Família: R$ 293
   - Balde + doce: R$ 94
