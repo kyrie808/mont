@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Paleta e fontes do wireframe aprovado (docs/loja-black/wireframe/LEIA-ME.md). */
+@theme {
+    --color-creme: #FAF7F2;          /* fundo */
+    --color-marrom: #2C1810;         /* texto, botões escuros */
+    --color-marrom-medio: #3D2B22;
+    --color-texto-suave: #6B5A4E;    /* texto secundário */
+    --color-linha: #E6DDD2;          /* bordas e divisórias */
+    --color-areia: #EFE7DC;          /* placeholder, blocos de apoio */
+    --color-tracejado: #C9B9A6;      /* borda tracejada, desabilitado */
+    --color-laranja: #E8923A;        /* CTA (texto marrom sobre ele) */
+    --color-verde: #2E7D32;          /* confirmação */
+}
+
+/* As fontes vêm de next/font (variáveis no <html>); "inline" para usar a variável em tempo de execução. */
+@theme inline {
+    --font-titulo: var(--font-anton), sans-serif;        /* Fonte A (provisória: Anton) */
+    --font-corpo: var(--font-dm-sans), sans-serif;
+    --font-apoio: var(--font-instrument-serif), serif;   /* Fonte B (provisória: Instrument Serif itálico) */
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--color-creme);
+    color: var(--color-marrom);
+    font-family: var(--font-corpo);
+    -webkit-tap-highlight-color: transparent;
+}
+
+a {
+    color: var(--color-marrom);
+}
