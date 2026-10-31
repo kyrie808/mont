@@ -9,6 +9,7 @@ import { Spinner } from './components/ui'
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
 const Contatos = lazy(() => import('./pages/Contatos').then(m => ({ default: m.Contatos })))
 const ContatoDetalhe = lazy(() => import('./pages/ContatoDetalhe').then(m => ({ default: m.ContatoDetalhe })))
+import { EdicaoVendaDesligada } from './components/features/vendas/EdicaoVendaDesligada'
 const NovaVenda = lazy(() => import('./pages/NovaVenda').then(m => ({ default: m.NovaVenda })))
 const Vendas = lazy(() => import('./pages/Vendas').then(m => ({ default: m.Vendas })))
 const VendaDetalhe = lazy(() => import('./pages/VendaDetalhe').then(m => ({ default: m.VendaDetalhe })))
@@ -57,7 +58,8 @@ function App() {
               <Route path="/nova-venda" element={<NovaVenda />} />
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/vendas/:id" element={<VendaDetalhe />} />
-              <Route path="/vendas/:id/editar" element={<NovaVenda />} />
+              {/* Edição desligada (31/10/2026): criava venda nova em vez de alterar. */}
+              <Route path="/vendas/:id/editar" element={<EdicaoVendaDesligada />} />
               <Route path="/ranking" element={<Ranking />} />
               <Route path="/pedidos-compra" element={<PedidosCompra />} />
               <Route path="/relacionamento" element={<Relacionamento />} />
