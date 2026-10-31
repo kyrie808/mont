@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Loja Mont — página única</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=DM+Sans:wght@400;500;700&amp;family=Instrument+Serif:ital@0;1&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2C1810}a:hover{color:#3D2B22}
+.ph{background:#EFE7DC;border:1px dashed #C9B9A6;border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#6B5A4E;font-size:11px;line-height:1.3;padding:6px;box-sizing:border-box}
+.add{height:40px;padding:0 16px;border-radius:20px;border:1.5px solid #2C1810;background:#FAF7F2;color:#2C1810;font:700 14px 'DM Sans',sans-serif;cursor:pointer}
+.step{display:flex;align-items:center;height:40px;border-radius:20px;background:#2C1810;color:#FAF7F2}
+.step button{width:44px;height:40px;border:0;background:transparent;color:#FAF7F2;font:700 18px 'DM Sans',sans-serif;cursor:pointer}
+.chip{height:36px;padding:0 14px;border-radius:18px;display:flex;align-items:center;font:700 13px 'DM Sans',sans-serif;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 2800px; position: relative; overflow: hidden; background: #FAF7F2; font-family: 'DM Sans', sans-serif; color: #2C1810">
+
+<header style="height: 64px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #FAF7F2; border-bottom: 1px solid #E6DDD2">
+<div style="display: flex; align-items: center; gap: 10px">
+<div class="ph" style="width: 40px; height: 40px; border-radius: 20px; font-size: 9px">logo</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Anton', sans-serif; font-size: 20px; letter-spacing: 0.5px; line-height: 1">MONT</span>
+<span style="font-size: 12px; color: #2E7D32; font-weight: 700">Pedidos 24h · entrega na rota</span>
+</div>
+</div>
+<a href="Sacola.dc.html" aria-label="Abrir sacola, 2 itens" style="position: relative; width: 44px; height: 44px; border-radius: 22px; border: 1px solid #E6DDD2; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C1810" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+<span style="position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; border-radius: 10px; background: #E8923A; color: #2C1810; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{count}}</span>
+</a>
+</header>
+
+<nav aria-label="Categorias" style="height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #E6DDD2">
+<a class="chip" href="#combos" style="background: #2C1810; color: #FAF7F2">Combos da Black</a>
+<a class="chip" href="#massa" style="background: #EFE7DC; color: #2C1810">Massa</a>
+<a class="chip" href="#doces" style="background: #EFE7DC; color: #2C1810">Doces</a>
+<a class="chip" href="#zero" style="background: #EFE7DC; color: #2C1810">Zero</a>
+</nav>
+
+<section style="margin: 16px; border-radius: 20px; background: #2C1810; color: #FAF7F2; padding: 20px; display: flex; gap: 12px; position: relative; overflow: hidden">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #E8923A">BLACK DA MONT · ATÉ 30/11</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 40px; line-height: 0.95; text-transform: uppercase">Despensa cheia</span>
+<span style="font-family: 'Instrument Serif', serif; font-style: italic; font-size: 22px; line-height: 1.1; color: #FAF7F2">Combo Família, 9 itens.</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 36px; color: #E8923A; line-height: 1">R$ 199</span>
+<span style="font-size: 12px; color: #E6DDD2">Preço no Pix. Cartão com a taxa da maquininha.</span>
+</div>
+<div class="ph" style="width: 120px; height: 170px; background: #3D2B22; border-color: #6B5A4E; color: #E6DDD2">foto: balde + baldinhos + potes</div>
+</section>
+
+<section id="combos" style="padding: 8px 16px 0; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 8px 0 0; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 26px; text-transform: uppercase; letter-spacing: 0.5px">Combos da Black</h2>
+<sc-for list="{{combos}}" as="c" hint-placeholder-count="5">
+<article style="display: flex; gap: 12px; padding: 12px; border: 1px solid #E6DDD2; border-radius: 16px; background: #FFFFFF">
+<div class="ph" style="width: 88px; height: 88px; flex-shrink: 0">{{c.foto}}</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<span style="font-size: 16px; font-weight: 700">{{c.nome}}</span>
+<span style="font-size: 12px; color: #6B5A4E; line-height: 1.35">{{c.itens}}</span>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px">
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Anton', sans-serif; font-size: 22px; line-height: 1">{{c.preco}}</span>
+<span style="font-size: 11px; color: #6B5A4E">{{c.ancora}}</span>
+</div>
+<a href="Combo.dc.html" style="height: 40px; padding: 0 14px; border-radius: 20px; background: #E8923A; color: #2C1810; font-size: 14px; font-weight: 700; display: flex; align-items: center; text-decoration: none">Montar</a>
+</div>
+</div>
+</article>
+</sc-for>
+</section>
+
+<section id="massa" style="padding: 24px 16px 0; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 26px; text-transform: uppercase; letter-spacing: 0.5px">Massa de pão de queijo</h2>
+<span style="font-size: 13px; color: #6B5A4E; margin-top: -6px">Queijo Canastra de verdade. Parmesão e Meia Cura.</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{massa}}" as="p" hint-placeholder-count="2">
+<article style="border: 1px solid #E6DDD2; border-radius: 16px; background: #FFFFFF; padding: 10px; display: flex; flex-direction: column; gap: 6px">
+<a href="Produto.dc.html" class="ph" style="height: 120px; text-decoration: none">{{p.foto}}</a>
+<span style="font-size: 14px; font-weight: 700; line-height: 1.25">{{p.nome}}</span>
+<span style="font-size: 11px; color: #6B5A4E">{{p.sub}}</span>
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-size: 12px; color: #6B5A4E; text-decoration: line-through">{{p.de}}</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 22px">{{p.preco}}</span>
+</div>
+<sc-if value="{{p.zero}}" hint-placeholder-val="{{true}}"><button class="add" onClick="{{p.add}}" style="width: 100%">Adicionar</button></sc-if>
+<sc-if value="{{p.tem}}" hint-placeholder-val="{{false}}"><div class="step" style="justify-content: space-between"><button aria-label="Tirar um" onClick="{{p.dec}}">−</button><span style="font-weight: 700">{{p.q}}</span><button aria-label="Pôr mais um" onClick="{{p.inc}}">+</button></div></sc-if>
+</article>
+</sc-for>
+</div>
+</section>
+
+<section id="doces" style="padding: 24px 16px 0; display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0 0 4px; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 26px; text-transform: uppercase; letter-spacing: 0.5px">Doces Duas Irmãs</h2>
+<span style="font-size: 13px; color: #6B5A4E; margin-bottom: 4px">Potes de 680 g e 400 g · sabores conforme estoque</span>
+<sc-for list="{{doces}}" as="p" hint-placeholder-count="9">
+<article style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #E6DDD2">
+<a href="Produto.dc.html" class="ph" style="width: 56px; height: 56px; flex-shrink: 0; text-decoration: none">pote</a>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 14px; font-weight: 700">{{p.nome}}</span>
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-size: 11px; color: #6B5A4E; text-decoration: line-through">{{p.de}}</span>
+<span style="font-size: 16px; font-weight: 700">{{p.preco}}</span>
+<span style="font-size: 11px; color: #6B5A4E">{{p.sub}}</span>
+</div>
+</div>
+<sc-if value="{{p.out}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 700; color: #6B5A4E; padding: 0 8px">Esgotado</span></sc-if>
+<sc-if value="{{p.zero}}" hint-placeholder-val="{{true}}"><button class="add" onClick="{{p.add}}">Adicionar</button></sc-if>
+<sc-if value="{{p.tem}}" hint-placeholder-val="{{false}}"><div class="step"><button aria-label="Tirar um" onClick="{{p.dec}}">−</button><span style="font-weight: 700; min-width: 16px; text-align: center">{{p.q}}</span><button aria-label="Pôr mais um" onClick="{{p.inc}}">+</button></div></sc-if>
+</article>
+</sc-for>
+</section>
+
+<section id="zero" style="padding: 24px 16px 0; display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0 0 4px; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 26px; text-transform: uppercase; letter-spacing: 0.5px">Linha zero</h2>
+<span style="font-size: 13px; color: #6B5A4E; margin-bottom: 4px">Zero adição de açúcares. Doce do mesmo jeito.</span>
+<sc-for list="{{zero}}" as="p" hint-placeholder-count="2">
+<article style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #E6DDD2">
+<a href="Produto.dc.html" class="ph" style="width: 56px; height: 56px; flex-shrink: 0; text-decoration: none">pote</a>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 14px; font-weight: 700">{{p.nome}}</span>
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-size: 11px; color: #6B5A4E; text-decoration: line-through">{{p.de}}</span>
+<span style="font-size: 16px; font-weight: 700">{{p.preco}}</span>
+<span style="font-size: 11px; color: #6B5A4E">{{p.sub}}</span>
+</div>
+</div>
+<sc-if value="{{p.zero}}" hint-placeholder-val="{{true}}"><button class="add" onClick="{{p.add}}">Adicionar</button></sc-if>
+<sc-if value="{{p.tem}}" hint-placeholder-val="{{false}}"><div class="step"><button aria-label="Tirar um" onClick="{{p.dec}}">−</button><span style="font-weight: 700; min-width: 16px; text-align: center">{{p.q}}</span><button aria-label="Pôr mais um" onClick="{{p.inc}}">+</button></div></sc-if>
+</article>
+</sc-for>
+</section>
+
+<footer style="margin: 28px 16px 0; padding: 20px 0 0; border-top: 1px solid #E6DDD2; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #6B5A4E">
+<span>Entregamos no ABC e em São Paulo · frete pelo bairro.</span>
+<a href="https://wa.me/" style="font-weight: 700">Falar com a Mont no WhatsApp</a>
+<a href="#privacidade">Política de privacidade</a>
+</footer>
+
+<a href="Sacola.dc.html" style="position: absolute; left: 12px; right: 12px; bottom: 16px; height: 60px; border-radius: 30px; background: #2C1810; color: #FAF7F2; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 20px; text-decoration: none; box-shadow: 0 8px 24px rgba(44,24,16,0.25)">
+<span style="font-size: 15px; font-weight: 700">Ver sacola · {{count}} itens</span>
+<span style="height: 44px; padding: 0 18px; border-radius: 22px; background: #E8923A; color: #2C1810; font-size: 16px; font-weight: 700; display: flex; align-items: center">{{total}}</span>
+</a>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { q: { baldinho: 1 } };
+  }
+  renderVals() {
+    const q = this.state.q || {};
+    const set = (id, n) => this.setState({ q: Object.assign({}, q, { [id]: Math.max(0, n) }) });
+    const brl = (v) => 'R$ ' + v;
+    const prod = (p) => {
+      const n = q[p.id] || 0;
+      return Object.assign({}, p, {
+        q: n, de: p.de ? 'R$ ' + p.de : '', preco: brl(p.price),
+        zero: !p.out && n === 0, tem: !p.out && n > 0, out: !!p.out,
+        add: () => set(p.id, 1), inc: () => set(p.id, n + 1), dec: () => set(p.id, n - 1)
+      });
+    };
+    const massa = [
+      { id: 'balde', nome: 'Balde de massa 4 kg', sub: 'rende ~80 recheados de 50 g', de: 75, price: 65, foto: 'foto: balde 4 kg' },
+      { id: 'baldinho', nome: 'Baldinho de massa 1 kg', sub: 'pra testar ou pra semana', de: 30, price: 27, foto: 'foto: baldinho 1 kg' }
+    ].map(prod);
+    const doces = [
+      { id: 'dl', nome: 'Doce de leite 680 g', de: 35, price: 29 },
+      { id: 'coco', nome: 'Doce de leite com coco 680 g', de: 35, price: 29 },
+      { id: 'cocada', nome: 'Cocada cremosa 680 g', de: 35, price: 29 },
+      { id: 'ameixa', nome: 'Ameixa 680 g', de: 35, price: 29 },
+      { id: 'milho', nome: 'Milho 680 g', de: 35, price: 29, out: true },
+      { id: 'morango', nome: 'Geleia de morango 680 g', de: 39, price: 33 },
+      { id: 'frutas', nome: 'Geleia de frutas vermelhas 680 g', de: 41, price: 35 },
+      { id: 'goiaba', nome: 'Geleia de goiaba 680 g', de: 29, price: 25 },
+      { id: 'dl400', nome: 'Doce de leite 400 g', de: 25, price: 21 }
+    ].map(prod);
+    const zero = [
+      { id: 'dlzero', nome: 'Doce de leite zero 400 g', de: 45, price: 39 },
+      { id: 'brigzero', nome: 'Brigadeiro zero 400 g', de: 45, price: 39 }
+    ].map(prod);
+    const all = massa.concat(doces, zero);
+    const n = all.reduce((s, p) => s + p.q, 0);
+    const t = all.reduce((s, p) => s + p.q * p.price, 0);
+    const combos = [
+      { nome: 'Combo Família', itens: 'Balde 4 kg + 2 baldinhos 1 kg + 6 doces 680 g à escolha', preco: 'R$ 199', ancora: 'separado: a partir de R$ 269', foto: 'foto combo' },
+      { nome: 'Balde + doce', itens: 'Balde 4 kg + 1 doce 680 g à escolha', preco: 'R$ 85', ancora: 'separado: a partir de R$ 90', foto: 'foto combo' },
+      { nome: 'Kit Top', itens: '2 baldinhos 1 kg + 1 geleia 680 g + doce de leite 400 g de brinde', preco: 'R$ 100', ancora: 'preço pendente (100 ou 89)', foto: 'foto combo' },
+      { nome: '3 doces', itens: '3 doces 680 g à escolha', preco: 'R$ 79', ancora: 'separado: R$ 87', foto: 'foto combo' },
+      { nome: 'Dupla Zero', itens: '2 doces zero 400 g à escolha', preco: 'R$ 75', ancora: 'fora da Black: R$ 90', foto: 'foto combo' }
+    ];
+    return { massa, doces, zero, combos, count: 1 + n, total: brl(199 + t) };
+  }
+}
+</script>
+</body>
+</html>

@@ -17,8 +17,9 @@ import { supabase } from '../lib/supabase'
  * é quem abre o Dashboard todo dia, então é o único lugar onde o aviso é visto a tempo
  * de alguém agir. Sem faturamento errado na tela, só a campanha otimizando às cegas.
  *
- * Limiar de 24h porque o worker roda 1x/dia (06:00). Evento criado hoje à tarde está
- * pendente por projeto, não por falha — só vira alerta quando perde a janela seguinte.
+ * Limiar de 3h porque o worker roda de hora em hora (desde 30/10/2026; antes era 1x/dia
+ * e o limiar era 24h). Evento da última hora está pendente por projeto, não por falha:
+ * só vira alerta depois de perder duas rodadas seguidas.
  */
 export interface AlertaCapi {
     pendentes: number
@@ -28,8 +29,8 @@ export interface AlertaCapi {
     valor_represado: number
 }
 
-/** Horas de fila parada a partir das quais vira alerta (o worker roda 1x/dia). */
-export const HORAS_PARA_ALERTAR = 24
+/** Horas de fila parada a partir das quais vira alerta (o worker roda de hora em hora). */
+export const HORAS_PARA_ALERTAR = 3
 
 export function useAlertaCapi() {
     const { data, refetch } = useQuery({

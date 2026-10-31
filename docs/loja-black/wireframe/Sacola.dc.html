@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Sacola</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2C1810}a:hover{color:#3D2B22}
+.ph{background:#EFE7DC;border:1px dashed #C9B9A6;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;color:#6B5A4E;font-size:10px;box-sizing:border-box}
+.st{display:flex;align-items:center;height:36px;border-radius:18px;border:1.5px solid #2C1810}
+.st button{width:40px;height:34px;border:0;background:transparent;color:#2C1810;font:700 17px 'DM Sans',sans-serif;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FAF7F2; font-family: 'DM Sans', sans-serif; color: #2C1810">
+<header style="height: 56px; padding: 0 8px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #E6DDD2">
+<a href="Main.dc.html" aria-label="Voltar para a loja" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 22px">←</a>
+<span style="font-size: 16px; font-weight: 700">Sua sacola</span>
+<span style="margin-left: auto; padding-right: 12px; font-size: 12px; color: #6B5A4E">1 Sacola · 2 Dados · 3 Pagamento</span>
+</header>
+<div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 12px">
+<article style="display: flex; gap: 12px; padding: 12px; border: 1px solid #E6DDD2; border-radius: 14px; background: #FFFFFF">
+<div class="ph" style="width: 56px; height: 56px; flex-shrink: 0">combo</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between"><span style="font-size: 15px; font-weight: 700">Combo Família</span><span style="font-size: 15px; font-weight: 700">R$ 199</span></div>
+<span style="font-size: 12px; color: #6B5A4E; line-height: 1.4">Balde 4 kg · 2 baldinhos 1 kg · Doce de leite ×2 · DL com coco ×2 · Cocada ×1 · Ameixa ×1</span>
+<a href="Combo.dc.html" style="font-size: 13px; font-weight: 700">Trocar sabores</a>
+</div>
+</article>
+<article style="display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px solid #E6DDD2; border-radius: 14px; background: #FFFFFF">
+<div class="ph" style="width: 56px; height: 56px; flex-shrink: 0">baldinho</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 700">Baldinho de massa 1 kg</span>
+<span style="font-size: 13px">R$ 27</span>
+</div>
+<div class="st"><button aria-label="Tirar um">−</button><span style="min-width: 14px; text-align: center; font-weight: 700">1</span><button aria-label="Pôr mais um">+</button></div>
+</article>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: #EFE7DC">
+<div class="ph" style="width: 44px; height: 44px; flex-shrink: 0; background: #FAF7F2">pote</div>
+<div style="flex: 1; display: flex; flex-direction: column">
+<span style="font-size: 12px; font-weight: 700; color: #6B5A4E">LEVA JUNTO?</span>
+<span style="font-size: 14px; font-weight: 700">Doce de leite 400 g · R$ 21</span>
+</div>
+<button style="height: 36px; padding: 0 14px; border-radius: 18px; border: 1.5px solid #2C1810; background: transparent; color: #2C1810; font: 700 13px 'DM Sans', sans-serif">+ Pôr</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px">
+<label for="bairro" style="font-size: 15px; font-weight: 700">Entrega</label>
+<div id="bairro" style="height: 52px; border: 1.5px solid #2C1810; border-radius: 12px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; background: #FFFFFF">
+<span>Rudge Ramos · São Bernardo</span><span aria-hidden="true">▾</span>
+</div>
+<span style="font-size: 12px; color: #6B5A4E">Frete deste bairro: R$ [FRETE] · próxima rota: [DIA]</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; border-top: 1px solid #E6DDD2; padding-top: 12px">
+<div style="display: flex; justify-content: space-between"><span>Produtos</span><span>R$ 226</span></div>
+<div style="display: flex; justify-content: space-between"><span>Frete</span><span>R$ [FRETE]</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 17px; font-weight: 700"><span>Total no Pix</span><span>R$ 226 + frete</span></div>
+<span style="font-size: 12px; color: #6B5A4E">No cartão, a taxa da maquininha entra no próximo passo.</span>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 20px; background: #FAF7F2; border-top: 1px solid #E6DDD2">
+<a href="Dados.dc.html" style="height: 56px; border-radius: 28px; background: #E8923A; color: #2C1810; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-decoration: none">Continuar</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

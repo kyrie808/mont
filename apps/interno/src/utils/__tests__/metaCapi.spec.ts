@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { escolherCanal, montarEvento, erroTransitorio, lerEventIds } from '@mont/shared'
+import { escolherCanal, montarEvento, erroTransitorio, lerEventIds, foraDaJanelaMeta } from '@mont/shared'
 
 /**
  * Unit (sem banco) da decisão de canal da Meta CAPI. Fonte: packages/shared/src/metaCapi.ts.
@@ -164,5 +164,31 @@ describe('lerEventIds', () => {
         expect(lerEventIds({ event_ids: 'lead_a' })).toBeNull()
         expect(lerEventIds({ event_ids: ['lead_a', 3] })).toBeNull()
         expect(lerEventIds({ event_ids: ['lead_a', ''] })).toBeNull()
+    })
+})
+
+describe('foraDaJanelaMeta', () => {
+    // A Meta recusa (erro 100, subcode 2804003) evento com mais de 7 dias. Os 3 casos
+    // reais de out/2026: vendas de junho/julho marcadas como entregues só em 18-20/10.
+    const AGORA = new Date('2026-10-30T15:00:00.000Z')
+
+    it('as 3 vendas antigas (03/06, 05/06, 12/07) estão fora', () => {
+        expect(foraDaJanelaMeta('2026-06-03T00:00:00+00:00', AGORA)).toBe(true)
+        expect(foraDaJanelaMeta('2026-06-05T00:00:00+00:00', AGORA)).toBe(true)
+        expect(foraDaJanelaMeta('2026-07-12T00:00:00+00:00', AGORA)).toBe(true)
+    })
+
+    it('evento de hoje e de 6 dias atrás estão dentro', () => {
+        expect(foraDaJanelaMeta('2026-10-30T09:00:00.000Z', AGORA)).toBe(false)
+        expect(foraDaJanelaMeta('2026-10-24T15:00:00.000Z', AGORA)).toBe(false)
+    })
+
+    it('o limite é 7 dias exatos: um segundo depois já está fora', () => {
+        expect(foraDaJanelaMeta('2026-10-23T15:00:00.000Z', AGORA)).toBe(false)
+        expect(foraDaJanelaMeta('2026-10-23T14:59:59.000Z', AGORA)).toBe(true)
+    })
+
+    it('data ilegível não é descartada (o worker tenta e a Meta diz o erro)', () => {
+        expect(foraDaJanelaMeta('não é data', AGORA)).toBe(false)
     })
 })

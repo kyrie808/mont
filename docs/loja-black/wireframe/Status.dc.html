@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Acompanhar pedido</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2C1810}a:hover{color:#3D2B22}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FAF7F2; font-family: 'DM Sans', sans-serif; color: #2C1810">
+<header style="height: 56px; padding: 0 8px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #E6DDD2">
+<a href="Main.dc.html" aria-label="Voltar para a loja" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 22px">←</a>
+<span style="font-size: 16px; font-weight: 700">Pedido #[NÚMERO]</span>
+</header>
+<div style="padding: 20px 16px 0; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: #6B5A4E">AGORA</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 30px; text-transform: uppercase; line-height: 1">Saiu para entrega</span>
+<span style="font-size: 15px">Você é a <strong>4ª parada</strong> da rota de hoje.</span>
+</div>
+<ol style="list-style: none; margin: 24px 16px 0; padding: 0; display: flex; flex-direction: column">
+<sc-for list="{{passos}}" as="p" hint-placeholder-count="5">
+<li style="display: flex; gap: 14px; min-height: 64px">
+<div style="display: flex; flex-direction: column; align-items: center; width: 24px">
+<span style="width: 24px; height: 24px; border-radius: 12px; background: {{p.dot}}; border: {{p.ring}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center; color: #FAF7F2; font-size: 13px; font-weight: 700">{{p.mark}}</span>
+<span style="flex: 1; width: 2px; background: {{p.line}}"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding-bottom: 14px">
+<span style="font-size: 15px; font-weight: {{p.peso}}; color: {{p.ink}}">{{p.nome}}</span>
+<span style="font-size: 12px; color: #6B5A4E">{{p.quando}}</span>
+</div>
+</li>
+</sc-for>
+</ol>
+<div style="margin: 8px 16px 0; padding: 12px 14px; border-radius: 12px; background: #EFE7DC; font-size: 13px">Cada passo também chega no seu WhatsApp. Não precisa ficar nesta tela.</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 20px">
+<a href="https://wa.me/" style="height: 52px; border-radius: 26px; border: 1.5px solid #2C1810; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-decoration: none">Falar com a Mont no WhatsApp</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const raw = [
+      { nome: 'Pedido recebido', quando: '[DATA] 22:41', st: 'ok' },
+      { nome: 'Pagamento aprovado', quando: 'Pix · [DATA] 22:42', st: 'ok' },
+      { nome: 'Separado', quando: '[DIA] 08:10', st: 'ok' },
+      { nome: 'Saiu para entrega', quando: '[DIA] 09:30 · você é a 4ª parada', st: 'now' },
+      { nome: 'Entregue', quando: 'previsão: [DIA], manhã', st: 'todo' }
+    ];
+    const passos = raw.map((p, i) => ({
+      nome: p.nome, quando: p.quando,
+      mark: p.st === 'ok' ? '✓' : '',
+      dot: p.st === 'ok' ? '#2E7D32' : (p.st === 'now' ? '#E8923A' : '#FAF7F2'),
+      ring: p.st === 'todo' ? '2px solid #C9B9A6' : '0',
+      line: i === raw.length - 1 ? 'transparent' : (p.st === 'ok' ? '#2E7D32' : '#E6DDD2'),
+      peso: p.st === 'now' ? 700 : 500,
+      ink: p.st === 'todo' ? '#6B5A4E' : '#2C1810'
+    }));
+    return { passos };
+  }
+}
+</script>
+</body>
+</html>
