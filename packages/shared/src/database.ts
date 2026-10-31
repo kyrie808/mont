@@ -1393,6 +1393,8 @@ export type Database = {
       }
       itens_venda: {
         Row: {
+          combo_id: string | null
+          combo_instancia: string | null
           custo_unitario: number | null
           id: string
           preco_unitario: number
@@ -1402,6 +1404,8 @@ export type Database = {
           venda_id: string
         }
         Insert: {
+          combo_id?: string | null
+          combo_instancia?: string | null
           custo_unitario?: number | null
           id?: string
           preco_unitario: number
@@ -1411,6 +1415,8 @@ export type Database = {
           venda_id: string
         }
         Update: {
+          combo_id?: string | null
+          combo_instancia?: string | null
           custo_unitario?: number | null
           id?: string
           preco_unitario?: number
@@ -2074,6 +2080,7 @@ export type Database = {
           evento: string
           id: string
           moeda: string
+          motivo_descarte: string | null
           resposta_meta: Json | null
           status: string
           tentativas: number
@@ -2091,6 +2098,7 @@ export type Database = {
           evento: string
           id?: string
           moeda?: string
+          motivo_descarte?: string | null
           resposta_meta?: Json | null
           status?: string
           tentativas?: number
@@ -2108,6 +2116,7 @@ export type Database = {
           evento?: string
           id?: string
           moeda?: string
+          motivo_descarte?: string | null
           resposta_meta?: Json | null
           status?: string
           tentativas?: number
@@ -2882,6 +2891,7 @@ export type Database = {
           recebido_em: string | null
           recebido_por_entregador_id: string | null
           status: string
+          tabela_preco: string | null
           taxa_entrega: number | null
           total: number
           updated_by: string | null
@@ -2917,6 +2927,7 @@ export type Database = {
           recebido_em?: string | null
           recebido_por_entregador_id?: string | null
           status?: string
+          tabela_preco?: string | null
           taxa_entrega?: number | null
           total: number
           updated_by?: string | null
@@ -2952,6 +2963,7 @@ export type Database = {
           recebido_em?: string | null
           recebido_por_entregador_id?: string | null
           status?: string
+          tabela_preco?: string | null
           taxa_entrega?: number | null
           total?: number
           updated_by?: string | null
@@ -4238,6 +4250,21 @@ export type Database = {
           venda_id: string
         }[]
       }
+      campanha_vigente: { Args: { p_em?: string }; Returns: string }
+      combo_itens: {
+        Args: {
+          p_combo_id: string
+          p_em?: string
+          p_escolhas: Json
+          p_tabela: string
+        }
+        Returns: {
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }[]
+      }
       criar_obrigacao_parcelada: {
         Args: {
           p_credor: string
@@ -4288,6 +4315,7 @@ export type Database = {
           p_itens: Json
           p_observacao_entregador?: string
           p_status?: string
+          p_tabela?: string
           p_taxa_entrega: number
         }
         Returns: string
@@ -4417,6 +4445,21 @@ export type Database = {
       }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_entregador: { Args: { check_user_id?: string }; Returns: boolean }
+      preco_tabela: {
+        Args: { p_em?: string; p_produto_id: string; p_tabela: string }
+        Returns: number
+      }
+      precos_vigentes: {
+        Args: { p_em?: string }
+        Returns: {
+          campanha: string
+          campanha_fim: string
+          cartao: number
+          normal: number
+          pix: number
+          produto_id: string
+        }[]
+      }
       produtos_comprados_juntos: {
         Args: { p_limit?: number; p_produto_id: string }
         Returns: {

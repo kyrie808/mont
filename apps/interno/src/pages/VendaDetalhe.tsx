@@ -227,6 +227,7 @@ export function VendaDetalhe() {
                         total={venda.total}
                         valorPago={venda.valorPago || 0}
                         historico={venda.pagamentos}
+                        tabelaPreco={venda.tabelaPreco ?? null}
                     />
                 )}
             </Drawer>

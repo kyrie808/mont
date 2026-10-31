@@ -14,7 +14,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["META_CAPI_TOKEN", "META_PIXEL_ID"]
+      "env": ["META_CAPI_TOKEN", "META_PIXEL_ID", "VITE_AGORA_SIMULADO", "VITE_VERCEL_ENV"]
     },
     "dev": {
       "cache": false,

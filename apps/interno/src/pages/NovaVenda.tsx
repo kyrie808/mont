@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
-import { useCombosComEscolha, useProdutos } from '../hooks/useProdutos'
-import { useCartStore } from '../stores/useCartStore'
+import { useCombosMontagem, usePrecosVigentes, useProdutos } from '../hooks/useProdutos'
+import { useCartStore, precificar, type CartItem } from '../stores/useCartStore'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
 import { useContatos } from '../hooks/useContatos'
@@ -15,6 +15,10 @@ import { CartSidebar } from '../components/features/vendas/NovaVenda/CartSidebar
 import { CheckoutSidebar } from '../components/features/vendas/NovaVenda/CheckoutSidebar'
 import { WizardProgress } from '../components/features/vendas/NovaVenda/WizardProgress'
 import { NovaVendaPOS } from '../components/features/vendas/NovaVenda/pos/NovaVendaPOS'
+import { SeletorTabelaPreco } from '../components/features/vendas/NovaVenda/SeletorTabelaPreco'
+import { MontarComboDialog } from '../components/features/vendas/NovaVenda/MontarComboDialog'
+import { precoNaTabela, resumoEscolhas, type EscolhaCombo, type TabelaPreco } from '../utils/tabelaPreco'
+import { agoraSimulado } from '../lib/agoraSimulado'
 import type { PagamentoImediato, OpcoesEntrega } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
 import { vendaService } from '../services/vendaService'
 import { User, ShoppingBag, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
@@ -36,13 +40,14 @@ export function NovaVenda() {
     const toast = useToast()
 
     const { produtos: todosProdutos, loading: loadingTodosProdutos } = useProdutos()
-    // Combos com escolha de sabor (Combo Família, Balde + doce, 3 doces…) são vendidos só pela loja.
-    const { ids: combosComEscolha, loading: loadingCombos } = useCombosComEscolha()
-    const produtos = useMemo(
-        () => todosProdutos.filter((p) => !combosComEscolha.includes(p.id)),
-        [todosProdutos, combosComEscolha]
-    )
+    // Black: combos com escolha de sabor + preço por tabela (Pix/dinheiro, cartão, normal).
+    const { combos, loading: loadingCombos } = useCombosMontagem()
+    const { precos, campanha } = usePrecosVigentes()
     const loadingProdutos = loadingTodosProdutos || loadingCombos
+
+    const produtosPorId = useMemo(() => new Map(todosProdutos.map((p) => [p.id, p])), [todosProdutos])
+    const nomes = useMemo(() => new Map(todosProdutos.map((p) => [p.id, p.nome])), [todosProdutos])
+    const montagemPorCombo = useMemo(() => new Map(combos.map((c) => [c.comboId, c])), [combos])
     const { getVendaById, createVenda } = useVendas()
     const { getContatoById } = useContatos()
 
@@ -56,8 +61,50 @@ export function NovaVenda() {
         setCliente: setSelectedContato,
         setItems,
         clearCart,
-        ensureIdempotencyKey
+        ensureIdempotencyKey,
+        tabela,
+        setTabela,
+        trocarEscolhas,
     } = useCartStore()
+
+    // A tabela que vale AGORA: no checkout, a forma de pagamento manda (fiado → normal,
+    // cartão → cartão); fora dele, a escolhida no carrinho. Os preços saem dela, na hora.
+    const [tabelaCheckout, setTabelaCheckout] = useState<TabelaPreco | null>(null)
+    const tabelaAtiva = tabelaCheckout ?? tabela
+    const precoNaAtiva = useCallback(
+        (p: DomainProduto) => precoNaTabela(precos, p.id, Number(p.preco), tabelaAtiva),
+        [precos, tabelaAtiva]
+    )
+    // A vitrine mostra o preço da tabela ativa (as listas exibem `produto.preco`).
+    const produtos = useMemo(
+        () => todosProdutos.map((p) => ({ ...p, preco: precoNaAtiva(p) })),
+        [todosProdutos, precoNaAtiva]
+    )
+    const carrinho = useMemo(() => precificar(cart, precoNaAtiva), [cart, precoNaAtiva])
+    const itensCheckout = useMemo(() => carrinho.map((item) => ({
+        produto_id: item.produto_id,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+        subtotal: item.subtotal,
+    })), [carrinho])
+
+    // Combo com grupo de sabor: 'montar' abre o seletor; grupo sem opção = sabores em definição.
+    const acaoCombo = useCallback((p: DomainProduto): 'montar' | 'pendente' | null => {
+        if (!p.ehCombo) return null
+        const m = montagemPorCombo.get(p.id)
+        if (!m || m.grupos.length === 0) return null
+        return m.grupos.some((g) => g.opcoes.length === 0) ? 'pendente' : 'montar'
+    }, [montagemPorCombo])
+
+    const resumoCombo = useCallback((item: CartItem): string | null => {
+        if (item.escolhas && item.escolhas.length > 0) return resumoEscolhas(item.escolhas, nomes)
+        if (!item.produto.ehCombo) return null
+        const fixos = montagemPorCombo.get(item.produto_id)?.fixos ?? []
+        return fixos.map((f) => `${f.quantidade > 1 ? `${f.quantidade}× ` : ''}${nomes.get(f.produtoId) ?? 'Item'}`).join(', ') || null
+    }, [nomes, montagemPorCombo])
+
+    // Seletor de sabores: combo novo (sem chave) ou troca de sabores de uma linha do carrinho.
+    const [montando, setMontando] = useState<{ comboId: string; chave?: string } | null>(null)
 
     // Local UI State
     const [currentStep, setCurrentStep] = useState(0)
@@ -71,6 +118,9 @@ export function NovaVenda() {
                     if (venda.contato) setSelectedContato(venda.contato)
 
                     const items = venda.itens.map(item => ({
+                        // Linha de combo vem em itens próprios (às vezes 2 do mesmo sabor): a chave
+                        // é a da linha gravada, não o produto.
+                        chave: item.id,
                         produto_id: item.produtoId,
                         quantidade: item.quantidade,
                         preco_unitario: item.precoUnitario,
@@ -114,43 +164,85 @@ export function NovaVenda() {
 
     // Calculations
     const cartTotal = useMemo(
-        () => cart.reduce((acc, item) => acc + item.subtotal, 0),
-        [cart]
+        () => Math.round(carrinho.reduce((acc, item) => acc + item.subtotal * 100, 0)) / 100,
+        [carrinho]
     )
 
 
     // Handlers
-    const getCartQuantity = (produtoId: string) => {
-        const item = cart.find((i) => i.produto_id === produtoId)
-        return item?.quantidade || 0
-    }
+    // Quantidade do produto no carrinho, somando as linhas (dois Combo Família montados = 2).
+    const getCartQuantity = (produtoId: string) =>
+        cart.filter((i) => i.produto_id === produtoId).reduce((acc, i) => acc + i.quantidade, 0)
 
-    const handleAddToCart = (produto: DomainProduto) => {
+    const handleAddToCart = (exibido: DomainProduto) => {
+        // Guarda o produto do cadastro (a vitrine mostra uma cópia com o preço da tabela).
+        const produto = produtosPorId.get(exibido.id) ?? exibido
+        const acao = acaoCombo(produto)
+        if (acao === 'pendente') return
+        if (acao === 'montar') {
+            setMontando({ comboId: produto.id })
+            return
+        }
+        const preco = precoNaAtiva(produto)
         addItem({
+            chave: produto.id,
             produto_id: produto.id,
             produto,
             quantidade: 1,
-            preco_unitario: Number(produto.preco),
-            subtotal: Number(produto.preco),
+            preco_unitario: preco,
+            subtotal: preco,
+            // Combo fixo (Dupla Zero): vai como combo, sem sabores a escolher.
+            escolhas: produto.ehCombo ? [] : undefined,
         })
         toast.success('Adicionado ao carrinho')
     }
 
-    const handleUpdateQuantity = (produtoId: string, delta: number) => {
-        const item = cart.find((i) => i.produto_id === produtoId)
+    const confirmarMontagem = (escolhas: EscolhaCombo[]) => {
+        if (!montando) return
+        if (montando.chave) {
+            trocarEscolhas(montando.chave, escolhas)
+            toast.success('Sabores trocados')
+        } else {
+            const produto = produtosPorId.get(montando.comboId)
+            if (!produto) return
+            const preco = precoNaAtiva(produto)
+            addItem({
+                chave: crypto.randomUUID(),
+                produto_id: produto.id,
+                produto,
+                quantidade: 1,
+                preco_unitario: preco,
+                subtotal: preco,
+                escolhas,
+            })
+            toast.success('Combo adicionado')
+        }
+        setMontando(null)
+    }
+
+    const handleUpdateQuantity = (chave: string, delta: number) => {
+        const item = cart.find((i) => i.chave === chave)
         if (!item) return
 
         const newQty = item.quantidade + delta
         if (newQty <= 0) {
-            removeItem(produtoId)
+            removeItem(chave)
             toast.success('Item removido')
         } else {
-            updateQuantity(produtoId, newQty)
+            updateQuantity(chave, newQty)
         }
     }
 
 
     const handleConfirmSale = useCallback(async (data: VendaFormData, pagamento?: PagamentoImediato, opcoes?: OpcoesEntrega) => {
+        // Data simulada (preview/dev): só para VER a campanha. O preview grava no banco de
+        // produção e o servidor precifica pela hora real — gravar aqui criaria venda de verdade
+        // com outro preço. Nunca acontece em produção (ver lib/agoraSimulado).
+        if (agoraSimulado) {
+            toast.error('Data simulada: esta tela é só para visualização. A venda não foi gravada.')
+            return
+        }
+
         // Pré-check de conexão: sem isto, um submit offline ficava travado/perdido
         // em silêncio. Avisa claramente e nem tenta gravar (carrinho preservado).
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -174,12 +266,12 @@ export function NovaVenda() {
             // forma real da venda (a intenção 'venda' sozinha não diz ao entregador o que cobrar).
             formaPagamento: data.pagamento_na_entrega ?? data.forma_pagamento,
             taxaEntrega: data.taxa_entrega,
-            itens: data.itens.map(it => ({
-                produtoId: it.produto_id,
-                quantidade: it.quantidade,
-                precoUnitario: it.preco_unitario,
-                subtotal: it.subtotal
-            })),
+            // Do carrinho, não do formulário: o combo vai com os sabores e o servidor rateia.
+            itens: carrinho.map(it => it.produto.ehCombo
+                ? { comboId: it.produto_id, quantidade: it.quantidade, escolhas: it.escolhas ?? [] }
+                : { produtoId: it.produto_id, quantidade: it.quantidade, precoUnitario: it.preco_unitario, subtotal: it.subtotal }),
+            // Com a tabela, quem decide o preço é o servidor (mesma regra que a tela mostrou).
+            tabela: opcoes?.tabela ?? tabelaAtiva,
             dataPrevistaPagamento: data.data_prevista_pagamento,
             entregadorId: data.entregador_id ?? null,
             observacaoEntregador: data.observacao_entregador ?? null,
@@ -214,7 +306,7 @@ export function NovaVenda() {
             console.error('[NovaVenda] falha ao confirmar venda:', error)
             toast.error('Não foi possível salvar a venda (conexão instável?). O carrinho foi mantido — confira em Vendas antes de refazer; refazer não gera duplicata.')
         }
-    }, [selectedContato, createVenda, toast, clearCart, navigate, ensureIdempotencyKey])
+    }, [selectedContato, createVenda, toast, clearCart, navigate, ensureIdempotencyKey, carrinho, tabelaAtiva])
 
     const nextStep = (contatoOverride?: typeof selectedContato) => {
         const contato = contatoOverride ?? selectedContato
@@ -233,6 +325,12 @@ export function NovaVenda() {
         if (currentStep > 0) setCurrentStep(currentStep - 1)
     }
 
+    const avisoSimulado = agoraSimulado && (
+        <div role="status" className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs font-semibold text-warning-strong">
+            Data simulada: {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(agoraSimulado))}. Só visualização — a venda não é gravada.
+        </div>
+    )
+
     return (
         <>
             {/* Mobile: wizard de 3 passos (intocado). `contents` = wrapper transparente no fluxo mobile; some no desktop. */}
@@ -244,6 +342,7 @@ export function NovaVenda() {
                     centerTitle
                 />
 
+                {avisoSimulado}
                 <WizardProgress currentStep={currentStep} steps={WIZARD_STEPS} />
 
                 <div className="flex-1 flex min-w-0 relative">
@@ -289,6 +388,11 @@ export function NovaVenda() {
                                         Total: {formatCurrency(cartTotal)}
                                     </div>
                                 </div>
+                                {campanha && (
+                                    <div className="border-b border-border bg-card px-4 py-3">
+                                        <SeletorTabelaPreco tabela={tabela} onChange={setTabela} campanha={campanha} />
+                                    </div>
+                                )}
                                 <div className="flex-1 overflow-y-auto px-4 pb-28 md:pb-4">
                                     <ProductList
                                         produtos={produtos}
@@ -296,6 +400,7 @@ export function NovaVenda() {
                                         getQuantity={getCartQuantity}
                                         onAdd={handleAddToCart}
                                         onUpdateQuantity={handleUpdateQuantity}
+                                        acaoCombo={acaoCombo}
                                     />
                                 </div>
                             </div>
@@ -316,12 +421,11 @@ export function NovaVenda() {
                                             total={cartTotal}
                                             contatoId={selectedContato?.id || ''}
                                             contatoNome={selectedContato?.nome || ''}
-                                            items={cart.map(item => ({
-                                                produto_id: item.produto_id,
-                                                quantidade: item.quantidade,
-                                                preco_unitario: item.preco_unitario,
-                                                subtotal: item.subtotal
-                                            }))}
+                                            tabelaEscolhida={tabela}
+                                            campanha={campanha}
+                                            onTabelaEscolhida={setTabela}
+                                            onTabelaEfetiva={setTabelaCheckout}
+                                            items={itensCheckout}
                                         />
                                     </div>
                                 </div>
@@ -360,7 +464,7 @@ export function NovaVenda() {
                     {/* Desktop Sidebar (Optional, maybe just a summary in steps 0/1) */}
                     <aside className="hidden lg:flex w-96 flex-col border-l border-border bg-card h-full overflow-y-auto">
                         <CartSidebar
-                            items={cart}
+                            items={carrinho}
                             total={cartTotal}
                             onUpdateQuantity={handleUpdateQuantity}
                             onCheckout={nextStep}
@@ -375,7 +479,7 @@ export function NovaVenda() {
             <NovaVendaPOS
                 produtos={produtos}
                 loading={loadingProdutos}
-                cart={cart}
+                cart={carrinho}
                 cartTotal={cartTotal}
                 selectedContato={selectedContato}
                 onSelectContato={setSelectedContato}
@@ -385,7 +489,39 @@ export function NovaVenda() {
                 onClear={clearCart}
                 onConfirm={handleConfirmSale}
                 isEditing={isEditing}
+                avisoTopo={avisoSimulado || null}
+                seletorTabela={<SeletorTabelaPreco tabela={tabela} onChange={setTabela} campanha={campanha} />}
+                tabelaEscolhida={tabela}
+                campanha={campanha}
+                onTabelaEscolhida={setTabela}
+                onTabelaEfetiva={setTabelaCheckout}
+                acaoCombo={acaoCombo}
+                resumoCombo={resumoCombo}
+                onEditarCombo={(chave) => {
+                    const item = cart.find((i) => i.chave === chave)
+                    if (item) setMontando({ comboId: item.produto_id, chave })
+                }}
             />
+
+            {montando && (() => {
+                const combo = produtosPorId.get(montando.comboId)
+                const montagem = montagemPorCombo.get(montando.comboId)
+                if (!combo || !montagem) return null
+                const escolhasIniciais = montando.chave ? cart.find((i) => i.chave === montando.chave)?.escolhas : undefined
+                return (
+                    <MontarComboDialog
+                        key={montando.chave ?? montando.comboId}
+                        isOpen
+                        onClose={() => setMontando(null)}
+                        combo={combo}
+                        montagem={montagem}
+                        produtosPorId={produtosPorId}
+                        preco={precoNaAtiva(combo)}
+                        escolhasIniciais={escolhasIniciais}
+                        onConfirmar={confirmarMontagem}
+                    />
+                )
+            })()}
         </>
     )
 }

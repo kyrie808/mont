@@ -9,6 +9,7 @@ import type { DomainPagamento } from '../../../types/domain'
 import { Button } from '../../ui/Button'
 import { Select } from '../../ui/Select'
 import { cn } from '@mont/shared'
+import { avisoTabelaNoPagamento, type TabelaPreco } from '../../../utils/tabelaPreco'
 import { cashFlowService } from '../../../services/cashFlowService'
 import { formatCurrency } from '@mont/shared'
 import type { Conta } from '@mont/shared'
@@ -20,6 +21,8 @@ interface PaymentSidebarProps {
     total: number
     valorPago: number
     historico: DomainPagamento[]
+    /** Tabela de preço do lançamento (Black). Forma diferente no Quitar → aviso; o valor não muda. */
+    tabelaPreco?: TabelaPreco | null
 }
 
 const PAYMENT_METHODS = [
@@ -36,6 +39,7 @@ export function PaymentSidebar({
     total,
     valorPago,
     historico,
+    tabelaPreco = null,
 }: PaymentSidebarProps) {
     const restante = Math.max(0, total - valorPago)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -201,6 +205,11 @@ export function PaymentSidebar({
                         )
                     })}
                 </div>
+                {avisoTabelaNoPagamento(tabelaPreco, currentMethod) && (
+                    <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-strong">
+                        {avisoTabelaNoPagamento(tabelaPreco, currentMethod)}
+                    </p>
+                )}
             </div>
 
             {/* Conta, Data & Observacao */}

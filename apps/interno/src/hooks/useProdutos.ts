@@ -2,6 +2,10 @@ import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { produtoService } from '../services/produtoService'
 import type { CreateProduto, UpdateProduto } from '../types/domain'
+import type { MapaPrecos } from '../utils/tabelaPreco'
+
+// Referência estável enquanto carrega: evita recalcular o carrinho a cada render.
+const SEM_PRECOS: MapaPrecos = new Map()
 
 export function useProdutos(includeInactive: boolean = false) {
     const queryClient = useQueryClient()
@@ -61,13 +65,40 @@ export function useProdutos(includeInactive: boolean = false) {
 }
 
 /** Ids dos combos com escolha de sabor (só a loja vende). Vazio enquanto carrega. */
-export function useCombosComEscolha() {
+export function useCombosMontagem() {
     const { data, isLoading: loading } = useQuery({
-        queryKey: ['combos-com-escolha'],
-        queryFn: () => produtoService.getCombosComEscolha(),
+        queryKey: ['combos-montagem'],
+        queryFn: () => produtoService.getCombosMontagem(),
     })
 
-    return { ids: data ?? [], loading }
+    return { combos: data ?? [], loading }
+}
+
+/** Preço de cada produto nas três tabelas (Pix/dinheiro, cartão, normal) + a campanha vigente. */
+export function usePrecosVigentes() {
+    const { data, isLoading: loading } = useQuery({
+        queryKey: ['precos-vigentes'],
+        queryFn: () => produtoService.getPrecosVigentes(),
+        // A campanha vira à meia-noite: rebusca a cada 5 min e ao voltar para a aba.
+        staleTime: 1000 * 60 * 5,
+        refetchInterval: 1000 * 60 * 5,
+    })
+
+    return { precos: data?.precos ?? SEM_PRECOS, campanha: data?.campanha ?? null, loading }
+}
+
+const SEM_NOMES = new Map<string, string>()
+
+/** Nome de cada produto pedido (só busca quando há ids). */
+export function useNomesProdutos(ids: string[]) {
+    const chave = [...new Set(ids)].sort()
+    const { data } = useQuery({
+        queryKey: ['nomes-produtos', chave],
+        queryFn: () => produtoService.getNomes(chave),
+        enabled: chave.length > 0,
+        staleTime: 1000 * 60 * 30,
+    })
+    return data ?? SEM_NOMES
 }
 
 export function useProduto(id: string | undefined) {
