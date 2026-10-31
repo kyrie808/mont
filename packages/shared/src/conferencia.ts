@@ -159,3 +159,93 @@ export function textoEventoMeta(e: {
         ...(e.erro ? [encurtar(e.erro, 200)] : []),
     ].join('\n')
 }
+
+// ─── Fechamento do dia (21h de Brasília, grupo da Equipe) ─────────────────────
+// Os dados vêm da função fechamento_do_dia(p_dia) no banco. Sem pendência: só "✅ Dia
+// fechado" e o placar. Nada de cobrança. Erro da Meta não entra aqui (vai só ao Luccas).
+
+export interface FechamentoDia {
+    /** 'AAAA-MM-DD' de Brasília. */
+    dia: string
+    aceitos_sem_venda: { nome: string | null; em: string; observacao: string | null }[]
+    vendas_com_falta: { nome: string | null; total: number; faltas: string[]; em: string }[]
+    duplicadas: { nome: string | null; a_total: number; b_total: number; a_em: string; b_em: string }[]
+    entregas_amanha: { bairro: string; clientes: (string | null)[] }[]
+    separar: { produto: string; qtd: number }[]
+    falta_doces: { nome: string; estoque: number; reservado: number; falta: number }[]
+    placar: { vendas: number; faturamento: number; de_anuncio: number }
+}
+
+const fmtHoraMinSP = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
+const DIAS_CURTOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+
+function rotuloDia(dia: string): string {
+    const [a, m, d] = dia.split('-').map(Number)
+    const dow = new Date(Date.UTC(a, m - 1, d)).getUTCDay()
+    return `${DIAS_CURTOS[dow]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`
+}
+
+const hhmm = (iso: string) => fmtHoraMinSP.format(new Date(iso))
+const nomeOu = (n: string | null) => (n && n.trim()) || 'Cliente sem nome'
+const qtd = (n: number) => (Number.isInteger(n) ? String(n) : String(n).replace('.', ','))
+
+/** O trecho do cliente que o analista grava no fim da nota: Cliente: "...". */
+function trechoDaNota(observacao: string | null): string | null {
+    const m = observacao?.match(/Cliente: ("[^"]+")/)
+    return m ? m[1] : null
+}
+
+function linhaPlacar(p: FechamentoDia['placar']): string {
+    const ticket = p.vendas > 0 ? p.faturamento / p.vendas : 0
+    return [
+        `${p.vendas} ${p.vendas === 1 ? 'venda' : 'vendas'}`,
+        reais(p.faturamento),
+        `ticket médio ${reais(ticket)}`,
+        `${p.de_anuncio} de anúncio`,
+    ].join(' · ')
+}
+
+export function textoFechamento(f: FechamentoDia): string {
+    const temPendencia = f.aceitos_sem_venda.length + f.vendas_com_falta.length + f.duplicadas.length + f.falta_doces.length > 0
+    const placar = ['📊 *Placar*', linhaPlacar(f.placar)].join('\n')
+    if (!temPendencia) return [`✅ *Dia fechado — ${rotuloDia(f.dia)}*`, placar].join('\n\n')
+
+    const blocos: string[] = [`📋 *Fechamento do dia — ${rotuloDia(f.dia)}*`]
+    if (f.aceitos_sem_venda.length) {
+        blocos.push([
+            `🔎 *Aceitaram e estão sem venda* (${f.aceitos_sem_venda.length})`,
+            ...f.aceitos_sem_venda.map((a) => {
+                const trecho = trechoDaNota(a.observacao)
+                return `• ${nomeOu(a.nome)} (${hhmm(a.em)})${trecho ? ` · ${trecho}` : ''}`
+            }),
+        ].join('\n'))
+    }
+    if (f.vendas_com_falta.length) {
+        blocos.push([
+            `⚠️ *Vendas de hoje para conferir* (${f.vendas_com_falta.length})`,
+            ...f.vendas_com_falta.map((v) => `• ${nomeOu(v.nome)} · ${reais(v.total)} (${hhmm(v.em)}) — ${v.faltas.join(', ')}`),
+        ].join('\n'))
+    }
+    if (f.duplicadas.length) {
+        blocos.push([
+            `👯 *Possíveis duplicadas* (${f.duplicadas.length})`,
+            ...f.duplicadas.map((d) => `• ${nomeOu(d.nome)} · ${reais(d.a_total)} (${hhmm(d.a_em)}) e ${reais(d.b_total)} (${hhmm(d.b_em)})`),
+        ].join('\n'))
+    }
+    const totalAmanha = f.entregas_amanha.reduce((s, b) => s + b.clientes.length, 0)
+    blocos.push(totalAmanha
+        ? [
+            `🚚 *Entregas de amanhã* (${totalAmanha})`,
+            ...f.entregas_amanha.map((b) => `• ${b.bairro}: ${b.clientes.map(nomeOu).join(', ')}`),
+            ...(f.separar.length ? [`Separar: ${f.separar.map((s) => `${qtd(s.qtd)}× ${s.produto}`).join(' · ')}`] : []),
+        ].join('\n')
+        : '🚚 *Entregas de amanhã*: nenhuma venda com data de entrega para amanhã.')
+    if (f.falta_doces.length) {
+        blocos.push([
+            '🍯 *Falta de doces* (estoque menos reservado)',
+            ...f.falta_doces.map((d) => `• ${d.nome}: estoque ${qtd(d.estoque)}, reservado ${qtd(d.reservado)} → faltam ${qtd(d.falta)}`),
+        ].join('\n'))
+    }
+    blocos.push(placar)
+    return blocos.join('\n\n')
+}

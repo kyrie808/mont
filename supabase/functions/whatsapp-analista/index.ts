@@ -21,14 +21,19 @@
 //   • Toda rodada (simulada ou não) vira uma linha em `wa_analista_rodadas`.
 //
 // Nada é engolido: resposta inválida tenta mais uma vez e, se falhar de novo, conta falha
-// no segmento (5 falhas → travado, sai da fila); 429 do Groq encerra a rodada com aviso;
-// erro do Groq 5xx/rede adia o segmento; exceção marca a rodada como `erro` e devolve 500.
+// no segmento (5 falhas → travado, sai da fila); exceção marca a rodada como `erro` e devolve 500.
+//
+// LLM (31/10/2026, Black): uma conversa por vez, espaçadas pelo plano (tokens e pedidos por
+// minuto). No 429, vale o retry-after; até 3 tentativas no Groq. Falhou 3 vezes → a MESMA
+// chamada (mesmo prompt) vai à Cerebras (gpt-oss-120b), também até 3 vezes, se houver
+// CEREBRAS_API_KEY. As duas falharam → a conversa fica na fila (só é marcada analisada
+// depois de gravada), a rodada para e sai um alerta só para o Luccas (alertas_operacao).
 //
 // Autenticação: x-cron-secret == CRON_SECRET (pg_cron, segredo no vault
 // `meta_capi_cron_secret`) OU x-ingestor-secret == INGESTOR_SECRET (chamada manual).
 //
-// Segredos: GROQ_API_KEY, CRON_SECRET, INGESTOR_SECRET; SUPABASE_URL e
-// SUPABASE_SERVICE_ROLE_KEY vêm do runtime.
+// Segredos: GROQ_API_KEY, CEREBRAS_API_KEY (reserva, opcional), CRON_SECRET, INGESTOR_SECRET;
+// SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY vêm do runtime.
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import {
@@ -44,9 +49,21 @@ import {
   validarPedidoExtraido,
   type PedidoExtraido,
 } from '../../../packages/shared/src/analista.ts'
+import {
+  esperaParaChamar,
+  lerDuracaoMs,
+  lerRetryAfterMs,
+  type ChamadaRegistrada,
+  type PlanoLlm,
+} from '../../../packages/shared/src/ritmoLlm.ts'
 
 const MODELO = 'openai/gpt-oss-20b'
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+/** Reserva: Cerebras, API compatível com a da OpenAI. */
+const CEREBRAS_URL = 'https://api.cerebras.ai/v1/chat/completions'
+const MODELO_CEREBRAS = 'gpt-oss-120b'
+/** Tentativas por provedor antes de passar para o próximo. */
+const TENTATIVAS_POR_PROVEDOR = 3
 // O Groq reserva o teto de saída no limite por minuto (8000 tokens). 400 cobre o JSON e
 // o raciocínio curto do reasoning_effort=low (medido: ~60 tokens).
 const MAX_COMPLETION = 400
@@ -72,93 +89,163 @@ function json(body: unknown, status: number): Response {
 
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// ── Groq ────────────────────────────────────────────────────────────────────────
+// ── LLM: Groq, com a Cerebras de reserva ───────────────────────────────────────
 
 type Mensagem = { role: 'system' | 'user' | 'assistant'; content: string }
 
-type RespostaGroq =
+interface Provedor {
+  nome: 'groq' | 'cerebras'
+  url: string
+  modelo: string
+  chave: string
+  plano: PlanoLlm
+  maxCompletion: number
+}
+
+/** Uma chamada. `limite` traz o retry-after (ms) quando o provedor mandou. */
+type RespostaChamada =
   | { tipo: 'ok'; conteudo: string; tokens: number }
   | { tipo: 'invalido'; motivo: string }
-  | { tipo: 'limite'; aviso: string }
+  | { tipo: 'limite'; erro: string; retryMs: number | null }
   | { tipo: 'transitorio'; erro: string }
 
-/** "7.66s", "2m59.5s", "120ms" → ms */
-function duracaoMs(valor: string | null): number | null {
-  if (!valor) return null
-  let total = 0
-  let achou = false
-  for (const [, n, u] of valor.matchAll(/([\d.]+)(ms|h|m|s)/g)) {
-    achou = true
-    const x = Number(n)
-    total += u === 'h' ? x * 3_600_000 : u === 'm' ? x * 60_000 : u === 's' ? x * 1000 : x
-  }
-  return achou ? Math.ceil(total) : null
-}
+/** O pedido inteiro, já com as tentativas e a reserva. */
+type RespostaLlm =
+  | { tipo: 'ok'; conteudo: string; tokens: number; provedor: Provedor['nome'] }
+  | { tipo: 'invalido'; motivo: string }
+  /** Ia passar do orçamento da rodada: fica para a próxima, sem alerta. */
+  | { tipo: 'sem_tempo'; aviso: string }
+  /** Os provedores falharam todas as tentativas: fica para a próxima, com alerta. */
+  | { tipo: 'esgotado'; erro: string }
 
-/** Ritmo pelos cabeçalhos x-ratelimit do Groq: espera o balde de tokens encher. */
-class Ritmo {
-  private restantes: number | null = null
-  private resetEm = 0
+const estimarTokens = (mensagens: Mensagem[], maxCompletion: number) =>
+  Math.ceil(mensagens.reduce((n, m) => n + m.content.length, 0) / 3) + maxCompletion
 
-  registrar(h: Headers) {
-    const r = Number(h.get('x-ratelimit-remaining-tokens'))
-    if (Number.isFinite(r)) this.restantes = r
-    const ms = duracaoMs(h.get('x-ratelimit-reset-tokens'))
-    if (ms !== null) this.resetEm = Date.now() + ms
-  }
-
-  /** ms a esperar antes de uma chamada que precisa de `tokens`. */
-  espera(tokens: number): number {
-    if (this.restantes === null || this.restantes >= tokens) return 0
-    return Math.max(0, this.resetEm - Date.now()) + 250
-  }
-}
-
-async function chamarGroq(chave: string, mensagens: Mensagem[], ritmo: Ritmo): Promise<RespostaGroq> {
+async function chamar(p: Provedor, mensagens: Mensagem[], estado: EstadoProvedor): Promise<RespostaChamada> {
   let res: Response
   try {
-    res = await fetch(GROQ_URL, {
+    res = await fetch(p.url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${p.chave}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: MODELO,
+        model: p.modelo,
         messages: mensagens,
         response_format: { type: 'json_object' },
         reasoning_effort: 'low',
-        max_completion_tokens: MAX_COMPLETION,
+        max_completion_tokens: p.maxCompletion,
         temperature: 0.2,
       }),
       signal: AbortSignal.timeout(30_000),
     })
   } catch (e) {
-    return { tipo: 'transitorio', erro: `rede: ${(e as Error).message}` }
+    return { tipo: 'transitorio', erro: `${p.nome} rede: ${(e as Error).message}` }
   }
 
-  ritmo.registrar(res.headers)
+  // Balde de tokens informado pelo provedor (o Groq manda; a Cerebras pode não mandar).
+  const restantes = Number(res.headers.get('x-ratelimit-remaining-tokens'))
+  const reset = lerDuracaoMs(res.headers.get('x-ratelimit-reset-tokens'))
+  if (Number.isFinite(restantes) && res.headers.has('x-ratelimit-remaining-tokens')) {
+    estado.restantes = restantes
+    estado.resetEm = reset !== null ? Date.now() + reset : estado.resetEm
+  }
   const corpo = await res.text()
 
   if (res.status === 429) {
-    const qual = res.headers.get('x-ratelimit-remaining-requests') === '0' ? 'pedidos por dia' : 'tokens por minuto'
-    const depois = res.headers.get('retry-after')
-    return { tipo: 'limite', aviso: `Groq 429 (${qual})${depois ? `, retry-after ${depois}s` : ''}: ${corpo.slice(0, 300)}` }
+    const porDia = res.headers.get('x-ratelimit-remaining-requests') === '0'
+    return {
+      tipo: 'limite',
+      erro: `${p.nome} 429 (${porDia ? 'pedidos por dia' : 'tokens por minuto'}): ${corpo.slice(0, 200)}`,
+      retryMs: lerRetryAfterMs(res.headers.get('retry-after')),
+    }
   }
   // json_object: quando o modelo não produz JSON válido o Groq devolve 400 json_validate_failed.
+  // Outro 400 (parâmetro recusado, por exemplo) é falha do provedor, não da conversa.
   if (res.status === 400 && corpo.includes('json_validate_failed')) {
     return { tipo: 'invalido', motivo: 'o modelo não produziu JSON válido' }
   }
-  if (!res.ok) {
-    return { tipo: 'transitorio', erro: `Groq HTTP ${res.status}: ${corpo.slice(0, 300)}` }
-  }
+  if (!res.ok) return { tipo: 'transitorio', erro: `${p.nome} HTTP ${res.status}: ${corpo.slice(0, 200)}` }
 
   try {
     const dados = JSON.parse(corpo)
     const escolha = dados?.choices?.[0]
-    if (escolha?.finish_reason === 'length') {
-      return { tipo: 'invalido', motivo: 'resposta cortada no limite de tokens' }
-    }
+    if (escolha?.finish_reason === 'length') return { tipo: 'invalido', motivo: 'resposta cortada no limite de tokens' }
     return { tipo: 'ok', conteudo: String(escolha?.message?.content ?? ''), tokens: Number(dados?.usage?.total_tokens ?? 0) }
   } catch {
-    return { tipo: 'transitorio', erro: `Groq devolveu corpo ilegível: ${corpo.slice(0, 200)}` }
+    return { tipo: 'transitorio', erro: `${p.nome} devolveu corpo ilegível: ${corpo.slice(0, 200)}` }
+  }
+}
+
+interface EstadoProvedor {
+  historico: ChamadaRegistrada[]
+  /** Não chamar antes disso (retry-after, ou o balde de tokens vazio). */
+  bloqueadoAte: number
+  restantes: number | null
+  resetEm: number
+  /** Desistiu deste provedor nesta rodada (limite do dia, ou 3 falhas). */
+  fora: boolean
+}
+
+class Llm {
+  private estados = new Map<Provedor['nome'], EstadoProvedor>()
+  /** Algum pedido esgotou os provedores nesta rodada: o Luccas é avisado. */
+  ultimoEsgotado: string | null = null
+
+  constructor(private provedores: Provedor[], private prazo: number) {
+    for (const p of provedores) {
+      this.estados.set(p.nome, { historico: [], bloqueadoAte: 0, restantes: null, resetEm: 0, fora: false })
+    }
+  }
+
+  /** Provedores configurados, na ordem (Groq, depois a reserva se houver chave). */
+  get nomes(): string[] {
+    return this.provedores.map((p) => p.nome)
+  }
+
+  async pedir(mensagens: Mensagem[]): Promise<RespostaLlm> {
+    const erros: string[] = []
+    for (const p of this.provedores) {
+      const e = this.estados.get(p.nome)!
+      if (e.fora) continue
+      let falhas = 0
+      while (falhas < TENTATIVAS_POR_PROVEDOR) {
+        const estimativa = estimarTokens(mensagens, p.maxCompletion)
+        const agora = Date.now()
+        // Ritmo próprio (orçamento do minuto, intervalo, balde do provedor): espera o que for
+        // preciso dentro da rodada — não é falha. Só o retry-after LONGO de um 429 (limite do
+        // dia, por exemplo) tira o provedor da rodada e passa para a reserva.
+        const pelaConta = esperaParaChamar(e.historico, agora, estimativa, p.plano)
+        const peloBalde = e.restantes !== null && e.restantes < estimativa ? Math.max(0, e.resetEm - agora) + 250 : 0
+        const peloBloqueio = e.bloqueadoAte - agora
+        if (peloBloqueio > ESPERA_MAXIMA_MS) {
+          erros.push(`${p.nome}: retry-after de ${Math.round(peloBloqueio / 1000)}s`)
+          e.fora = true
+          break
+        }
+        const espera = Math.max(pelaConta, peloBalde, peloBloqueio, 0)
+        if (agora + espera > this.prazo) {
+          return { tipo: 'sem_tempo', aviso: `tempo da rodada esgotado (esperaria ${Math.round(espera / 1000)}s)` }
+        }
+        if (espera > 0) await dormir(espera)
+
+        const r = await chamar(p, mensagens, e)
+        e.historico.push({ em: Date.now(), tokens: r.tipo === 'ok' && r.tokens > 0 ? r.tokens : estimativa })
+        if (r.tipo === 'ok') return { ...r, provedor: p.nome }
+        if (r.tipo === 'invalido') return r
+
+        falhas++
+        erros.push(r.erro)
+        if (r.tipo === 'limite') {
+          // Sem retry-after, espera 10 s; retry-after longo tira o provedor da rodada (acima).
+          e.bloqueadoAte = Date.now() + (r.retryMs ?? 10_000)
+        } else {
+          e.bloqueadoAte = Date.now() + 2_000 * falhas
+        }
+      }
+      if (falhas >= TENTATIVAS_POR_PROVEDOR) e.fora = true
+    }
+    const erro = erros.length ? erros.slice(-4).join(' | ') : 'nenhum provedor disponível'
+    this.ultimoEsgotado = erro
+    return { tipo: 'esgotado', erro }
   }
 }
 
@@ -168,26 +255,30 @@ async function chamarGroq(chave: string, mensagens: Mensagem[], ritmo: Ritmo): P
  * Segundo passo, só num "aceitou": lê o pedido com o prompt da conferência. Não mexe no
  * veredito nem na timeline; falha aqui nunca derruba o segmento.
  */
+/**
+ * Leitura do pedido: lido, falhou de verdade (o modelo não deu JSON válido 2 vezes) ou
+ * ADIADA — faltou tempo na rodada ou LLM. Adiada, a conversa inteira volta para a fila: nada
+ * é gravado, nem o veredito, para não perder o pedido numa leitura incompleta.
+ */
+type LeituraPedido =
+  | { pedido: PedidoExtraido }
+  | { falhou: string }
+  | { adiar: 'sem_tempo' | 'esgotado'; motivo: string }
+
 async function extrairPedido(
-  chave: string,
+  llm: Llm,
   seg: Segmento,
   nome: string | null,
-  ritmo: Ritmo,
-): Promise<{ pedido: PedidoExtraido } | { falhou: string }> {
+): Promise<LeituraPedido> {
   const conversa: Mensagem[] = [
     { role: 'system', content: PROMPT_PEDIDO },
     { role: 'user', content: montarPromptUsuario(seg, nome) },
   ]
   let motivo = 'sem resposta'
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
-    const estimativa = Math.ceil(conversa.reduce((n, m) => n + m.content.length, 0) / 3) + MAX_COMPLETION
-    const espera = ritmo.espera(estimativa)
-    if (espera > ESPERA_MAXIMA_MS) return { falhou: `limite de tokens por minuto (esperaria ${Math.round(espera / 1000)}s)` }
-    if (espera > 0) await dormir(espera)
-
-    const r = await chamarGroq(chave, conversa, ritmo)
-    if (r.tipo === 'limite') return { falhou: r.aviso }
-    if (r.tipo === 'transitorio') return { falhou: r.erro }
+    const r = await llm.pedir(conversa)
+    if (r.tipo === 'sem_tempo') return { adiar: 'sem_tempo', motivo: r.aviso }
+    if (r.tipo === 'esgotado') return { adiar: 'esgotado', motivo: r.erro }
     if (r.tipo === 'invalido') {
       motivo = r.motivo
     } else {
@@ -221,6 +312,8 @@ interface Detalhe {
   tokens?: number
   /** Só na simulação: o que o modelo respondeu em cada tentativa, para conferir a leitura antes de gravar. */
   bruto?: string[]
+  /** Qual LLM respondeu (groq, ou cerebras como reserva). */
+  provedor?: string
   /** Bloco C: o pedido lido num "aceitou" (fechado ou não) ou o motivo de a leitura ter falhado. */
   pedido?: PedidoExtraido | { falhou: string }
 }
@@ -282,7 +375,7 @@ async function registrarFalha(admin: SupabaseClient, seg: Segmento, erro: string
 
 async function rodar(
   admin: SupabaseClient,
-  chave: string,
+  llm: Llm,
   opcoes: { simular: boolean; limite: number; contatos: string[] | null; reprocessarDesde: string | null },
   detalhes: Detalhe[],
   cont: Contadores,
@@ -309,7 +402,6 @@ async function rodar(
     }
   }
 
-  const ritmo = new Ritmo()
   // Segmento que falhou ou foi adiado segura os seguintes do MESMO contato: a timeline e
   // o card têm que andar na ordem em que a conversa aconteceu.
   const bloqueados = new Set<string>()
@@ -375,30 +467,26 @@ async function rodar(
     const bruto: string[] = []
     // Erro só na frase, na saúde ou na data: a correção mantém o resultado da 1ª resposta.
     let manterResultado: string | undefined
+    let provedor: string | undefined
 
     for (tentativas = 1; tentativas <= 2 && !veredito; tentativas++) {
-      const estimativa = Math.ceil(conversa.reduce((n, m) => n + m.content.length, 0) / 3) + MAX_COMPLETION
-      const espera = ritmo.espera(estimativa)
-      if (espera > ESPERA_MAXIMA_MS || Date.now() - inicio + espera > ORCAMENTO_MS) {
-        detalhes.push({ ...base, erro: `limite de tokens por minuto: esperaria ${Math.round(espera / 1000)}s` })
-        cont.adiados++
-        return { status: 'parcial', aviso: 'Limite de tokens por minuto do Groq; o resto fica para a próxima rodada.' }
-      }
-      if (espera > 0) await dormir(espera)
-
-      const r = await chamarGroq(chave, conversa, ritmo)
-      if (r.tipo === 'limite') {
+      const r = await llm.pedir(conversa)
+      if (r.tipo === 'sem_tempo') {
         detalhes.push({ ...base, erro: r.aviso })
         cont.adiados++
-        return { status: 'limite_groq', aviso: `${r.aviso}. Rodada encerrada; os segmentos restantes ficam para a próxima.` }
+        return { status: 'parcial', aviso: `${r.aviso}; o resto fica para a próxima rodada.` }
       }
-      if (r.tipo === 'transitorio') {
-        motivo = r.erro
-        break
+      if (r.tipo === 'esgotado') {
+        // Os provedores falharam todas as tentativas: a conversa fica na fila (não foi marcada),
+        // a rodada para, e o Luccas é avisado no fim.
+        detalhes.push({ ...base, erro: `LLM indisponível: ${r.erro}` })
+        cont.adiados++
+        return { status: 'limite_groq', aviso: `LLM indisponível (${llm.nomes.join(' e ')}): ${r.erro}. As conversas ficam na fila.` }
       }
       if (r.tipo === 'invalido') {
         motivo = r.motivo
       } else {
+        provedor = r.provedor
         tokens += r.tokens
         bruto.push(r.conteudo)
         const v = validarVeredito(r.conteudo, seg, { manterResultado })
@@ -444,13 +532,29 @@ async function rodar(
       if (error) throw new Error(`Falha na prévia: ${error.message}`)
       const p = data as { aba: string; coluna_antes: string; destino: string | null } | null
       colunaSimulada.set(seg.contatoId, p?.destino ?? p?.coluna_antes ?? null)
-      const lido = veredito.resultado === 'aceitou' ? await extrairPedido(chave, seg, base.nome, ritmo) : null
+      const lido = veredito.resultado === 'aceitou' ? await extrairPedido(llm, seg, base.nome) : null
+      if (lido && 'adiar' in lido) {
+        detalhes.push({ ...base, tentativas, veredito, tokens, provedor, erro: `leitura do pedido adiada: ${lido.motivo}` })
+        cont.adiados++
+        return { status: 'parcial', aviso: `${lido.motivo}; o resto fica para a próxima rodada.` }
+      }
       detalhes.push({
-        ...base, situacao: 'simulado', tentativas, veredito, tokens, bruto,
-        ...(lido ? { pedido: 'pedido' in lido ? lido.pedido : lido } : {}),
+        ...base, situacao: 'simulado', tentativas, veredito, tokens, bruto, provedor,
+        ...(lido ? { pedido: 'pedido' in lido ? lido.pedido : { falhou: lido.falhou } } : {}),
         movimento: { aba: p?.aba ?? null, de: p?.coluna_antes ?? null, para: p?.destino ?? null },
       })
       continue
+    }
+
+    // Bloco C: num "aceitou" o pedido é lido ANTES de gravar. Sem tempo ou sem LLM, a conversa
+    // inteira volta para a fila (nem o veredito é gravado) — só se marca analisada no sucesso.
+    const lido = veredito.resultado === 'aceitou' ? await extrairPedido(llm, seg, base.nome) : null
+    if (lido && 'adiar' in lido) {
+      detalhes.push({ ...base, tentativas, veredito, tokens, provedor, erro: `leitura do pedido adiada: ${lido.motivo}` })
+      cont.adiados++
+      return lido.adiar === 'esgotado'
+        ? { status: 'limite_groq', aviso: `LLM indisponível (${llm.nomes.join(' e ')}): ${lido.motivo}. As conversas ficam na fila.` }
+        : { status: 'parcial', aviso: `${lido.motivo}; o resto fica para a próxima rodada.` }
     }
 
     const { data, error } = await admin.rpc('rpc_registrar_interacao_ia', {
@@ -487,9 +591,8 @@ async function rodar(
     // procura a venda). Leitura que falhou também entra, como 'falhou': o analista disse
     // "aceitou", e melhor conferir à toa que perder um pedido sem venda.
     let pedidoLido: PedidoExtraido | { falhou: string } | undefined
-    if (veredito.resultado === 'aceitou') {
-      const lido = await extrairPedido(chave, seg, base.nome, ritmo)
-      pedidoLido = 'pedido' in lido ? lido.pedido : lido
+    if (lido) {
+      pedidoLido = 'pedido' in lido ? lido.pedido : { falhou: lido.falhou }
       const ultimaDoCliente = [...seg.mensagens].reverse().find((m) => m.de === 'cliente')?.em ?? seg.fim
       const linha = 'pedido' in lido
         ? (lido.pedido.fechado
@@ -513,7 +616,7 @@ async function rodar(
     }
 
     detalhes.push({
-      ...base, situacao: 'gravado', tentativas, veredito, tokens, interacao_id: g.interacao_id,
+      ...base, situacao: 'gravado', tentativas, veredito, tokens, provedor, interacao_id: g.interacao_id,
       ...(pedidoLido ? { pedido: pedidoLido } : {}),
       movimento: {
         aba: g.aba ?? null,
@@ -528,6 +631,30 @@ async function rodar(
     status: parcial ? 'parcial' : 'ok',
     aviso: parcial ? `${cont.falhas} falha(s), ${cont.adiados} adiado(s); ver detalhes.` : null,
   }
+}
+
+/**
+ * Os provedores de LLM falharam todas as tentativas: alerta só para o Luccas. Um por hora
+ * (ref com a hora de SP), para uma queda longa não virar uma mensagem a cada 15 min.
+ * A conferência (W7) é quem manda, no horário dela.
+ */
+async function avisarLuccasLlm(admin: SupabaseClient, llm: Llm, cont: Contadores) {
+  const agora = new Date()
+  const hora = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+  }).format(agora)
+  const naFila = Math.max(cont.segmentos_prontos - cont.gravados - cont.descartados, 1)
+  const texto = [
+    '⚠️ *Analista sem LLM*',
+    `${llm.nomes.join(' e ')} falharam ${TENTATIVAS_POR_PROVEDOR} vezes cada às ${hora.slice(11, 13)}h. ${naFila} conversa(s) ficaram na fila para a próxima rodada.`,
+    ...(llm.nomes.length === 1 ? ['A reserva (Cerebras) não está configurada: falta o segredo CEREBRAS_API_KEY.'] : []),
+    `Último erro: ${(llm.ultimoEsgotado ?? '').slice(0, 180)}`,
+  ].join('\n')
+  const { error } = await admin.from('alertas_operacao').upsert(
+    { tipo: 'analista_llm', ref: `analista_llm:${hora}`, destino: 'luccas', vence_em: agora.toISOString(), texto },
+    { onConflict: 'tipo,ref', ignoreDuplicates: true },
+  )
+  if (error) console.error('[whatsapp-analista] falha ao registrar o alerta de LLM', error.message)
 }
 
 Deno.serve(async (req: Request) => {
@@ -597,7 +724,25 @@ Deno.serve(async (req: Request) => {
   try {
     const chave = Deno.env.get('GROQ_API_KEY')
     if (!chave) throw new Error('GROQ_API_KEY ausente nos secrets da função')
-    ;({ status, aviso } = await rodar(admin, chave, { simular, limite, contatos, reprocessarDesde }, detalhes, cont))
+    const provedores: Provedor[] = [{
+      // Plano gratuito do gpt-oss-20b: 30 pedidos e 8K tokens por minuto.
+      nome: 'groq', url: GROQ_URL, modelo: MODELO, chave,
+      plano: { tpm: Number(Deno.env.get('GROQ_TPM') ?? 8000), intervaloMinMs: 2_100 },
+      maxCompletion: MAX_COMPLETION,
+    }]
+    const reserva = Deno.env.get('CEREBRAS_API_KEY')
+    if (reserva) {
+      provedores.push({
+        // Plano gratuito do gpt-oss-120b: 5 pedidos e 30K tokens por minuto. O 120b raciocina
+        // mais: teto de saída maior.
+        nome: 'cerebras', url: CEREBRAS_URL, modelo: MODELO_CEREBRAS, chave: reserva,
+        plano: { tpm: Number(Deno.env.get('CEREBRAS_TPM') ?? 30000), intervaloMinMs: 12_500 },
+        maxCompletion: 800,
+      })
+    }
+    const llm = new Llm(provedores, Date.now() + ORCAMENTO_MS)
+    ;({ status, aviso } = await rodar(admin, llm, { simular, limite, contatos, reprocessarDesde }, detalhes, cont))
+    if (llm.ultimoEsgotado && !simular) await avisarLuccasLlm(admin, llm, cont)
   } catch (e) {
     console.error('[whatsapp-analista]', e)
     status = 'erro'

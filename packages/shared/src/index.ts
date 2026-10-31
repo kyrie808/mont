@@ -155,8 +155,11 @@ export {
     textoPedidoSemVenda,
     textoAnuncioSemPurchase,
     textoEventoMeta,
+    textoFechamento,
     HORA_INICIO_ALERTAS,
     HORA_FIM_ALERTAS,
     HORAS_PARA_VENDA,
 } from './conferencia'
-export type { AlertaPendente, MensagemDevida, PedidoParaAviso } from './conferencia'
+export type { AlertaPendente, MensagemDevida, PedidoParaAviso, FechamentoDia } from './conferencia'
+export { esperaParaChamar, lerRetryAfterMs, lerDuracaoMs } from './ritmoLlm'
+export type { ChamadaRegistrada, PlanoLlm } from './ritmoLlm'
