@@ -31,7 +31,7 @@ export {
 } from './metaNormalize'
 
 // Meta CAPI — decisão de canal (physical_store × business_messaging) e payload do evento
-export { escolherCanal, montarEvento, erroTransitorio, lerEventIds } from './metaCapi'
+export { escolherCanal, montarEvento, erroTransitorio, lerEventIds, foraDaJanelaMeta } from './metaCapi'
 export type { CanalMeta, UserDataBase, UserDataMeta, EventoFila, EventoMeta } from './metaCapi'
 
 // WhatsApp — chave canônica + parsing do webhook da Evolution

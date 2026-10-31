@@ -460,6 +460,125 @@ export type Database = {
         }
         Relationships: []
       }
+      combo_grupo_opcoes: {
+        Row: {
+          grupo_id: string
+          ordem: number
+          produto_id: string
+        }
+        Insert: {
+          grupo_id: string
+          ordem?: number
+          produto_id: string
+        }
+        Update: {
+          grupo_id?: string
+          ordem?: number
+          produto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_grupo_opcoes_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "combo_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_grupo_opcoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_grupo_opcoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_giro_estoque"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "combo_grupo_opcoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_margem_por_sku"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "combo_grupo_opcoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combo_grupos: {
+        Row: {
+          combo_id: string
+          criado_em: string
+          id: string
+          ordem: number
+          permite_repetir: boolean
+          quantidade: number
+          rotulo_plural: string
+          rotulo_singular: string
+          titulo: string
+        }
+        Insert: {
+          combo_id: string
+          criado_em?: string
+          id?: string
+          ordem?: number
+          permite_repetir?: boolean
+          quantidade: number
+          rotulo_plural: string
+          rotulo_singular: string
+          titulo: string
+        }
+        Update: {
+          combo_id?: string
+          criado_em?: string
+          id?: string
+          ordem?: number
+          permite_repetir?: boolean
+          quantidade?: number
+          rotulo_plural?: string
+          rotulo_singular?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_grupos_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_grupos_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_giro_estoque"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "combo_grupos_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_margem_por_sku"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "combo_grupos_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           atualizado_em: string
@@ -1588,6 +1707,224 @@ export type Database = {
           },
         ]
       }
+      loja_campanhas: {
+        Row: {
+          ativa: boolean
+          criado_em: string
+          fim: string
+          id: string
+          inicio: string
+          nome: string
+        }
+        Insert: {
+          ativa?: boolean
+          criado_em?: string
+          fim: string
+          id?: string
+          inicio: string
+          nome: string
+        }
+        Update: {
+          ativa?: boolean
+          criado_em?: string
+          fim?: string
+          id?: string
+          inicio?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      loja_frete_bairros: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          bairro: string | null
+          bairro_norm: string | null
+          cidade: string
+          cidade_norm: string | null
+          criado_em: string
+          dias_rota: number[] | null
+          id: string
+          uf: string
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          bairro?: string | null
+          bairro_norm?: string | null
+          cidade: string
+          cidade_norm?: string | null
+          criado_em?: string
+          dias_rota?: number[] | null
+          id?: string
+          uf?: string
+          valor: number
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          bairro?: string | null
+          bairro_norm?: string | null
+          cidade?: string
+          cidade_norm?: string | null
+          criado_em?: string
+          dias_rota?: number[] | null
+          id?: string
+          uf?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      loja_precos: {
+        Row: {
+          ancora: number | null
+          atualizado_em: string
+          campanha_id: string
+          criado_em: string
+          id: string
+          preco_credito_1x: number
+          preco_credito_2x: number | null
+          preco_debito: number | null
+          preco_pix: number
+          produto_id: string
+        }
+        Insert: {
+          ancora?: number | null
+          atualizado_em?: string
+          campanha_id: string
+          criado_em?: string
+          id?: string
+          preco_credito_1x: number
+          preco_credito_2x?: number | null
+          preco_debito?: number | null
+          preco_pix: number
+          produto_id: string
+        }
+        Update: {
+          ancora?: number | null
+          atualizado_em?: string
+          campanha_id?: string
+          criado_em?: string
+          id?: string
+          preco_credito_1x?: number
+          preco_credito_2x?: number | null
+          preco_debito?: number | null
+          preco_pix?: number
+          produto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loja_precos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "loja_campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loja_precos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loja_precos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_giro_estoque"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "loja_precos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_margem_por_sku"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "loja_precos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loja_vitrine: {
+        Row: {
+          atualizado_em: string
+          criado_em: string
+          destaque_hero: boolean
+          disponivel: boolean
+          leva_junto: boolean
+          nome_loja: string | null
+          ordem: number
+          produto_id: string
+          resumo: string | null
+          secao: string
+          usa_estoque: boolean
+          visivel: boolean
+        }
+        Insert: {
+          atualizado_em?: string
+          criado_em?: string
+          destaque_hero?: boolean
+          disponivel?: boolean
+          leva_junto?: boolean
+          nome_loja?: string | null
+          ordem?: number
+          produto_id: string
+          resumo?: string | null
+          secao: string
+          usa_estoque?: boolean
+          visivel?: boolean
+        }
+        Update: {
+          atualizado_em?: string
+          criado_em?: string
+          destaque_hero?: boolean
+          disponivel?: boolean
+          leva_junto?: boolean
+          nome_loja?: string | null
+          ordem?: number
+          produto_id?: string
+          resumo?: string | null
+          secao?: string
+          usa_estoque?: boolean
+          visivel?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loja_vitrine_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: true
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loja_vitrine_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: true
+            referencedRelation: "rpt_giro_estoque"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "loja_vitrine_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: true
+            referencedRelation: "rpt_margem_por_sku"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "loja_vitrine_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: true
+            referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensagens_whatsapp: {
         Row: {
           analise_falhas: number
@@ -1737,6 +2074,7 @@ export type Database = {
           evento: string
           id: string
           moeda: string
+          motivo_descarte: string | null
           resposta_meta: Json | null
           status: string
           tentativas: number
@@ -1754,6 +2092,7 @@ export type Database = {
           evento: string
           id?: string
           moeda?: string
+          motivo_descarte?: string | null
           resposta_meta?: Json | null
           status?: string
           tentativas?: number
@@ -1771,6 +2110,7 @@ export type Database = {
           evento?: string
           id?: string
           moeda?: string
+          motivo_descarte?: string | null
           resposta_meta?: Json | null
           status?: string
           tentativas?: number
@@ -4031,6 +4371,7 @@ export type Database = {
         Args: { p_sinal: number; p_venda_id: string }
         Returns: undefined
       }
+      fn_frase_adiamento: { Args: { p_texto: string }; Returns: boolean }
       fn_ia_destino_coluna: {
         Args: {
           p_coluna: Database["public"]["Enums"]["enum_relacionamento_status"]
