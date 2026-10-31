@@ -40,6 +40,9 @@ import {
   type MensagemPendente,
   type Segmento,
   type Veredito,
+  PROMPT_PEDIDO,
+  validarPedidoExtraido,
+  type PedidoExtraido,
 } from '../../../packages/shared/src/analista.ts'
 
 const MODELO = 'openai/gpt-oss-20b'
@@ -159,6 +162,45 @@ async function chamarGroq(chave: string, mensagens: Mensagem[], ritmo: Ritmo): P
   }
 }
 
+// ── Pedido fechado (bloco C) ────────────────────────────────────────────────────
+
+/**
+ * Segundo passo, só num "aceitou": lê o pedido com o prompt da conferência. Não mexe no
+ * veredito nem na timeline; falha aqui nunca derruba o segmento.
+ */
+async function extrairPedido(
+  chave: string,
+  seg: Segmento,
+  nome: string | null,
+  ritmo: Ritmo,
+): Promise<{ pedido: PedidoExtraido } | { falhou: string }> {
+  const conversa: Mensagem[] = [
+    { role: 'system', content: PROMPT_PEDIDO },
+    { role: 'user', content: montarPromptUsuario(seg, nome) },
+  ]
+  let motivo = 'sem resposta'
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    const estimativa = Math.ceil(conversa.reduce((n, m) => n + m.content.length, 0) / 3) + MAX_COMPLETION
+    const espera = ritmo.espera(estimativa)
+    if (espera > ESPERA_MAXIMA_MS) return { falhou: `limite de tokens por minuto (esperaria ${Math.round(espera / 1000)}s)` }
+    if (espera > 0) await dormir(espera)
+
+    const r = await chamarGroq(chave, conversa, ritmo)
+    if (r.tipo === 'limite') return { falhou: r.aviso }
+    if (r.tipo === 'transitorio') return { falhou: r.erro }
+    if (r.tipo === 'invalido') {
+      motivo = r.motivo
+    } else {
+      const v = validarPedidoExtraido(r.conteudo, seg)
+      if (v.ok) return { pedido: v.pedido }
+      motivo = v.motivo
+      conversa.push({ role: 'assistant', content: r.conteudo })
+    }
+    conversa.push({ role: 'user', content: `Resposta inválida: ${motivo}. Responda de novo, só com o objeto JSON.` })
+  }
+  return { falhou: `leitura inválida após 2 tentativas: ${motivo}` }
+}
+
 // ── Rodada ──────────────────────────────────────────────────────────────────────
 
 interface Detalhe {
@@ -179,6 +221,8 @@ interface Detalhe {
   tokens?: number
   /** Só na simulação: o que o modelo respondeu em cada tentativa, para conferir a leitura antes de gravar. */
   bruto?: string[]
+  /** Bloco C: o pedido lido num "aceitou" (fechado ou não) ou o motivo de a leitura ter falhado. */
+  pedido?: PedidoExtraido | { falhou: string }
 }
 
 interface Contadores {
@@ -400,8 +444,10 @@ async function rodar(
       if (error) throw new Error(`Falha na prévia: ${error.message}`)
       const p = data as { aba: string; coluna_antes: string; destino: string | null } | null
       colunaSimulada.set(seg.contatoId, p?.destino ?? p?.coluna_antes ?? null)
+      const lido = veredito.resultado === 'aceitou' ? await extrairPedido(chave, seg, base.nome, ritmo) : null
       detalhes.push({
         ...base, situacao: 'simulado', tentativas, veredito, tokens, bruto,
+        ...(lido ? { pedido: 'pedido' in lido ? lido.pedido : lido } : {}),
         movimento: { aba: p?.aba ?? null, de: p?.coluna_antes ?? null, para: p?.destino ?? null },
       })
       continue
@@ -436,8 +482,39 @@ async function rodar(
       continue
     }
     cont.gravados++
+
+    // Bloco C: "aceitou" → lê o pedido. Fechado pelo critério → pedidos_conversa (a conferência
+    // procura a venda). Leitura que falhou também entra, como 'falhou': o analista disse
+    // "aceitou", e melhor conferir à toa que perder um pedido sem venda.
+    let pedidoLido: PedidoExtraido | { falhou: string } | undefined
+    if (veredito.resultado === 'aceitou') {
+      const lido = await extrairPedido(chave, seg, base.nome, ritmo)
+      pedidoLido = 'pedido' in lido ? lido.pedido : lido
+      const ultimaDoCliente = [...seg.mensagens].reverse().find((m) => m.de === 'cliente')?.em ?? seg.fim
+      const linha = 'pedido' in lido
+        ? (lido.pedido.fechado
+          ? {
+            fechado_em: lido.pedido.fechadoEm, itens: lido.pedido.itens, forma_pagamento: lido.pedido.formaPagamento,
+            entrega: lido.pedido.entrega, total_citado: lido.pedido.totalCitado, confirmacao: lido.pedido.confirmacao,
+            faltam_sabores: lido.pedido.faltamSabores, trecho: lido.pedido.trecho, extracao: 'ok',
+          }
+          : null)
+        : {
+          fechado_em: ultimaDoCliente, itens: [], forma_pagamento: null, entrega: null, total_citado: null,
+          confirmacao: 'nenhuma', faltam_sabores: false, trecho: veredito.trechoCliente?.slice(0, 150) ?? null, extracao: 'falhou',
+        }
+      if (linha) {
+        const { error: erroPedido } = await admin.from('pedidos_conversa').upsert(
+          { ...linha, contato_id: seg.contatoId, interacao_id: g.interacao_id ?? null, message_ids: seg.messageIds },
+          { onConflict: 'interacao_id', ignoreDuplicates: true },
+        )
+        if (erroPedido) console.error('[whatsapp-analista] falha ao gravar pedidos_conversa', erroPedido.message)
+      }
+    }
+
     detalhes.push({
       ...base, situacao: 'gravado', tentativas, veredito, tokens, interacao_id: g.interacao_id,
+      ...(pedidoLido ? { pedido: pedidoLido } : {}),
       movimento: {
         aba: g.aba ?? null,
         de: g.coluna_antes ?? null,
