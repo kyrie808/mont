@@ -56,6 +56,45 @@ export type Database = {
         }
         Relationships: []
       }
+      alertas_operacao: {
+        Row: {
+          criado_em: string
+          destino: string
+          enviado_em: string | null
+          id: string
+          message_id: string | null
+          ref: string
+          status: string
+          texto: string
+          tipo: string
+          vence_em: string
+        }
+        Insert: {
+          criado_em?: string
+          destino: string
+          enviado_em?: string | null
+          id?: string
+          message_id?: string | null
+          ref: string
+          status?: string
+          texto: string
+          tipo: string
+          vence_em: string
+        }
+        Update: {
+          criado_em?: string
+          destino?: string
+          enviado_em?: string | null
+          id?: string
+          message_id?: string | null
+          ref?: string
+          status?: string
+          texto?: string
+          tipo?: string
+          vence_em?: string
+        }
+        Relationships: []
+      }
       campanha_meta_metricas: {
         Row: {
           campanha_id: string
@@ -1393,6 +1432,8 @@ export type Database = {
       }
       itens_venda: {
         Row: {
+          combo_id: string | null
+          combo_instancia: string | null
           custo_unitario: number | null
           id: string
           preco_unitario: number
@@ -1402,6 +1443,8 @@ export type Database = {
           venda_id: string
         }
         Insert: {
+          combo_id?: string | null
+          combo_instancia?: string | null
           custo_unitario?: number | null
           id?: string
           preco_unitario: number
@@ -1411,6 +1454,8 @@ export type Database = {
           venda_id: string
         }
         Update: {
+          combo_id?: string | null
+          combo_instancia?: string | null
           custo_unitario?: number | null
           id?: string
           preco_unitario?: number
@@ -2356,6 +2401,138 @@ export type Database = {
           },
         ]
       }
+      pedidos_conversa: {
+        Row: {
+          confirmacao: string
+          contato_id: string
+          criado_em: string
+          entrega: string | null
+          extracao: string
+          faltam_sabores: boolean
+          fechado_em: string
+          forma_pagamento: string | null
+          id: string
+          interacao_id: string | null
+          itens: Json
+          message_ids: string[]
+          total_citado: number | null
+          trecho: string | null
+          venda_id: string | null
+        }
+        Insert: {
+          confirmacao: string
+          contato_id: string
+          criado_em?: string
+          entrega?: string | null
+          extracao: string
+          faltam_sabores?: boolean
+          fechado_em: string
+          forma_pagamento?: string | null
+          id?: string
+          interacao_id?: string | null
+          itens?: Json
+          message_ids: string[]
+          total_citado?: number | null
+          trecho?: string | null
+          venda_id?: string | null
+        }
+        Update: {
+          confirmacao?: string
+          contato_id?: string
+          criado_em?: string
+          entrega?: string | null
+          extracao?: string
+          faltam_sabores?: boolean
+          fechado_em?: string
+          forma_pagamento?: string | null
+          id?: string
+          interacao_id?: string | null
+          itens?: Json
+          message_ids?: string[]
+          total_citado?: number | null
+          trecho?: string | null
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: true
+            referencedRelation: "aceitou_sem_venda"
+            referencedColumns: ["interacao_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: true
+            referencedRelation: "interacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_projecao_recebimentos"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plano_de_contas: {
         Row: {
           ativo: boolean | null
@@ -2885,6 +3062,7 @@ export type Database = {
           recebido_em: string | null
           recebido_por_entregador_id: string | null
           status: string
+          tabela_preco: string | null
           taxa_entrega: number | null
           total: number
           updated_by: string | null
@@ -2920,6 +3098,7 @@ export type Database = {
           recebido_em?: string | null
           recebido_por_entregador_id?: string | null
           status?: string
+          tabela_preco?: string | null
           taxa_entrega?: number | null
           total: number
           updated_by?: string | null
@@ -2955,6 +3134,7 @@ export type Database = {
           recebido_em?: string | null
           recebido_por_entregador_id?: string | null
           status?: string
+          tabela_preco?: string | null
           taxa_entrega?: number | null
           total?: number
           updated_by?: string | null
@@ -4241,6 +4421,21 @@ export type Database = {
           venda_id: string
         }[]
       }
+      campanha_vigente: { Args: { p_em?: string }; Returns: string }
+      combo_itens: {
+        Args: {
+          p_combo_id: string
+          p_em?: string
+          p_escolhas: Json
+          p_tabela: string
+        }
+        Returns: {
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }[]
+      }
       criar_obrigacao_parcelada: {
         Args: {
           p_credor: string
@@ -4291,6 +4486,7 @@ export type Database = {
           p_itens: Json
           p_observacao_entregador?: string
           p_status?: string
+          p_tabela?: string
           p_taxa_entrega: number
         }
         Returns: string
@@ -4420,6 +4616,21 @@ export type Database = {
       }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_entregador: { Args: { check_user_id?: string }; Returns: boolean }
+      preco_tabela: {
+        Args: { p_em?: string; p_produto_id: string; p_tabela: string }
+        Returns: number
+      }
+      precos_vigentes: {
+        Args: { p_em?: string }
+        Returns: {
+          campanha: string
+          campanha_fim: string
+          cartao: number
+          normal: number
+          pix: number
+          produto_id: string
+        }[]
+      }
       produtos_comprados_juntos: {
         Args: { p_limit?: number; p_produto_id: string }
         Returns: {

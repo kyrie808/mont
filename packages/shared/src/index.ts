@@ -147,3 +147,19 @@ export type { VendaAviso, ClienteAviso } from './avisoEntrega'
 // Aviso diário da Agenda no grupo Equipe — texto e regra de atraso
 export { montarAvisoAgenda, entraNosAtrasados, MAX_NOMES_VENCIMENTO } from './avisoAgenda'
 export type { ItemAvisoAgenda, EntradaAvisoAgenda } from './avisoAgenda'
+export { PROMPT_PEDIDO, validarPedidoExtraido } from './analista'
+export type { PedidoExtraido, ItemExtraido, ValidacaoPedido, FormaCombinada } from './analista'
+export {
+    dentroDoHorario,
+    mensagensDevidas,
+    textoPedidoSemVenda,
+    textoAnuncioSemPurchase,
+    textoEventoMeta,
+    textoFechamento,
+    HORA_INICIO_ALERTAS,
+    HORA_FIM_ALERTAS,
+    HORAS_PARA_VENDA,
+} from './conferencia'
+export type { AlertaPendente, MensagemDevida, PedidoParaAviso, FechamentoDia } from './conferencia'
+export { esperaParaChamar, lerRetryAfterMs, lerDuracaoMs } from './ritmoLlm'
+export type { ChamadaRegistrada, PlanoLlm } from './ritmoLlm'
