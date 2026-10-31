@@ -8,7 +8,9 @@
     "NEXT_PUBLIC_APP_URL",
     "ORS_API_KEY",
     "VITE_SUPABASE_URL",
-    "VITE_SUPABASE_ANON_KEY"
+    "VITE_SUPABASE_ANON_KEY",
+    "VERCEL_ENV",
+    "LOJA_AGORA"
   ],
   "tasks": {
     "build": {
