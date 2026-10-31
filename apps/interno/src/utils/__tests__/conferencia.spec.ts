@@ -139,6 +139,15 @@ describe('mensagensDevidas', () => {
         expect(m.find((x) => x.destino === 'luccas')!.alertaIds).toEqual(['c'])
     })
 
+    it('sem o resumo da noite: o que venceu de noite sai um por um no primeiro envio', () => {
+        const noite = [alerta('a', 'luccas', '2026-11-04T00:30:00Z'), alerta('b', 'luccas', '2026-11-04T03:00:00Z')]
+        const m = mensagensDevidas(noite, '2026-11-04T11:00:00Z', { resumoNoite: false })
+        expect(m).toEqual([
+            { destino: 'luccas', texto: 'alerta a', alertaIds: ['a'] },
+            { destino: 'luccas', texto: 'alerta b', alertaIds: ['b'] },
+        ])
+    })
+
     it('alerta que ainda não venceu espera', () => {
         expect(mensagensDevidas([alerta('a', 'grupo', '2026-11-03T18:00:00Z')], '2026-11-03T16:00:00Z')).toEqual([])
     })

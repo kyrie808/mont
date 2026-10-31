@@ -44,6 +44,15 @@ const PENDENTE_PARADO_MS = 2 * 3_600_000
 /** Venda de anúncio sem Purchase: só a partir do dia em que a conferência entrou no ar. */
 const CORTE_ANUNCIO = '2026-10-31T00:00:00-03:00'
 
+// Desligados em 31/10/2026 (Luccas: atendimento e lançamento de vendas são humanos). Religar
+// sem código: `npx supabase secrets set CONFERENCIA_PEDIDO_SEM_VENDA=true` (idem
+// CONFERENCIA_RESUMO_NOITE). Os dados (pedidos_conversa, alertas_operacao) ficam onde estão.
+const flagLigada = (nome: string) => Deno.env.get(nome)?.trim().toLowerCase() === 'true'
+/** Pedido fechado na conversa sem venda em 3 h → grupo da Equipe. */
+const PEDIDO_SEM_VENDA = 'CONFERENCIA_PEDIDO_SEM_VENDA'
+/** O que vence de noite junta num "Resumo da noite"; desligado, sai um por um às 8h. */
+const RESUMO_NOITE = 'CONFERENCIA_RESUMO_NOITE'
+
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -199,7 +208,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const r: Resultado = { novos: [], comVenda: [] }
-    await pedidosSemVenda(admin, agoraMs, r)
+    const pedidoLigado = flagLigada(PEDIDO_SEM_VENDA)
+    if (pedidoLigado) await pedidosSemVenda(admin, agoraMs, r)
     await anunciosSemPurchase(admin, agoraIso, r)
     await eventosMeta(admin, agoraMs, agoraIso, r)
 
@@ -220,12 +230,18 @@ Deno.serve(async (req: Request) => {
     const resolvidos = new Set(r.comVenda.map((c) => c.pedidoId))
     let pendentes: AlertaPendente[] = (abertos ?? [])
       .filter((a) => !(a.tipo === 'pedido_sem_venda' && resolvidos.has(a.ref)))
+      // Desligado: um pedido_sem_venda que ficou pendente não sai (continua gravado).
+      .filter((a) => pedidoLigado || a.tipo !== 'pedido_sem_venda')
       .map((a) => ({ id: a.id, destino: a.destino, venceEm: a.vence_em, texto: a.texto }))
 
     if (simular) {
       pendentes = [...pendentes, ...novos.map((n, i) => ({ id: `novo-${i}`, destino: n.destino, venceEm: n.vence_em, texto: n.texto }))]
-      const devidos = mensagensDevidas(pendentes, agoraIso).map((m) => ({ ...m, destino: DESTINO[m.destino] }))
-      return json({ ok: true, simulacao: true, agora: agoraIso, novos, com_venda: r.comVenda, devidos }, 200)
+      const devidos = mensagensDevidas(pendentes, agoraIso, { resumoNoite: flagLigada(RESUMO_NOITE) })
+        .map((m) => ({ ...m, destino: DESTINO[m.destino] }))
+      return json({
+        ok: true, simulacao: true, agora: agoraIso, novos, com_venda: r.comVenda, devidos,
+        flags: { [PEDIDO_SEM_VENDA]: pedidoLigado, [RESUMO_NOITE]: flagLigada(RESUMO_NOITE) },
+      }, 200)
     }
 
     for (const c of r.comVenda) {
@@ -244,7 +260,8 @@ Deno.serve(async (req: Request) => {
       pendentes = [...pendentes, ...(inseridos ?? []).map((a) => ({ id: a.id, destino: a.destino, venceEm: a.vence_em, texto: a.texto }))]
     }
 
-    const devidos = mensagensDevidas(pendentes, agoraIso).map((m) => ({ ...m, destino: DESTINO[m.destino] }))
+    const devidos = mensagensDevidas(pendentes, agoraIso, { resumoNoite: flagLigada(RESUMO_NOITE) })
+      .map((m) => ({ ...m, destino: DESTINO[m.destino] }))
     return json({ ok: true, agora: agoraIso, registrados: novos.length, com_venda: r.comVenda.length, devidos }, 200)
   } catch (e) {
     console.error('[conferencia]', e)

@@ -64,6 +64,12 @@ const CEREBRAS_URL = 'https://api.cerebras.ai/v1/chat/completions'
 const MODELO_CEREBRAS = 'gpt-oss-120b'
 /** Tentativas por provedor antes de passar para o próximo. */
 const TENTATIVAS_POR_PROVEDOR = 3
+/**
+ * Leitura do pedido num "aceitou" (bloco C). Desligada em 31/10/2026: atendimento e
+ * lançamento são humanos, e a leitura dobrava as chamadas ao Groq. Religar:
+ * `npx supabase secrets set ANALISTA_LER_PEDIDO=true`.
+ */
+const LER_PEDIDO = Deno.env.get('ANALISTA_LER_PEDIDO')?.trim().toLowerCase() === 'true'
 // O Groq reserva o teto de saída no limite por minuto (8000 tokens). 400 cobre o JSON e
 // o raciocínio curto do reasoning_effort=low (medido: ~60 tokens).
 const MAX_COMPLETION = 400
@@ -532,7 +538,7 @@ async function rodar(
       if (error) throw new Error(`Falha na prévia: ${error.message}`)
       const p = data as { aba: string; coluna_antes: string; destino: string | null } | null
       colunaSimulada.set(seg.contatoId, p?.destino ?? p?.coluna_antes ?? null)
-      const lido = veredito.resultado === 'aceitou' ? await extrairPedido(llm, seg, base.nome) : null
+      const lido = LER_PEDIDO && veredito.resultado === 'aceitou' ? await extrairPedido(llm, seg, base.nome) : null
       if (lido && 'adiar' in lido) {
         detalhes.push({ ...base, tentativas, veredito, tokens, provedor, erro: `leitura do pedido adiada: ${lido.motivo}` })
         cont.adiados++
@@ -548,7 +554,7 @@ async function rodar(
 
     // Bloco C: num "aceitou" o pedido é lido ANTES de gravar. Sem tempo ou sem LLM, a conversa
     // inteira volta para a fila (nem o veredito é gravado) — só se marca analisada no sucesso.
-    const lido = veredito.resultado === 'aceitou' ? await extrairPedido(llm, seg, base.nome) : null
+    const lido = LER_PEDIDO && veredito.resultado === 'aceitou' ? await extrairPedido(llm, seg, base.nome) : null
     if (lido && 'adiar' in lido) {
       detalhes.push({ ...base, tentativas, veredito, tokens, provedor, erro: `leitura do pedido adiada: ${lido.motivo}` })
       cont.adiados++
@@ -647,7 +653,6 @@ async function avisarLuccasLlm(admin: SupabaseClient, llm: Llm, cont: Contadores
   const texto = [
     '⚠️ *Analista sem LLM*',
     `${llm.nomes.join(' e ')} falharam ${TENTATIVAS_POR_PROVEDOR} vezes cada às ${hora.slice(11, 13)}h. ${naFila} conversa(s) ficaram na fila para a próxima rodada.`,
-    ...(llm.nomes.length === 1 ? ['A reserva (Cerebras) não está configurada: falta o segredo CEREBRAS_API_KEY.'] : []),
     `Último erro: ${(llm.ultimoEsgotado ?? '').slice(0, 180)}`,
   ].join('\n')
   const { error } = await admin.from('alertas_operacao').upsert(

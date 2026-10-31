@@ -68,15 +68,23 @@ export interface MensagemDevida {
  * O que sai AGORA. Fora do horário, nada. Dentro: o alerta que venceu de dia sai sozinho; o
  * que venceu de noite (ou de madrugada) junta num "Resumo da noite" por destino.
  */
-export function mensagensDevidas(alertas: AlertaPendente[], agoraIso: string): MensagemDevida[] {
+export function mensagensDevidas(
+    alertas: AlertaPendente[],
+    agoraIso: string,
+    opcoes: { resumoNoite?: boolean } = {},
+): MensagemDevida[] {
     if (!dentroDoHorario(agoraIso)) return []
     const agora = Date.parse(agoraIso)
-    const vencidos = alertas.filter((a) => Date.parse(a.venceEm) <= agora)
+    const vencidos = alertas
+        .filter((a) => Date.parse(a.venceEm) <= agora)
+        .sort((x, y) => Date.parse(x.venceEm) - Date.parse(y.venceEm))
+    const resumoNoite = opcoes.resumoNoite ?? true
 
     const saida: MensagemDevida[] = []
     const noturnos = new Map<'grupo' | 'luccas', AlertaPendente[]>()
     for (const a of vencidos) {
-        if (dentroDoHorario(a.venceEm)) {
+        // Sem o resumo (desligado em 31/10), o da noite sai sozinho no primeiro envio do dia.
+        if (!resumoNoite || dentroDoHorario(a.venceEm)) {
             saida.push({ destino: a.destino, texto: a.texto, alertaIds: [a.id] })
         } else {
             noturnos.set(a.destino, [...(noturnos.get(a.destino) ?? []), a])
