@@ -4,6 +4,7 @@ import {
     dentroDoHorario,
     mensagensDevidas,
     textoPedidoSemVenda,
+    textoEventoMeta,
     type Segmento,
     type AlertaPendente,
 } from '@mont/shared'
@@ -155,5 +156,17 @@ describe('textoPedidoSemVenda', () => {
         expect(t).toContain('R$ 199')
         expect(t).toContain('Fechado, quero 1')
         expect(t).toContain('10:10') // horário de SP do aceite
+    })
+})
+
+describe('textoEventoMeta', () => {
+    it('erro longo da Meta é cortado na palavra inteira, com reticências', () => {
+        const erro = 'O registro de data e hora deste evento é muito no passado. Os eventos precisam ser enviados do seu servidor dentro de 7 dias após terem ocorrido. Insira um registro de data e hora que tenha ocorrido nos últimos 7 dias.'
+        const t = textoEventoMeta({ evento: 'Purchase', eventId: 'venda_x', status: 'erro', valor: 25, tentativas: 1, erro })
+        const ultima = t.split('\n').at(-1)!
+        expect(ultima.endsWith('…')).toBe(true)
+        expect(ultima.length).toBeLessThanOrEqual(200)
+        expect(erro.startsWith(ultima.slice(0, -1))).toBe(true)
+        expect(ultima).not.toMatch(/ \S{1,3}…$/) // não termina num pedaço de palavra
     })
 })

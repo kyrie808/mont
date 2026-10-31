@@ -142,12 +142,20 @@ export function textoAnuncioSemPurchase(v: { nome: string | null; total: number;
     ].join('\n')
 }
 
+/** Corta na última palavra inteira antes do limite, com reticências. */
+function encurtar(texto: string, limite: number): string {
+    if (texto.length <= limite) return texto
+    const corte = texto.slice(0, limite - 1)
+    const espaco = corte.lastIndexOf(' ')
+    return `${(espaco > limite / 2 ? corte.slice(0, espaco) : corte).replace(/[\s,.;:]+$/, '')}…`
+}
+
 export function textoEventoMeta(e: {
     evento: string; eventId: string; status: 'erro' | 'parado'; valor: number | null; tentativas: number; erro: string | null
 }): string {
     return [
         `⚠️ *Evento da Meta ${e.status === 'erro' ? 'com erro' : 'parado na fila'}*`,
         `${e.evento} ${e.eventId}${e.valor !== null ? ` · ${reais(e.valor)}` : ''} · ${e.tentativas} tentativa(s)`,
-        ...(e.erro ? [e.erro.slice(0, 200)] : []),
+        ...(e.erro ? [encurtar(e.erro, 200)] : []),
     ].join('\n')
 }
