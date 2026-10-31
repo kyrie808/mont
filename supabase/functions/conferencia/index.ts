@@ -33,8 +33,8 @@ import {
 
 /** 🧀 Equipe Mont Distribuidora 🛵 — pedido para conferir. */
 const GRUPO_EQUIPE = '120363129541953733@g.us'
-/** Luccas — eventos da Meta (decisão de 30/10: Meta só para ele). */
-const LUCCAS = '5511934417085@s.whatsapp.net'
+/** Luccas — eventos da Meta e "analista sem LLM" (só para ele). Número trocado em 31/10. */
+const LUCCAS = '5511980017732@s.whatsapp.net'
 const DESTINO: Record<'grupo' | 'luccas', string> = { grupo: GRUPO_EQUIPE, luccas: LUCCAS }
 
 /** Venda lançada até 30 min ANTES do aceite também conta (o pedido pode ter sido lançado antes da última mensagem). */
