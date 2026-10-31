@@ -8,6 +8,7 @@ import type {
     PurchaseOrderItem, 
     PurchaseOrderPayment 
 } from '@mont/shared'
+import type { EscolhaCombo, TabelaPreco } from '../utils/tabelaPreco'
 
 export type VendaStatus = 'pendente' | 'entregue' | 'cancelada'
 // 'venda' = intenção de venda normal (forma real informada no Quitar). 'fiado'/'brinde' carregam lógica.
@@ -98,6 +99,29 @@ export interface DomainItemVenda {
     quantidade: number
     precoUnitario: number
     subtotal: number
+    /** Combo de onde a linha veio (sabor ou item fixo, com o preço do combo rateado). null = avulso. */
+    comboId: string | null
+    /** Agrupa as linhas de uma unidade do combo. */
+    comboInstancia: string | null
+}
+
+// Montagem de um combo na Nova Venda: itens fixos + grupos de escolha de sabor.
+// Nomes e fotos vêm da lista de produtos já carregada (mesmo padrão dos componentes).
+export interface ComboMontagemGrupo {
+    id: string
+    titulo: string
+    rotuloSingular: string
+    rotuloPlural: string
+    quantidade: number
+    permiteRepetir: boolean
+    /** produto_id das opções, na ordem do cadastro. Vazio = sabores ainda em definição. */
+    opcoes: string[]
+}
+
+export interface ComboMontagem {
+    comboId: string
+    fixos: { produtoId: string; quantidade: number }[]
+    grupos: ComboMontagemGrupo[]
 }
 
 // Composição de um combo/kit (linha de produto_componentes)
@@ -146,6 +170,8 @@ export interface DomainVenda {
     dataEntregaPrevista?: string | null
     /** Quando o aviso saiu no grupo #ENTREGAS (null = ainda não saiu). */
     avisoGrupoEnviadoEm?: string | null
+    /** Tabela de preço do lançamento (Black). null = venda antiga ou lançada sem tabela. */
+    tabelaPreco?: TabelaPreco | null
 }
 
 // Creation/Update types (Domain-side)
@@ -162,18 +188,35 @@ export type CreateContato = Omit<
 >
 export type UpdateContato = Partial<CreateContato>
 
+/** Item avulso: preço e subtotal são só referência quando a venda vai com `tabela`. */
+export interface ItemAvulsoCreateVenda {
+    produtoId: string
+    quantidade: number
+    precoUnitario: number
+    subtotal: number
+}
+
+/** Combo com os sabores escolhidos (vazio no combo fixo). O servidor rateia o preço. */
+export interface ItemComboCreateVenda {
+    comboId: string
+    quantidade: number
+    escolhas: EscolhaCombo[]
+}
+
+export type ItemCreateVenda = ItemAvulsoCreateVenda | ItemComboCreateVenda
+
 export interface CreateVenda {
     contatoId: string
     data: string
     formaPagamento: PagamentoMetodo
     taxaEntrega: number
     dataPrevistaPagamento?: string | null
-    itens: {
-        produtoId: string
-        quantidade: number
-        precoUnitario: number
-        subtotal: number
-    }[]
+    itens: ItemCreateVenda[]
+    /**
+     * Tabela de preço (Black: pix = Pix/dinheiro, cartao, normal). Com ela o SERVIDOR decide o
+     * preço de tudo e abre os combos em itens; sem ela, vale o preço mandado (chamadores antigos).
+     */
+    tabela?: TabelaPreco
     // Entrega: entregador atribuído (null/undefined = retirada) + nota pro entregador.
     entregadorId?: string | null
     observacaoEntregador?: string | null

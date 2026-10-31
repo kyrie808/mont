@@ -64,7 +64,7 @@ export function CartSidebar({ items, total, onUpdateQuantity, onCheckout, onClea
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {items.map((item) => (
-                    <div key={item.produto_id} className="flex gap-3 bg-muted/40 p-3 rounded-lg border border-border">
+                    <div key={item.chave} className="flex gap-3 bg-muted/40 p-3 rounded-lg border border-border">
                         <div className="flex-1 min-w-0">
                             <p className="font-medium text-foreground text-sm line-clamp-1">{item.produto.nome}</p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -80,7 +80,7 @@ export function CartSidebar({ items, total, onUpdateQuantity, onCheckout, onClea
                             <div className="flex items-center gap-2 bg-muted rounded-md p-1">
                                 <button
                                     aria-label="Diminuir quantidade"
-                                    onClick={() => onUpdateQuantity(item.produto_id, -1)}
+                                    onClick={() => onUpdateQuantity(item.chave, -1)}
                                     className="w-6 h-6 flex items-center justify-center rounded hover:bg-background transition"
                                 >
                                     -
@@ -88,7 +88,7 @@ export function CartSidebar({ items, total, onUpdateQuantity, onCheckout, onClea
                                 <span className="text-xs font-medium w-4 text-center">{item.quantidade}</span>
                                 <button
                                     aria-label="Aumentar quantidade"
-                                    onClick={() => onUpdateQuantity(item.produto_id, 1)}
+                                    onClick={() => onUpdateQuantity(item.chave, 1)}
                                     className="w-6 h-6 flex items-center justify-center rounded hover:bg-background transition"
                                 >
                                     +

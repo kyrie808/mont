@@ -8,13 +8,15 @@
     "NEXT_PUBLIC_APP_URL",
     "ORS_API_KEY",
     "VITE_SUPABASE_URL",
-    "VITE_SUPABASE_ANON_KEY"
+    "VITE_SUPABASE_ANON_KEY",
+    "VERCEL_ENV",
+    "LOJA_AGORA"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["META_CAPI_TOKEN", "META_PIXEL_ID"]
+      "env": ["META_CAPI_TOKEN", "META_PIXEL_ID", "VITE_AGORA_SIMULADO", "VITE_VERCEL_ENV"]
     },
     "dev": {
       "cache": false,

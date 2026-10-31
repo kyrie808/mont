@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 import { ShoppingCart, Trash2, Minus, Plus, User, Search, ChevronRight } from 'lucide-react'
 import { cn, formatCurrency, formatPhone } from '@mont/shared'
 import { ClientSelector } from '../ClientSelector'
@@ -10,14 +10,20 @@ interface PosCartProps {
     total: number
     selectedContato: DomainContato | null
     onSelectContato: (c: DomainContato | null) => void
-    onUpdateQuantity: (produtoId: string, delta: number) => void
+    onUpdateQuantity: (chave: string, delta: number) => void
     onClear: () => void
     onCheckout: () => void
+    /** Seletor da tabela de preço (Black); some fora de campanha. */
+    seletorTabela?: ReactNode
+    /** Sabores escolhidos de um combo, em texto, ou null para item avulso. */
+    resumoCombo?: (item: CartItem) => string | null
+    /** Reabre o seletor de sabores de um combo montado. */
+    onEditarCombo?: (chave: string) => void
 }
 
 // Carrinho persistente do PDV (espelha o Cart da Adega, tema Mont): cliente no topo →
 // itens (scroll) → rodapé fixo com Total + "Ir para pagamento".
-export function PosCart({ items, total, selectedContato, onSelectContato, onUpdateQuantity, onClear, onCheckout }: PosCartProps) {
+export function PosCart({ items, total, selectedContato, onSelectContato, onUpdateQuantity, onClear, onCheckout, seletorTabela, resumoCombo, onEditarCombo }: PosCartProps) {
     const [clienteOpen, setClienteOpen] = useState(false)
     const triggerRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
@@ -92,6 +98,8 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                     </div>
                 )}
 
+                {seletorTabela && <div className="mt-4">{seletorTabela}</div>}
+
                 <div className="mt-4 flex items-end justify-between">
                     <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
                         <ShoppingCart className="size-5 text-primary" /> Carrinho
@@ -124,16 +132,28 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                 </div>
             ) : (
                 <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
-                    {items.map((item) => (
-                        <div key={item.produto_id} className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
+                    {items.map((item) => {
+                        const sabores = resumoCombo?.(item) ?? null
+                        return (
+                        <div key={item.chave} className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-semibold text-foreground">{item.produto.nome}</p>
+                                {sabores && <p className="text-xs leading-snug text-muted-foreground">{sabores}</p>}
                                 <p className="text-xs text-muted-foreground">{formatCurrency(item.preco_unitario)} un.</p>
+                                {item.escolhas && item.escolhas.length > 0 && onEditarCombo && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onEditarCombo(item.chave)}
+                                        className="mt-1 text-xs font-semibold text-primary hover:underline"
+                                    >
+                                        Trocar sabores
+                                    </button>
+                                )}
                             </div>
                             <div className="flex items-center gap-1 rounded-lg bg-background p-1">
                                 <button
                                     aria-label="Diminuir"
-                                    onClick={() => onUpdateQuantity(item.produto_id, -1)}
+                                    onClick={() => onUpdateQuantity(item.chave, -1)}
                                     className="flex size-7 items-center justify-center rounded-md border border-border transition-colors hover:bg-muted"
                                 >
                                     <Minus className="size-3.5" />
@@ -141,7 +161,7 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                                 <span className="w-6 text-center text-sm font-bold tabular-nums">{item.quantidade}</span>
                                 <button
                                     aria-label="Aumentar"
-                                    onClick={() => onUpdateQuantity(item.produto_id, 1)}
+                                    onClick={() => onUpdateQuantity(item.chave, 1)}
                                     className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground transition-transform active:scale-95"
                                 >
                                     <Plus className="size-3.5" />
@@ -151,7 +171,8 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                                 {formatCurrency(item.subtotal)}
                             </span>
                         </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
 

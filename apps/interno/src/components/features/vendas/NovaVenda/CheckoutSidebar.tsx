@@ -9,6 +9,8 @@ import { useContas } from '../../../../hooks/useContas'
 import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
 import type { OpcoesEntrega, PagamentoImediato } from './pos/FinalizarVendaDrawer'
+import { SeletorTabelaPreco } from './SeletorTabelaPreco'
+import { ROTULO_TABELA, tabelaDaVenda, type TabelaPreco } from '../../../../utils/tabelaPreco'
 
 interface CheckoutSidebarProps {
     onBack: () => void
@@ -17,6 +19,12 @@ interface CheckoutSidebarProps {
     contatoId: string
     contatoNome: string
     items: VendaFormData['itens']
+    /** Tabela escolhida no carrinho e a campanha valendo (null = fora de campanha). */
+    tabelaEscolhida: TabelaPreco
+    campanha: { nome: string; fim: string } | null
+    onTabelaEscolhida: (tabela: TabelaPreco) => void
+    /** Avisa a tabela que vale agora (null ao sair), para o total mostrar o preço certo. */
+    onTabelaEfetiva: (tabela: TabelaPreco | null) => void
 }
 
 // Intenção da venda (a forma REAL — pix/dinheiro/cartão — é informada no Quitar).
@@ -41,7 +49,11 @@ export function CheckoutSidebar({
     total,
     contatoId,
     contatoNome,
-    items
+    items,
+    tabelaEscolhida,
+    campanha,
+    onTabelaEscolhida,
+    onTabelaEfetiva,
 }: CheckoutSidebarProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     /*
@@ -105,6 +117,23 @@ export function CheckoutSidebar({
         setValue('pagamento_na_entrega', opcao === 'ja_pago' ? null : opcao)
         setValue('dinheiro_na_entrega', opcao === 'dinheiro')
     }
+    // Forma de pagamento já decidida (na entrega, ou "Já pago"): ela escolhe a tabela.
+    const metodoDefinido: PagamentoImediato['metodo'] | null = !exigePagamento || !pagamentoEntrega
+        ? null
+        : pagamentoEntrega === 'ja_pago' ? metodoPago : pagamentoEntrega
+    const tabelaEfetiva = tabelaDaVenda(formaPagamento, metodoDefinido, tabelaEscolhida)
+    const tabelaTravadaPor = formaPagamento === 'fiado' || formaPagamento === 'brinde'
+        ? 'Fiado e brinde usam o preço normal.'
+        : metodoDefinido
+            ? `Recebendo em ${metodoDefinido === 'cartao' ? 'cartão' : metodoDefinido === 'pix' ? 'Pix' : 'dinheiro'}: vale a tabela ${ROTULO_TABELA[tabelaEfetiva]}.`
+            : null
+
+    useEffect(() => {
+        onTabelaEfetiva(tabelaEfetiva)
+    }, [tabelaEfetiva, onTabelaEfetiva])
+    // Saiu do checkout: o carrinho volta à tabela escolhida.
+    useEffect(() => () => onTabelaEfetiva(null), [onTabelaEfetiva])
+
     const taxaEntregaValue = watch('taxa_entrega') || 0
     const descontoValue = watch('desconto') || 0
     // Produto com piso 0 (espelha o clamp da RPC) + frete.
@@ -130,7 +159,14 @@ export function CheckoutSidebar({
             pagamento_na_entrega: null,
             dinheiro_na_entrega: false
         })
-    }, [contatoId, items, reset])
+        // Só o cliente reinicia o formulário. Os itens mudam de preço junto com a tabela
+        // (fiado → normal) e, se reiniciassem, a escolha de "Fiado" voltaria para "Venda".
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contatoId, reset])
+
+    useEffect(() => {
+        setValue('itens', items)
+    }, [items, setValue])
 
     // Tudo que não é 'entrega' zera frete, atribuição e nota do entregador —
     // "Entrego depois" é o próprio Gilmar levando, não tem entregador nem frete.
@@ -164,7 +200,7 @@ export function CheckoutSidebar({
                 : undefined
             // Fora da exigência (sem data, fiado, brinde), a escolha não vale.
             const dados: VendaFormData = exigePagamento ? data : { ...data, pagamento_na_entrega: null }
-            await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada' })
+            await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada', tabela: tabelaEfetiva })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
         } finally {
@@ -224,6 +260,13 @@ export function CheckoutSidebar({
                         A forma de pagamento (PIX, dinheiro, cartão) é informada ao quitar a venda.
                     </p>
                 </div>
+
+                <SeletorTabelaPreco
+                    tabela={tabelaEfetiva}
+                    onChange={onTabelaEscolhida}
+                    campanha={campanha}
+                    travadaPor={tabelaTravadaPor}
+                />
 
                 {/* Fiado: data de vencimento */}
                 {formaPagamento === 'fiado' && (

@@ -3,7 +3,15 @@ import type {
     ProdutoInsert,
     ProdutoUpdate
 } from '@mont/shared'
-import type { DomainProduto, CreateProduto, UpdateProduto, DomainProdutoComponente } from '../types/domain'
+import type { DomainProduto, CreateProduto, UpdateProduto, DomainProdutoComponente, ComboMontagem } from '../types/domain'
+import type { MapaPrecos } from '../utils/tabelaPreco'
+import { agoraSimulado } from '../lib/agoraSimulado'
+
+export interface PrecosVigentes {
+    precos: MapaPrecos
+    /** Campanha valendo agora (ex.: Black da Mont 2026). `null` = fora de campanha. */
+    campanha: { nome: string; fim: string } | null
+}
 import { toDomainProduto } from './mappers'
 
 /** Sanitiza um slug pra URL-safe (o catálogo resolve produto por slug). null se vazio. */
@@ -201,6 +209,71 @@ export class ProdutoService {
             componenteId: row.componente_id,
             quantidade: Number(row.quantidade || 0)
         }))
+    }
+
+    /* COMBOS NA NOVA VENDA — fixos (produto_componentes) + grupos de sabor (combo_grupos).
+       Só ids: nomes e fotos saem da lista de produtos que a tela já tem. */
+    async getCombosMontagem(): Promise<ComboMontagem[]> {
+        const [combos, fixos, grupos] = await Promise.all([
+            supabase.from('produtos').select('id').eq('eh_combo', true).eq('ativo', true),
+            supabase.from('produto_componentes').select('combo_id, componente_id, quantidade').order('criado_em'),
+            supabase
+                .from('combo_grupos')
+                .select('id, combo_id, titulo, rotulo_singular, rotulo_plural, quantidade, permite_repetir, ordem, opcoes:combo_grupo_opcoes(produto_id, ordem)')
+                .order('ordem'),
+        ])
+        if (combos.error) throw combos.error
+        if (fixos.error) throw fixos.error
+        if (grupos.error) throw grupos.error
+
+        return (combos.data || []).map(({ id }) => ({
+            comboId: id,
+            fixos: (fixos.data || [])
+                .filter((f) => f.combo_id === id)
+                .map((f) => ({ produtoId: f.componente_id, quantidade: Number(f.quantidade || 0) })),
+            grupos: (grupos.data || [])
+                .filter((g) => g.combo_id === id)
+                .map((g) => ({
+                    id: g.id,
+                    titulo: g.titulo,
+                    rotuloSingular: g.rotulo_singular,
+                    rotuloPlural: g.rotulo_plural,
+                    quantidade: g.quantidade,
+                    permiteRepetir: g.permite_repetir,
+                    opcoes: [...(g.opcoes || [])].sort((a, b) => a.ordem - b.ordem).map((o) => o.produto_id),
+                })),
+        }))
+    }
+
+    /* NOMES POR ID — p. ex. o nome do combo no recibo (itens_venda.combo_id não tem FK, de
+       propósito: uma 2ª FK para produtos deixaria ambíguo o embed itens_venda → produtos). */
+    async getNomes(ids: string[]): Promise<Map<string, string>> {
+        if (ids.length === 0) return new Map()
+        const { data, error } = await supabase.from('produtos').select('id, nome').in('id', ids)
+        if (error) throw error
+        return new Map((data || []).map((p) => [p.id, p.nome]))
+    }
+
+    /* PREÇO DA CAMPANHA — as três tabelas de cada produto ativo (RPC precos_vigentes, a
+       mesma regra que a criar_venda usa ao gravar). `campanha` só vem durante a campanha. */
+    async getPrecosVigentes(): Promise<PrecosVigentes> {
+        // Fora de produção, a data simulada (VITE_AGORA_SIMULADO) mostra a campanha antes da hora.
+        const { data, error } = await supabase.rpc('precos_vigentes', agoraSimulado ? { p_em: agoraSimulado } : {})
+        if (error) throw error
+
+        const precos: MapaPrecos = new Map()
+        let campanha: PrecosVigentes['campanha'] = null
+        for (const linha of data || []) {
+            precos.set(linha.produto_id, {
+                normal: Number(linha.normal),
+                pix: Number(linha.pix),
+                cartao: Number(linha.cartao),
+            })
+            if (!campanha && linha.campanha && linha.campanha_fim) {
+                campanha = { nome: linha.campanha, fim: linha.campanha_fim }
+            }
+        }
+        return { precos, campanha }
     }
 
     // Substitui toda a composição do combo de forma ATÔMICA (RPC: delete+insert numa

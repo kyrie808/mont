@@ -8,6 +8,8 @@ interface PosProductGridProps {
     getQuantity: (produtoId: string) => number
     onAdd: (produto: DomainProduto) => void
     onUpdateQuantity: (produtoId: string, delta: number) => void
+    /** Combo com escolha de sabor: 'montar' abre o seletor; 'pendente' = sabores em definição. */
+    acaoCombo?: (produto: DomainProduto) => 'montar' | 'pendente' | null
 }
 
 // Badge de estoque — INFORMATIVO (o estoque do Mont ainda não foi contado); NUNCA bloqueia
@@ -22,7 +24,7 @@ function estoqueBadge(p: DomainProduto): { label: string; cls: string } {
     return { label: `${atual} un`, cls }
 }
 
-export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity }: PosProductGridProps) {
+export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity, acaoCombo }: PosProductGridProps) {
     if (produtos.length === 0) {
         return (
             <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
@@ -36,6 +38,7 @@ export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity 
             {produtos.map((produto) => {
                 const qty = getQuantity(produto.id)
                 const badge = estoqueBadge(produto)
+                const combo = acaoCombo?.(produto) ?? null
                 return (
                     <div
                         key={produto.id}
@@ -60,7 +63,21 @@ export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity 
                         <p className="mb-2 text-base font-bold tabular-nums text-primary">{formatCurrency(Number(produto.preco))}</p>
 
                         <div className="mt-auto">
-                            {qty > 0 ? (
+                            {combo === 'pendente' ? (
+                                <button
+                                    disabled
+                                    className="w-full cursor-not-allowed rounded-lg bg-muted py-2 text-sm font-semibold text-muted-foreground"
+                                >
+                                    Sabores em definição
+                                </button>
+                            ) : combo === 'montar' ? (
+                                <button
+                                    onClick={() => onAdd(produto)}
+                                    className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-95"
+                                >
+                                    {qty > 0 ? `Montar outro (${qty})` : 'Montar combo'}
+                                </button>
+                            ) : qty > 0 ? (
                                 <div className="flex items-center justify-between gap-1 rounded-lg bg-muted p-1">
                                     <button
                                         aria-label="Diminuir"
