@@ -58,7 +58,7 @@ export function VendaAcoesSecundarias({
                         onClick={() => setShowDeleteModal(true)}
                     >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        {venda.status === 'cancelada' ? 'Excluir' : 'Cancelar'}
+                        {venda.status === 'cancelada' ? 'Excluir' : 'Excluir venda'}
                     </Button>
                 )}
             </div>
