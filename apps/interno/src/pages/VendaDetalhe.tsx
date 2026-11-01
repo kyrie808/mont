@@ -166,7 +166,7 @@ export function VendaDetalhe() {
                     <div role="status" className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-warning-strong">
                         <p className="font-semibold">Editar venda está desligado.</p>
                         <p className="mt-1 text-xs">
-                            Salvar a edição criava uma venda nova em vez de alterar esta. Para corrigir, cancele esta venda e lance outra.
+                            Salvar a edição criava uma venda nova em vez de alterar esta. Para corrigir, exclua esta venda e lance outra.
                         </p>
                     </div>
                 )}
