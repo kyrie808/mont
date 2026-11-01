@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { formatCurrency } from '@mont/shared'
 import { LoadingScreen, Button, Drawer } from '../components/ui'
@@ -21,6 +21,8 @@ export function VendaDetalhe() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const toast = useToast()
+    // Veio de /vendas/:id/editar, que está desligado (criava outra venda em vez de alterar).
+    const edicaoDesligada = (useLocation().state as { edicaoDesligada?: boolean } | null)?.edicaoDesligada === true
     const { venda, loading, error, refetch } = useVenda(id)
     const { deleteVenda, cancelVenda, addPagamento, updateVendaStatus, deleteUltimoPagamento, updateVenda } = useVendas()
 
@@ -160,6 +162,14 @@ export function VendaDetalhe() {
             />
 
             <main className="flex-1 flex flex-col pt-6 px-4 pb-24 w-full max-w-md mx-auto">
+                {edicaoDesligada && (
+                    <div role="status" className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-warning-strong">
+                        <p className="font-semibold">Editar venda está desligado.</p>
+                        <p className="mt-1 text-xs">
+                            Salvar a edição criava uma venda nova em vez de alterar esta. Para corrigir, cancele esta venda e lance outra.
+                        </p>
+                    </div>
+                )}
                 <VendaReceipt venda={venda} />
 
                 <VendaAcoesPrincipais 

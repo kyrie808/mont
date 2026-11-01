@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, ShoppingCart } from 'lucide-react'
+import { Trash2, ShoppingCart } from 'lucide-react'
 import { Button, Modal, ModalActions } from '../../../../components/ui'
 import { useVendas } from '../../../../hooks/useVendas'
 import { formatDate, formatCurrency } from '@mont/shared'
@@ -9,12 +9,11 @@ import { getVendaBadgeStatus } from '@/utils/vendaBadge'
 
 interface ReceiptCardProps {
     venda: DomainVenda;
-    onEdit?: (id: string, e: React.MouseEvent) => void;
     onView?: (id: string, e: React.MouseEvent) => void;
     onDelete?: (id: string, e: React.MouseEvent) => void;
 }
 
-function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
+function ReceiptCard({ venda, onView, onDelete }: ReceiptCardProps) {
     return (
         <div
             onClick={(e) => onView && onView(venda.id, e)}
@@ -67,17 +66,8 @@ function ReceiptCard({ venda, onEdit, onView, onDelete }: ReceiptCardProps) {
                 <div className="flex flex-col items-end gap-2 pl-2">
                     <p className="text-sm font-bold text-muted-foreground font-mono mb-1">{formatDate(venda.data)}</p>
                     <div className="flex items-center gap-1">
-                        {venda.status !== 'cancelada' && (
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-lg"
-                                onClick={(e) => onEdit && onEdit(venda.id, e)}
-                                title="Editar"
-                            >
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        )}
+                        {/* Sem "Editar" (31/10/2026): salvar a edição criava outra venda em vez de
+                            alterar esta. Volta quando existir a edição de verdade. */}
                         {venda.status === 'cancelada' && (
                             <Button
                                 size="icon"
@@ -131,10 +121,6 @@ export function VendasHistory({ contatoId }: { contatoId: string }) {
                             onView={(id, e) => {
                                 e.stopPropagation();
                                 navigate(`/vendas/${id}`);
-                            }}
-                            onEdit={(id, e) => {
-                                e.stopPropagation();
-                                navigate(`/vendas/${id}/editar`);
                             }}
                             onDelete={(id, e) => {
                                 e.stopPropagation();
