@@ -1,6 +1,6 @@
 import { instanteDeReferencia } from '@/lib/ambiente'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
-import type { BairroFrete, ComboLoja, GrupoCombo, ItemFixo, ProdutoLoja, Secao, Vitrine } from './tipos'
+import type { ComboLoja, GrupoCombo, ItemFixo, ProdutoLoja, Secao, Vitrine } from './tipos'
 
 type Cliente = Awaited<ReturnType<typeof criarClienteServidor>>
 
@@ -225,20 +225,4 @@ export async function carregarVitrine(): Promise<Vitrine> {
         zero: avulsos.zero,
         levaJunto,
     }
-}
-
-export async function carregarBairros(): Promise<BairroFrete[]> {
-    const cliente = await criarClienteServidor()
-    const { data, error } = await cliente
-        .from('loja_frete_bairros')
-        .select('id, bairro, cidade, valor')
-        .eq('ativo', true)
-        .order('cidade')
-        .order('bairro')
-    if (error) falha('os bairros de entrega', error.message)
-    return (data ?? []).map((b) => ({
-        id: b.id,
-        rotulo: b.bairro ? `${b.bairro} · ${b.cidade}` : b.cidade,
-        valor: b.valor,
-    }))
 }

@@ -12,6 +12,8 @@ interface AcoesSacola {
     removerCombo: (chave: string) => void
     escolherBairro: (bairroId: string | null) => void
     manterSomente: (produtoIdsValidos: ReadonlySet<string>, bairroIdsValidos: ReadonlySet<string>) => void
+    /** Depois que o pedido foi gravado. */
+    esvaziar: () => void
 }
 
 export type EstadoSacola = SacolaPersistida & AcoesSacola
@@ -79,6 +81,8 @@ export const useSacola = create<EstadoSacola>()(
                     ),
                     bairroId: s.bairroId && bairroIdsValidos.has(s.bairroId) ? s.bairroId : null,
                 })),
+
+            esvaziar: () => set({ itens: [], bairroId: null }),
         }),
         {
             name: 'mont-loja-sacola',

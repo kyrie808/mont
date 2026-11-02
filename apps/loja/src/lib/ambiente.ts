@@ -25,6 +25,22 @@ export function ambiente(): Ambiente {
     return cache
 }
 
+const esquemaAmbienteServidor = z.object({
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+})
+
+/**
+ * Chave de serviço, só no servidor (gravar o pedido pela RPC loja_criar_pedido). Sem o prefixo
+ * NEXT_PUBLIC_, o Next nunca a manda para o navegador.
+ */
+export function ambienteServidor(): z.infer<typeof esquemaAmbienteServidor> {
+    const resultado = esquemaAmbienteServidor.safeParse({ SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY })
+    if (!resultado.success) {
+        throw new Error('apps/loja: SUPABASE_SERVICE_ROLE_KEY ausente (necessária para gravar o pedido).')
+    }
+    return resultado.data
+}
+
 const esquemaAgoraSimulado = z.iso.datetime({ offset: true })
 
 /**

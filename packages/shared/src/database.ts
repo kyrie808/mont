@@ -266,6 +266,8 @@ export type Database = {
       }
       cat_itens_pedido: {
         Row: {
+          combo_id: string | null
+          combo_instancia: string | null
           id: string
           nome_produto: string
           pedido_id: string | null
@@ -275,6 +277,8 @@ export type Database = {
           total: number | null
         }
         Insert: {
+          combo_id?: string | null
+          combo_instancia?: string | null
           id?: string
           nome_produto: string
           pedido_id?: string | null
@@ -284,6 +288,8 @@ export type Database = {
           total?: number | null
         }
         Update: {
+          combo_id?: string | null
+          combo_instancia?: string | null
           id?: string
           nome_produto?: string
           pedido_id?: string | null
@@ -333,60 +339,96 @@ export type Database = {
       cat_pedidos: {
         Row: {
           atualizado_em: string | null
+          bairro: string | null
+          canal: string
+          cep: string | null
+          chave_idempotencia: string | null
+          cidade: string | null
+          complemento: string | null
           contato_id: string | null
           criado_em: string | null
           endereco_entrega: string | null
           frete: number | null
           id: string
           indicado_por: string | null
+          itens_loja: Json | null
+          logradouro: string | null
           metodo_entrega: string | null
           metodo_pagamento: string | null
           nome_cliente: string
+          numero: string | null
           numero_pedido: number
           observacoes: string | null
+          ofertas_texto: string | null
+          ofertas_whatsapp: boolean
           status: string | null
           status_pagamento: string | null
           subtotal: number | null
           telefone_cliente: string
           total: number | null
+          uf: string | null
         }
         Insert: {
           atualizado_em?: string | null
+          bairro?: string | null
+          canal?: string
+          cep?: string | null
+          chave_idempotencia?: string | null
+          cidade?: string | null
+          complemento?: string | null
           contato_id?: string | null
           criado_em?: string | null
           endereco_entrega?: string | null
           frete?: number | null
           id?: string
           indicado_por?: string | null
+          itens_loja?: Json | null
+          logradouro?: string | null
           metodo_entrega?: string | null
           metodo_pagamento?: string | null
           nome_cliente: string
+          numero?: string | null
           numero_pedido?: number
           observacoes?: string | null
+          ofertas_texto?: string | null
+          ofertas_whatsapp?: boolean
           status?: string | null
           status_pagamento?: string | null
           subtotal?: number | null
           telefone_cliente: string
           total?: number | null
+          uf?: string | null
         }
         Update: {
           atualizado_em?: string | null
+          bairro?: string | null
+          canal?: string
+          cep?: string | null
+          chave_idempotencia?: string | null
+          cidade?: string | null
+          complemento?: string | null
           contato_id?: string | null
           criado_em?: string | null
           endereco_entrega?: string | null
           frete?: number | null
           id?: string
           indicado_por?: string | null
+          itens_loja?: Json | null
+          logradouro?: string | null
           metodo_entrega?: string | null
           metodo_pagamento?: string | null
           nome_cliente?: string
+          numero?: string | null
           numero_pedido?: number
           observacoes?: string | null
+          ofertas_texto?: string | null
+          ofertas_whatsapp?: boolean
           status?: string | null
           status_pagamento?: string | null
           subtotal?: number | null
           telefone_cliente?: string
           total?: number | null
+          uf?: string | null
         }
         Relationships: [
           {
@@ -4495,6 +4537,29 @@ export type Database = {
         }
         Returns: string
       }
+      criar_venda_em: {
+        Args: {
+          p_cat_pedido_id: string
+          p_contato_id: string
+          p_data: string
+          p_data_entrega_prevista: string
+          p_data_prevista_pagamento: string
+          p_desconto: number
+          p_dinheiro_na_entrega: boolean
+          p_entregador_id: string
+          p_forma_pagamento: string
+          p_idempotency_key: string
+          p_itens: Json
+          p_observacao_entregador: string
+          p_observacoes: string
+          p_origem: string
+          p_preco_em: string
+          p_status: string
+          p_tabela: string
+          p_taxa_entrega: number
+        }
+        Returns: string
+      }
       delete_image_reference: {
         Args: { p_produto_id: string }
         Returns: undefined
@@ -4620,6 +4685,54 @@ export type Database = {
       }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_entregador: { Args: { check_user_id?: string }; Returns: boolean }
+      loja_confirmar_pedido: {
+        Args: {
+          p_atualizar_endereco?: boolean
+          p_data_entrega: string
+          p_forma_pagamento: string
+          p_pedido_id: string
+          p_taxa_entrega: number
+        }
+        Returns: string
+      }
+      loja_criar_pedido: {
+        Args: {
+          p_bairro: string
+          p_cep: string
+          p_chave: string
+          p_cidade: string
+          p_complemento: string
+          p_itens: Json
+          p_logradouro: string
+          p_nome: string
+          p_numero: string
+          p_ofertas: boolean
+          p_ofertas_texto: string
+          p_telefone: string
+          p_uf: string
+        }
+        Returns: {
+          numero_pedido: number
+          pedido_id: string
+          total: number
+        }[]
+      }
+      loja_descartar_pedido: {
+        Args: { p_pedido_id: string }
+        Returns: undefined
+      }
+      loja_endereco_texto: {
+        Args: {
+          p_bairro: string
+          p_cep: string
+          p_cidade: string
+          p_complemento: string
+          p_logradouro: string
+          p_numero: string
+          p_uf: string
+        }
+        Returns: string
+      }
       preco_tabela: {
         Args: { p_em?: string; p_produto_id: string; p_tabela: string }
         Returns: number

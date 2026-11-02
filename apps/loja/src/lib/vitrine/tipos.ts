@@ -67,9 +67,3 @@ export interface Vitrine {
     zero: ProdutoLoja[]
     levaJunto: ProdutoLoja | null
 }
-
-export interface BairroFrete {
-    id: string
-    rotulo: string
-    valor: number
-}
