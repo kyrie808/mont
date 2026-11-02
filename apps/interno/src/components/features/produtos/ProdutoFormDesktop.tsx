@@ -62,12 +62,13 @@ interface Props {
     custoEfetivo: number
     margem: number
     showMargem: boolean
-    componentes: { componenteId: string; quantidade: number }[]
+    componentes: { componenteId: string; quantidade: number; brinde: boolean }[]
     componenteOptions: { value: string; label: string }[]
     secaoOptions: { value: string; label: string }[]
     pick: { componenteId: string; setComponenteId: (v: string) => void; quantidade: string; setQuantidade: (v: string) => void }
     onAddComponente: () => void
     onRemoveComponente: (componenteId: string) => void
+    onToggleBrinde: (componenteId: string) => void
     produtoNome: (id: string) => string
     imageSlot?: ReactNode
 }
@@ -75,7 +76,7 @@ interface Props {
 export function ProdutoFormDesktop({
     mode, values, setters, custoEfetivo, margem, showMargem,
     componentes, componenteOptions, secaoOptions, pick,
-    onAddComponente, onRemoveComponente, produtoNome, imageSlot,
+    onAddComponente, onRemoveComponente, onToggleBrinde, produtoNome, imageSlot,
 }: Props) {
     const isEdit = mode === 'edit'
     const datalistId = `variacoes-sugestoes-desktop-${mode}`
@@ -214,7 +215,16 @@ export function ProdutoFormDesktop({
                                 <ul className="grid grid-cols-2 gap-1.5">
                                     {componentes.map((c) => (
                                         <li key={c.componenteId} className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
-                                            <span className="truncate text-foreground">{produtoNome(c.componenteId)} × {c.quantidade}</span>
+                                            <span className="flex-1 truncate text-foreground">{produtoNome(c.componenteId)} × {c.quantidade}</span>
+                                            <label className="mr-1 flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={c.brinde}
+                                                    onChange={() => onToggleBrinde(c.componenteId)}
+                                                    className="h-4 w-4 accent-primary"
+                                                />
+                                                Brinde
+                                            </label>
                                             <button
                                                 type="button"
                                                 onClick={() => onRemoveComponente(c.componenteId)}

@@ -70,12 +70,13 @@ interface ProdutoFormFieldsProps {
     custoEfetivo: number
     margem: number
     showMargem: boolean
-    componentes: { componenteId: string; quantidade: number }[]
+    componentes: { componenteId: string; quantidade: number; brinde: boolean }[]
     componenteOptions: { value: string; label: string }[]
     secaoOptions: { value: string; label: string }[]
     pick: ComboPicker
     onAddComponente: () => void
     onRemoveComponente: (componenteId: string) => void
+    onToggleBrinde: (componenteId: string) => void
     produtoNome: (id: string) => string
     /** Bloco de imagem (só no modo edit). */
     imageSlot?: ReactNode
@@ -115,6 +116,7 @@ export function ProdutoFormFields({
     pick,
     onAddComponente,
     onRemoveComponente,
+    onToggleBrinde,
     produtoNome,
     imageSlot,
 }: ProdutoFormFieldsProps) {
@@ -250,7 +252,16 @@ export function ProdutoFormFields({
                                     <ul className="space-y-1">
                                         {componentes.map((c) => (
                                             <li key={c.componenteId} className="flex items-center justify-between bg-gray-50 dark:bg-white/5 rounded px-3 py-2 text-sm">
-                                                <span>{produtoNome(c.componenteId)} × {c.quantidade}</span>
+                                                <span className="flex-1">{produtoNome(c.componenteId)} × {c.quantidade}</span>
+                                                <label className="mr-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={c.brinde}
+                                                        onChange={() => onToggleBrinde(c.componenteId)}
+                                                        className="h-4 w-4 accent-primary"
+                                                    />
+                                                    Brinde
+                                                </label>
                                                 <button
                                                     type="button"
                                                     onClick={() => onRemoveComponente(c.componenteId)}

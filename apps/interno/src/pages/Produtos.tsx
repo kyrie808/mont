@@ -101,7 +101,7 @@ export function Produtos() {
     const [newVisivelCatalogo, setNewVisivelCatalogo] = useState(true)
     const [newEhCombo, setNewEhCombo] = useState(false)
     const [newSecaoId, setNewSecaoId] = useState('')
-    const [newComponentes, setNewComponentes] = useState<{ componenteId: string; quantidade: number }[]>([])
+    const [newComponentes, setNewComponentes] = useState<{ componenteId: string; quantidade: number; brinde: boolean }[]>([])
     const [isCreating, setIsCreating] = useState(false)
 
     // Form states for edit
@@ -128,7 +128,7 @@ export function Produtos() {
     const [editVisivelCatalogo, setEditVisivelCatalogo] = useState(true)
     const [editEhCombo, setEditEhCombo] = useState(false)
     const [editSecaoId, setEditSecaoId] = useState('')
-    const [editComponentes, setEditComponentes] = useState<{ componenteId: string; quantidade: number }[]>([])
+    const [editComponentes, setEditComponentes] = useState<{ componenteId: string; quantidade: number; brinde: boolean }[]>([])
     const [isUpdating, setIsUpdating] = useState(false)
 
     // Picker de componentes (compartilhado — um modal aberto por vez)
@@ -147,7 +147,7 @@ export function Produtos() {
     const foraCatalogoCount = produtos.filter(p => p.ativo && !p.visivelCatalogo).length
 
     // Custo de um combo = soma do custo dos componentes × quantidade (não digitado).
-    const custoComponentes = (comps: { componenteId: string; quantidade: number }[]) =>
+    const custoComponentes = (comps: { componenteId: string; quantidade: number; brinde: boolean }[]) =>
         comps.reduce((sum, c) => sum + (produtos.find(p => p.id === c.componenteId)?.custo ?? 0) * c.quantidade, 0)
 
     // Open edit modal
@@ -181,7 +181,7 @@ export function Produtos() {
         setEditComponentes([])
         if (produto.ehCombo) {
             produtoService.getComponentes(produto.id)
-                .then(comps => setEditComponentes(comps.map(c => ({ componenteId: c.componenteId, quantidade: c.quantidade }))))
+                .then(comps => setEditComponentes(comps.map(c => ({ componenteId: c.componenteId, quantidade: c.quantidade, brinde: c.brinde }))))
                 .catch(err => {
                     console.error('Erro ao carregar componentes do combo:', err)
                     toast.error('Não foi possível carregar os componentes do combo')
@@ -412,9 +412,15 @@ export function Produtos() {
             toast.error('Esse produto já está no combo')
             return
         }
-        setList([...list, { componenteId: pickComponenteId, quantidade }])
+        setList([...list, { componenteId: pickComponenteId, quantidade, brinde: false }])
         setPickComponenteId('')
         setPickQuantidade('1')
+    }
+
+    // Item dado de brinde no combo (a loja mostra "de brinde"; o rateio do preço não muda).
+    const toggleBrinde = (mode: 'create' | 'edit', componenteId: string) => {
+        const setList = mode === 'create' ? setNewComponentes : setEditComponentes
+        setList(prev => prev.map(c => (c.componenteId === componenteId ? { ...c, brinde: !c.brinde } : c)))
     }
 
     const removeComponente = (mode: 'create' | 'edit', componenteId: string) => {
@@ -592,6 +598,7 @@ export function Produtos() {
                                 pick={{ componenteId: pickComponenteId, setComponenteId: setPickComponenteId, quantidade: pickQuantidade, setQuantidade: setPickQuantidade }}
                                 onAddComponente={() => addComponente('create')}
                                 onRemoveComponente={(id) => removeComponente('create', id)}
+                                onToggleBrinde={(id) => toggleBrinde('create', id)}
                                 produtoNome={produtoNome}
                             />
 
@@ -648,6 +655,7 @@ export function Produtos() {
                                 pick={{ componenteId: pickComponenteId, setComponenteId: setPickComponenteId, quantidade: pickQuantidade, setQuantidade: setPickQuantidade }}
                                 onAddComponente={() => addComponente('edit')}
                                 onRemoveComponente={(id) => removeComponente('edit', id)}
+                                onToggleBrinde={(id) => toggleBrinde('edit', id)}
                                 produtoNome={produtoNome}
                                 imageSlot={
                                     <div>
