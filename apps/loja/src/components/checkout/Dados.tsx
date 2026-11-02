@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { enviarPedido } from '@/app/checkout/acoes'
 import { linkWhatsApp } from '@/lib/formato'
 import { guardarEnviado, novaChavePedido } from '@/lib/pedido/enviado'
+import { faltaParaEnviar, frasesDoQueFalta } from '@/lib/pedido/faltando'
 import { TEXTO_OFERTAS } from '@/lib/pedido/esquema'
 import { catalogoDa, resumirSacola } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
@@ -94,27 +95,18 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
     }
 
     const sacolaVazia = pronta && resumo.linhas.length === 0
-    const podeEnviar = pronta && !sacolaVazia && !resumo.temPendencia && cepStatus === 'ok' && !enviando
+    const envio = { chave, nome, telefone, cep, logradouro, numero, complemento, bairro, cidade, uf, ofertas, site, itens }
+    // Mesma regra do servidor: vale o CEP achado ou o endereço digitado à mão (CEP novo, ViaCEP fora do ar).
+    const faltando = faltaParaEnviar(envio)
+    const comecou = [telefone, nome, cep, numero, logradouro].some((v) => v.trim() !== '')
+    const podeEnviar =
+        pronta && !sacolaVazia && !resumo.temPendencia && cepStatus !== 'buscando' && faltando.length === 0 && !enviando
 
     function enviar() {
         if (!podeEnviar) return
         setErro(null)
         iniciarEnvio(async () => {
-            const resultado = await enviarPedido({
-                chave,
-                nome,
-                telefone,
-                cep,
-                logradouro,
-                numero,
-                complemento,
-                bairro,
-                cidade,
-                uf,
-                ofertas,
-                site,
-                itens,
-            })
+            const resultado = await enviarPedido(envio)
             if (!resultado.ok) {
                 setErro(resultado.erro)
                 return
@@ -126,7 +118,7 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
     }
 
     return (
-        <div className="relative min-h-dvh pb-[100px]">
+        <div className="relative min-h-dvh pb-[124px]">
             <header className="flex h-14 items-center gap-1 border-b border-linha px-2">
                 <Link
                     href="/sacola"
@@ -222,20 +214,22 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                             />
                         </div>
                     </div>
-                    {cepStatus === 'buscando' && <span className="text-xs text-texto-suave">Buscando o endereço…</span>}
-                    {cepStatus === 'erro' && (
-                        <span className="text-xs text-texto-suave">
-                            Não achamos esse CEP. Confira os números ou{' '}
-                            <a href={linkWhatsApp(whatsapp)} target="_blank" rel="noopener noreferrer" className="font-bold">
-                                fale com a gente no WhatsApp
-                            </a>
-                            .
-                        </span>
-                    )}
+                    <div role="status" className="text-xs text-texto-suave empty:hidden">
+                        {cepStatus === 'buscando' && 'Buscando o endereço…'}
+                        {cepStatus === 'erro' && (
+                            <>
+                                Não achamos esse CEP. Confira os números ou preencha o endereço abaixo. Dúvida?{' '}
+                                <a href={linkWhatsApp(whatsapp)} target="_blank" rel="noopener noreferrer" className="font-bold">
+                                    Fale com a gente no WhatsApp
+                                </a>
+                                .
+                            </>
+                        )}
+                    </div>
 
                     <div className="flex flex-col gap-1.5">
                         <label className={rotulo} htmlFor="rua">
-                            Rua (preenche pelo CEP)
+                            {cepStatus === 'erro' ? 'Rua' : 'Rua (preenche pelo CEP)'}
                         </label>
                         <input
                             id="rua"
@@ -252,6 +246,56 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                             </span>
                         )}
                     </div>
+
+                    {cepStatus === 'erro' && (
+                        <>
+                            <div className="flex flex-col gap-1.5">
+                                <label className={rotulo} htmlFor="bairro">
+                                    Bairro
+                                </label>
+                                <input
+                                    id="bairro"
+                                    autoComplete="address-level3"
+                                    value={bairro}
+                                    onChange={(e) => setBairro(e.target.value)}
+                                    className={campo}
+                                    maxLength={80}
+                                />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="col-span-2 flex flex-col gap-1.5">
+                                    <label className={rotulo} htmlFor="cidade">
+                                        Cidade
+                                    </label>
+                                    <input
+                                        id="cidade"
+                                        autoComplete="address-level2"
+                                        value={cidade}
+                                        onChange={(e) => setCidade(e.target.value)}
+                                        className={campo}
+                                        maxLength={80}
+                                        required
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className={rotulo} htmlFor="uf">
+                                        Estado (UF)
+                                    </label>
+                                    <input
+                                        id="uf"
+                                        autoComplete="address-level1"
+                                        autoCapitalize="characters"
+                                        placeholder="SP"
+                                        value={uf}
+                                        onChange={(e) => setUf(e.target.value.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase())}
+                                        className={campo}
+                                        maxLength={2}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     <div className="flex flex-col gap-1.5">
                         <label className={rotulo} htmlFor="comp">
@@ -296,6 +340,9 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                     )}
 
                     <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] border-t border-linha bg-creme px-4 pt-3 pb-5">
+                        <p role="status" className="pb-2 text-center text-xs text-marrom-medio empty:hidden">
+                            {comecou && !resumo.temPendencia ? frasesDoQueFalta(faltando) : ''}
+                        </p>
                         <button
                             type="submit"
                             disabled={!podeEnviar}
