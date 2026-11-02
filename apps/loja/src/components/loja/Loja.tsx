@@ -22,7 +22,7 @@ interface LojaProps {
 
 const tituloSecao = 'font-titulo text-[26px] font-normal uppercase tracking-[0.5px]'
 const botaoAdicionar =
-    'h-10 cursor-pointer rounded-[20px] border-[1.5px] border-marrom bg-creme px-4 text-sm font-bold text-marrom'
+    'h-11 cursor-pointer rounded-[22px] border-[1.5px] border-marrom bg-creme px-4 text-sm font-bold text-marrom'
 
 /** Tela 01: a loja em página única. */
 export function Loja({ vitrine, whatsapp }: LojaProps) {
@@ -157,7 +157,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     </div>
                     <Link
                         href={`/combo/${c.slug}`}
-                        className="flex h-10 items-center rounded-[20px] bg-laranja px-3.5 text-sm font-bold text-marrom no-underline"
+                        className="flex h-11 items-center rounded-[22px] bg-laranja px-4 text-sm font-bold text-marrom no-underline"
                     >
                         Montar
                     </Link>
@@ -209,7 +209,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                             aria-current={s.id === secaoAtiva ? 'true' : undefined}
                             onClick={() => setSecaoAtiva(s.id)}
                             className={cn(
-                                'flex h-9 shrink-0 items-center rounded-[18px] px-3.5 text-[13px] font-bold no-underline transition-colors duration-150',
+                                'flex h-11 shrink-0 items-center rounded-[22px] px-4 text-[13px] font-bold no-underline transition-colors duration-150',
                                 s.id === secaoAtiva ? 'bg-marrom text-creme' : 'bg-areia text-marrom hover:bg-linha',
                             )}
                         >

@@ -41,8 +41,8 @@ function mascaraCep(v: string): string {
 }
 
 const campo =
-    'h-12 w-full rounded-xl border border-tracejado bg-white px-3.5 text-[15px] font-medium text-marrom ' +
-    'placeholder:text-texto-suave/60 focus:border-[1.5px] focus:border-marrom focus:outline-none'
+    'h-12 w-full rounded-xl border border-texto-suave/80 bg-white px-3.5 text-[15px] font-medium text-marrom ' +
+    'placeholder:text-texto-suave focus:border-marrom'
 const rotulo = 'text-[13px] font-bold'
 
 /** Tela 05: dados de entrega e envio do pedido pelo WhatsApp (sem pagamento online, decisão de 02/11). */
