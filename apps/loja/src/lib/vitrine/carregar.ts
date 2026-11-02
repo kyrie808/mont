@@ -19,6 +19,16 @@ function temEstoqueLivre(estoqueAtual: number | null): boolean {
     return (estoqueAtual ?? 0) > 0
 }
 
+/** 1ª linha não vazia da descrição do produto (a frase de venda que a Mont escreveu). */
+function primeiraLinha(texto: string | null): string | null {
+    return (
+        (texto ?? '')
+            .split('\n')
+            .map((l) => l.trim())
+            .find(Boolean) ?? null
+    )
+}
+
 function falha(contexto: string, mensagem: string): never {
     throw new Error(`Loja: falha ao ler ${contexto} (${mensagem})`)
 }
@@ -127,6 +137,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
             slug: l.produto.slug,
             nome: nomeNaLoja.get(l.produto_id) ?? l.produto.nome,
             subtitulo: l.produto.subtitulo,
+            chamada: l.resumo ?? primeiraLinha(l.produto.descricao),
             descricao: l.produto.descricao,
             imagemUrl: imagens.get(l.produto_id) ?? null,
             secao: l.secao,

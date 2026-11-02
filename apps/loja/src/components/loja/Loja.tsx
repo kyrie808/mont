@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@mont/shared'
 import { Foto } from '@/components/Foto'
 import { IconeSacola } from '@/components/IconeSacola'
@@ -58,12 +58,36 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         }
     }, [])
 
-    const secoes = [
-        { id: 'combos', rotulo: 'Combos da Black', tem: vitrine.combos.length > 0 },
-        { id: 'massa', rotulo: 'Massa', tem: vitrine.massa.length > 0 },
-        { id: 'doces', rotulo: 'Doces', tem: vitrine.doces.length > 0 },
-        { id: 'zero', rotulo: 'Zero', tem: vitrine.zero.length > 0 },
-    ].filter((s) => s.tem)
+    const secoes = useMemo(
+        () =>
+            [
+                { id: 'combos', rotulo: 'Combos da Black', tem: vitrine.combos.length > 0 },
+                { id: 'massa', rotulo: 'Massa', tem: vitrine.massa.length > 0 },
+                { id: 'doces', rotulo: 'Doces', tem: vitrine.doces.length > 0 },
+                { id: 'zero', rotulo: 'Zero', tem: vitrine.zero.length > 0 },
+            ].filter((s) => s.tem),
+        [vitrine],
+    )
+
+    // Aba ativa acompanha a rolagem: a seção que cruza a faixa logo abaixo das abas fixas.
+    const [secaoAtiva, setSecaoAtiva] = useState<string | undefined>(secoes[0]?.id)
+    useEffect(() => {
+        const alvos = secoes.flatMap((s) => {
+            const el = document.getElementById(s.id)
+            return el ? [el] : []
+        })
+        const observador = new IntersectionObserver(
+            (entradas) => {
+                const visivel = entradas
+                    .filter((e) => e.isIntersecting)
+                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+                if (visivel) setSecaoAtiva(visivel.target.id)
+            },
+            { rootMargin: '-64px 0px -65% 0px' },
+        )
+        alvos.forEach((el) => observador.observe(el))
+        return () => observador.disconnect()
+    }, [secoes])
 
     const controle = (p: ProdutoLoja, larguraTotal = false) => {
         if (!p.disponivel) {
@@ -94,25 +118,26 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         )
     }
 
+    // Foto, nome e preço abrem o produto juntos (alvo grande); o botão da direita só põe na sacola.
     const linhaProduto = (p: ProdutoLoja) => (
         <article key={p.id} className="flex items-center gap-3 border-b border-linha py-2.5">
             <button
                 type="button"
                 aria-label={`Ver ${p.nome}`}
                 onClick={() => abrir(p)}
-                className="shrink-0 cursor-pointer rounded-xl"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl text-left"
             >
-                <Foto url={p.imagemUrl} alt={p.nome} largura={56} className="h-14 w-14 rounded-xl" />
+                <Foto url={p.imagemUrl} alt="" largura={56} className="h-14 w-14 shrink-0 rounded-xl" />
+                <span className="flex min-w-0 flex-col gap-1">
+                    <span className="text-sm leading-tight font-bold">{p.nome}</span>
+                    <span className="flex items-baseline gap-1.5">
+                        {p.precoDe !== null && (
+                            <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
+                        )}
+                        <span className="font-titulo text-xl leading-none">{reais(p.preco)}</span>
+                    </span>
+                </span>
             </button>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-sm font-bold">{p.nome}</span>
-                <div className="flex items-baseline gap-1.5">
-                    {p.precoDe !== null && (
-                        <span className="text-[11px] text-texto-suave line-through">{reais(p.precoDe)}</span>
-                    )}
-                    <span className="text-base font-bold">{reais(p.preco)}</span>
-                </div>
-            </div>
             {controle(p)}
         </article>
     )
@@ -173,14 +198,19 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             </header>
 
             {secoes.length > 0 && (
-                <nav aria-label="Categorias" className="flex h-14 items-center gap-2 overflow-x-auto border-b border-linha px-4">
-                    {secoes.map((s, i) => (
+                <nav
+                    aria-label="Categorias"
+                    className="sticky top-0 z-30 flex h-14 items-center gap-2 overflow-x-auto border-b border-linha bg-creme px-4"
+                >
+                    {secoes.map((s) => (
                         <a
                             key={s.id}
                             href={`#${s.id}`}
+                            aria-current={s.id === secaoAtiva ? 'true' : undefined}
+                            onClick={() => setSecaoAtiva(s.id)}
                             className={cn(
                                 'flex h-9 shrink-0 items-center rounded-[18px] px-3.5 text-[13px] font-bold no-underline transition-colors duration-150',
-                                i === 0 ? 'bg-marrom text-creme' : 'bg-areia text-marrom hover:bg-linha',
+                                s.id === secaoAtiva ? 'bg-marrom text-creme' : 'bg-areia text-marrom hover:bg-linha',
                             )}
                         >
                             {s.rotulo}
@@ -211,14 +241,14 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             )}
 
             {vitrine.combos.length > 0 && (
-                <section id="combos" className="flex scroll-mt-2 flex-col gap-3 px-4 pt-2">
+                <section id="combos" className="flex scroll-mt-16 flex-col gap-3 px-4 pt-2">
                     <h2 className={cn(tituloSecao, 'mt-2')}>Combos da Black</h2>
                     {vitrine.combos.map(cardCombo)}
                 </section>
             )}
 
             {vitrine.massa.length > 0 && (
-                <section id="massa" className="flex scroll-mt-2 flex-col gap-3 px-4 pt-6">
+                <section id="massa" className="flex scroll-mt-16 flex-col gap-3 px-4 pt-6">
                     <h2 className={tituloSecao}>Massa de pão de queijo</h2>
                     <span className="-mt-1.5 text-[13px] text-texto-suave">
                         Queijo Canastra de verdade. Parmesão e Meia Cura.
@@ -233,19 +263,24 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                                     type="button"
                                     aria-label={`Ver ${p.nome}`}
                                     onClick={() => abrir(p)}
-                                    className="cursor-pointer rounded-xl"
+                                    className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
                                 >
-                                    <Foto url={p.imagemUrl} alt={p.nome} largura={170} className="h-[120px] w-full rounded-xl" />
-                                </button>
-                                <span className="text-sm leading-tight font-bold">{p.nome}</span>
-                                {p.subtitulo && <span className="text-[11px] text-texto-suave">{p.subtitulo}</span>}
-                                <div className="flex items-baseline gap-1.5">
-                                    {p.precoDe !== null && (
-                                        <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
+                                    <Foto url={p.imagemUrl} alt="" largura={170} className="h-[120px] w-full rounded-xl" />
+                                    <span className="text-sm leading-tight font-bold">{p.nome}</span>
+                                    {p.chamada && (
+                                        <span className="line-clamp-2 text-xs leading-snug text-texto-suave">{p.chamada}</span>
                                     )}
-                                    <span className="font-titulo text-[22px]">{reais(p.preco)}</span>
+                                </button>
+                                {/* Preço e botão alinhados no pé do card, mesmo com nomes de tamanhos diferentes. */}
+                                <div className="mt-auto flex flex-col gap-1.5">
+                                    <div className="flex items-baseline gap-1.5">
+                                        {p.precoDe !== null && (
+                                            <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
+                                        )}
+                                        <span className="font-titulo text-[22px]">{reais(p.preco)}</span>
+                                    </div>
+                                    {controle(p, true)}
                                 </div>
-                                {controle(p, true)}
                             </article>
                         ))}
                     </div>
@@ -253,7 +288,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             )}
 
             {vitrine.doces.length > 0 && (
-                <section id="doces" className="flex scroll-mt-2 flex-col gap-1 px-4 pt-6">
+                <section id="doces" className="flex scroll-mt-16 flex-col gap-1 px-4 pt-6">
                     <h2 className={cn(tituloSecao, 'mb-1')}>Doces Duas Irmãs</h2>
                     <span className="mb-1 text-[13px] text-texto-suave">Potes de 680 g e 400 g · sabores conforme estoque</span>
                     {vitrine.doces.map(linhaProduto)}
@@ -261,7 +296,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             )}
 
             {vitrine.zero.length > 0 && (
-                <section id="zero" className="flex scroll-mt-2 flex-col gap-1 px-4 pt-6">
+                <section id="zero" className="flex scroll-mt-16 flex-col gap-1 px-4 pt-6">
                     <h2 className={cn(tituloSecao, 'mb-1')}>Linha zero</h2>
                     <span className="mb-1 text-[13px] text-texto-suave">Zero adição de açúcares. Doce do mesmo jeito.</span>
                     {vitrine.zero.map(linhaProduto)}
