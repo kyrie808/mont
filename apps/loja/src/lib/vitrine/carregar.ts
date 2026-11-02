@@ -1,5 +1,6 @@
 import { instanteDeReferencia } from '@/lib/ambiente'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { fotoProvisoria } from './fotosProvisorias'
 import type { ComboLoja, GrupoCombo, ItemFixo, ProdutoLoja, Secao, Vitrine } from './tipos'
 
 type Cliente = Awaited<ReturnType<typeof criarClienteServidor>>
@@ -66,7 +67,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
     const { data: linhas, error: erroVitrine } = await cliente
         .from('loja_vitrine')
         .select(
-            'produto_id, secao, ordem, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, frase_card, produto:produtos!inner(id, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, ativo)',
+            'produto_id, secao, ordem, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, frase_card, produto:produtos!inner(id, codigo, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, ativo)',
         )
         .eq('visivel', true)
         .order('ordem')
@@ -129,7 +130,8 @@ export async function carregarVitrine(): Promise<Vitrine> {
             subtitulo: l.produto.subtitulo,
             chamada: l.frase_card,
             descricao: l.produto.descricao,
-            imagemUrl: imagens.get(l.produto_id) ?? null,
+            // Capa cadastrada no sistema primeiro; sem ela, a composição provisória do combo (se houver).
+            imagemUrl: imagens.get(l.produto_id) ?? fotoProvisoria(l.produto.codigo),
             secao: l.secao,
             preco: preco ? preco.pix : l.produto.preco,
             precoDe: preco && l.produto.preco > preco.pix ? l.produto.preco : null,

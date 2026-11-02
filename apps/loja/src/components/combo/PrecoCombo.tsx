@@ -1,6 +1,6 @@
 import { cn } from '@mont/shared'
 import { reais } from '@/lib/formato'
-import { economiaDoCombo } from '@/lib/vitrine/economia'
+import { economiaDoCombo, mostraSeloEconomia } from '@/lib/vitrine/economia'
 import type { ComboLoja } from '@/lib/vitrine/tipos'
 
 interface PrecoComboProps {
@@ -30,14 +30,16 @@ export function PrecoCombo({ combo, variante }: PrecoComboProps) {
                     <span className={cn('text-[13px] whitespace-nowrap', noBanner ? 'text-linha' : 'text-texto-suave')}>
                         separado <s>{reais(combo.ancora)}</s>
                     </span>
-                    <span
-                        className={cn(
-                            'rounded-full px-2.5 py-1 text-xs leading-none font-bold whitespace-nowrap',
-                            noBanner ? 'bg-laranja text-marrom' : 'bg-verde text-white',
-                        )}
-                    >
-                        Economize {reais(economia)}
-                    </span>
+                    {mostraSeloEconomia(economia) && (
+                        <span
+                            className={cn(
+                                'rounded-full px-2.5 py-1 text-xs leading-none font-bold whitespace-nowrap',
+                                noBanner ? 'bg-laranja text-marrom' : 'bg-verde text-white',
+                            )}
+                        >
+                            Economize {reais(economia)}
+                        </span>
+                    )}
                 </>
             )}
         </div>
