@@ -251,6 +251,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                         alt={hero.nome}
                         largura={120}
                         escura
+                        prioridade
                         className="h-[170px] w-[120px] rounded-xl"
                     />
                 </section>
@@ -270,7 +271,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                         Queijo Canastra de verdade. Parmesão e Meia Cura.
                     </span>
                     <div className="grid grid-cols-2 gap-3">
-                        {vitrine.massa.map((p) => (
+                        {vitrine.massa.map((p, i) => (
                             <article
                                 key={p.id}
                                 className="flex flex-col gap-1.5 rounded-2xl border border-linha bg-white p-2.5"
@@ -281,7 +282,13 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                                     onClick={() => abrir(p)}
                                     className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
                                 >
-                                    <Foto url={p.imagemUrl} alt="" largura={170} className="h-[120px] w-full rounded-xl" />
+                                    <Foto
+                                        url={p.imagemUrl}
+                                        alt=""
+                                        largura={170}
+                                        prioridade={!hero && i < 2}
+                                        className="h-[120px] w-full rounded-xl"
+                                    />
                                     <span className="text-sm leading-tight font-bold">{p.nome}</span>
                                     {p.chamada && (
                                         <span className="line-clamp-2 text-xs leading-snug text-texto-suave">{p.chamada}</span>

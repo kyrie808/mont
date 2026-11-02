@@ -9,10 +9,12 @@ interface FotoProps {
     className?: string
     /** Variante escura (banner do topo). */
     escura?: boolean
+    /** Foto principal acima da dobra (LCP): carrega já, sem esperar a rolagem. */
+    prioridade?: boolean
 }
 
 /** Foto do storage do Supabase; sem foto, o retângulo tracejado do wireframe, vazio. */
-export function Foto({ url, alt, largura, className, escura = false }: FotoProps) {
+export function Foto({ url, alt, largura, className, escura = false, prioridade = false }: FotoProps) {
     if (!url) {
         return (
             <div
@@ -27,7 +29,7 @@ export function Foto({ url, alt, largura, className, escura = false }: FotoProps
     }
     return (
         <div className={cn('relative shrink-0 overflow-hidden bg-areia', className)}>
-            <Image src={url} alt={alt} fill sizes={`${largura}px`} className="object-cover" />
+            <Image src={url} alt={alt} fill sizes={`${largura}px`} priority={prioridade} className="object-cover" />
         </div>
     )
 }

@@ -95,7 +95,13 @@ export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: Pain
                         </button>
                     </div>
 
-                    <Foto url={produto.imagemUrl} alt={produto.nome} largura={390} className="h-[220px] shrink-0 rounded-xl" />
+                    <Foto
+                        url={produto.imagemUrl}
+                        alt={produto.nome}
+                        largura={390}
+                        prioridade
+                        className="h-[220px] shrink-0 rounded-xl"
+                    />
 
                     <h1 className="mt-1 text-[22px] font-bold">{produto.nome}</h1>
 
