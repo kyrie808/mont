@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState, useTransition } from 'react'
 import { z } from 'zod'
 import { enviarPedido } from '@/app/checkout/acoes'
-import { linkWhatsApp } from '@/lib/formato'
+import { linkWhatsApp, reais } from '@/lib/formato'
 import { guardarEnviado, novaChavePedido } from '@/lib/pedido/enviado'
 import { faltaParaEnviar, frasesDoQueFalta } from '@/lib/pedido/faltando'
 import { TEXTO_OFERTAS } from '@/lib/pedido/esquema'
@@ -41,8 +41,8 @@ function mascaraCep(v: string): string {
 }
 
 const campo =
-    'h-12 w-full rounded-xl border border-tracejado bg-white px-3.5 text-[15px] font-medium text-marrom ' +
-    'placeholder:text-texto-suave/60 focus:border-[1.5px] focus:border-marrom focus:outline-none'
+    'h-12 w-full rounded-xl border border-texto-suave/80 bg-white px-3.5 text-[15px] font-medium text-marrom ' +
+    'placeholder:text-texto-suave focus:border-marrom'
 const rotulo = 'text-[13px] font-bold'
 
 /** Tela 05: dados de entrega e envio do pedido pelo WhatsApp (sem pagamento online, decisão de 02/11). */
@@ -127,7 +127,7 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                 >
                     ←
                 </Link>
-                <span className="text-base font-bold">Seus dados</span>
+                <h1 className="text-base font-bold">Seus dados</h1>
                 <span className="ml-auto pr-3 text-xs text-texto-suave">1 Sacola · 2 Dados</span>
             </header>
 
@@ -146,6 +146,29 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                         enviar()
                     }}
                 >
+                    {/* O que está sendo pedido, à mão na hora de enviar (sem voltar para a sacola). */}
+                    {pronta && (
+                        <details className="rounded-[14px] border border-linha bg-white px-3.5 py-3 text-sm">
+                            <summary className="cursor-pointer font-bold">
+                                Seu pedido: {resumo.quantidadeItens} {resumo.quantidadeItens === 1 ? 'item' : 'itens'} ·{' '}
+                                {reais(resumo.totalPix)} no Pix
+                            </summary>
+                            <ul className="mt-2 flex list-none flex-col gap-1 p-0 text-[13px] text-marrom-medio">
+                                {resumo.linhas.map((l) => (
+                                    <li key={l.tipo === 'combo' ? l.chave : l.produto.id} className="flex justify-between gap-3">
+                                        <span>
+                                            {l.tipo === 'combo'
+                                                ? l.combo.nome
+                                                : `${l.quantidade > 1 ? `${l.quantidade}× ` : ''}${l.produto.nome}`}
+                                        </span>
+                                        <span className="shrink-0">{reais(l.subtotal)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <p className="mt-2 text-xs text-texto-suave">Frete e dia de entrega: combinamos no WhatsApp.</p>
+                        </details>
+                    )}
+
                     <div className="flex flex-col gap-1.5">
                         <label className={rotulo} htmlFor="cel">
                             Seu WhatsApp
@@ -341,7 +364,11 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
 
                     <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] border-t border-linha bg-creme px-4 pt-3 pb-5">
                         <p role="status" className="pb-2 text-center text-xs text-marrom-medio empty:hidden">
-                            {comecou && !resumo.temPendencia ? frasesDoQueFalta(faltando) : ''}
+                            {podeEnviar
+                                ? 'Vamos abrir seu WhatsApp com o pedido pronto. É só apertar enviar.'
+                                : comecou && !resumo.temPendencia
+                                  ? frasesDoQueFalta(faltando)
+                                  : ''}
                         </p>
                         <button
                             type="submit"

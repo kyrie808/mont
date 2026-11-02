@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { cn } from '@mont/shared'
 import { useEffect, useMemo } from 'react'
+import { EsqueletoLinhas } from '@/components/Esqueleto'
 import { Foto } from '@/components/Foto'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
@@ -52,15 +54,22 @@ export function Sacola({ vitrine }: SacolaProps) {
                 >
                     ←
                 </Link>
-                <span className="text-base font-bold">Sua sacola</span>
+                <h1 className="text-base font-bold">Sua sacola</h1>
                 <span className="ml-auto pr-3 text-xs text-texto-suave">1 Sacola · 2 Dados</span>
             </header>
 
-            {pronta && resumo.linhas.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 px-4 pt-16 text-center">
-                    <span className="text-[15px] text-texto-suave">Sua sacola está vazia.</span>
-                    <Link href="/" className="text-sm font-bold">
-                        Voltar para a loja
+            {/* Enquanto a sacola é lida do aparelho: esqueleto (nada de "R$ 0" piscando). */}
+            {!pronta ? (
+                <EsqueletoLinhas />
+            ) : resumo.linhas.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-6 pt-16 text-center">
+                    <span className="text-[17px] font-bold">Sua sacola está vazia.</span>
+                    <span className="text-sm text-texto-suave">Escolha a massa e os doces na loja.</span>
+                    <Link
+                        href="/"
+                        className="mt-2 flex h-14 w-full items-center justify-center rounded-[28px] bg-laranja text-base font-bold text-marrom no-underline"
+                    >
+                        Ver a loja
                     </Link>
                 </div>
             ) : (
@@ -121,11 +130,16 @@ export function Sacola({ vitrine }: SacolaProps) {
                                 <div className="flex flex-1 flex-col gap-0.5">
                                     <span className="text-[15px] font-bold">{linha.produto.nome}</span>
                                     <span className="text-[13px]">
-                                        {linha.vendavel ? reais(linha.produto.preco) : 'Esgotado'}
+                                        {!linha.vendavel
+                                            ? 'Esgotado'
+                                            : linha.quantidade > 1
+                                              ? `${reais(linha.subtotal)} · ${reais(linha.produto.preco)} cada`
+                                              : reais(linha.produto.preco)}
                                     </span>
                                 </div>
                                 <Seletor
                                     variante="sacola"
+                                    nome={linha.produto.nome}
                                     quantidade={linha.quantidade}
                                     onMenos={() => definirQuantidade(linha.produto.id, linha.quantidade - 1)}
                                     onMais={() => definirQuantidade(linha.produto.id, linha.quantidade + 1)}
@@ -147,9 +161,10 @@ export function Sacola({ vitrine }: SacolaProps) {
                             <button
                                 type="button"
                                 onClick={() => adicionarProduto(leva.id, 1)}
-                                className="h-9 cursor-pointer rounded-[18px] border-[1.5px] border-marrom bg-transparent px-3.5 text-[13px] font-bold text-marrom"
+                                aria-label={`Adicionar ${leva.nome}`}
+                                className="h-11 cursor-pointer rounded-[22px] border-[1.5px] border-marrom bg-transparent px-3.5 text-[13px] font-bold text-marrom"
                             >
-                                + Pôr
+                                + Adicionar
                             </button>
                         </div>
                     )}
@@ -164,7 +179,12 @@ export function Sacola({ vitrine }: SacolaProps) {
                 </div>
             )}
 
-            <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] border-t border-linha bg-creme px-4 pt-3 pb-5">
+            <div
+                className={cn(
+                    'fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] border-t border-linha bg-creme px-4 pt-3 pb-5',
+                    pronta && resumo.linhas.length === 0 && 'hidden',
+                )}
+            >
                 {podeContinuar ? (
                     <Link
                         href="/checkout/dados"

@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="pt-BR" className={`${anton.variable} ${dmSans.variable} ${instrumentSerif.variable}`}>
             <body className="min-h-dvh antialiased">
-                <div className="mx-auto min-h-dvh w-full max-w-[430px] bg-creme">{children}</div>
+                <main className="mx-auto min-h-dvh w-full max-w-[430px] bg-creme">{children}</main>
             </body>
         </html>
     )

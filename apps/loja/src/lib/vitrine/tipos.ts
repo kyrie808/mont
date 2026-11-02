@@ -8,6 +8,8 @@ export interface ProdutoLoja {
     slug: string
     nome: string
     subtitulo: string | null
+    /** Frase curta sob o nome no card (loja_vitrine.frase_card). NULL = sem frase. */
+    chamada: string | null
     descricao: string | null
     imagemUrl: string | null
     secao: Secao
