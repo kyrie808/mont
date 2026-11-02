@@ -28,25 +28,29 @@ export function Enviado() {
         <div className="flex min-h-dvh flex-col items-center gap-4 px-6 pt-20 text-center">
             {pedido ? (
                 <>
-                    <span
-                        aria-hidden="true"
-                        className="flex h-14 w-14 items-center justify-center rounded-full bg-verde text-2xl font-bold text-white"
-                    >
-                        ✓
+                    <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-verde">
+                        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="white" strokeWidth="3">
+                            <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                     </span>
-                    <h1 className="font-titulo text-[32px] leading-none">Pedido nº {pedido.numero} enviado</h1>
-                    <p className="text-[15px] text-marrom-medio">
-                        Se o WhatsApp não abriu,{' '}
-                        <a href={pedido.link} className="font-bold">
-                            toque aqui
-                        </a>
-                        .
+                    {/* "Registrado" é a verdade: o pedido só chega à Mont quando o cliente aperta enviar no WhatsApp. */}
+                    <h1 className="font-titulo text-[32px] leading-none">Pedido nº {pedido.numero} registrado</h1>
+                    <p className="text-[17px] font-bold">Falta só mandar no WhatsApp.</p>
+                    <a
+                        href={pedido.link}
+                        className="mt-2 flex h-14 w-full items-center justify-center rounded-[28px] bg-verde text-base font-bold text-white no-underline"
+                    >
+                        Abrir o WhatsApp
+                    </a>
+                    <p className="text-sm text-marrom-medio">
+                        A mensagem já vai pronta: é só apertar enviar. Lá a gente combina o frete, o dia da entrega e o
+                        pagamento.
                     </p>
                 </>
             ) : (
                 <p className="text-[15px] text-texto-suave">Nenhum pedido enviado nesta aba.</p>
             )}
-            <Link href="/" className="mt-4 text-sm font-bold">
+            <Link href="/" className="mt-4 flex h-11 items-center px-3 text-sm font-bold">
                 Voltar para a loja
             </Link>
         </div>

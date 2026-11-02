@@ -52,7 +52,7 @@ export function Sacola({ vitrine }: SacolaProps) {
                 >
                     ←
                 </Link>
-                <span className="text-base font-bold">Sua sacola</span>
+                <h1 className="text-base font-bold">Sua sacola</h1>
                 <span className="ml-auto pr-3 text-xs text-texto-suave">1 Sacola · 2 Dados</span>
             </header>
 
