@@ -11,6 +11,8 @@ export interface PrecosVigentes {
     precos: MapaPrecos
     /** Campanha valendo agora (ex.: Black da Mont 2026). `null` = fora de campanha. */
     campanha: { nome: string; fim: string } | null
+    /** Produtos fora de venda agora (combo da campanha fora dela). */
+    foraDeVenda: Set<string>
 }
 import { toDomainProduto } from './mappers'
 
@@ -263,17 +265,19 @@ export class ProdutoService {
 
         const precos: MapaPrecos = new Map()
         let campanha: PrecosVigentes['campanha'] = null
+        const foraDeVenda = new Set<string>()
         for (const linha of data || []) {
             precos.set(linha.produto_id, {
                 normal: Number(linha.normal),
                 pix: Number(linha.pix),
                 cartao: Number(linha.cartao),
             })
+            if (!linha.vendavel) foraDeVenda.add(linha.produto_id)
             if (!campanha && linha.campanha && linha.campanha_fim) {
                 campanha = { nome: linha.campanha, fim: linha.campanha_fim }
             }
         }
-        return { precos, campanha }
+        return { precos, campanha, foraDeVenda }
     }
 
     // Substitui toda a composição do combo de forma ATÔMICA (RPC: delete+insert numa

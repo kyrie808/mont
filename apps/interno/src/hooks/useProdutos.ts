@@ -6,6 +6,7 @@ import type { MapaPrecos } from '../utils/tabelaPreco'
 
 // Referência estável enquanto carrega: evita recalcular o carrinho a cada render.
 const SEM_PRECOS: MapaPrecos = new Map()
+const NADA_FORA_DE_VENDA: ReadonlySet<string> = new Set()
 
 export function useProdutos(includeInactive: boolean = false) {
     const queryClient = useQueryClient()
@@ -74,7 +75,10 @@ export function useCombosMontagem() {
     return { combos: data ?? [], loading }
 }
 
-/** Preço de cada produto nas três tabelas (Pix/dinheiro, cartão, normal) + a campanha vigente. */
+/**
+ * Preço de cada produto nas três tabelas (Pix/dinheiro, cartão, normal) + a campanha vigente +
+ * o que está fora de venda agora (combo da campanha com a campanha pausada ou encerrada).
+ */
 export function usePrecosVigentes() {
     const { data, isLoading: loading } = useQuery({
         queryKey: ['precos-vigentes'],
@@ -84,7 +88,12 @@ export function usePrecosVigentes() {
         refetchInterval: 1000 * 60 * 5,
     })
 
-    return { precos: data?.precos ?? SEM_PRECOS, campanha: data?.campanha ?? null, loading }
+    return {
+        precos: data?.precos ?? SEM_PRECOS,
+        campanha: data?.campanha ?? null,
+        foraDeVenda: data?.foraDeVenda ?? NADA_FORA_DE_VENDA,
+        loading,
+    }
 }
 
 const SEM_NOMES = new Map<string, string>()

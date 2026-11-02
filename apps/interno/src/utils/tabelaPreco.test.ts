@@ -7,6 +7,7 @@ import {
     faltamNoGrupo,
     resumoEscolhas,
     avisoTabelaNoPagamento,
+    produtosAVenda,
     type MapaPrecos,
 } from './tabelaPreco'
 
@@ -108,5 +109,17 @@ describe('avisoTabelaNoPagamento', () => {
         expect(avisoTabelaNoPagamento('cartao', 'cartao')).toBeNull()
         expect(avisoTabelaNoPagamento('normal', 'cartao')).toBeNull()
         expect(avisoTabelaNoPagamento(null, 'cartao')).toBeNull()
+    })
+})
+
+describe('produtosAVenda', () => {
+    const lista = [{ id: BALDE }, { id: FAMILIA }]
+
+    it('tira o combo da campanha quando o servidor diz que está fora de venda', () => {
+        expect(produtosAVenda(lista, new Set([FAMILIA]))).toEqual([{ id: BALDE }])
+    })
+
+    it('sem nada fora de venda, devolve a mesma lista', () => {
+        expect(produtosAVenda(lista, new Set())).toBe(lista)
     })
 })

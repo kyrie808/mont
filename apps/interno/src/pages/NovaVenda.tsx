@@ -17,7 +17,7 @@ import { WizardProgress } from '../components/features/vendas/NovaVenda/WizardPr
 import { NovaVendaPOS } from '../components/features/vendas/NovaVenda/pos/NovaVendaPOS'
 import { SeletorTabelaPreco } from '../components/features/vendas/NovaVenda/SeletorTabelaPreco'
 import { MontarComboDialog } from '../components/features/vendas/NovaVenda/MontarComboDialog'
-import { precoNaTabela, resumoEscolhas, type EscolhaCombo, type TabelaPreco } from '../utils/tabelaPreco'
+import { precoNaTabela, produtosAVenda, resumoEscolhas, type EscolhaCombo, type TabelaPreco } from '../utils/tabelaPreco'
 import { agoraSimulado } from '../lib/agoraSimulado'
 import type { PagamentoImediato, OpcoesEntrega } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
 import { vendaService } from '../services/vendaService'
@@ -42,8 +42,9 @@ export function NovaVenda() {
     const { produtos: todosProdutos, loading: loadingTodosProdutos } = useProdutos()
     // Black: combos com escolha de sabor + preço por tabela (Pix/dinheiro, cartão, normal).
     const { combos, loading: loadingCombos } = useCombosMontagem()
-    const { precos, campanha } = usePrecosVigentes()
-    const loadingProdutos = loadingTodosProdutos || loadingCombos
+    const { precos, campanha, foraDeVenda, loading: loadingPrecos } = usePrecosVigentes()
+    // Espera os preços: são eles que dizem se o combo da campanha está à venda agora.
+    const loadingProdutos = loadingTodosProdutos || loadingCombos || loadingPrecos
 
     const produtosPorId = useMemo(() => new Map(todosProdutos.map((p) => [p.id, p])), [todosProdutos])
     const nomes = useMemo(() => new Map(todosProdutos.map((p) => [p.id, p.nome])), [todosProdutos])
@@ -75,10 +76,11 @@ export function NovaVenda() {
         (p: DomainProduto) => precoNaTabela(precos, p.id, Number(p.preco), tabelaAtiva),
         [precos, tabelaAtiva]
     )
-    // A vitrine mostra o preço da tabela ativa (as listas exibem `produto.preco`).
+    // A vitrine mostra o preço da tabela ativa (as listas exibem `produto.preco`) e só o que
+    // está à venda agora: combo da campanha some com a campanha pausada ou encerrada.
     const produtos = useMemo(
-        () => todosProdutos.map((p) => ({ ...p, preco: precoNaAtiva(p) })),
-        [todosProdutos, precoNaAtiva]
+        () => produtosAVenda(todosProdutos, foraDeVenda).map((p) => ({ ...p, preco: precoNaAtiva(p) })),
+        [todosProdutos, foraDeVenda, precoNaAtiva]
     )
     const carrinho = useMemo(() => precificar(cart, precoNaAtiva), [cart, precoNaAtiva])
     const itensCheckout = useMemo(() => carrinho.map((item) => ({

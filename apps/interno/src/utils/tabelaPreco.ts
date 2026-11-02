@@ -63,6 +63,16 @@ export function totalNaTabela(
     return centavos / 100
 }
 
+/**
+ * O que a Nova Venda oferece: tira o que o servidor marcou como fora de venda
+ * (`precos_vigentes.vendavel = false` — combo da campanha com a campanha pausada ou encerrada,
+ * cujo `produtos.preco` é o preço promocional). Sem nada fora de venda, a mesma lista.
+ */
+export function produtosAVenda<T extends { id: string }>(produtos: T[], foraDeVenda: ReadonlySet<string>): T[] {
+    if (foraDeVenda.size === 0) return produtos
+    return produtos.filter((p) => !foraDeVenda.has(p.id))
+}
+
 // ── Combos com escolha de sabor ───────────────────────────────────────────────
 
 export interface EscolhaCombo {

@@ -5,11 +5,12 @@
 -- gravado — nem as vendas de teste, nem a baixa de estoque, nem o evento da Meta, nem os
 -- AJUSTES DE CENÁRIO abaixo (campanha antecipada e sabores fictícios nos grupos). Os sabores
 -- reais (7 doces 680 g por grupo, decididos em 02/11) voltam intactos no fim.
---   SUITE_OK     combos_preco_campanha 22/22 | [...]
---   SUITE_FALHOU combos_preco_campanha 21/22 | [...]
+--   SUITE_OK     combos_preco_campanha 26/26 | [...]
+--   SUITE_FALHOU combos_preco_campanha 25/26 | [...]
 --
 -- Cenário (só dentro da transação):
---   * a campanha "Black da Mont 2026" passa a valer desde ontem (para testar o preço Black hoje);
+--   * a campanha "Black da Mont 2026" fica ligada e valendo desde ontem (para testar o preço Black
+--     hoje), mesmo que no banco ela esteja pausada (`ativa = false`);
 --   * os 3 grupos de doce 680 g ficam vazios (caso C1) e depois recebem 4 sabores; o grupo do
 --     Trio Mineiro vira sem repetição só para o caso que testa essa regra;
 --   * o Café da Tarde (geleia à escolha) é testado com os sabores reais.
@@ -48,7 +49,8 @@ BEGIN
     'meta_eventos', (SELECT count(*) FROM public.meta_eventos),
     'combo_grupo_opcoes', (SELECT count(*) FROM public.combo_grupo_opcoes),
     'estoque_total', (SELECT sum(estoque_atual) FROM public.produtos),
-    'campanha_inicio', (SELECT min(inicio) FROM public.loja_campanhas)
+    'campanha_inicio', (SELECT min(inicio) FROM public.loja_campanhas),
+    'campanha_ativa', (SELECT bool_or(ativa) FROM public.loja_campanhas)
   );
 
   IF EXISTS (SELECT 1 FROM public.contatos WHERE telefone LIKE c_tel || '%') THEN
@@ -83,6 +85,9 @@ BEGIN
     RAISE EXCEPTION 'SUITE_ABORTADA: cenário da Black não encontrado';
   END IF;
 
+  -- A campanha vale desde ontem, ligada (descartado no fim).
+  UPDATE public.loja_campanhas SET ativa = true, inicio = now() - interval '1 day' WHERE id = v_campanha;
+
   -- Os grupos de doce 680 g ficam vazios (descartado no fim) para o C1 e para o preparo.
   DELETE FROM public.combo_grupo_opcoes WHERE grupo_id IN (g_familia, g_balde_doce, g_tres);
 
@@ -103,7 +108,6 @@ BEGIN
   END;
 
   -- ── Preparo do cenário (descartado no fim) ──
-  UPDATE public.loja_campanhas SET inicio = now() - interval '1 day' WHERE id = v_campanha;
   INSERT INTO public.combo_grupo_opcoes (grupo_id, produto_id, ordem)
   SELECT g, p, o
     FROM unnest(ARRAY[g_familia, g_balde_doce, g_tres]) g
@@ -249,6 +253,58 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'C10 Dupla Zero cartão 78 = 39 + 39', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'C10 Dupla Zero cartão 78 = 39 + 39', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C23: combo da campanha fora do período recusa ──
+  casos := casos + 1;
+  BEGIN
+    BEGIN
+      PERFORM * FROM public.combo_itens(v_familia, v_escolhas_familia, 'normal', '2026-12-15');
+      RAISE EXCEPTION 'aceitou combo da campanha depois do fim';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE '%só é vendido durante a campanha%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
+    END;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C23 combo da campanha fora do período recusa', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C23 combo da campanha fora do período recusa', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C24: campanha pausada (ativa = false) dentro do período: combo recusa, avulso vende no normal ──
+  casos := casos + 1;
+  BEGIN
+    UPDATE public.loja_campanhas SET ativa = false WHERE id = v_campanha;
+    BEGIN
+      PERFORM * FROM public.combo_itens(v_dupla, '[]'::jsonb, 'pix');
+      RAISE EXCEPTION 'aceitou combo com a campanha pausada';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE '%só é vendido durante a campanha%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
+    END;
+    IF public.preco_tabela(v_balde, 'pix') <> 75 THEN RAISE EXCEPTION 'balde pausado = %', public.preco_tabela(v_balde, 'pix'); END IF;
+    UPDATE public.loja_campanhas SET ativa = true WHERE id = v_campanha;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C24 campanha pausada tira o combo', 'ok', true);
+  EXCEPTION WHEN others THEN
+    UPDATE public.loja_campanhas SET ativa = true WHERE id = v_campanha;
+    resultados := resultados || jsonb_build_object('caso', 'C24 campanha pausada tira o combo', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C25: precos_vigentes diz o que está à venda (combo da campanha só durante ela) ──
+  casos := casos + 1;
+  BEGIN
+    IF NOT (SELECT pv.vendavel FROM public.precos_vigentes() pv WHERE pv.produto_id = v_familia) THEN
+      RAISE EXCEPTION 'combo fora de venda durante a campanha';
+    END IF;
+    IF (SELECT pv.vendavel FROM public.precos_vigentes('2026-12-15') pv WHERE pv.produto_id = v_familia) THEN
+      RAISE EXCEPTION 'combo à venda depois do fim da campanha';
+    END IF;
+    IF NOT (SELECT pv.vendavel FROM public.precos_vigentes('2026-12-15') pv WHERE pv.produto_id = v_balde) THEN
+      RAISE EXCEPTION 'avulso fora de venda depois da campanha';
+    END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C25 precos_vigentes.vendavel', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C25 precos_vigentes.vendavel', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── Daqui pra frente, como a conta-teste (admin), igual ao app. ──
@@ -484,6 +540,23 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'C22 Kit Top antigo inativo', 'ok', false, 'erro', SQLERRM);
   END;
 
+  -- ── C26: combo da campanha como item avulso sem tabela (tela antiga) recusa ──
+  casos := casos + 1;
+  BEGIN
+    BEGIN
+      PERFORM public.criar_venda(v_contato, current_date, 'venda', 0,
+        jsonb_build_array(jsonb_build_object('produto_id', v_familia, 'quantidade', 1, 'preco_unitario', 199, 'subtotal', 199)),
+        gen_random_uuid());
+      RAISE EXCEPTION 'aceitou combo da campanha como avulso sem tabela';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE '%com os sabores%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
+    END;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C26 combo da campanha sem tabela recusa', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C26 combo da campanha sem tabela recusa', 'ok', false, 'erro', SQLERRM);
+  END;
+
   RAISE EXCEPTION '% combos_preco_campanha %/% | contagens_antes=% | %',
     CASE WHEN passou = casos THEN 'SUITE_OK' ELSE 'SUITE_FALHOU' END,
     passou, casos, antes, resultados;
@@ -495,4 +568,5 @@ $suite$;
 --        (SELECT count(*) FROM public.itens_venda) itens_venda, (SELECT count(*) FROM public.meta_eventos) meta_eventos,
 --        (SELECT count(*) FROM public.combo_grupo_opcoes) combo_grupo_opcoes,
 --        (SELECT sum(estoque_atual) FROM public.produtos) estoque_total,
---        (SELECT min(inicio) FROM public.loja_campanhas) campanha_inicio;
+--        (SELECT min(inicio) FROM public.loja_campanhas) campanha_inicio,
+--        (SELECT bool_or(ativa) FROM public.loja_campanhas) campanha_ativa;
