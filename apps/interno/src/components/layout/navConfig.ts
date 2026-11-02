@@ -17,6 +17,7 @@ import {
     CalendarDays,
     Megaphone,
     Plus,
+    Store,
     type LucideIcon,
 } from 'lucide-react'
 
@@ -44,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
             { label: 'Clientes',    path: '/contatos',         icon: Users },
             { label: 'Nova Venda',  path: NOVA_VENDA_PATH,     icon: Plus },
             { label: 'Vendas',      path: '/vendas',           icon: ShoppingCart },
+            { label: 'Pedidos da loja', path: '/pedidos-loja', icon: Store },
             { label: 'Entregas',    path: '/entregas',         icon: Truck },
             { label: 'Agenda',      path: '/agenda',           icon: CalendarDays },
         ],

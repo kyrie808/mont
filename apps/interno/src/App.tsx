@@ -30,6 +30,7 @@ const Catalogo = lazy(() => import('./pages/Catalogo').then(m => ({ default: m.C
 const PedidosCompra = lazy(() => import('./pages/PedidosCompra').then(m => ({ default: m.PedidosCompra })))
 const Menu = lazy(() => import('./pages/Menu').then(m => ({ default: m.Menu })))
 const CatalogoPendentes = lazy(() => import('./pages/CatalogoPendentes').then(m => ({ default: m.CatalogoPendentes })))
+const PedidosLoja = lazy(() => import('./pages/PedidosLoja').then(m => ({ default: m.PedidosLoja })))
 const Relatorios = lazy(() => import('./pages/Relatorios').then(m => ({ default: m.Relatorios })))
 const Campanhas = lazy(() => import('./pages/Campanhas').then(m => ({ default: m.Campanhas })))
 const Agenda = lazy(() => import('./pages/Agenda').then(m => ({ default: m.Agenda })))
@@ -71,6 +72,7 @@ function App() {
               <Route path="/entregas" element={<Entregas />} />
               <Route path="/menu" element={<Menu />} />
               <Route path="/catalogo-pendentes" element={<CatalogoPendentes />} />
+              <Route path="/pedidos-loja" element={<PedidosLoja />} />
               <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
               <Route path="/contas-a-receber" element={<ContasReceber />} />
               <Route path="/contas-a-pagar" element={<ContasAPagar />} />
