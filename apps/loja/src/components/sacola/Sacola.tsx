@@ -100,12 +100,14 @@ export function Sacola({ vitrine }: SacolaProps) {
                                         </span>
                                     )}
                                     <div className="flex gap-4">
-                                        <Link
-                                            href={`/combo/${linha.combo.slug}?editar=${encodeURIComponent(linha.chave)}`}
-                                            className="text-[13px] font-bold"
-                                        >
-                                            Trocar sabores
-                                        </Link>
+                                        {linha.combo.grupos.length > 0 && (
+                                            <Link
+                                                href={`/combo/${linha.combo.slug}?editar=${encodeURIComponent(linha.chave)}`}
+                                                className="text-[13px] font-bold"
+                                            >
+                                                Trocar sabores
+                                            </Link>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => removerCombo(linha.chave)}

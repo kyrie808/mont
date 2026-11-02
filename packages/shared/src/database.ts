@@ -2613,6 +2613,7 @@ export type Database = {
       }
       produto_componentes: {
         Row: {
+          brinde: boolean
           combo_id: string
           componente_id: string
           criado_em: string
@@ -2620,6 +2621,7 @@ export type Database = {
           quantidade: number
         }
         Insert: {
+          brinde?: boolean
           combo_id: string
           componente_id: string
           criado_em?: string
@@ -2627,6 +2629,7 @@ export type Database = {
           quantidade?: number
         }
         Update: {
+          brinde?: boolean
           combo_id?: string
           componente_id?: string
           criado_em?: string

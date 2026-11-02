@@ -70,7 +70,7 @@ export function Seletor({
                 aria-label={`Tirar um: ${nome}`}
                 onClick={onMenos}
                 disabled={menosDesabilitado}
-                className={cn('cursor-pointer border-0 bg-transparent font-bold disabled:cursor-default', e.botao)}
+                className={cn('cursor-pointer rounded-full border-0 bg-transparent font-bold disabled:cursor-default', e.botao)}
             >
                 −
             </button>
@@ -81,7 +81,7 @@ export function Seletor({
                 onClick={onMais}
                 disabled={maisDesabilitado}
                 autoFocus={focarMais}
-                className={cn('cursor-pointer border-0 bg-transparent font-bold disabled:cursor-default', e.botao)}
+                className={cn('cursor-pointer rounded-full border-0 bg-transparent font-bold disabled:cursor-default', e.botao)}
             >
                 +
             </button>

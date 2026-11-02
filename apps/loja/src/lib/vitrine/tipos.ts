@@ -26,6 +26,8 @@ export interface ItemFixo {
     produtoId: string
     nome: string
     quantidade: number
+    /** Dado de brinde no combo (produto_componentes.brinde): só muda o texto do "Já incluso". */
+    brinde: boolean
 }
 
 export interface OpcaoGrupo {

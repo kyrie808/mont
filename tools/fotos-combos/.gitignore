@@ -1,0 +1,4 @@
+# Fotos baixadas e recortes (regenerados pelo gerar.py) e o ambiente Python.
+cache/
+.venv/
+__pycache__/
