@@ -97,13 +97,68 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                 {combo.fixos.length > 0 && (
                     <div className="flex flex-col gap-0.5 rounded-xl bg-areia px-3 py-2.5 text-[13px]">
                         <span className="font-bold">Já incluso</span>
-                        <span>{combo.fixos.map((f) => rotuloItem(f.nome, f.quantidade)).join(' · ')}</span>
+                        {/* Um item por linha: "Doce de leite tradicional 400 g · de brinde" não se confunde com outro item. */}
+                        <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+                            {combo.fixos.map((f) => (
+                                <li key={f.produtoId}>
+                                    {rotuloItem(f.nome, f.quantidade)}
+                                    {f.brinde && <span className="font-bold"> · de brinde</span>}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
 
                 {combo.grupos.map((g) => {
                     const n = escolhidos(q, g)
                     const cheio = n >= g.quantidade
+                    // Escolha de 1: toque para selecionar (opção única), sem contador nem "Pode repetir sabor".
+                    if (g.quantidade === 1) {
+                        const escolhido = Object.entries(q[g.id] ?? {}).find(([, v]) => v > 0)?.[0]
+                        return (
+                            <div key={g.id} className="flex flex-col">
+                                <h2 className="mt-1 text-[17px] font-bold" id={`grupo-${g.id}`}>
+                                    {g.titulo}
+                                </h2>
+                                {g.opcoes.length === 0 && (
+                                    <p className="mt-2 text-[13px] text-texto-suave">Os sabores ainda estão sendo definidos.</p>
+                                )}
+                                <div role="radiogroup" aria-labelledby={`grupo-${g.id}`} className="mt-2 flex flex-col gap-2">
+                                    {g.opcoes.map((o) => {
+                                        const marcado = escolhido === o.produtoId
+                                        return (
+                                            <button
+                                                key={o.produtoId}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={marcado}
+                                                disabled={!o.disponivel}
+                                                onClick={() => setQ((atual) => ({ ...atual, [g.id]: { [o.produtoId]: 1 } }))}
+                                                className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-[14px] border-[1.5px] bg-white px-3 py-2 text-left transition-colors duration-150 disabled:cursor-default disabled:opacity-60 ${marcado ? 'border-marrom' : 'border-linha'}`}
+                                            >
+                                                <Foto url={o.imagemUrl} alt="" largura={44} className="h-11 w-11 rounded-[10px]" />
+                                                <span className="flex-1 text-[15px] font-medium">{o.nome}</span>
+                                                {!o.disponivel ? (
+                                                    <span className="pr-1 text-xs font-bold text-texto-suave">Esgotado</span>
+                                                ) : (
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${marcado ? 'border-marrom bg-marrom' : 'border-texto-suave'}`}
+                                                    >
+                                                        {marcado && (
+                                                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="white" strokeWidth="3.5">
+                                                                <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )
+                    }
                     return (
                         <div key={g.id} className="flex flex-col">
                             <div className="mt-1 flex flex-col gap-2">

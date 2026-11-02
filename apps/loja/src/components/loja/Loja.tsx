@@ -30,6 +30,8 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
     const pronta = useSacolaPronta()
     const itens = useSacola((s) => s.itens)
     const definirQuantidade = useSacola((s) => s.definirQuantidade)
+    const adicionarCombo = useSacola((s) => s.adicionarCombo)
+    const removerCombo = useSacola((s) => s.removerCombo)
 
     const catalogo = useMemo(() => catalogoDa(vitrine), [vitrine])
     const resumo = useMemo(() => resumirSacola(pronta ? itens : [], catalogo), [pronta, itens, catalogo])
@@ -134,6 +136,48 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         )
     }
 
+    // Combo sem escolha (ex.: Dupla Zero): vai direto para a sacola, sem a tela de montar.
+    // Cada unidade é um combo na sacola; o "−" tira a última.
+    const controleComboFixo = (c: ComboLoja) => {
+        if (!c.disponivel || !c.montavel) {
+            return <span className="px-2 text-xs font-bold text-texto-suave">Esgotado</span>
+        }
+        const naSacola = pronta ? itens.filter((i) => i.tipo === 'combo' && i.comboId === c.id) : []
+        const q = naSacola.length
+        if (q === 0) {
+            return (
+                <button
+                    type="button"
+                    aria-label={`Adicionar ${c.nome}`}
+                    autoFocus={foco?.id === c.id && foco.alvo === 'adicionar'}
+                    onClick={() => {
+                        adicionarCombo(c.id, [])
+                        setFoco({ id: c.id, alvo: 'mais' })
+                    }}
+                    className="flex h-11 cursor-pointer items-center rounded-[22px] bg-laranja px-4 text-sm font-bold text-marrom"
+                >
+                    Adicionar
+                </button>
+            )
+        }
+        const ultimo = naSacola[naSacola.length - 1]
+        return (
+            <Seletor
+                variante="loja"
+                nome={c.nome}
+                quantidade={q}
+                onMenos={() => {
+                    if (q === 1) setFoco({ id: c.id, alvo: 'adicionar' })
+                    if (ultimo?.tipo === 'combo') removerCombo(ultimo.chave)
+                }}
+                onMais={() => adicionarCombo(c.id, [])}
+                maisDesabilitado={q >= 99}
+                focarMais={foco?.id === c.id && foco.alvo === 'mais'}
+                animar
+            />
+        )
+    }
+
     // Foto, nome e preço abrem o produto juntos (alvo grande); o botão da direita só põe na sacola.
     const linhaProduto = (p: ProdutoLoja) => (
         <article key={p.id} className="flex items-center gap-3 border-b border-linha py-2.5">
@@ -165,12 +209,16 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 {c.resumo && <span className="text-xs leading-[1.35] text-texto-suave">{c.resumo}</span>}
                 <div className="mt-1 flex items-end justify-between gap-2">
                     <PrecoCombo combo={c} variante="card" />
-                    <Link
-                        href={`/combo/${c.slug}`}
-                        className="flex h-11 items-center rounded-[22px] bg-laranja px-4 text-sm font-bold text-marrom no-underline"
-                    >
-                        Montar
-                    </Link>
+                    {c.grupos.length === 0 ? (
+                        controleComboFixo(c)
+                    ) : (
+                        <Link
+                            href={`/combo/${c.slug}`}
+                            className="flex h-11 items-center rounded-[22px] bg-laranja px-4 text-sm font-bold text-marrom no-underline"
+                        >
+                            Montar
+                        </Link>
+                    )}
                 </div>
             </div>
         </article>

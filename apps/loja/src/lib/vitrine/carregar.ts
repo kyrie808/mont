@@ -95,7 +95,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
     const [fixosRes, gruposRes] = await Promise.all([
         cliente
             .from('produto_componentes')
-            .select('combo_id, quantidade, componente:produtos!produto_componentes_componente_id_fkey(id, nome, ativo)')
+            .select('combo_id, quantidade, brinde, componente:produtos!produto_componentes_componente_id_fkey(id, nome, ativo)')
             .in('combo_id', comboIds),
         cliente
             .from('combo_grupos')
@@ -148,6 +148,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
             produtoId: f.componente.id,
             nome: nomeNaLoja.get(f.componente.id) ?? f.componente.nome,
             quantidade: f.quantidade,
+            brinde: f.brinde,
         })
         fixosPorCombo.set(f.combo_id, lista)
         const ok = disponivelNaVitrine.get(f.componente.id) ?? f.componente.ativo
