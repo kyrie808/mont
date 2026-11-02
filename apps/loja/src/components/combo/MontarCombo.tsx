@@ -141,6 +141,7 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                                             {o.disponivel ? (
                                                 <Seletor
                                                     variante="combo"
+                                                    nome={o.nome}
                                                     quantidade={qtd}
                                                     onMenos={() => definir(g.id, o.produtoId, qtd - 1)}
                                                     onMais={() => {

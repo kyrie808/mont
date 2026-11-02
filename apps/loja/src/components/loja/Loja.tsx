@@ -29,7 +29,6 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
     const pronta = useSacolaPronta()
     const itens = useSacola((s) => s.itens)
     const definirQuantidade = useSacola((s) => s.definirQuantidade)
-    const adicionarProduto = useSacola((s) => s.adicionarProduto)
 
     const catalogo = useMemo(() => catalogoDa(vitrine), [vitrine])
     const resumo = useMemo(() => resumirSacola(pronta ? itens : [], catalogo), [pronta, itens, catalogo])
@@ -75,6 +74,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             return (
                 <button
                     type="button"
+                    aria-label={`Adicionar ${p.nome}`}
                     onClick={() => definirQuantidade(p.id, 1)}
                     className={cn(botaoAdicionar, larguraTotal && 'w-full')}
                 >
@@ -85,6 +85,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         return (
             <Seletor
                 variante="loja"
+                nome={p.nome}
                 quantidade={q}
                 onMenos={() => definirQuantidade(p.id, q - 1)}
                 onMais={() => definirQuantidade(p.id, q + 1)}
@@ -295,9 +296,10 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 <PainelProduto
                     key={produtoAberto.id}
                     produto={produtoAberto}
+                    naSacola={quantidadeDe(produtoAberto.id)}
                     onFechar={fechar}
-                    onAdicionar={(q) => {
-                        adicionarProduto(produtoAberto.id, q)
+                    onConfirmar={(q) => {
+                        definirQuantidade(produtoAberto.id, q)
                         fechar()
                     }}
                 />

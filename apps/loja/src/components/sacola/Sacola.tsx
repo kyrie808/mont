@@ -126,6 +126,7 @@ export function Sacola({ vitrine }: SacolaProps) {
                                 </div>
                                 <Seletor
                                     variante="sacola"
+                                    nome={linha.produto.nome}
                                     quantidade={linha.quantidade}
                                     onMenos={() => definirQuantidade(linha.produto.id, linha.quantidade - 1)}
                                     onMais={() => definirQuantidade(linha.produto.id, linha.quantidade + 1)}
