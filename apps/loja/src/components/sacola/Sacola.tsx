@@ -1,52 +1,46 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Foto } from '@/components/Foto'
 import { Seletor } from '@/components/Seletor'
-import { linkWhatsApp, reais } from '@/lib/formato'
+import { reais } from '@/lib/formato'
 import { catalogoDa, descreverCombo, resumirSacola } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
-import type { BairroFrete, Vitrine } from '@/lib/vitrine/tipos'
+import type { Vitrine } from '@/lib/vitrine/tipos'
 
 interface SacolaProps {
     vitrine: Vitrine
-    bairros: BairroFrete[]
-    whatsapp: string
 }
 
-const FORA_DA_LISTA = 'fora-da-lista'
+const SEM_BAIRROS: ReadonlySet<string> = new Set()
 
-/** Tela 04: sacola, "Leva junto?" e frete pelo bairro. */
-export function Sacola({ vitrine, bairros, whatsapp }: SacolaProps) {
+/**
+ * Tela 04: sacola e "Leva junto?". Sem cálculo de frete (decisão de 02/11): frete e dia de
+ * entrega são combinados no WhatsApp, depois que o pedido chega.
+ */
+export function Sacola({ vitrine }: SacolaProps) {
     const pronta = useSacolaPronta()
     const itens = useSacola((s) => s.itens)
-    const bairroId = useSacola((s) => s.bairroId)
     const definirQuantidade = useSacola((s) => s.definirQuantidade)
     const adicionarProduto = useSacola((s) => s.adicionarProduto)
     const removerCombo = useSacola((s) => s.removerCombo)
-    const escolherBairro = useSacola((s) => s.escolherBairro)
     const manterSomente = useSacola((s) => s.manterSomente)
-    const [foraDaLista, setForaDaLista] = useState(false)
 
     const catalogo = useMemo(() => catalogoDa(vitrine), [vitrine])
     const resumo = useMemo(() => resumirSacola(pronta ? itens : [], catalogo), [pronta, itens, catalogo])
 
-    // Tira da sacola o que saiu da vitrine e o bairro que saiu da tabela.
+    // Tira da sacola o que saiu da vitrine (e o bairro guardado de antes, que não é mais usado).
     useEffect(() => {
         if (!pronta) return
-        manterSomente(
-            new Set([...catalogo.produtos.keys(), ...catalogo.combos.keys()]),
-            new Set(bairros.map((b) => b.id)),
-        )
-    }, [pronta, catalogo, bairros, manterSomente])
+        manterSomente(new Set([...catalogo.produtos.keys(), ...catalogo.combos.keys()]), SEM_BAIRROS)
+    }, [pronta, catalogo, manterSomente])
 
-    const bairro = bairros.find((b) => b.id === bairroId) ?? null
     const leva = vitrine.levaJunto
     const mostrarLevaJunto =
         leva !== null && leva.disponivel && !itens.some((i) => i.tipo === 'produto' && i.produtoId === leva.id)
-    const podeContinuar = resumo.linhas.length > 0 && !resumo.temPendencia && bairro !== null
+    const podeContinuar = resumo.linhas.length > 0 && !resumo.temPendencia
 
     return (
         <div className="relative min-h-dvh pb-[100px]">
@@ -59,7 +53,7 @@ export function Sacola({ vitrine, bairros, whatsapp }: SacolaProps) {
                     ←
                 </Link>
                 <span className="text-base font-bold">Sua sacola</span>
-                <span className="ml-auto pr-3 text-xs text-texto-suave">1 Sacola · 2 Dados · 3 Pagamento</span>
+                <span className="ml-auto pr-3 text-xs text-texto-suave">1 Sacola · 2 Dados</span>
             </header>
 
             {pronta && resumo.linhas.length === 0 ? (
@@ -160,66 +154,12 @@ export function Sacola({ vitrine, bairros, whatsapp }: SacolaProps) {
                         </div>
                     )}
 
-                    <div className="mt-1 flex flex-col gap-1.5">
-                        <label htmlFor="bairro" className="text-[15px] font-bold">
-                            Entrega
-                        </label>
-                        {bairros.length > 0 && (
-                            <div className="relative">
-                                <select
-                                    id="bairro"
-                                    value={foraDaLista ? FORA_DA_LISTA : (bairro?.id ?? '')}
-                                    onChange={(e) => {
-                                        const valor = e.target.value
-                                        setForaDaLista(valor === FORA_DA_LISTA)
-                                        escolherBairro(valor && valor !== FORA_DA_LISTA ? valor : null)
-                                    }}
-                                    className="h-[52px] w-full cursor-pointer appearance-none rounded-xl border-[1.5px] border-marrom bg-white px-3.5 text-[15px] text-marrom"
-                                >
-                                    <option value="">Escolha seu bairro</option>
-                                    {bairros.map((b) => (
-                                        <option key={b.id} value={b.id}>
-                                            {b.rotulo}
-                                        </option>
-                                    ))}
-                                    <option value={FORA_DA_LISTA}>Meu bairro não está na lista</option>
-                                </select>
-                                <span aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2">
-                                    ▾
-                                </span>
-                            </div>
-                        )}
-                        {bairro ? (
-                            <span className="text-xs text-texto-suave">Frete deste bairro: {reais(bairro.valor)}</span>
-                        ) : (
-                            (bairros.length === 0 || foraDaLista) && (
-                                <span className="text-xs text-texto-suave">
-                                    Para saber o frete do seu bairro,{' '}
-                                    <a href={linkWhatsApp(whatsapp)} target="_blank" rel="noopener noreferrer" className="font-bold">
-                                        fale com a gente no WhatsApp
-                                    </a>
-                                    .
-                                </span>
-                            )
-                        )}
-                    </div>
-
                     <div className="flex flex-col gap-1.5 border-t border-linha pt-3 text-sm">
-                        <div className="flex justify-between">
-                            <span>Produtos</span>
-                            <span>{reais(resumo.totalPix)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Frete</span>
-                            <span>{bairro ? reais(bairro.valor) : '—'}</span>
-                        </div>
                         <div className="flex justify-between text-[17px] font-bold">
                             <span>Total no Pix</span>
-                            <span>
-                                {bairro ? reais(resumo.totalPix + bairro.valor) : `${reais(resumo.totalPix)} + frete`}
-                            </span>
+                            <span>{reais(resumo.totalPix)}</span>
                         </div>
-                        <span className="text-xs text-texto-suave">No cartão, a taxa da maquininha entra no próximo passo.</span>
+                        <span className="text-xs text-texto-suave">Frete e dia de entrega: combinamos no WhatsApp.</span>
                     </div>
                 </div>
             )}
