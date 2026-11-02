@@ -33,6 +33,9 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
     const catalogo = useMemo(() => catalogoDa(vitrine), [vitrine])
     const resumo = useMemo(() => resumirSacola(pronta ? itens : [], catalogo), [pronta, itens, catalogo])
 
+    // Para onde vai o foco quando o botão some ("Adicionar" ↔ "− 1 +"): sem isso ele cai no <body>.
+    const [foco, setFoco] = useState<{ id: string; alvo: 'mais' | 'adicionar' } | null>(null)
+
     const quantidadeDe = (produtoId: string): number => {
         if (!pronta) return 0
         const item = itens.find((i) => i.tipo === 'produto' && i.produtoId === produtoId)
@@ -99,7 +102,11 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 <button
                     type="button"
                     aria-label={`Adicionar ${p.nome}`}
-                    onClick={() => definirQuantidade(p.id, 1)}
+                    autoFocus={foco?.id === p.id && foco.alvo === 'adicionar'}
+                    onClick={() => {
+                        definirQuantidade(p.id, 1)
+                        setFoco({ id: p.id, alvo: 'mais' })
+                    }}
                     className={cn(botaoAdicionar, larguraTotal && 'w-full')}
                 >
                     Adicionar
@@ -111,8 +118,13 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 variante="loja"
                 nome={p.nome}
                 quantidade={q}
-                onMenos={() => definirQuantidade(p.id, q - 1)}
+                onMenos={() => {
+                    if (q === 1) setFoco({ id: p.id, alvo: 'adicionar' })
+                    definirQuantidade(p.id, q - 1)
+                }}
                 onMais={() => definirQuantidade(p.id, q + 1)}
+                focarMais={foco?.id === p.id && foco.alvo === 'mais'}
+                animar
                 className={cn(larguraTotal && 'w-full justify-between')}
             />
         )
@@ -190,7 +202,11 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 >
                     <IconeSacola />
                     {resumo.quantidadeItens > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-[10px] bg-laranja text-xs font-bold text-marrom">
+                        // key: a cada mudança o selo remonta e pulsa (feedback de "entrou na sacola").
+                        <span
+                            key={resumo.quantidadeItens}
+                            className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-[10px] bg-laranja text-xs font-bold text-marrom motion-safe:animate-pulsar"
+                        >
                             {resumo.quantidadeItens}
                         </span>
                     )}
@@ -312,7 +328,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             </footer>
 
             {resumo.quantidadeItens > 0 && (
-                <div className="fixed inset-x-0 bottom-4 z-40 mx-auto w-full max-w-[430px] px-3">
+                <div className="fixed inset-x-0 bottom-4 z-40 mx-auto w-full max-w-[430px] px-3 motion-safe:animate-subir motion-reduce:animate-surgir">
                     <Link
                         href="/sacola"
                         className="flex h-[60px] items-center justify-between rounded-[30px] bg-marrom pr-2 pl-5 text-creme no-underline shadow-[0_8px_24px_rgba(44,24,16,0.25)]"
@@ -326,6 +342,13 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     </Link>
                 </div>
             )}
+
+            {/* Leitor de tela: anuncia a sacola mudando (o selo e a barra são só visuais). */}
+            <p role="status" className="sr-only">
+                {pronta && resumo.quantidadeItens > 0
+                    ? `${resumo.quantidadeItens} ${resumo.quantidadeItens === 1 ? 'item' : 'itens'} na sacola, ${reais(resumo.totalPix)}`
+                    : ''}
+            </p>
 
             {produtoAberto && (
                 <PainelProduto

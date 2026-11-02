@@ -35,6 +35,10 @@ interface SeletorProps {
     onMais: () => void
     menosDesabilitado?: boolean
     maisDesabilitado?: boolean
+    /** Recebe o foco no "+" ao aparecer (o "Adicionar" que virou seletor sumiu com o foco). */
+    focarMais?: boolean
+    /** Entra com um zoom curto (o "Adicionar" virando "− 1 +"). */
+    animar?: boolean
     className?: string
 }
 
@@ -47,11 +51,20 @@ export function Seletor({
     onMais,
     menosDesabilitado = false,
     maisDesabilitado = false,
+    focarMais = false,
+    animar = false,
     className,
 }: SeletorProps) {
     const e = estilos[variante]
     return (
-        <div className={cn('flex items-center', e.caixa, className)}>
+        <div
+            className={cn(
+                'flex items-center',
+                e.caixa,
+                animar && 'motion-safe:animate-entrar motion-reduce:animate-surgir',
+                className,
+            )}
+        >
             <button
                 type="button"
                 aria-label={`Tirar um: ${nome}`}
@@ -67,6 +80,7 @@ export function Seletor({
                 aria-label={`Mais um: ${nome}`}
                 onClick={onMais}
                 disabled={maisDesabilitado}
+                autoFocus={focarMais}
                 className={cn('cursor-pointer border-0 bg-transparent font-bold disabled:cursor-default', e.botao)}
             >
                 +

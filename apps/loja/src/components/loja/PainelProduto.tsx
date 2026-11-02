@@ -72,14 +72,14 @@ export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: Pain
                 aria-label="Fechar"
                 tabIndex={-1}
                 onClick={onFechar}
-                className="absolute inset-0 cursor-default bg-marrom/45"
+                className="absolute inset-0 cursor-default bg-marrom/45 motion-safe:animate-surgir"
             />
             <section
                 ref={painel}
                 role="dialog"
                 aria-modal="true"
                 aria-label={produto.nome}
-                className="relative flex h-[85dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[24px] bg-creme"
+                className="relative flex h-[85dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[24px] bg-creme motion-safe:animate-subir motion-reduce:animate-surgir"
             >
                 <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 pt-3 pb-4">
                     <div className="relative flex items-center justify-end">

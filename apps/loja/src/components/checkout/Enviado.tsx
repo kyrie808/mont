@@ -28,7 +28,10 @@ export function Enviado() {
         <div className="flex min-h-dvh flex-col items-center gap-4 px-6 pt-20 text-center">
             {pedido ? (
                 <>
-                    <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-verde">
+                    <span
+                        aria-hidden="true"
+                        className="flex h-14 w-14 items-center justify-center rounded-full bg-verde motion-safe:animate-entrar"
+                    >
                         <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="white" strokeWidth="3">
                             <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

@@ -13,6 +13,40 @@
     --color-verde: #2E7D32;          /* confirmação */
 }
 
+/*
+ * Movimento (150–250 ms, só transform/opacity). Saída mais rápida que entrada; nada atrasa o toque.
+ * Cada uso tem par "motion-reduce:" no componente: com menos movimento fica só o esmaecer.
+ */
+@theme {
+    --ease-chegada: cubic-bezier(0.16, 1, 0.3, 1);
+    --animate-subir: subir 240ms var(--ease-chegada);
+    --animate-surgir: surgir 200ms ease-out;
+    --animate-entrar: entrar 160ms var(--ease-chegada);
+    --animate-pulsar: pulsar 240ms var(--ease-chegada);
+
+    @keyframes subir {
+        from {
+            transform: translateY(100%);
+        }
+    }
+    @keyframes surgir {
+        from {
+            opacity: 0;
+        }
+    }
+    @keyframes entrar {
+        from {
+            opacity: 0;
+            transform: scale(0.92);
+        }
+    }
+    @keyframes pulsar {
+        50% {
+            transform: scale(1.3);
+        }
+    }
+}
+
 /* As fontes vêm de next/font (variáveis no <html>); "inline" para usar a variável em tempo de execução. */
 @theme inline {
     --font-titulo: var(--font-anton), sans-serif;        /* Fonte A (provisória: Anton) */
@@ -25,8 +59,10 @@
  * (ex.: `a { color }` apagava o `text-creme` da aba de categoria ativa).
  */
 @layer base {
-    html {
-        scroll-behavior: smooth;
+    @media (prefers-reduced-motion: no-preference) {
+        html {
+            scroll-behavior: smooth;
+        }
     }
 
     body {
