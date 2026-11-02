@@ -19,16 +19,6 @@ function temEstoqueLivre(estoqueAtual: number | null): boolean {
     return (estoqueAtual ?? 0) > 0
 }
 
-/** 1ª linha não vazia da descrição do produto (a frase de venda que a Mont escreveu). */
-function primeiraLinha(texto: string | null): string | null {
-    return (
-        (texto ?? '')
-            .split('\n')
-            .map((l) => l.trim())
-            .find(Boolean) ?? null
-    )
-}
-
 function falha(contexto: string, mensagem: string): never {
     throw new Error(`Loja: falha ao ler ${contexto} (${mensagem})`)
 }
@@ -76,7 +66,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
     const { data: linhas, error: erroVitrine } = await cliente
         .from('loja_vitrine')
         .select(
-            'produto_id, secao, ordem, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, produto:produtos!inner(id, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, ativo)',
+            'produto_id, secao, ordem, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, frase_card, produto:produtos!inner(id, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, ativo)',
         )
         .eq('visivel', true)
         .order('ordem')
@@ -137,7 +127,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
             slug: l.produto.slug,
             nome: nomeNaLoja.get(l.produto_id) ?? l.produto.nome,
             subtitulo: l.produto.subtitulo,
-            chamada: l.resumo ?? primeiraLinha(l.produto.descricao),
+            chamada: l.frase_card,
             descricao: l.produto.descricao,
             imagemUrl: imagens.get(l.produto_id) ?? null,
             secao: l.secao,

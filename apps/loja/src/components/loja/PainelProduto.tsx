@@ -10,6 +10,8 @@ interface PainelProdutoProps {
     produto: ProdutoLoja
     /** Quantas unidades já estão na sacola (0 = nenhuma). */
     naSacola: number
+    /** Aberto pelo teclado: o foco vai para o "×" (com contorno). Pelo toque: para o painel. */
+    focarFechar: boolean
     onFechar: () => void
     /** Quantidade final na sacola (não soma: o painel mostra e ajusta o que já está lá). */
     onConfirmar: (quantidade: number) => void
@@ -18,7 +20,7 @@ interface PainelProdutoProps {
 const FOCAVEIS = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /** Tela 02: o produto abre como painel por cima da loja (não troca de página). */
-export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: PainelProdutoProps) {
+export function PainelProduto({ produto, naSacola, focarFechar, onFechar, onConfirmar }: PainelProdutoProps) {
     const [quantidade, setQuantidade] = useState(naSacola > 0 ? naSacola : 1)
     const painel = useRef<HTMLElement>(null)
     const fechar = useRef<HTMLButtonElement>(null)
@@ -27,7 +29,8 @@ export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: Pain
         const overflowAntes = document.body.style.overflow
         const focoAntes = document.activeElement instanceof HTMLElement ? document.activeElement : null
         document.body.style.overflow = 'hidden'
-        fechar.current?.focus()
+        if (focarFechar) fechar.current?.focus()
+        else painel.current?.focus()
 
         const aoTeclar = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onFechar()
@@ -52,7 +55,7 @@ export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: Pain
             window.removeEventListener('keydown', aoTeclar)
             focoAntes?.focus()
         }
-    }, [onFechar])
+    }, [onFechar, focarFechar])
 
     const linhasDescricao = (produto.descricao ?? '')
         .split('\n')
@@ -76,10 +79,11 @@ export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: Pain
             />
             <section
                 ref={painel}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-label={produto.nome}
-                className="relative flex h-[85dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[24px] bg-creme motion-safe:animate-subir motion-reduce:animate-surgir"
+                className="relative flex h-[85dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[24px] bg-creme outline-none motion-safe:animate-subir motion-reduce:animate-surgir"
             >
                 <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 pt-3 pb-4">
                     <div className="relative flex items-center justify-end">
@@ -89,7 +93,7 @@ export function PainelProduto({ produto, naSacola, onFechar, onConfirmar }: Pain
                             type="button"
                             aria-label="Fechar"
                             onClick={onFechar}
-                            className="flex h-11 w-11 items-center justify-center text-[22px]"
+                            className="flex h-11 w-11 items-center justify-center rounded-full text-[22px]"
                         >
                             ×
                         </button>

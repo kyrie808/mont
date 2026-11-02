@@ -48,7 +48,10 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
     const produtoAberto = slugAberto ? [...catalogo.produtos.values()].find((p) => p.slug === slugAberto) : undefined
     const empilhou = useRef(false)
 
-    const abrir = (produto: ProdutoLoja) => {
+    // Aberto pelo teclado (Enter/Espaço: detail 0) o foco vai para o "×"; pelo toque, para o painel, sem contorno.
+    const [abertoPorTeclado, setAbertoPorTeclado] = useState(false)
+    const abrir = (produto: ProdutoLoja, evento: React.MouseEvent) => {
+        setAbertoPorTeclado(evento.detail === 0)
         window.history.pushState(null, '', `?produto=${encodeURIComponent(produto.slug)}`)
         empilhou.current = true
     }
@@ -135,7 +138,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         <article key={p.id} className="flex items-center gap-3 border-b border-linha py-2.5">
             <button
                 type="button"
-                onClick={() => abrir(p)}
+                onClick={(e) => abrir(p, e)}
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl text-left"
             >
                 <Foto url={p.imagemUrl} alt="" largura={56} className="h-14 w-14 shrink-0 rounded-xl" />
@@ -196,7 +199,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 </div>
                 <Link
                     href="/sacola"
-                    aria-label={`Abrir sacola, ${resumo.quantidadeItens} itens`}
+                    aria-label={`Abrir sacola, ${resumo.quantidadeItens} ${resumo.quantidadeItens === 1 ? 'item' : 'itens'}`}
                     className="relative flex h-11 w-11 items-center justify-center rounded-full border border-linha"
                 >
                     <IconeSacola />
@@ -277,7 +280,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                             >
                                 <button
                                     type="button"
-                                    onClick={() => abrir(p)}
+                                    onClick={(e) => abrir(p, e)}
                                     className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
                                 >
                                     <Foto
@@ -289,7 +292,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                                     />
                                     <span className="text-sm leading-tight font-bold">{p.nome}</span>
                                     {p.chamada && (
-                                        <span className="line-clamp-2 text-xs leading-snug text-texto-suave">{p.chamada}</span>
+                                        <span className="text-xs leading-snug text-texto-suave">{p.chamada}</span>
                                     )}
                                 </button>
                                 {/* Preço e botão alinhados no pé do card, mesmo com nomes de tamanhos diferentes. */}
@@ -360,6 +363,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     key={produtoAberto.id}
                     produto={produtoAberto}
                     naSacola={quantidadeDe(produtoAberto.id)}
+                    focarFechar={abertoPorTeclado}
                     onFechar={fechar}
                     onConfirmar={(q) => {
                         definirQuantidade(produtoAberto.id, q)

@@ -1944,6 +1944,7 @@ export type Database = {
           criado_em: string
           destaque_hero: boolean
           disponivel: boolean
+          frase_card: string | null
           leva_junto: boolean
           nome_loja: string | null
           ordem: number
@@ -1958,6 +1959,7 @@ export type Database = {
           criado_em?: string
           destaque_hero?: boolean
           disponivel?: boolean
+          frase_card?: string | null
           leva_junto?: boolean
           nome_loja?: string | null
           ordem?: number
@@ -1972,6 +1974,7 @@ export type Database = {
           criado_em?: string
           destaque_hero?: boolean
           disponivel?: boolean
+          frase_card?: string | null
           leva_junto?: boolean
           nome_loja?: string | null
           ordem?: number
