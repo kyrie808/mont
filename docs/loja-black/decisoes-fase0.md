@@ -6,14 +6,24 @@
 > - **DECIDIDO:** pode implementar.
 > - **PENDENTE GILMAR:** não implemente o dado. Deixe o esquema pronto e o valor em aberto.
 
+## Nomes dos combos (02/11)
+- **DECIDIDO:** nomes novos no sistema interno, na Nova Venda e na loja (só o nome visível, em `produtos.nome` e `loja_vitrine.nome_loja`; ids, códigos e vendas antigas não mudam):
+  - Combo Família → **Mesa Cheia**
+  - Balde + doce → **Par Mineiro**
+  - Kit Top → **Café da Tarde**
+  - 3 doces → **Trio Mineiro**
+  - Dupla Zero → mantém
+- Os nomes antigos continuam abaixo onde registram a decisão como foi tomada.
+- Aplicado em 02/11 (migration `20261102064947_black_nomes_sabores_cafe_da_tarde`, backup `dump-*-20261102-034516.sql`).
+
 ## Lançamento
 - **DECIDIDO:** os anúncios da Black começam em 03/11 apontando para o WhatsApp, como hoje. Eles só passam a apontar para a loja quando ela passar no teste real de R$ 1 de ponta a ponta (Pix e cartão).
 - **DECIDIDO:** domínio `loja.montdistribuidora.com.br`.
 - **DECIDIDO:** congelados ficam fora da loja na Black.
 
 ## P1 — Quando nasce a venda
-- **DECIDIDO:** opção (a). A venda nasce no Jarvis só depois do pagamento confirmado.
-- Aceite da Fase 2: pedido gravado em `cat_pedidos`/`cat_itens_pedido` com os sabores. A venda aparecendo no Jarvis passa a ser conferida no teste de R$ 1 da Fase 3.
+- **DECIDIDO:** opção (a). A venda nasce no sistema interno só depois do pagamento confirmado.
+- Aceite da Fase 2: pedido gravado em `cat_pedidos`/`cat_itens_pedido` com os sabores. A venda aparecendo no sistema interno passa a ser conferida no teste de R$ 1 da Fase 3.
 
 ## P2 — InfinitePay
 - **DECIDIDO:** opção A simplificada. A tela 06 oferece só **Pix** e **Cartão de crédito**. Saem "Cartão de débito" e "Crédito 2x" (divergência autorizada do wireframe; vou atualizar o wireframe).
@@ -39,29 +49,34 @@
     - Balde + doce: 85 → 88
     - 3 doces: 79 → 82
     - Dupla Zero: 75 → 78
-    - Kit Top: 89 → 92, ou 100 → 104 (**PENDENTE GILMAR**)
-- Guarde também débito e 2x na tabela de preços (serve ao Jarvis depois), mas a loja só usa Pix e crédito 1x.
+    - Café da Tarde (ex-Kit Top): 89 → 92 (**DECIDIDO 02/11**; débito 91, crédito 2x 95)
+- Guarde também débito e 2x na tabela de preços (serve ao sistema interno depois), mas a loja só usa Pix e crédito 1x.
 
 ## P4 — Grupos dos combos e âncoras
-- **PENDENTE GILMAR:** geleias fora dos grupos de "doce 680 g".
-- Recomendação a implementar quando confirmada:
-  - **Grupos de doce 680 g** (Combo Família, Balde + doce, 3 doces):
+- **DECIDIDO (02/11):** geleias fora dos grupos de "doce 680 g".
+  - **Grupos de doce 680 g** (Mesa Cheia, Par Mineiro, Trio Mineiro):
     - Doce de leite tradicional, com coco, com geleia de ameixa e com geleia de café
     - Cocada cremosa e cocada com maracujá
     - Doce de milho
-  - **Geleias:** só no Kit Top.
-- **Âncora "separado: a partir de"** = soma dos avulsos no preço Black com o sabor mais barato do grupo:
-  - Combo Família: R$ 293
-  - Balde + doce: R$ 94
-  - 3 doces: R$ 87
-  - Kit Top: R$ 108 (morango)
+  - **Geleias:** só no Café da Tarde (morango ou frutas vermelhas).
+  - Aplicado em 02/11 (era o rascunho `supabase/rascunhos/sabores_combos_black.sql`, que virou a migration `20261102064947`).
+- **DECIDIDO (30/10):** a **Dupla Zero é FIXA**: 1 doce de leite zero 400 g + 1 brigadeiro de colher zero 400 g, **sem grupo de escolha** (vale a composição atual em `produto_componentes`). Substitui o "2 zero 400 g à escolha" do BRIEFING.
+- **DECIDIDO (30/10):** a **composição** dos combos com escolha é fixa (os sabores vieram em 02/11, acima). Os grupos foram criados sem opções (migration `20261030053815_loja_combos_composicao`):
+  - Combo Família: balde 4 kg ×1 + baldinho 1 kg ×2 + "Escolha 6 doces de 680 g" (9 itens);
+  - Balde + doce: balde 4 kg ×1 + "Escolha 1 doce de 680 g";
+  - 3 doces: "Escolha 3 doces de 680 g".
+- **Âncora "separado: a partir de"** = soma dos avulsos no preço Black com o sabor mais barato do grupo (**DECIDIDO 02/11**, gravada em `loja_precos.ancora`):
+  - Mesa Cheia: R$ 293
+  - Par Mineiro: R$ 94
+  - Trio Mineiro: R$ 87
+  - Café da Tarde: R$ 108 (morango)
   - Dupla Zero: R$ 78
 
 ## P5 — Disponibilidade
 - **DECIDIDO:** regra da seção 3.4.
   - Massa: só a chave manual.
   - Doces: chave + estoque − reservado.
-- Na Black **não há tela no Jarvis**. A chave "Esgotado" é operada pelo Luccas (SQL/MCP). Uma tela fica para depois.
+- Na Black **não há tela no sistema interno**. A chave "Esgotado" é operada pelo Luccas (SQL/MCP). Uma tela fica para depois.
 
 ## P6 — Endereço
 - **DECIDIDO:** o endereço de entrega é do **pedido**.
@@ -78,10 +93,12 @@
 ## P8 — Origem
 - **DECIDIDO:** `'loja'` (nova), separada nos relatórios.
 
-## P9 — Kit Top
-- **PENDENTE GILMAR:** R$ 100 ou R$ 89 (recomendado R$ 89, geleia só morango ou frutas vermelhas).
+## P9 — Café da Tarde (ex-Kit Top)
+- **DECIDIDO (02/11):** R$ 89 no Pix. Cartão: débito R$ 91, crédito 1x R$ 92, crédito 2x R$ 95. Âncora R$ 108.
+- **DECIDIDO (02/11):** geleia só **morango** ou **frutas vermelhas** (goiaba fora).
+- Composição: 2 baldinhos 1 kg + 1 geleia 680 g à escolha + doce de leite tradicional 400 g de brinde fixo. Virou **um combo com grupo de escolha** (código `combo_black_cafe_da_tarde`), no lugar de um SKU por sabor.
 - **DECIDIDO:** o doce de leite 400 g de brinde entra no rateio proporcional como os demais componentes. Isso não é "brinde" no sentido de `forma_pagamento='brinde'`.
-- Os 3 SKUs "Kit Top — X (Black)" serão inativados (mudança de dado, com backup).
+- Os 3 SKUs "Kit Top — X (Black)" foram **inativados** em 02/11, com backup antes (nenhum tinha venda; nada foi apagado).
 
 ## P10 — Contabilidade do cartão
 - **DECIDIDO:** `vendas.total` = valor efetivamente cobrado do cliente.
@@ -100,7 +117,7 @@
 
 ## P14 — Separado / Saiu para entrega
 - **DECIDIDO:** como sugerido.
-  - "Separado": no Jarvis, em lote.
+  - "Separado": no sistema interno, em lote.
   - "Saiu para entrega": botão "Iniciar rota" no `apps/entregador`.
 - Fica para depois do lançamento (Fase 5).
 

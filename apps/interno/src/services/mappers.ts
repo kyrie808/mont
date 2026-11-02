@@ -16,6 +16,7 @@ import type {
     PagamentoMetodo
 } from '../types/domain'
 import type { Tables } from '@mont/shared'
+import type { TabelaPreco } from '../utils/tabelaPreco'
 
 // ---------------------------------------------------
 // Row aliases for readability
@@ -159,7 +160,9 @@ export const toDomainItemVenda = (dbItem: ItemVendaRowWithProduto): DomainItemVe
         produto: dbItem.produto ? toDomainProduto(dbItem.produto as ProdutoRowWithImages) : undefined,
         quantidade: Number(dbItem.quantidade || 0),
         precoUnitario: Number(dbItem.preco_unitario || 0),
-        subtotal: Number(dbItem.subtotal || 0)
+        subtotal: Number(dbItem.subtotal || 0),
+        comboId: dbItem.combo_id ?? null,
+        comboInstancia: dbItem.combo_instancia ?? null
     }
 }
 
@@ -173,6 +176,11 @@ export const toDomainPagamento = (dbPagamento: PagamentoRowWithStatus): DomainPa
         status: (dbPagamento.status || 'pago') as DomainPagamento['status'],
         observacao: dbPagamento.observacao
     }
+}
+
+/** A coluna é `text` com CHECK no banco; aqui vira o tipo fechado (valor fora do CHECK → null). */
+function lerTabelaPreco(valor: string | null | undefined): TabelaPreco | null {
+    return valor === 'pix' || valor === 'cartao' || valor === 'normal' ? valor : null
 }
 
 export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
@@ -204,7 +212,8 @@ export const toDomainVenda = (dbVenda: VendaRowWithRelations): DomainVenda => {
         entregadorId: dbVenda.entregador_id ?? null,
         entregadorNome: dbVenda.entregador?.nome ?? null,
         dataEntregaPrevista: dbVenda.data_entrega_prevista ?? null,
-        avisoGrupoEnviadoEm: dbVenda.aviso_grupo_enviado_em ?? null
+        avisoGrupoEnviadoEm: dbVenda.aviso_grupo_enviado_em ?? null,
+        tabelaPreco: lerTabelaPreco(dbVenda.tabela_preco)
     }
 }
 

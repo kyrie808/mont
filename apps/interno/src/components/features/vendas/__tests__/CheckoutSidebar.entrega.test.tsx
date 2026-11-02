@@ -15,6 +15,11 @@ const defaultProps = {
     total: 95,
     contatoId: '0223a3d9-e59c-4498-a47f-fded3f3fb700',
     contatoNome: 'Vilma Margarete',
+    // Black (30/10/2026): tabela de preço. Fora de campanha o seletor não aparece.
+    tabelaEscolhida: 'pix' as const,
+    campanha: null,
+    onTabelaEscolhida: vi.fn(),
+    onTabelaEfetiva: vi.fn(),
     items: [
         {
             produto_id: '487fef98-5d10-42e4-a628-2f7d176ce87e',
@@ -52,7 +57,7 @@ describe('CheckoutSidebar — tipo de entrega define o status inicial', () => {
         const onConfirm = vi.fn().mockResolvedValue(undefined)
         render(<CheckoutSidebar {...defaultProps} onConfirm={onConfirm} />)
 
-        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: true })
+        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: true, tabela: 'pix' })
     })
 
     it('REGRESSÃO: "Entrego depois" nasce PENDENTE — produto ainda está no carro', async () => {
@@ -61,7 +66,7 @@ describe('CheckoutSidebar — tipo de entrega define o status inicial', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /entrego depois/i }))
 
-        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false })
+        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false, tabela: 'pix' })
     })
 
     it('"Entrego depois" não abre frete nem entregador — é ele mesmo quem leva', () => {
@@ -79,7 +84,7 @@ describe('CheckoutSidebar — tipo de entrega define o status inicial', () => {
         fireEvent.click(screen.getByRole('button', { name: /^entrega$/i }))
         expect(screen.getByText(/frete/i)).toBeInTheDocument()
 
-        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false })
+        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false, tabela: 'pix' })
     })
 })
 
@@ -148,5 +153,49 @@ describe('CheckoutSidebar — entrega com data prevista exige a forma de pagamen
         fireEvent.click(screen.getByRole('button', { name: /confirmar venda/i }))
         await waitFor(() => expect(onConfirm).toHaveBeenCalled())
         expect(onConfirm.mock.calls[0][0].pagamento_na_entrega).toBeNull()
+    })
+})
+
+/*
+ * Black (30/10/2026): o preço depende de como o cliente paga. Pix/dinheiro → preço Black,
+ * cartão → tabela de cartão, fiado → normal. A tabela vai junto com a venda (opcoes.tabela)
+ * e a `criar_venda` recusa combinação incoerente (fiado no preço do Pix).
+ */
+describe('CheckoutSidebar — tabela de preço da venda', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    function abrirEntregaComData() {
+        fireEvent.click(screen.getByRole('button', { name: /^entrega$/i }))
+        fireEvent.change(screen.getByLabelText(/data prevista de entrega/i), { target: { value: '2026-11-04' } })
+    }
+
+    it('fiado vai sempre no preço normal, mesmo com Pix escolhido no carrinho', async () => {
+        const onConfirm = vi.fn().mockResolvedValue(undefined)
+        render(<CheckoutSidebar {...defaultProps} onConfirm={onConfirm} />)
+        fireEvent.click(screen.getByRole('button', { name: /fiado/i }))
+        expect((await confirmarEPegarOpcoes(onConfirm)).tabela).toBe('normal')
+    })
+
+    it('cartão na entrega leva a tabela de cartão', async () => {
+        const onConfirm = vi.fn().mockResolvedValue(undefined)
+        render(<CheckoutSidebar {...defaultProps} onConfirm={onConfirm} />)
+        abrirEntregaComData()
+        fireEvent.click(screen.getByRole('button', { name: /^cartão$/i }))
+        expect((await confirmarEPegarOpcoes(onConfirm)).tabela).toBe('cartao')
+    })
+
+    it('sem forma definida, vale a tabela escolhida no carrinho', async () => {
+        const onConfirm = vi.fn().mockResolvedValue(undefined)
+        render(<CheckoutSidebar {...defaultProps} tabelaEscolhida="cartao" onConfirm={onConfirm} />)
+        expect((await confirmarEPegarOpcoes(onConfirm)).tabela).toBe('cartao')
+    })
+
+    it('avisa a NovaVenda a tabela que vale agora (para o total mostrar o preço certo)', async () => {
+        const onTabelaEfetiva = vi.fn()
+        render(<CheckoutSidebar {...defaultProps} onTabelaEfetiva={onTabelaEfetiva} />)
+        fireEvent.click(screen.getByRole('button', { name: /fiado/i }))
+        await waitFor(() => expect(onTabelaEfetiva).toHaveBeenLastCalledWith('normal'))
     })
 })

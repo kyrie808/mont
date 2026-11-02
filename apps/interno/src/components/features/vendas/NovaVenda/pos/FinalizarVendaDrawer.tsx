@@ -12,6 +12,8 @@ import { useEntregadores } from '../../../../../hooks/useEntregadores'
 import { useContas } from '../../../../../hooks/useContas'
 import type { CartItem } from '../../../../../stores/useCartStore'
 import { Button } from '../../../../ui/Button'
+import { SeletorTabelaPreco } from '../SeletorTabelaPreco'
+import { ROTULO_TABELA, tabelaDaVenda, type TabelaPreco } from '../../../../../utils/tabelaPreco'
 
 // Pagamento imediato (quita na hora). Ausente = venda em aberto (quita depois no perfil).
 export interface PagamentoImediato {
@@ -27,6 +29,11 @@ export interface PagamentoImediato {
  */
 export interface OpcoesEntrega {
     entregaImediata: boolean
+    /**
+     * Tabela de preço que vale na venda (Black): a forma de pagamento escolhida manda; fiado e
+     * brinde ficam no normal; sem forma, vale a escolhida no carrinho. Vai para a `criar_venda`.
+     */
+    tabela: TabelaPreco
 }
 
 interface FinalizarVendaDrawerProps {
@@ -38,6 +45,12 @@ interface FinalizarVendaDrawerProps {
     contatoId: string
     contatoNome: string
     contatoTelefone?: string | null
+    /** Tabela escolhida no carrinho e a campanha valendo (null = fora de campanha). */
+    tabelaEscolhida: TabelaPreco
+    campanha: { nome: string; fim: string } | null
+    onTabelaEscolhida: (tabela: TabelaPreco) => void
+    /** Avisa a tabela que vale agora (null ao fechar), para o carrinho mostrar o preço certo. */
+    onTabelaEfetiva: (tabela: TabelaPreco | null) => void
 }
 
 // Tipo de venda = eixo primário (divulgação progressiva). Balcão/Entrega são a MESMA intenção
@@ -78,6 +91,10 @@ export function FinalizarVendaDrawer({
     contatoId,
     contatoNome,
     contatoTelefone,
+    tabelaEscolhida,
+    campanha,
+    onTabelaEscolhida,
+    onTabelaEfetiva,
 }: FinalizarVendaDrawerProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [tipoVenda, setTipoVenda] = useState<TipoVenda>('balcao')
@@ -141,6 +158,21 @@ export function FinalizarVendaDrawer({
     const dataEntregaPrevista = watch('data_entrega_prevista')
     const exigePagamentoNaEntrega = tipoVenda === 'entrega' && tipoEntrega === 'entrega' && !!dataEntregaPrevista && !isPayNow
     const troco = recebimento === 'dinheiro' && valorRecebido > totalGeral ? valorRecebido - totalGeral : 0
+
+    // Forma de pagamento já decidida (pagar agora, ou como paga na entrega): ela escolhe a tabela.
+    const metodoDefinido: PagamentoNaEntrega | null = recebimento !== 'depois' && isPayNow
+        ? recebimento
+        : exigePagamentoNaEntrega ? pagamentoNaEntrega : null
+    const tabelaEfetiva = tabelaDaVenda(formaPagamento, metodoDefinido, tabelaEscolhida)
+    const tabelaTravadaPor = formaPagamento === 'fiado' || formaPagamento === 'brinde'
+        ? 'Fiado e brinde usam o preço normal.'
+        : metodoDefinido
+            ? `Recebendo em ${metodoDefinido === 'cartao' ? 'cartão' : metodoDefinido === 'pix' ? 'PIX' : 'dinheiro'}: vale a tabela ${ROTULO_TABELA[tabelaEfetiva]}.`
+            : null
+
+    useEffect(() => {
+        onTabelaEfetiva(isOpen ? tabelaEfetiva : null)
+    }, [isOpen, tabelaEfetiva, onTabelaEfetiva])
 
     // Zera os campos de entrega (usado ao voltar p/ retirada / trocar de tipo).
     const limparEntrega = () => {
@@ -222,7 +254,7 @@ export function FinalizarVendaDrawer({
             : { ...data, pagamento_na_entrega: null }
         try {
             setIsSubmitting(true)
-            await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada' })
+            await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada', tabela: tabelaEfetiva })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
         } finally {
@@ -474,9 +506,16 @@ export function FinalizarVendaDrawer({
                     {/* Esquerda: Resumo do Pedido */}
                     <div className="hidden w-1/3 shrink-0 flex-col border-r border-border bg-muted/20 p-4 md:flex">
                         <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Resumo do Pedido</h3>
+                        <SeletorTabelaPreco
+                            tabela={tabelaEfetiva}
+                            onChange={onTabelaEscolhida}
+                            campanha={campanha}
+                            travadaPor={tabelaTravadaPor}
+                            className="mb-4"
+                        />
                         <div className="flex-1 space-y-3 overflow-y-auto">
                             {cart.map((item) => (
-                                <div key={item.produto_id} className="flex items-start justify-between gap-2 text-sm">
+                                <div key={item.chave} className="flex items-start justify-between gap-2 text-sm">
                                     <div className="min-w-0">
                                         <p className="line-clamp-2 text-foreground">{item.produto.nome}</p>
                                         <p className="text-xs text-muted-foreground">

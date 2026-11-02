@@ -4422,6 +4422,10 @@ export type Database = {
         }[]
       }
       campanha_vigente: { Args: { p_em?: string }; Returns: string }
+      combo_fora_da_campanha: {
+        Args: { p_em?: string; p_produto_id: string }
+        Returns: boolean
+      }
       combo_itens: {
         Args: {
           p_combo_id: string
@@ -4629,6 +4633,7 @@ export type Database = {
           normal: number
           pix: number
           produto_id: string
+          vendavel: boolean
         }[]
       }
       produtos_comprados_juntos: {

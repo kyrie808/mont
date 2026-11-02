@@ -130,12 +130,20 @@ export const vendaService = {
             p_data: data.data,
             p_forma_pagamento: data.formaPagamento,
             p_taxa_entrega: data.taxaEntrega ?? 0,
-            p_itens: data.itens.map(it => ({
-                produto_id: it.produtoId,
-                quantidade: it.quantidade,
-                preco_unitario: it.precoUnitario,
-                subtotal: it.subtotal,
-            })),
+            // Combo vai com os sabores (o servidor rateia o preço e abre em itens); avulso vai
+            // com preço de referência — com `p_tabela`, quem decide o preço é o servidor.
+            p_itens: data.itens.map(it => 'comboId' in it
+                ? {
+                    combo_id: it.comboId,
+                    quantidade: it.quantidade,
+                    escolhas: it.escolhas.map(e => ({ grupo_id: e.grupoId, produto_id: e.produtoId, quantidade: e.quantidade })),
+                }
+                : {
+                    produto_id: it.produtoId,
+                    quantidade: it.quantidade,
+                    preco_unitario: it.precoUnitario,
+                    subtotal: it.subtotal,
+                }),
             p_idempotency_key: idempotencyKey,
             p_data_prevista_pagamento: data.dataPrevistaPagamento ?? undefined,
             p_entregador_id: data.entregadorId ?? undefined,
@@ -146,6 +154,7 @@ export const vendaService = {
             // Retirada nasce 'entregue' — a baixa de estoque (e a despesa, se
             // brinde) sai dos gatilhos de `itens_venda`/`vendas` no banco.
             p_status: data.status ?? 'pendente',
+            p_tabela: data.tabela,
         })
         if (error) throw error
         if (!vendaId) throw new Error('criar_venda não retornou o id da venda')

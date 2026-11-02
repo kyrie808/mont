@@ -9,6 +9,8 @@ interface ProductListProps {
     getQuantity: (produtoId: string) => number
     onAdd: (produto: DomainProduto) => void
     onUpdateQuantity: (produtoId: string, delta: number) => void
+    /** Combo com escolha de sabor: 'montar' abre o seletor; 'pendente' = sabores em definição. */
+    acaoCombo?: (produto: DomainProduto) => 'montar' | 'pendente' | null
 }
 
 const PRODUCT_ORDER = [
@@ -22,7 +24,7 @@ const PRODUCT_ORDER = [
     'Pão de Queijo Congelado 1kg'
 ]
 
-export function ProductList({ produtos, loading, getQuantity, onAdd, onUpdateQuantity }: ProductListProps) {
+export function ProductList({ produtos, loading, getQuantity, onAdd, onUpdateQuantity, acaoCombo }: ProductListProps) {
     const [search, setSearch] = useState('')
 
     const filteredProdutos = useMemo(() => {
@@ -73,6 +75,7 @@ export function ProductList({ produtos, loading, getQuantity, onAdd, onUpdateQua
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto">
                 {filteredProdutos.map((produto) => {
                     const qty = getQuantity(produto.id)
+                    const combo = acaoCombo?.(produto) ?? null
                     return (
                         <div
                             key={produto.id}
@@ -105,7 +108,21 @@ export function ProductList({ produtos, loading, getQuantity, onAdd, onUpdateQua
                                 </p>
                             </div>
 
-                            {qty > 0 ? (
+                            {combo === 'pendente' ? (
+                                <button
+                                    disabled
+                                    className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-semibold text-sm cursor-not-allowed"
+                                >
+                                    Sabores em definição
+                                </button>
+                            ) : combo === 'montar' ? (
+                                <button
+                                    onClick={() => onAdd(produto)}
+                                    className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 active:scale-95 transition-all text-sm"
+                                >
+                                    {qty > 0 ? `Montar outro (${qty})` : 'Montar combo'}
+                                </button>
+                            ) : qty > 0 ? (
                                 <div className="flex items-center justify-between bg-muted rounded-xl p-1 gap-1">
                                     <button
                                         aria-label="Diminuir quantidade"

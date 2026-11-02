@@ -1,5 +1,8 @@
 import { formatCurrency, formatDate } from '@mont/shared'
 import { VendaStatusBadges } from './VendaStatusBadges'
+import { useNomesProdutos } from '../../../hooks/useProdutos'
+import { agruparItensVenda } from '../../../utils/itensVenda'
+import { ROTULO_TABELA } from '../../../utils/tabelaPreco'
 
 import type { DomainVenda } from '../../../types/domain'
 
@@ -10,6 +13,8 @@ interface VendaReceiptProps {
 export function VendaReceipt({ venda }: VendaReceiptProps) {
     // Brilho neon (modo tactical/escuro) — decorativo, referencia o RGB de --primary
     const neonShadow = "dark:drop-shadow-[0_0_10px_rgba(19,236,19,0.5)]"
+    const blocos = agruparItensVenda(venda.itens)
+    const nomesCombos = useNomesProdutos(venda.itens.flatMap((i) => (i.comboId ? [i.comboId] : [])))
 
     return (
         <div className="relative w-full mb-8">
@@ -35,6 +40,11 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
                     <p className="text-xs font-mono text-muted-foreground mt-4">
                         {formatDate(venda.data)}
                     </p>
+                    {venda.tabelaPreco && (
+                        <p className="text-xs font-mono text-muted-foreground mt-1">
+                            Preço: {ROTULO_TABELA[venda.tabelaPreco]}
+                        </p>
+                    )}
                     {venda.formaPagamento === 'fiado' && venda.dataPrevistaPagamento && (
                         <p className="text-xs font-mono text-muted-foreground mt-1">
                             Vence em {formatDate(venda.dataPrevistaPagamento)}
@@ -48,18 +58,36 @@ export function VendaReceipt({ venda }: VendaReceiptProps) {
                 </div>
 
                 <div className="flex flex-col space-y-4">
-                    {venda.itens.map((item) => (
-                        <div key={item.id} className="flex justify-between items-start group">
+                    {blocos.map((bloco) => bloco.tipo === 'avulso' ? (
+                        <div key={bloco.item.id} className="flex justify-between items-start group">
                             <div className="flex flex-col">
                                 <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                                    {item.produto?.nome || 'Produto Removido'}
+                                    {bloco.item.produto?.nome || 'Produto Removido'}
                                 </span>
                                 <span className="text-[10px] font-mono text-muted-foreground">
-                                    QTD: x{item.quantidade}
+                                    QTD: x{bloco.item.quantidade}
                                 </span>
                             </div>
                             <span className="text-sm font-mono text-foreground group-hover:text-primary transition-colors tabular-nums">
-                                {formatCurrency(item.subtotal)}
+                                {formatCurrency(bloco.item.subtotal)}
+                            </span>
+                        </div>
+                    ) : (
+                        // Combo: o total dele e o que foi dentro (sabores e fixos). O rateio por
+                        // item fica gravado para estoque e relatório, mas não aparece aqui.
+                        <div key={bloco.instancia} className="flex justify-between items-start group">
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                    {nomesCombos.get(bloco.comboId) ?? 'Combo'}
+                                </span>
+                                {bloco.itens.map((item) => (
+                                    <span key={item.id} className="text-[10px] font-mono text-muted-foreground">
+                                        x{item.quantidade} {item.produto?.nome || 'Produto Removido'}
+                                    </span>
+                                ))}
+                            </div>
+                            <span className="text-sm font-mono text-foreground group-hover:text-primary transition-colors tabular-nums">
+                                {formatCurrency(bloco.total)}
                             </span>
                         </div>
                     ))}

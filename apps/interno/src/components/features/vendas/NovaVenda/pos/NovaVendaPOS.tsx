@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Search, ShoppingBag } from 'lucide-react'
 import { cn } from '@mont/shared'
@@ -8,6 +8,7 @@ import { FinalizarVendaDrawer, type PagamentoImediato, type OpcoesEntrega } from
 import type { DomainProduto, DomainContato } from '../../../../../types/domain'
 import type { CartItem } from '../../../../../stores/useCartStore'
 import type { VendaFormData } from '../../../../../schemas/venda'
+import type { TabelaPreco } from '../../../../../utils/tabelaPreco'
 
 // Ordem preferida (mesma do ProductList mobile) — os carros-chefe primeiro.
 const PRODUCT_ORDER = [
@@ -42,12 +43,24 @@ interface NovaVendaPOSProps {
     onClear: () => void
     onConfirm: (data: VendaFormData, pagamento?: PagamentoImediato, opcoes?: OpcoesEntrega) => Promise<void>
     isEditing: boolean
+    // Black: tabela de preço + combos com escolha de sabor.
+    /** Faixa no topo (ex.: "Data simulada", fora de produção). */
+    avisoTopo?: ReactNode
+    seletorTabela: ReactNode
+    tabelaEscolhida: TabelaPreco
+    campanha: { nome: string; fim: string } | null
+    onTabelaEscolhida: (tabela: TabelaPreco) => void
+    onTabelaEfetiva: (tabela: TabelaPreco | null) => void
+    acaoCombo: (produto: DomainProduto) => 'montar' | 'pendente' | null
+    resumoCombo: (item: CartItem) => string | null
+    onEditarCombo: (chave: string) => void
 }
 
 // PDV de tela única (só desktop, ≥lg). `fixed inset-0 lg:left-64` = ocupa a viewport à direita
 // da SidebarNav (w-64) → a página NÃO rola (sai do fluxo de scroll-de-documento do AppLayout).
 export function NovaVendaPOS(props: NovaVendaPOSProps) {
     const { produtos, loading, cart, cartTotal, selectedContato, onSelectContato, getQuantity, onAdd, onUpdateQuantity, onClear, onConfirm, isEditing } = props
+    const { avisoTopo, seletorTabela, tabelaEscolhida, campanha, onTabelaEscolhida, onTabelaEfetiva, acaoCombo, resumoCombo, onEditarCombo } = props
     const navigate = useNavigate()
     const [search, setSearch] = useState('')
     const [categoria, setCategoria] = useState('todos')
@@ -73,6 +86,7 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
 
     return (
         <div className="fixed inset-0 z-40 hidden flex-col overflow-hidden bg-background lg:left-64 lg:flex">
+            {avisoTopo}
             {/* Top bar */}
             <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
                 <button
@@ -123,7 +137,7 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                     {loading ? (
                         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Carregando produtos…</div>
                     ) : (
-                        <PosProductGrid produtos={filtrados} getQuantity={getQuantity} onAdd={onAdd} onUpdateQuantity={onUpdateQuantity} />
+                        <PosProductGrid produtos={filtrados} getQuantity={getQuantity} onAdd={onAdd} onUpdateQuantity={onUpdateQuantity} acaoCombo={acaoCombo} />
                     )}
                 </div>
 
@@ -136,6 +150,9 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                     onUpdateQuantity={onUpdateQuantity}
                     onClear={onClear}
                     onCheckout={() => setPagamentoOpen(true)}
+                    seletorTabela={seletorTabela}
+                    resumoCombo={resumoCombo}
+                    onEditarCombo={onEditarCombo}
                 />
             </div>
 
@@ -149,6 +166,10 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                 contatoId={selectedContato?.id || ''}
                 contatoNome={selectedContato?.nome || ''}
                 contatoTelefone={selectedContato?.telefone}
+                tabelaEscolhida={tabelaEscolhida}
+                campanha={campanha}
+                onTabelaEscolhida={onTabelaEscolhida}
+                onTabelaEfetiva={onTabelaEfetiva}
             />
         </div>
     )
