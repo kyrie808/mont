@@ -20,17 +20,34 @@
     --font-apoio: var(--font-instrument-serif), serif;   /* Fonte B (provisória: Instrument Serif itálico) */
 }
 
-html {
-    scroll-behavior: smooth;
-}
+/*
+ * Estilos de elemento ficam na camada "base": fora de camada eles venciam as classes do Tailwind
+ * (ex.: `a { color }` apagava o `text-creme` da aba de categoria ativa).
+ */
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
 
-body {
-    background-color: var(--color-creme);
-    color: var(--color-marrom);
-    font-family: var(--font-corpo);
-    -webkit-tap-highlight-color: transparent;
-}
+    body {
+        background-color: var(--color-creme);
+        color: var(--color-marrom);
+        font-family: var(--font-corpo);
+        -webkit-tap-highlight-color: transparent;
+    }
 
-a {
-    color: var(--color-marrom);
+    a {
+        color: var(--color-marrom);
+    }
+
+    /* Foco de teclado visível em tudo, na cor da marca (some no toque/clique). */
+    :focus-visible {
+        outline: 2px solid var(--color-marrom);
+        outline-offset: 2px;
+    }
+
+    ::selection {
+        background-color: var(--color-laranja);
+        color: var(--color-marrom);
+    }
 }

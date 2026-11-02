@@ -178,8 +178,8 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                             key={s.id}
                             href={`#${s.id}`}
                             className={cn(
-                                'flex h-9 shrink-0 items-center rounded-[18px] px-3.5 text-[13px] font-bold no-underline',
-                                i === 0 ? 'bg-marrom text-creme' : 'bg-areia text-marrom',
+                                'flex h-9 shrink-0 items-center rounded-[18px] px-3.5 text-[13px] font-bold no-underline transition-colors duration-150',
+                                i === 0 ? 'bg-marrom text-creme' : 'bg-areia text-marrom hover:bg-linha',
                             )}
                         >
                             {s.rotulo}
