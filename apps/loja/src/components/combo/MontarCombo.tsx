@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Foto } from '@/components/Foto'
+import { PrecoCombo } from './PrecoCombo'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
 import { rotuloItem, totalDeItens } from '@/lib/sacola/calculo'
@@ -47,13 +48,6 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
     const definir = (grupoId: string, produtoId: string, n: number) =>
         setQ((atual) => ({ ...atual, [grupoId]: { ...atual[grupoId], [produtoId]: Math.max(0, n) } }))
 
-    const linhaInfo = [
-        `${totalDeItens(combo)} itens`,
-        combo.ancora !== null ? `separado: a partir de ${reais(combo.ancora)}` : null,
-    ]
-        .filter(Boolean)
-        .join(' · ')
-
     const incompleto = combo.grupos.find((g) => escolhidos(q, g) < g.quantidade)
     const completo = combo.montavel && combo.disponivel && !incompleto
 
@@ -93,10 +87,10 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
             <div className="flex flex-col gap-3 p-4">
                 <div className="flex gap-3">
                     <Foto url={combo.imagemUrl} alt={combo.nome} largura={72} className="h-[72px] w-[72px] rounded-[10px]" />
-                    <div className="flex flex-col gap-0.5">
-                        <span className="font-titulo text-2xl leading-none uppercase">{combo.nome}</span>
-                        {linhaInfo && <span className="text-[13px] text-texto-suave">{linhaInfo}</span>}
-                        <span className="font-titulo text-[26px] leading-[1.1]">{reais(combo.preco)}</span>
+                    <div className="flex flex-col gap-1">
+                        <h1 className="font-titulo text-2xl leading-none font-normal uppercase">{combo.nome}</h1>
+                        <span className="text-[13px] text-texto-suave">{totalDeItens(combo)} itens</span>
+                        <PrecoCombo combo={combo} variante="grande" />
                     </div>
                 </div>
 
@@ -112,16 +106,33 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                     const cheio = n >= g.quantidade
                     return (
                         <div key={g.id} className="flex flex-col">
-                            <div className="mt-1 flex items-center justify-between">
+                            <div className="mt-1 flex flex-col gap-2">
                                 <div className="flex flex-col">
-                                    <span className="text-[17px] font-bold">{g.titulo}</span>
+                                    <h2 className="text-[17px] font-bold">{g.titulo}</h2>
                                     {g.permiteRepetir && <span className="text-xs text-texto-suave">Pode repetir sabor</span>}
                                 </div>
-                                <span
-                                    className={`flex h-[30px] items-center rounded-[15px] px-3 text-sm font-bold text-creme ${cheio ? 'bg-verde' : 'bg-marrom'}`}
-                                >
-                                    {n}/{g.quantidade}
-                                </span>
+                                {/* Progresso do grupo: barra + "3 de 6 escolhidos"; verde ao completar. */}
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        role="progressbar"
+                                        aria-label={g.titulo}
+                                        aria-valuemin={0}
+                                        aria-valuemax={g.quantidade}
+                                        aria-valuenow={n}
+                                        className="h-2 flex-1 overflow-hidden rounded-full bg-areia"
+                                    >
+                                        <div
+                                            className={`h-full origin-left rounded-full transition-transform duration-200 ease-out motion-reduce:transition-none ${cheio ? 'bg-verde' : 'bg-marrom'}`}
+                                            style={{ transform: `scaleX(${Math.min(1, n / g.quantidade)})` }}
+                                        />
+                                    </div>
+                                    <span
+                                        aria-live="polite"
+                                        className={`shrink-0 text-sm font-bold ${cheio ? 'text-verde' : 'text-marrom'}`}
+                                    >
+                                        {n} de {g.quantidade} {g.quantidade === 1 ? 'escolhido' : 'escolhidos'}
+                                    </span>
+                                </div>
                             </div>
                             {g.opcoes.length === 0 && (
                                 <p className="mt-2 text-[13px] text-texto-suave">Os sabores ainda estão sendo definidos.</p>
@@ -169,7 +180,7 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                         onClick={porNaSacola}
                         className="flex h-14 w-full cursor-pointer items-center justify-center rounded-[28px] bg-laranja text-base font-bold text-marrom"
                     >
-                        Pôr na sacola · {reais(combo.preco)}
+                        Adicionar à sacola · {reais(combo.preco)}
                     </button>
                 ) : (
                     <button

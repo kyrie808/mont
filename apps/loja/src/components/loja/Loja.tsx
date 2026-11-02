@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@mont/shared'
+import { PrecoCombo } from '@/components/combo/PrecoCombo'
 import { Foto } from '@/components/Foto'
 import { IconeSacola } from '@/components/IconeSacola'
 import { Seletor } from '@/components/Seletor'
@@ -162,13 +163,8 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="text-base font-bold">{c.nome}</span>
                 {c.resumo && <span className="text-xs leading-[1.35] text-texto-suave">{c.resumo}</span>}
-                <div className="mt-1 flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <span className="font-titulo text-[22px] leading-none">{reais(c.preco)}</span>
-                        {c.ancora !== null && (
-                            <span className="text-[11px] text-texto-suave">separado: a partir de {reais(c.ancora)}</span>
-                        )}
-                    </div>
+                <div className="mt-1 flex items-end justify-between gap-2">
+                    <PrecoCombo combo={c} variante="card" />
                     <Link
                         href={`/combo/${c.slug}`}
                         className="flex h-11 items-center rounded-[22px] bg-laranja px-4 text-sm font-bold text-marrom no-underline"
@@ -218,7 +214,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             {secoes.length > 0 && (
                 <nav
                     aria-label="Categorias"
-                    className="sticky top-0 z-30 flex h-14 items-center gap-2 overflow-x-auto border-b border-linha bg-creme px-4"
+                    className="sticky top-0 z-30 flex h-14 items-center gap-2 overflow-x-auto border-b border-linha bg-creme px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                     {secoes.map((s) => (
                         <a
@@ -245,7 +241,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                         </span>
                         <span className="font-titulo text-[40px] leading-[0.95] uppercase">Despensa cheia</span>
                         <span className="font-apoio text-[22px] leading-[1.1] italic">{fraseHero}</span>
-                        <span className="font-titulo text-4xl leading-none text-laranja">{reais(hero.preco)}</span>
+                        <PrecoCombo combo={hero} variante="banner" />
                         <span className="text-xs text-linha">Preço no Pix. Cartão com a taxa da maquininha.</span>
                     </div>
                     <Foto
