@@ -16,6 +16,14 @@
 - Os nomes antigos continuam abaixo onde registram a decisão como foi tomada.
 - Aplicado em 02/11 (migration `20261102064947_black_nomes_sabores_cafe_da_tarde`, backup `dump-*-20261102-034516.sql`).
 
+## Pedido pelo WhatsApp, sem pagamento online (02/11)
+- **DECIDIDO:** por enquanto a loja **não** tem pagamento online; InfinitePay fica para depois (P2, P3 na parte da loja, P10 e P15 ficam em espera).
+- Tela 04 sem cálculo de frete: "Frete e dia de entrega: combinamos no WhatsApp". A tabela `loja_frete_bairros` fica no banco, sem uso.
+- Tela 05: nome, WhatsApp, CEP (rua e cidade pelo CEP), número, complemento e o aceite de ofertas. "Enviar pedido pelo WhatsApp" grava o pedido (origem `loja`, sabores, endereço do pedido) e abre o wa.me da Mont com a mensagem pronta.
+- Tela 07: "Pedido nº X enviado. Se o WhatsApp não abriu, toque aqui".
+- **P1 revista:** o pedido só vira venda quando a Mont **confirma no sistema interno** ("Pedidos da loja": frete, data de entrega, forma de pagamento). Confirmar é idempotente; "Descartar" para quem não confirmou; pedido parado há mais de 3 dias sai da lista principal sem ser apagado. O gatilho antigo `fn_sync_cat_pedido_to_venda` ignora os pedidos da loja.
+- Aplicado em 02/11: migração `20261102083258_loja_pedido_whatsapp` (+ `20261102080550`: combo da campanha só durante a campanha).
+
 ## Lançamento
 - **DECIDIDO:** os anúncios da Black começam em 03/11 apontando para o WhatsApp, como hoje. Eles só passam a apontar para a loja quando ela passar no teste real de R$ 1 de ponta a ponta (Pix e cartão).
 - **DECIDIDO:** domínio `loja.montdistribuidora.com.br`.
