@@ -478,3 +478,142 @@ export function validarVeredito(
     const tipo = resultado !== null ? 'ponto_contato' : (o.tipo as Veredito['tipo'])
     return { ok: true, veredito: { tipo, resultado, observacao, trechoCliente, retomarEm } }
 }
+
+// ─── Pedido fechado (bloco C, conferência de hora em hora) ───────────────────
+// Segundo passo do analista, só num "aceitou". O critério de "pedido fechado" (aprovado pelo
+// Luccas em 30/10) está no prompt e, de forma determinística, em validarPedidoExtraido:
+//   1. aceite do cliente sobre itens concretos; 2. pelo menos um item com quantidade;
+//   3. confirmação do outro lado (equipe combinou total/entrega/Pix, ou comprovante);
+//   4. sem desistência depois do aceite.
+
+export const PROMPT_PEDIDO = [
+    'Você confere pedidos fechados no WhatsApp da Mont Distribuidora (pão de queijo e doces).',
+    'A conversa abaixo já foi marcada como "cliente aceitou". Extraia o pedido, sem inventar.',
+    '',
+    'Responda SÓ com um objeto JSON:',
+    '{"fechado": true | false, "itens": [{"produto": "...", "quantidade": 1, "sabores": ["..."]}], "forma_pagamento": "pix" | "dinheiro" | "cartao" | "fiado" | null, "entrega": "retirada" | "entrega" | null, "total_citado": 199 | null, "confirmacao": "equipe" | "comprovante" | "nenhuma", "desistiu": true | false, "faltam_sabores": true | false, "trecho_aceite": "..." | null}',
+    '',
+    'fechado = true SÓ se valerem os quatro:',
+    '  1. Uma linha CLIENTE aceita a compra de itens concretos ("pode mandar", "fechado",',
+    '     "quero 2 baldes", "pode separar"). Pergunta de preço, "vou ver", "depois te falo" não valem.',
+    '  2. Há pelo menos um item com quantidade.',
+    '  3. Do outro lado houve confirmação. confirmacao = "equipe" quando uma linha NÓS, junto ou',
+    '     depois do aceite, confirmou o pedido, disse o total, combinou a entrega (dia, horário,',
+    '     "amanhã de manhã", "avisamos a hora") ou mandou a chave Pix. Ex.: "combinado, levo',
+    '     amanhã cedo", "fica R$ 130", "segue o pix". confirmacao = "comprovante" quando o cliente',
+    '     mandou o comprovante do pagamento. Só "nenhuma" se NÓS não respondeu nada disso.',
+    '  4. O cliente não desistiu depois do aceite ("deixa pra próxima", "cancela"). Se desistiu: desistiu = true.',
+    '',
+    'itens: o que o cliente levou, com o nome como está na conversa ("Combo Família", "balde 4 kg")',
+    'e a quantidade. sabores: os sabores escolhidos, se houver ("3 doce de leite"). Combo que tem',
+    'sabores à escolha e ficou sem eles: faltam_sabores = true.',
+    'forma_pagamento: a forma COMBINADA na conversa; não dita = null.',
+    'entrega: "retirada" (cliente busca) ou "entrega" (levamos); não dito = null. NUNCA escreva',
+    'endereço, rua, número, bairro ou CEP em lugar nenhum.',
+    'total_citado: o total em reais dito na conversa (número, sem "R$"); não dito = null.',
+    'trecho_aceite: copie EXATAMENTE a frase de aceite de uma linha CLIENTE, até 150 caracteres.',
+].join('\n')
+
+export type FormaCombinada = 'pix' | 'dinheiro' | 'cartao' | 'fiado'
+
+export interface ItemExtraido {
+    produto: string
+    quantidade: number
+    sabores: string[]
+}
+
+export interface PedidoExtraido {
+    fechado: boolean
+    itens: ItemExtraido[]
+    formaPagamento: FormaCombinada | null
+    entrega: 'retirada' | 'entrega' | null
+    totalCitado: number | null
+    confirmacao: 'equipe' | 'comprovante' | 'nenhuma'
+    desistiu: boolean
+    faltamSabores: boolean
+    /** A frase do cliente, achada numa mensagem DELE. null se o modelo citou outra coisa. */
+    trecho: string | null
+    /** Momento do aceite: a mensagem do trecho; sem trecho, a última do cliente. */
+    fechadoEm: string
+}
+
+export type ValidacaoPedido = { ok: true; pedido: PedidoExtraido } | { ok: false; motivo: string }
+
+const FORMAS = new Set(['pix', 'dinheiro', 'cartao', 'fiado'])
+
+function lerJson(texto: string): Record<string, unknown> | null {
+    try {
+        const v: unknown = JSON.parse(texto)
+        return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Lê a resposta do extrator e aplica o critério. O modelo propõe; a decisão final de
+ * "fechado" é daqui: os quatro pontos têm que valer, não basta o modelo dizer `true`.
+ */
+export function validarPedidoExtraido(texto: string, seg: Segmento): ValidacaoPedido {
+    const o = lerJson(texto)
+    if (!o) return { ok: false, motivo: 'a resposta não é um objeto JSON' }
+
+    if (typeof o.fechado !== 'boolean') return { ok: false, motivo: '"fechado" deve ser true ou false' }
+    if (typeof o.desistiu !== 'boolean') return { ok: false, motivo: '"desistiu" deve ser true ou false' }
+    if (typeof o.faltam_sabores !== 'boolean') return { ok: false, motivo: '"faltam_sabores" deve ser true ou false' }
+    if (o.confirmacao !== 'equipe' && o.confirmacao !== 'comprovante' && o.confirmacao !== 'nenhuma') {
+        return { ok: false, motivo: '"confirmacao" fora do vocabulário' }
+    }
+    if (o.forma_pagamento !== null && (typeof o.forma_pagamento !== 'string' || !FORMAS.has(o.forma_pagamento))) {
+        return { ok: false, motivo: '"forma_pagamento" fora do vocabulário' }
+    }
+    if (o.entrega !== null && o.entrega !== 'retirada' && o.entrega !== 'entrega') {
+        return { ok: false, motivo: '"entrega" fora do vocabulário' }
+    }
+    if (o.total_citado !== null && (typeof o.total_citado !== 'number' || !(o.total_citado > 0))) {
+        return { ok: false, motivo: '"total_citado" deve ser um número positivo ou null' }
+    }
+    if (!Array.isArray(o.itens)) return { ok: false, motivo: '"itens" deve ser uma lista' }
+
+    const itens: ItemExtraido[] = []
+    for (const i of o.itens) {
+        const item = typeof i === 'object' && i !== null ? (i as Record<string, unknown>) : null
+        const produto = typeof item?.produto === 'string' ? item.produto.trim() : ''
+        const quantidade = item?.quantidade
+        if (!produto || produto.length > 80) return { ok: false, motivo: 'item sem nome de produto' }
+        if (typeof quantidade !== 'number' || !(quantidade > 0) || quantidade > 999) {
+            return { ok: false, motivo: `quantidade inválida em "${produto}"` }
+        }
+        const sabores = Array.isArray(item?.sabores)
+            ? item.sabores.filter((s): s is string => typeof s === 'string' && s.trim() !== '').map((s) => s.trim().slice(0, 60))
+            : []
+        itens.push({ produto, quantidade, sabores })
+    }
+
+    // O trecho só vale se estiver numa mensagem do CLIENTE — nunca cita fala nossa.
+    const bruto = typeof o.trecho_aceite === 'string' ? o.trecho_aceite.trim().slice(0, 150) : ''
+    const alvo = bruto ? normalizarTrecho(bruto) : ''
+    const doCliente = seg.mensagens.filter((m) => m.de === 'cliente')
+    const origem = alvo ? doCliente.find((m) => normalizarTrecho(m.texto).includes(alvo)) : undefined
+    const trecho = origem ? bruto : null
+    const fechadoEm = origem?.em ?? doCliente[doCliente.length - 1]?.em ?? seg.fim
+
+    const fechado = o.fechado && itens.length > 0 && o.confirmacao !== 'nenhuma' && !o.desistiu
+
+    return {
+        ok: true,
+        pedido: {
+            fechado,
+            itens,
+            formaPagamento: (o.forma_pagamento as FormaCombinada | null) ?? null,
+            entrega: (o.entrega as 'retirada' | 'entrega' | null) ?? null,
+            totalCitado: (o.total_citado as number | null) ?? null,
+            confirmacao: o.confirmacao,
+            desistiu: o.desistiu,
+            faltamSabores: o.faltam_sabores,
+            trecho,
+            fechadoEm,
+        },
+    }
+}
+

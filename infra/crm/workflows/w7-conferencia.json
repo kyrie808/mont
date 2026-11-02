@@ -1,0 +1,228 @@
+{
+  "name": "W7 — Conferência de hora em hora (pedido sem venda + Meta)",
+  "nodes": [
+    {
+      "id": "hora",
+      "name": "De hora em hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 * * * *"
+            }
+          ]
+        }
+      },
+      "notes": "Roda toda hora, aos 5 min. Quem decide o que sai é a Edge Function conferencia (regra em packages/shared/src/conferencia.ts): alertas só entre 8h e 21h de SP; o que vence fora disso vai num resumo único no primeiro envio do dia."
+    },
+    {
+      "id": "devidos",
+      "name": "Alertas devidos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/conferencia",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ acao: 'devidos' }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      }
+    },
+    {
+      "id": "um-por-alerta",
+      "name": "Um alerta por item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Nada devido = a execução termina aqui (e não fica salva: saveDataSuccessExecution=none).\nreturn ($json.devidos ?? []).map((d) => ({ json: d }));"
+      }
+    },
+    {
+      "id": "enviar",
+      "name": "Enviar alerta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution:8080/message/sendText/mont",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.destino, text: $json.texto, delay: 0, linkPreview: false }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GAzXyugDzud6i2fY",
+          "name": "Evolution API (apikey)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "destino vem da Edge Function (constantes validadas no código: grupo da Equipe ou o Luccas). Falha = o alerta continua pendente e sai na próxima hora."
+    },
+    {
+      "id": "saiu",
+      "name": "Saiu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "saiu",
+              "leftValue": "={{ !!$json.key?.id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "marcar",
+      "name": "Marcar enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/conferencia",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ acao: 'marcar_enviado', alerta_ids: $('Um alerta por item').item.json.alertaIds, message_id: $json.key.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "Grava status=enviado: o alerta nunca mais sai."
+    }
+  ],
+  "connections": {
+    "De hora em hora": {
+      "main": [
+        [
+          {
+            "node": "Alertas devidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alertas devidos": {
+      "main": [
+        [
+          {
+            "node": "Um alerta por item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Um alerta por item": {
+      "main": [
+        [
+          {
+            "node": "Enviar alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar alerta": {
+      "main": [
+        [
+          {
+            "node": "Saiu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Saiu?": {
+      "main": [
+        [
+          {
+            "node": "Marcar enviado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true
+  }
+}

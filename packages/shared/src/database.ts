@@ -56,6 +56,45 @@ export type Database = {
         }
         Relationships: []
       }
+      alertas_operacao: {
+        Row: {
+          criado_em: string
+          destino: string
+          enviado_em: string | null
+          id: string
+          message_id: string | null
+          ref: string
+          status: string
+          texto: string
+          tipo: string
+          vence_em: string
+        }
+        Insert: {
+          criado_em?: string
+          destino: string
+          enviado_em?: string | null
+          id?: string
+          message_id?: string | null
+          ref: string
+          status?: string
+          texto: string
+          tipo: string
+          vence_em: string
+        }
+        Update: {
+          criado_em?: string
+          destino?: string
+          enviado_em?: string | null
+          id?: string
+          message_id?: string | null
+          ref?: string
+          status?: string
+          texto?: string
+          tipo?: string
+          vence_em?: string
+        }
+        Relationships: []
+      }
       campanha_meta_metricas: {
         Row: {
           campanha_id: string
@@ -2355,6 +2394,138 @@ export type Database = {
           },
           {
             foreignKeyName: "pagamentos_venda_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos_conversa: {
+        Row: {
+          confirmacao: string
+          contato_id: string
+          criado_em: string
+          entrega: string | null
+          extracao: string
+          faltam_sabores: boolean
+          fechado_em: string
+          forma_pagamento: string | null
+          id: string
+          interacao_id: string | null
+          itens: Json
+          message_ids: string[]
+          total_citado: number | null
+          trecho: string | null
+          venda_id: string | null
+        }
+        Insert: {
+          confirmacao: string
+          contato_id: string
+          criado_em?: string
+          entrega?: string | null
+          extracao: string
+          faltam_sabores?: boolean
+          fechado_em: string
+          forma_pagamento?: string | null
+          id?: string
+          interacao_id?: string | null
+          itens?: Json
+          message_ids: string[]
+          total_citado?: number | null
+          trecho?: string | null
+          venda_id?: string | null
+        }
+        Update: {
+          confirmacao?: string
+          contato_id?: string
+          criado_em?: string
+          entrega?: string | null
+          extracao?: string
+          faltam_sabores?: boolean
+          fechado_em?: string
+          forma_pagamento?: string | null
+          id?: string
+          interacao_id?: string | null
+          itens?: Json
+          message_ids?: string[]
+          total_citado?: number | null
+          trecho?: string | null
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contato_compras_resumo"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_compras"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_indicacoes"
+            referencedColumns: ["indicador_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_ltv_por_cliente"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_home_alertas"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "view_relacionamento_kanban"
+            referencedColumns: ["contato_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: true
+            referencedRelation: "aceitou_sem_venda"
+            referencedColumns: ["interacao_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_interacao_id_fkey"
+            columns: ["interacao_id"]
+            isOneToOne: true
+            referencedRelation: "interacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "rpt_projecao_recebimentos"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "pedidos_conversa_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"

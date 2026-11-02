@@ -1,5 +1,5 @@
 // Edge Function: meta-capi-worker
-// Flush diário da outbox `meta_eventos` → Meta Conversions API (offline events).
+// Flush de hora em hora da outbox `meta_eventos` → Meta Conversions API (offline events).
 // Blueprint §4. Lead + Purchase por match de telefone/hash (+ ctwa_clid quando há).
 //
 // O CANAL (`action_source`) é decidido AQUI, não no trigger — ver `metaCapi.ts`. Sem WABA
@@ -7,7 +7,7 @@
 // de forma definitiva o mesmo evento é reenviado como `physical_store` na hora. O canal
 // aceito é gravado de volta em `meta_eventos.action_source`.
 //
-// Invocação: cron (pg_cron + pg_net) 1x/dia, OU manual para teste. Protegida por header
+// Invocação: cron (pg_cron + pg_net) de hora em hora, OU manual para teste. Protegida por header
 //   x-cron-secret == env CRON_SECRET. Usa service_role internamente (lê/escreve meta_eventos,
 //   que tem RLS service_role-only para escrita).
 //
@@ -35,6 +35,7 @@ import {
   escolherCanal,
   montarEvento,
   erroTransitorio,
+  foraDaJanelaMeta,
   lerEventIds,
   type CanalMeta,
   type EventoMeta,
@@ -200,10 +201,23 @@ Deno.serve(async (req: Request) => {
   let enviados = 0
   let erros = 0
   let fallbacks = 0
+  let descartados = 0
+  const agora = new Date()
   // Só no modo teste: a resposta crua da Meta volta na chamada, pra auditar.
   const detalhes: Record<string, unknown>[] = []
 
   for (const ev of eventos) {
+    // Mais de 7 dias: a Meta recusa com certeza (2804003). Descarta sem chamar a API, com
+    // o motivo gravado, em vez de gastar 5 tentativas num erro conhecido.
+    if (foraDaJanelaMeta(ev.event_time, agora)) {
+      await admin
+        .from('meta_eventos')
+        .update({ status: 'descartado', motivo_descarte: 'fora_da_janela_7d' })
+        .eq('id', ev.id)
+      descartados++
+      continue
+    }
+
     const base = await buildUserData(ev)
     const clid = ev.ctwa_clid ?? ev.contato?.ctwa_clid ?? null
 
@@ -232,13 +246,16 @@ Deno.serve(async (req: Request) => {
         .eq('id', ev.id)
       enviados++
     } else {
-      // Em erro, `action_source` = o último canal TENTADO, pra diagnóstico.
+      // Em erro, `action_source` = o último canal TENTADO, pra diagnóstico. Erro definitivo
+      // (a Meta recusou o conteúdo) não melhora sozinho: esgota as tentativas de uma vez e
+      // fica parado em `erro` para alguém olhar. Só o passageiro volta na próxima hora.
+      const passageiro = erroTransitorio(resposta.status, resposta.corpo)
       await admin
         .from('meta_eventos')
         .update({
           status: 'erro',
           action_source: canal,
-          tentativas: ev.tentativas + 1,
+          tentativas: passageiro ? ev.tentativas + 1 : MAX_TENTATIVAS,
           resposta_meta: fallback ? { ...fallback, erro: resposta.corpo } : resposta.corpo,
         })
         .eq('id', ev.id)
@@ -257,6 +274,7 @@ Deno.serve(async (req: Request) => {
       enviados,
       erros,
       fallbacks,
+      descartados,
       test_mode: !!testEventCode,
       ...(testEventCode ? { detalhes } : {}),
     },

@@ -135,3 +135,20 @@ export function lerEventIds(corpo: unknown): string[] | null {
     if (!Array.isArray(ids) || ids.length === 0) return null
     return ids.every((id): id is string => typeof id === 'string' && id !== '') ? ids : null
 }
+
+/** A Meta só aceita evento enviado até 7 dias depois de ele ter acontecido. */
+const JANELA_META_MS = 7 * 24 * 3_600_000
+
+/**
+ * `true` quando o evento já passou da janela de 7 dias da Meta: enviar é erro certo
+ * (100 / subcode 2804003), então o worker descarta sem chamar a API.
+ *
+ * Acontece com venda antiga marcada como entregue tarde (out/2026: vendas de junho
+ * entregues no sistema em 18/10). Data ilegível segue para o envio: a Meta devolve o
+ * erro e ele fica registrado, em vez de sumir num descarte silencioso.
+ */
+export function foraDaJanelaMeta(eventTime: string, agora: Date): boolean {
+    const instante = Date.parse(eventTime)
+    if (Number.isNaN(instante)) return false
+    return agora.getTime() - instante > JANELA_META_MS
+}

@@ -437,3 +437,6 @@ verify_jwt = false
 # gateway devolve 401 antes do codigo: o cron morre em silencio (footgun registrado).
 [functions.avisos-agenda]
 verify_jwt = false
+
+[functions.conferencia]
+verify_jwt = false
