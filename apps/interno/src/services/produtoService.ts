@@ -199,7 +199,7 @@ export class ProdutoService {
     async getComponentes(comboId: string): Promise<DomainProdutoComponente[]> {
         const { data, error } = await supabase
             .from('produto_componentes')
-            .select('id, combo_id, componente_id, quantidade')
+            .select('id, combo_id, componente_id, quantidade, brinde')
             .eq('combo_id', comboId)
             .order('criado_em')
 
@@ -209,7 +209,8 @@ export class ProdutoService {
             id: row.id,
             comboId: row.combo_id,
             componenteId: row.componente_id,
-            quantidade: Number(row.quantidade || 0)
+            quantidade: Number(row.quantidade || 0),
+            brinde: row.brinde,
         }))
     }
 
@@ -283,10 +284,14 @@ export class ProdutoService {
     // Substitui toda a composição do combo de forma ATÔMICA (RPC: delete+insert numa
     // transação). Itens vazio = limpa (desfaz o combo). Evita o estado "combo vazio"
     // que o delete+insert client-side deixava se o insert falhasse após o delete.
-    async replaceComponentes(comboId: string, itens: { componenteId: string; quantidade: number }[]): Promise<void> {
+    // `brinde` vai sempre junto; se faltar (app antigo em cache), o banco preserva a marca de quem fica.
+    async replaceComponentes(
+        comboId: string,
+        itens: { componenteId: string; quantidade: number; brinde: boolean }[],
+    ): Promise<void> {
         const { error } = await supabase.rpc('replace_combo_componentes', {
             p_combo_id: comboId,
-            p_itens: itens.map((i) => ({ componenteId: i.componenteId, quantidade: i.quantidade })),
+            p_itens: itens.map((i) => ({ componenteId: i.componenteId, quantidade: i.quantidade, brinde: i.brinde })),
         })
         if (error) throw error
     }

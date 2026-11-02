@@ -130,6 +130,8 @@ export interface DomainProdutoComponente {
     comboId: string
     componenteId: string
     quantidade: number
+    /** Dado de brinde no combo (só exibição na loja: "de brinde"). */
+    brinde: boolean
     componente?: DomainProduto
 }
 
