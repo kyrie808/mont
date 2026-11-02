@@ -56,21 +56,12 @@ export async function enviarPedido(entrada: unknown): Promise<ResultadoEnvio> {
         return { ok: false, erro: ERRO_GERAL }
     }
 
-    const { data: pedido, error: erroPedido } = await banco
-        .from('cat_pedidos')
-        .select('endereco_entrega')
-        .eq('id', data.pedido_id)
-        .single()
-    if (erroPedido) {
-        console.error('[loja] pedido gravado, falha ao ler o endereço', erroPedido)
-    }
-
     const vitrine = await carregarVitrine()
     const mensagem = mensagemDoPedido({
         numero: data.numero_pedido,
         total: Number(data.total),
         nome: d.nome,
-        endereco: pedido?.endereco_entrega ?? `${d.logradouro}, ${d.numero} - ${d.cidade}/${d.uf.toUpperCase()}`,
+        endereco: { logradouro: d.logradouro, numero: d.numero, complemento: d.complemento, bairro: d.bairro, cidade: d.cidade },
         itens: d.itens,
         vitrine,
     })
