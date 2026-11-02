@@ -3,15 +3,16 @@
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA": um DO-block que SEMPRE termina em RAISE EXCEPTION. Nada é
 -- gravado — nem as vendas de teste, nem a baixa de estoque, nem o evento da Meta, nem os
--- AJUSTES DE CENÁRIO abaixo (campanha antecipada e sabores fictícios nos grupos). Os grupos
--- de sabor reais continuam vazios até a decisão do Gilmar.
---   SUITE_OK     combos_preco_campanha 18/18 | [...]
---   SUITE_FALHOU combos_preco_campanha 17/18 | [...]
+-- AJUSTES DE CENÁRIO abaixo (campanha antecipada e sabores fictícios nos grupos). Os sabores
+-- reais (7 doces 680 g por grupo, decididos em 02/11) voltam intactos no fim.
+--   SUITE_OK     combos_preco_campanha 22/22 | [...]
+--   SUITE_FALHOU combos_preco_campanha 21/22 | [...]
 --
 -- Cenário (só dentro da transação):
 --   * a campanha "Black da Mont 2026" passa a valer desde ontem (para testar o preço Black hoje);
---   * os 3 grupos de doce 680 g recebem 4 sabores; o grupo do "3 doces" vira sem repetição
---     só para o caso que testa essa regra.
+--   * os 3 grupos de doce 680 g ficam vazios (caso C1) e depois recebem 4 sabores; o grupo do
+--     Trio Mineiro vira sem repetição só para o caso que testa essa regra;
+--   * o Café da Tarde (geleia à escolha) é testado com os sabores reais.
 -- Roda como o dono do banco no preparo e como a CONTA-TESTE (admin) nas chamadas de venda,
 -- igual ao app: `criar_venda` checa is_admin(), e `created_by` sai com o uid dela.
 
@@ -30,7 +31,8 @@ DECLARE
   v_dl uuid; v_coco uuid; v_cocada uuid; v_milho uuid;
   v_dl_zero uuid; v_brig_zero uuid;
   v_familia uuid; v_balde_doce uuid; v_tres uuid; v_dupla uuid;
-  g_familia uuid; g_balde_doce uuid; g_tres uuid;
+  v_cafe uuid; v_morango uuid; v_goiaba uuid; v_dl400 uuid;
+  g_familia uuid; g_balde_doce uuid; g_tres uuid; g_cafe uuid;
   v_contato uuid;
   v_venda uuid;
   v_escolhas_familia jsonb;
@@ -53,7 +55,7 @@ BEGIN
     RAISE EXCEPTION 'SUITE_ABORTADA: já existe contato com o prefixo fictício %', c_tel;
   END IF;
 
-  -- ── Identificadores (por nome; o seed da Black usa estes nomes) ──
+  -- ── Identificadores (avulsos por nome; combos por código, que não muda com o nome) ──
   SELECT id INTO v_campanha FROM public.loja_campanhas WHERE nome = 'Black da Mont 2026';
   SELECT id INTO v_balde FROM public.produtos WHERE nome = 'Massa Pão de Queijo 4kg';
   SELECT id INTO v_baldinho FROM public.produtos WHERE nome = 'Massa Pão de Queijo 1kg';
@@ -63,17 +65,26 @@ BEGIN
   SELECT id INTO v_milho FROM public.produtos WHERE nome = 'Doce de Milho 680g';
   SELECT id INTO v_dl_zero FROM public.produtos WHERE nome = 'Doce de Leite Zero 400g';
   SELECT id INTO v_brig_zero FROM public.produtos WHERE nome = 'Brigadeiro de Colher Zero 400g';
-  SELECT id INTO v_familia FROM public.produtos WHERE nome = 'Combo Família (Black)';
-  SELECT id INTO v_balde_doce FROM public.produtos WHERE nome = 'Balde + doce (Black)';
-  SELECT id INTO v_tres FROM public.produtos WHERE nome = '3 doces (Black)';
-  SELECT id INTO v_dupla FROM public.produtos WHERE nome = 'Dupla Zero (Black)';
+  SELECT id INTO v_morango FROM public.produtos WHERE nome = 'Geleia de Morango 680g';
+  SELECT id INTO v_goiaba FROM public.produtos WHERE nome = 'Geleia de Goiaba 680g';
+  SELECT id INTO v_dl400 FROM public.produtos WHERE nome = 'Doce de Leite Tradicional 400g';
+  SELECT id INTO v_familia FROM public.produtos WHERE codigo = 'combo_black_familia';
+  SELECT id INTO v_balde_doce FROM public.produtos WHERE codigo = 'combo_black_balde_doce';
+  SELECT id INTO v_tres FROM public.produtos WHERE codigo = 'combo_black_3_doces';
+  SELECT id INTO v_dupla FROM public.produtos WHERE codigo = 'combo_black_dupla_zero';
+  SELECT id INTO v_cafe FROM public.produtos WHERE codigo = 'combo_black_cafe_da_tarde';
   SELECT id INTO g_familia FROM public.combo_grupos WHERE combo_id = v_familia;
   SELECT id INTO g_balde_doce FROM public.combo_grupos WHERE combo_id = v_balde_doce;
   SELECT id INTO g_tres FROM public.combo_grupos WHERE combo_id = v_tres;
+  SELECT id INTO g_cafe FROM public.combo_grupos WHERE combo_id = v_cafe;
 
-  IF v_campanha IS NULL OR v_balde IS NULL OR v_familia IS NULL OR g_familia IS NULL OR v_dupla IS NULL THEN
+  IF v_campanha IS NULL OR v_balde IS NULL OR v_familia IS NULL OR g_familia IS NULL OR v_dupla IS NULL
+     OR g_cafe IS NULL OR v_morango IS NULL OR v_goiaba IS NULL OR v_dl400 IS NULL THEN
     RAISE EXCEPTION 'SUITE_ABORTADA: cenário da Black não encontrado';
   END IF;
+
+  -- Os grupos de doce 680 g ficam vazios (descartado no fim) para o C1 e para o preparo.
+  DELETE FROM public.combo_grupo_opcoes WHERE grupo_id IN (g_familia, g_balde_doce, g_tres);
 
   -- ── C1 (antes do preparo): grupo sem sabores recusa ──
   casos := casos + 1;
@@ -405,6 +416,72 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'C18 permissões das funções novas', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'C18 permissões das funções novas', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C19: Café da Tarde no Pix fecha em 89,00 com o doce de leite 400 g no rateio ──
+  casos := casos + 1;
+  BEGIN
+    SELECT sum(ci.subtotal), count(DISTINCT ci.produto_id) INTO x, n
+      FROM public.combo_itens(v_cafe, jsonb_build_array(jsonb_build_object('grupo_id', g_cafe, 'produto_id', v_morango, 'quantidade', 1)), 'pix') ci;
+    IF x <> 89.00 OR n <> 3 THEN RAISE EXCEPTION 'soma = %, produtos = % (esperado 89 e 3)', x, n; END IF;
+    SELECT sum(ci.quantidade) INTO x FROM public.combo_itens(v_cafe, jsonb_build_array(jsonb_build_object('grupo_id', g_cafe, 'produto_id', v_morango, 'quantidade', 1)), 'pix') ci WHERE ci.produto_id = v_baldinho;
+    IF x <> 2 THEN RAISE EXCEPTION 'baldinho qtd = %', x; END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.combo_itens(v_cafe, jsonb_build_array(jsonb_build_object('grupo_id', g_cafe, 'produto_id', v_morango, 'quantidade', 1)), 'pix') ci
+                    WHERE ci.produto_id = v_dl400 AND ci.subtotal > 0) THEN
+      RAISE EXCEPTION 'doce de leite 400 g fora do rateio';
+    END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C19 Café da Tarde Pix 89,00 rateado', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C19 Café da Tarde Pix 89,00 rateado', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C20: Café da Tarde no cartão = 92,00; tabela guarda débito 91 e 2x 95; âncora 108 ──
+  casos := casos + 1;
+  BEGIN
+    SELECT sum(ci.subtotal) INTO x FROM public.combo_itens(v_cafe, jsonb_build_array(jsonb_build_object('grupo_id', g_cafe, 'produto_id', v_morango, 'quantidade', 1)), 'cartao') ci;
+    IF x <> 92.00 THEN RAISE EXCEPTION 'cartão = %', x; END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.loja_precos lp WHERE lp.produto_id = v_cafe AND lp.campanha_id = v_campanha
+                     AND lp.preco_pix = 89 AND lp.preco_debito = 91 AND lp.preco_credito_1x = 92
+                     AND lp.preco_credito_2x = 95 AND lp.ancora = 108) THEN
+      RAISE EXCEPTION 'tabela do Café da Tarde diferente de 89/91/92/95, âncora 108';
+    END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C20 Café da Tarde cartão 92 + tabela', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C20 Café da Tarde cartão 92 + tabela', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C21: geleia de goiaba fora do Café da Tarde ──
+  casos := casos + 1;
+  BEGIN
+    BEGIN
+      PERFORM * FROM public.combo_itens(v_cafe,
+        jsonb_build_array(jsonb_build_object('grupo_id', g_cafe, 'produto_id', v_goiaba, 'quantidade', 1)), 'pix');
+      RAISE EXCEPTION 'aceitou goiaba';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE '%fora das opções%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
+    END;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C21 goiaba fora do Café da Tarde', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C21 goiaba fora do Café da Tarde', 'ok', false, 'erro', SQLERRM);
+  END;
+
+  -- ── C22: SKUs "Kit Top — X" inativos e fora dos preços vigentes ──
+  casos := casos + 1;
+  BEGIN
+    IF EXISTS (SELECT 1 FROM public.produtos WHERE codigo LIKE 'combo_black_kit_top%' AND ativo) THEN
+      RAISE EXCEPTION 'Kit Top antigo ativo';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.precos_vigentes() pv JOIN public.produtos p ON p.id = pv.produto_id
+                WHERE p.codigo LIKE 'combo_black_kit_top%') THEN
+      RAISE EXCEPTION 'Kit Top antigo ainda aparece em precos_vigentes';
+    END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'C22 Kit Top antigo inativo', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'C22 Kit Top antigo inativo', 'ok', false, 'erro', SQLERRM);
   END;
 
   RAISE EXCEPTION '% combos_preco_campanha %/% | contagens_antes=% | %',
