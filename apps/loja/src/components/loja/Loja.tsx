@@ -135,7 +135,6 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         <article key={p.id} className="flex items-center gap-3 border-b border-linha py-2.5">
             <button
                 type="button"
-                aria-label={`Ver ${p.nome}`}
                 onClick={() => abrir(p)}
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl text-left"
             >
@@ -278,7 +277,6 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                             >
                                 <button
                                     type="button"
-                                    aria-label={`Ver ${p.nome}`}
                                     onClick={() => abrir(p)}
                                     className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
                                 >
