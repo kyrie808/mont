@@ -1,8 +1,6 @@
 // Modelo da vitrine que o servidor monta e entrega às telas.
 // Valores em reais. Nada de custo nem de estoque bruto vai para o navegador.
 
-export type Secao = 'combos' | 'massa' | 'doces' | 'zero'
-
 export interface ProdutoLoja {
     id: string
     slug: string
@@ -12,10 +10,15 @@ export interface ProdutoLoja {
     chamada: string | null
     descricao: string | null
     imagemUrl: string | null
-    secao: Secao
+    /** Selo do cadastro já em texto ("Mais vendido", "Oferta", "Queridinho"). NULL = sem selo. */
+    selo: string | null
+    /** Benefícios do cadastro, um por linha. */
+    beneficios: string[]
+    /** Modo de preparo do cadastro, um passo por linha. */
+    preparo: string[]
     /** Preço que vale agora: Pix da campanha, ou produtos.preco fora dela. */
     preco: number
-    /** Preço normal riscado ("de"). Só durante a campanha. */
+    /** Preço riscado ("de"): só durante a campanha, e é o preço normal do cadastro. Fora dela, NULL. */
     precoDe: number | null
     /** Crédito 1x da tabela aprovada. Só durante a campanha. */
     precoCredito: number | null
@@ -57,6 +60,22 @@ export interface ComboLoja extends ProdutoLoja {
     montavel: boolean
 }
 
+export function ehCombo(p: ProdutoLoja): p is ComboLoja {
+    return 'grupos' in p
+}
+
+/** Seção com poucos produtos vira cartões com foto grande; com muitos, lista. */
+export type FormatoSecao = 'cartoes' | 'lista'
+
+/** Uma aba da loja = uma seção da tela Catálogo do sistema interno. */
+export interface SecaoLoja {
+    /** Âncora na página (#id). */
+    id: string
+    nome: string
+    formato: FormatoSecao
+    itens: ProdutoLoja[]
+}
+
 export interface Campanha {
     nome: string
     fim: string
@@ -65,9 +84,8 @@ export interface Campanha {
 export interface Vitrine {
     campanha: Campanha | null
     hero: ComboLoja | null
+    /** Combos da campanha vigente (bloco próprio, no topo). */
     combos: ComboLoja[]
-    massa: ProdutoLoja[]
-    doces: ProdutoLoja[]
-    zero: ProdutoLoja[]
+    secoes: SecaoLoja[]
     levaJunto: ProdutoLoja | null
 }

@@ -1,4 +1,4 @@
-import type { ComboLoja, ProdutoLoja, Vitrine } from '@/lib/vitrine/tipos'
+import { ehCombo, type ComboLoja, type ProdutoLoja, type Vitrine } from '@/lib/vitrine/tipos'
 import type { Escolha, ItemSacola } from './esquema'
 
 export interface Catalogo {
@@ -8,9 +8,14 @@ export interface Catalogo {
 
 export function catalogoDa(vitrine: Vitrine): Catalogo {
     const produtos = new Map<string, ProdutoLoja>()
-    for (const p of [...vitrine.massa, ...vitrine.doces, ...vitrine.zero]) produtos.set(p.id, p)
     const combos = new Map<string, ComboLoja>()
     for (const c of vitrine.combos) combos.set(c.id, c)
+    for (const s of vitrine.secoes) {
+        for (const item of s.itens) {
+            if (ehCombo(item)) combos.set(item.id, item)
+            else produtos.set(item.id, item)
+        }
+    }
     return { produtos, combos }
 }
 

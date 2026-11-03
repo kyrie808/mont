@@ -15,8 +15,8 @@
 | Usa `ativo` + `visivel_catalogo` (o interruptor "Visível no catálogo" da tela de Produtos). | 🟡 | Usa `produtos.ativo` + `loja_vitrine.visivel`. Ignora `visivel_catalogo`. |
 | Abas = seções da tela **Catálogo** do sistema interno (`cat_secoes`: Congelados, Resfriados, Doces; Combos inativa), na ordem de lá. | ❌ | Seções fixas no código (`combos`, `massa`, `doces`, `zero`) e gravadas em `loja_vitrine.secao`. |
 | Ordem dos produtos = arrastar na tela Catálogo (`ordem_vitrine`). | ❌ | `loja_vitrine.ordem` (SQL). |
-| Todas as linhas: hoje 9 congelados + 1 "Pão de Queijo 2kg - 100gr" sem categoria + 2 combos fixos ("Balde 4kg + Palito 1kg", "Balde 4kg + Pão de Queijo 1kg"). | ❌ | Mostra 2 massas refrigeradas, doces, zero e os combos da Black. **Os 9 visíveis acima ficam de fora** (consulta: `visiveis_sem_vitrine = 9`). |
-| Combos permanentes, com preço de `produtos.preco` e itens de `produto_componentes`. | ❌ | Combo só aparece **dentro de campanha** com preço em `loja_precos`. Os 2 combos permanentes não aparecem. |
+| Todas as linhas: hoje 8 congelados + 1 "Pão de Queijo 2kg - 100gr" sem categoria. (Correção 02/11: os 2 "Combo Balde 4kg + …" estão com "Visível no catálogo" desligado e não são combos no cadastro; o catálogo antigo também não os mostra.) | ❌ | Mostra 2 massas refrigeradas, doces, zero e os combos da Black. **Os 9 visíveis acima ficam de fora** (consulta: `visiveis_sem_vitrine = 9`). |
+| Combos permanentes, com preço de `produtos.preco` e itens de `produto_componentes`. | ❌ | Combo só aparece **dentro de campanha** com preço em `loja_precos`. Hoje não há combo permanente visível; a regra vale para o que for cadastrado. |
 | Fotos: capa e galeria de `cat_imagens_produto`, que o upload do sistema interno grava junto com `sis_imagens_produto` (36 = 36). | ✅ | Usa a mesma capa. Não mostra galeria (só capa). |
 | Preço = `produtos.preco`; preço "de" = `preco_ancoragem`. | 🟡 | Preço = `produtos.preco` fora de campanha (ok). Preço "de" só vem da campanha; `preco_ancoragem` é ignorado. |
 | Nome, subtítulo e descrição do cadastro. | ✅ | Usa nome (ou `nome_loja`), subtítulo e descrição. |

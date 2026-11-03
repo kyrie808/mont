@@ -179,10 +179,12 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'L3 recusas da loja', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- ── L4: estoque do doce menor que o pedido recusa ──
+  -- ── L4: com "controlar pelo estoque" ligado, estoque do doce menor que o pedido recusa ──
+  -- (Desde 20261102112056 os doces vendem só pela chave manual; o cenário liga o controle na cocada.)
   casos := casos + 1;
   BEGIN
     RESET ROLE;
+    UPDATE public.loja_vitrine SET usa_estoque = true WHERE produto_id = v_cocada;
     UPDATE public.produtos SET estoque_atual = 2 WHERE id = v_cocada;
     SET LOCAL ROLE service_role;
     BEGIN
@@ -194,6 +196,7 @@ BEGIN
     END;
     RESET ROLE;
     UPDATE public.produtos SET estoque_atual = 100 WHERE id = v_cocada;
+    UPDATE public.loja_vitrine SET usa_estoque = false WHERE produto_id = v_cocada;
     SET LOCAL ROLE service_role;
     passou := passou + 1;
     resultados := resultados || jsonb_build_object('caso', 'L4 estoque insuficiente recusa', 'ok', true);
