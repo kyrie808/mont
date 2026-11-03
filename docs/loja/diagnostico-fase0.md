@@ -1,7 +1,7 @@
 # Diagnóstico — Fase 0 · Loja Mont (Black 2026)
 
 > 29/10/2026 · somente leitura. Nenhum arquivo de código alterado, nenhum SQL de escrita.
-> Fontes: banco de produção (`herlvujykltxnwqmwmyx`, só `SELECT`/catálogo do Postgres), código do monorepo, wireframe em `docs/loja-black/wireframe/`, documentação pública da InfinitePay (https://www.infinitepay.io/checkout-documentacao).
+> Fontes: banco de produção (`herlvujykltxnwqmwmyx`, só `SELECT`/catálogo do Postgres), código do monorepo, wireframe em `docs/loja/wireframe/`, documentação pública da InfinitePay (https://www.infinitepay.io/checkout-documentacao).
 
 ---
 
@@ -35,7 +35,7 @@ Passo a passo:
    - grava o `contato_id` no pedido;
    - insere `vendas` com `status='pendente'`, `pago=false`, `origem='catalogo'`, `cat_pedido_id`, `taxa_entrega=p_frete`, `data=current_date` (UTC);
    - insere `itens_venda` com `custo_unitario` lido de `produtos.custo` e atualiza `vendas.custo_total`.
-4. **Se qualquer coisa do passo 3 falhar, o erro é engolido**: grava uma linha em `cat_pedidos_pendentes_vinculacao` e a função retorna sucesso. O pedido existe, mas a venda não. Hoje essa fila está vazia, e o Jarvis tem a tela `#/catalogo-pendentes` para vincular à mão.
+4. **Se qualquer coisa do passo 3 falhar, o erro é engolido**: grava uma linha em `cat_pedidos_pendentes_vinculacao` e a função retorna sucesso. O pedido existe, mas a venda não. Hoje essa fila está vazia, e o sistema interno tem a tela `#/catalogo-pendentes` para vincular à mão.
 5. Retorna `{id, numero_pedido, status, total}`.
 
 O route handler do catálogo **recalcula os preços** a partir de `produtos.preco` e o frete pelo servidor (distância de rota via ORS + `configuracoes.frete_config`). A RPC em si **não recalcula nada**.
@@ -57,12 +57,12 @@ O route handler do catálogo **recalcula os preços** a partir de `produtos.prec
 
 **Estoque:** `fn_ajusta_estoque_item` **explode combos** (`eh_combo=true`) pelos componentes de `produto_componentes` (quantidade fixa). **Não existe reserva**: o estoque só se mexe na entrega. "Liberar o que estava reservado" aos 30 min ainda não tem onde se apoiar.
 
-**Pagamento no Jarvis:** `registrar_pagamento_venda(venda, valor, metodo, data, conta_id, obs)` exige `is_admin()` **ou** `service_role`. Ela chama `_pagamento_venda_core`, que insere `pagamentos_venda` e dois `lancamentos`, separando produto e frete na proporção `taxa_entrega/total`. A conta da InfinitePay já existe em `contas`: "InfinityPay - Mont" (`codigo='PIX'`).
+**Pagamento no sistema interno:** `registrar_pagamento_venda(venda, valor, metodo, data, conta_id, obs)` exige `is_admin()` **ou** `service_role`. Ela chama `_pagamento_venda_core`, que insere `pagamentos_venda` e dois `lancamentos`, separando produto e frete na proporção `taxa_entrega/total`. A conta da InfinitePay já existe em `contas`: "InfinityPay - Mont" (`codigo='PIX'`).
 
 ### 1.3 Como `eh_combo` é tratado hoje
 
 - **Banco:** `produtos.eh_combo` + `produto_componentes(combo_id, componente_id, quantidade)` (único por par, sem autorreferência). A composição se edita pela RPC `replace_combo_componentes` (só admin). O estoque explode pelos componentes. A view `rpt_giro_estoque` exclui combos (migration `giro_estoque_sem_combos`).
-- **Jarvis:** formulário de produto com toggle "combo" e editor de componentes; custo exibido = soma dos componentes; ícone "combo" na grade e na curadoria de seções.
+- **sistema interno:** formulário de produto com toggle "combo" e editor de componentes; custo exibido = soma dos componentes; ícone "combo" na grade e na curadoria de seções.
 - **Catálogo:** trata combo como produto comum (um SKU com preço próprio).
 - **Limite estrutural:** o modelo só descreve composição **fixa**. Não existe "grupo de escolha" nem registro do sabor escolhido. Por isso o Kit Top virou 3 SKUs. Há também combos antigos com `eh_combo=false` e sem componentes ("Combo Balde 4kg + Palito 1kg", "Combo Balde 4kg + Pão de Queijo 1kg", "kit BALDÃO", "Kit Mãezona"). Esses não baixam estoque de nada.
 
@@ -85,7 +85,7 @@ Ninguém de fora lê `cat_pedidos`. Pela RLS atual, uma página pública de stat
 
 - **Sacola:** Zustand + `persist` (`localStorage`, chave `mont-cart-storage`), sem validação na leitura. Guarda o **objeto `ProdutoCatalogo` inteiro**, com preço. O total exibido é calculado no cliente. Cada SKU vira uma linha (sem variações). Dispara `add_to_cart`/`remove_from_cart` no dataLayer.
 - **Checkout (`/carrinho`):** manda só `product_id` e `quantity` para `POST /api/pedidos`. O servidor valida com Zod, recalcula preço e frete e chama `criar_pedido` com service role. Em seguida o cliente dispara `pedido_enviado` (GTM) e `InitiateCheckout` server-side (Meta), **monta o texto no navegador** (`lib/whatsapp/checkout.ts`), abre `wa.me/<número>?text=…` e limpa a sacola.
-- **O pagamento combinado no WhatsApp é humano.** A venda é marcada como paga ou entregue no Jarvis. O `Purchase` só vai para a Meta na entrega (decisão de 13/10, migration `catalogo_purchase_na_entrega`).
+- **O pagamento combinado no WhatsApp é humano.** A venda é marcada como paga ou entregue no sistema interno. O `Purchase` só vai para a Meta na entrega (decisão de 13/10, migration `catalogo_purchase_na_entrega`).
 
 ### 1.6 Onde o monorepo fala com a Evolution API
 
@@ -98,8 +98,8 @@ Ninguém de fora lê `cat_pedidos`. Pela RLS atual, uma página pública de stat
 ### 1.7 Outros pontos que tocam a loja
 
 - **Fluxo de entrega:** `avisos-entrega` (W5) publica no grupo #ENTREGAS **toda venda `pendente` com `data_entrega_prevista`**, lendo **o endereço do contato** (não do pedido). O app `apps/entregador` lista, reordena (`entregador_reordenar_rota` → `vendas.ordem_rota`) e marca entregue.
-- **Telas do Jarvis que leem `vendas` pendentes ou não pagas:** `view_home_operacional`, `crm_view_operational_snapshot`, `rpt_distribuicao_forma_pagamento`, `aceitou_sem_venda`, a lista de Vendas com pendentes e os relatórios de "a receber".
-- **Jarvis e `cat_pedidos`:** o Jarvis só mostra `cat_pedidos` no perfil do contato (`catalogService.getPedidosByContato`) e na fila de pendentes de vinculação. **O pedido "aparece no Jarvis" porque existe a venda.**
+- **Telas do sistema interno que leem `vendas` pendentes ou não pagas:** `view_home_operacional`, `crm_view_operational_snapshot`, `rpt_distribuicao_forma_pagamento`, `aceitou_sem_venda`, a lista de Vendas com pendentes e os relatórios de "a receber".
+- **sistema interno e `cat_pedidos`:** o sistema interno só mostra `cat_pedidos` no perfil do contato (`catalogService.getPedidosByContato`) e na fila de pendentes de vinculação. **O pedido "aparece no sistema interno" porque existe a venda.**
 - **Frete atual do catálogo:** distância de rota (ORS) + `frete_config.faixas` (até 20 km R$ 5, até 30 km R$ 10, até 50 km R$ 15). Não existe tabela por bairro nem dias de rota.
 
 ---
@@ -111,7 +111,7 @@ Ninguém de fora lê `cat_pedidos`. Pela RLS atual, uma página pública de stat
 navegador ─POST /api/pedidos─▶ route handler (service role, recalcula preço/frete)
    └▶ criar_pedido ─▶ cat_pedidos + cat_itens_pedido ─▶ contatos (cria OU sobrescreve)
                   └▶ vendas(pendente, pago=false) + itens_venda   [falha → pendentes_vinculacao]
-navegador ─▶ wa.me com texto ─▶ humano combina pagamento ─▶ Jarvis marca pago/entregue
+navegador ─▶ wa.me com texto ─▶ humano combina pagamento ─▶ sistema interno marca pago/entregue
    └▶ triggers: estoque na entrega · Purchase Meta na entrega · sync venda→cat_pedidos
 ```
 
@@ -129,23 +129,23 @@ navegador ─▶ wa.me com texto ─▶ humano combina pagamento ─▶ Jarvis m
 3. InfinitePay ─▶ redirect_url (/pedido/[token]/confirmado?…) e webhook (route handler, 200 rápido)
      ambos ─▶ payment_check (handle + order_nsu + transaction_nsu + slug)
      paid=true ─▶ RPC `loja_confirmar_pagamento` (idempotente por transaction_nsu):
-        · cria vendas + itens_venda (cada sabor = uma linha)  ← o pedido entra no Jarvis aqui
+        · cria vendas + itens_venda (cada sabor = uma linha)  ← o pedido entra no sistema interno aqui
         · registra o pagamento pelo caminho de sempre (_pagamento_venda_core, conta InfinitePay)
         · status=pago + histórico
 4. pg_cron (1 min): aguardando_pagamento com expira_em vencido → cancelado (reserva some sozinha)
    n8n (pull, flag desligada): lembrete aos 15 min, resumo, mudanças de status
-5. Separado / Saiu para entrega: ação humana (Jarvis ou apps/entregador) → histórico → WhatsApp
+5. Separado / Saiu para entrega: ação humana (sistema interno ou apps/entregador) → histórico → WhatsApp
    Entregue: o fluxo atual (venda entregue → estoque baixa → Purchase Meta)
 ```
 
 ### O que precisa mudar no caminho
 
-1. **Não reaproveitar `criar_pedido` como está.** Ela confia no preço do chamador, sobrescreve contato, engole erro e usa data UTC. A proposta é uma **RPC nova da loja**, sem tocar a do catálogo, que continua no ar. Ela escreve nas **mesmas tabelas** (`cat_pedidos`, `cat_itens_pedido`, `vendas`, `itens_venda`, `pagamentos_venda`), então não existe caminho paralelo que o Jarvis não veja.
+1. **Não reaproveitar `criar_pedido` como está.** Ela confia no preço do chamador, sobrescreve contato, engole erro e usa data UTC. A proposta é uma **RPC nova da loja**, sem tocar a do catálogo, que continua no ar. Ela escreve nas **mesmas tabelas** (`cat_pedidos`, `cat_itens_pedido`, `vendas`, `itens_venda`, `pagamentos_venda`), então não existe caminho paralelo que o sistema interno não veja.
 2. **Quando nasce a venda — decisão do Luccas (pergunta P1).** Recomendo **criar a venda só com o pagamento confirmado**:
    - Venda `pendente` não paga **vazaria para o #ENTREGAS** (W5 publica toda venda pendente com data prevista) e para as listas e KPIs de pendentes e "a receber".
-   - Com tráfego de anúncio, os abandonos de checkout virariam **dezenas de vendas canceladas** no Jarvis.
+   - Com tráfego de anúncio, os abandonos de checkout virariam **dezenas de vendas canceladas** no sistema interno.
    - A regra 8 ("separação só com pagamento aprovado") fica garantida pela própria estrutura.
-   - Custo: antes do pagamento, o pedido só aparece no perfil do contato (via `cat_pedidos`). O aceite da Fase 2 ("pedido de teste aparece no Jarvis com cada sabor") precisaria ser verificado **após um pagamento**, ou por uma confirmação manual de teste.
+   - Custo: antes do pagamento, o pedido só aparece no perfil do contato (via `cat_pedidos`). O aceite da Fase 2 ("pedido de teste aparece no sistema interno com cada sabor") precisaria ser verificado **após um pagamento**, ou por uma confirmação manual de teste.
    - A alternativa seria criar a venda no ato e excluir os pedidos da loja aguardando pagamento de W5, das views e das listas. São ~6 views e 1 Edge Function, todas fora de `apps/loja`.
 3. **`sync_venda_to_cat_pedido` precisa parar de rebaixar status** dos pedidos da loja (hoje registrar o pagamento joga o pedido de volta para `pendente`). Também o `vendaService` do interno sincroniza `cat_pedidos` pelo cliente. Os dois precisam respeitar o canal `loja`.
 4. **Endereço por pedido.** A loja não pode sobrescrever o contato (regra 9), mas o W5 e o entregador leem o endereço **do contato**. Precisa decidir onde vive o endereço da entrega da loja (pergunta P6).
@@ -156,26 +156,26 @@ navegador ─▶ wa.me com texto ─▶ humano combina pagamento ─▶ Jarvis m
 
 ## 3. Proposta de modelo de dados (descrição, sem SQL)
 
-Princípio: **não mudar o significado de colunas que o catálogo e o Jarvis já usam.** Coisas novas da loja ficam em tabelas novas. As tabelas compartilhadas ganham só colunas novas, todas anuláveis.
+Princípio: **não mudar o significado de colunas que o catálogo e o sistema interno já usam.** Coisas novas da loja ficam em tabelas novas. As tabelas compartilhadas ganham só colunas novas, todas anuláveis.
 
 ### 3.1 Combo com itens fixos + grupos de escolha
-- **Itens fixos:** reaproveitar `produto_componentes`, que já existe, já tem UI no Jarvis e já tem a RPC `replace_combo_componentes`. Combo Família = balde 4 kg ×1 + baldinho 1 kg ×2.
+- **Itens fixos:** reaproveitar `produto_componentes`, que já existe, já tem UI no sistema interno e já tem a RPC `replace_combo_componentes`. Combo Família = balde 4 kg ×1 + baldinho 1 kg ×2.
 - **`combo_grupos`** (nova): `combo_id` → produtos, `titulo` ("Escolha 6 doces de 680 g"), `quantidade` (6), `permite_repetir` (sim), `ordem`.
 - **`combo_grupo_opcoes`** (nova): `grupo_id`, `produto_id`, `ordem`. Os sabores reais (ex.: "Doce de Leite com Geleia de Ameixa 680g").
 - **Kit Top:** fixos 2 baldinhos + DL tradicional 400 g (o brinde) e grupo "1 geleia 680 g" com 3 opções. Os 3 SKUs "Kit Top — X (Black)" seriam inativados (mudança de dado, com backup).
 - **Dupla Zero:** sem fixos, grupo "2 zero 400 g" com 2 opções e repetição permitida (hoje é 1+1 fixo).
 - **Como o pedido registra o combo:** cada componente e cada sabor vira **uma linha** em `cat_itens_pedido` e, depois, em `itens_venda`, apontando para o produto real (balde, baldinho, cada doce). As linhas do mesmo combo levam um identificador comum da instância do combo, o `combo_id` (o produto combo) e, se for o caso, o `grupo_id`.
   - O estoque baixa com os triggers que já existem, sem tocar em `fn_ajusta_estoque_item`, porque a linha nunca é o SKU combo, então não há explosão dupla.
-  - O Jarvis lista cada sabor sem mudar nada.
+  - O sistema interno lista cada sabor sem mudar nada.
   - O custo fica certo por SKU.
-  - Exige **colunas novas anuláveis** em `cat_itens_pedido` e em `itens_venda` (tabela compartilhada). O Jarvis pode, depois, agrupar visualmente por combo.
+  - Exige **colunas novas anuláveis** em `cat_itens_pedido` e em `itens_venda` (tabela compartilhada). O sistema interno pode, depois, agrupar visualmente por combo.
 - **Rateio do preço do combo entre as linhas:** proporcional ao preço avulso de cada componente, com o resíduo de centavos na última linha, para que a soma bata com o preço do combo. Sem rateio, a margem por SKU e o ranking ficam errados. O brinde do Kit Top entra no rateio com valor 0 ou proporcional (pergunta P9).
 
 ### 3.2 Preço de campanha com período
 - **`loja_campanhas`**: `nome` ("Black da Mont 2026"), `inicio`/`fim` em `timestamptz` gravados com −03:00 (03/11 00:00 → 30/11 23:59:59 SP), `ativa`.
 - **`loja_precos`**: `campanha_id`, `produto_id` (avulso **ou** combo), `preco_pix` (o "por"). O "de" exibido é o `produtos.preco`, que fica intocado. Atenção: `preco_ancoragem` hoje tem outros números (balde 99, doces 40), e o wireframe usa o preço normal (75, 35).
 - Fora do período, ou sem linha de campanha, vale `produtos.preco`. Combos só existem dentro da campanha.
-- O fiado no Jarvis continua com `produtos.preco`, porque nada do Jarvis lê essas tabelas.
+- O fiado no sistema interno continua com `produtos.preco`, porque nada do sistema interno lê essas tabelas.
 
 ### 3.3 Preço no cartão
 - A regra é reproduzir a **tabela aprovada centavo por centavo**. Em vez de fórmula, **guardar os valores da tabela**: em `loja_precos`, colunas `preco_debito`, `preco_credito_1x`, `preco_credito_2x` por produto e combo.
@@ -189,7 +189,7 @@ Princípio: **não mudar o significado de colunas que o catálogo e o Jarvis já
   - **Doces (680 g, 400 g, zero, geleias):** chave manual **e** `estoque_atual − reservado ≥ quantidade pedida`. Os doces foram contados em 29/09 e estão todos ≥ 0.
   - **Reservado** = soma dos sabores em pedidos da loja `aguardando_pagamento` (não expirados) + pagos ainda não entregues. É calculado, nunca subtraído do estoque. Por isso o cancelamento aos 30 min "libera" sozinho.
   - Na criação do pedido, travar as linhas dos doces envolvidos (`FOR UPDATE`) para dois clientes não levarem o último pote.
-- **Pergunta P5:** confirmar a regra. E o Gilmar precisa operar a chave "Esgotado" pelo Jarvis (tela fora de `apps/loja`).
+- **Pergunta P5:** confirmar a regra. E o Gilmar precisa operar a chave "Esgotado" pelo sistema interno (tela fora de `apps/loja`).
 
 ### 3.5 Campos de pagamento da InfinitePay
 - **`loja_pagamentos`** (nova, **N por pedido**: o cliente pode trocar de método e cada link é novo):
@@ -203,7 +203,7 @@ Princípio: **não mudar o significado de colunas que o catálogo e o Jarvis já
 ### 3.6 Status e histórico do pedido
 - **Status de `cat_pedidos`** para o canal loja: `aguardando_pagamento` → `pago` → `separado` → `saiu_para_entrega` → `entregue` · `cancelado`.
   - O `CHECK` atual tem `pendente, confirmado, preparando, enviado, entregue, cancelado`. Há duas opções: **ampliar** o `CHECK` com os nomes novos, ou **mapear** (confirmado = pago, preparando = separado, enviado = saiu). Recomendo ampliar, porque os nomes do wireframe evitam tradução mental.
-  - `vendas.status` **não muda** (`pendente/entregue/cancelada`). O Jarvis segue igual.
+  - `vendas.status` **não muda** (`pendente/entregue/cancelada`). O sistema interno segue igual.
 - **`cat_pedidos_status_historico`** (nova): `pedido_id`, `status`, `em` (timestamptz), `por` (sistema | admin | entregador + id), `observacao`. A tela 08 mostra o "quando" de cada passo a partir daqui.
 - `sync_venda_to_cat_pedido` precisa ser ajustado para pedidos da loja: venda `entregue` → `entregue`, venda `cancelada` → `cancelado`, e **nunca rebaixar**.
 
@@ -280,7 +280,7 @@ Fonte: documentação pública (lida em 29/10/2026). Os pontos marcados "não do
 
 ## 5. Lista de migrations previstas (ordem sugerida, todas com backup antes)
 
-| # | Migration | Tipo | Toca tabela usada pelo Jarvis/catálogo? |
+| # | Migration | Tipo | Toca tabela usada pelo sistema interno/catálogo? |
 |---|---|---|---|
 | 1 | `loja_vitrine` (visível/disponível/seção/ordem/hero/leva junto) | schema | não |
 | 2 | `combo_grupos` + `combo_grupo_opcoes` | schema | não (usa `produto_componentes` como está) |
@@ -315,7 +315,7 @@ Depois de cada DDL: `get_advisors` + `NOTIFY pgrst, 'reload schema'` + regenerar
 10. **`sync_venda_to_cat_pedido`** rebaixa o status ao registrar pagamento. Se não for ajustado, a tela 08 mostra o passo errado.
 11. **Fuso UTC no banco.** Qualquer `current_date` ou `now()::date` erra a janela da Black e a data da venda depois das 21h.
 12. **Âncoras dos combos inconsistentes no wireframe.** "A partir de R$ 269" (Família) e "R$ 90" (Balde + doce) só fecham com **geleia de goiaba (R$ 25)** no grupo; "R$ 87" (3 doces) só fecha **sem geleias** (3 × 29). A regra de âncora e os sabores de cada grupo precisam ser definidos juntos (P4).
-13. **Volume de carrinhos abandonados.** Com tráfego pago, se a venda nascer no ato (alternativa da P1), o Jarvis enche de vendas canceladas e o #ENTREGAS pode receber pedido não pago.
+13. **Volume de carrinhos abandonados.** Com tráfego pago, se a venda nascer no ato (alternativa da P1), o sistema interno enche de vendas canceladas e o #ENTREGAS pode receber pedido não pago.
 14. **Concorrência no último pote.** Sem lock na criação, dois pedidos podem reservar o mesmo doce.
 15. **`wa_envios`.** Mensagem da loja não registrada ali faz a secretária entender que um humano respondeu e calar naquela conversa.
 
@@ -323,11 +323,11 @@ Depois de cada DDL: `get_advisors` + `NOTIFY pgrst, 'reload schema'` + regenerar
 
 ## 7. Perguntas abertas
 
-- **P1 — Quando nasce a venda no Jarvis?** (a) só com pagamento confirmado *(recomendado)* ou (b) no ato do pedido, ajustando W5, views e listas. Se (a): o aceite da Fase 2 passa a ser verificado com um pagamento de teste (ou uma confirmação manual)?
+- **P1 — Quando nasce a venda no sistema interno?** (a) só com pagamento confirmado *(recomendado)* ou (b) no ato do pedido, ajustando W5, views e listas. Se (a): o aceite da Fase 2 passa a ser verificado com um pagamento de teste (ou uma confirmação manual)?
 - **P2 — InfinitePay:** Opção A, B ou C (seção 4)? E, se o link não aceitar **débito**, autoriza tirar "Cartão de débito" da tela 06?
 - **P3 — Cartão:** preço por item (soma da tabela) ou taxa sobre o total? O frete leva taxa? Preciso da **tabela completa** por produto e combo (débito, 1x, 2x).
 - **P4 — Grupos dos combos:** quais sabores entram em cada grupo (geleias entram no Combo Família e no Balde + doce? no 3 doces?), doces 400 g entram em algum? E a regra da âncora "separado: a partir de" (soma dos avulsos no preço Black com o sabor mais barato do grupo?).
-- **P5 — Disponibilidade:** confirma a regra da 3.4 (massa só chave manual; doces chave + estoque − reservado)? Onde o Gilmar liga e desliga "Esgotado" (tela no Jarvis = mudança fora de `apps/loja`)?
+- **P5 — Disponibilidade:** confirma a regra da 3.4 (massa só chave manual; doces chave + estoque − reservado)? Onde o Gilmar liga e desliga "Esgotado" (tela no sistema interno = mudança fora de `apps/loja`)?
 - **P6 — Endereço:** o endereço da entrega fica no pedido. Para cliente **existente**, como o W5 e o entregador recebem o endereço novo: na observação da venda, em colunas de endereço na venda, ou atualizando o contato só quando ele estiver vazio?
 - **P7 — Rota:** tabela de bairros (valor + dias) e horário de corte para "próxima rota". "Escolher outro dia" (tela 05) é livre ou restrito aos dias de rota do bairro?
 - **P8 — Origem:** contato e venda da loja com origem `'loja'` (nova, aparece separada nos relatórios) ou `'catalogo'`?
@@ -336,6 +336,6 @@ Depois de cada DDL: `get_advisors` + `NOTIFY pgrst, 'reload schema'` + regenerar
 - **P11 — Preço "Pote 400 g R$ 25 → 21":** vale para todos os 400 g tradicionais (DL tradicional, DL com coco, ambrosia)? Abóbora com coco 400 g está fora do catálogo hoje.
 - **P12 — Doces fora do wireframe:** Cocada com Maracujá 680 g e DL com Geleia de Café 680 g existem no banco e não aparecem no wireframe. Entram na loja?
 - **P13 — "Leva junto?":** é sempre o DL 400 g, ou uma regra (item mais barato que não está na sacola)?
-- **P14 — Separado / Saiu para entrega (Fase 5):** minha sugestão é "Separado" no Jarvis (em lote, pedidos do dia) e "Saiu para entrega" no `apps/entregador` (botão "Iniciar rota", que marca todos da rota do dia). Ok?
+- **P14 — Separado / Saiu para entrega (Fase 5):** minha sugestão é "Separado" no sistema interno (em lote, pedidos do dia) e "Saiu para entrega" no `apps/entregador` (botão "Iniciar rota", que marca todos da rota do dia). Ok?
 - **P15 — Meta:** o `Purchase` da loja sai na **entrega** (como o catálogo, automático) ou no **pagamento aprovado**? Hoje sairia na entrega sem nenhuma mudança.
 - Já pendentes no briefing: domínio da loja; congelados durante a Black.
