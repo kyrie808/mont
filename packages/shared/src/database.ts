@@ -1948,9 +1948,11 @@ export type Database = {
           leva_junto: boolean
           nome_loja: string | null
           ordem: number
+          ordem_loja: number | null
           produto_id: string
           resumo: string | null
-          secao: string
+          secao: string | null
+          secao_id: string | null
           usa_estoque: boolean
           visivel: boolean
         }
@@ -1963,9 +1965,11 @@ export type Database = {
           leva_junto?: boolean
           nome_loja?: string | null
           ordem?: number
+          ordem_loja?: number | null
           produto_id: string
           resumo?: string | null
-          secao: string
+          secao?: string | null
+          secao_id?: string | null
           usa_estoque?: boolean
           visivel?: boolean
         }
@@ -1978,9 +1982,11 @@ export type Database = {
           leva_junto?: boolean
           nome_loja?: string | null
           ordem?: number
+          ordem_loja?: number | null
           produto_id?: string
           resumo?: string | null
-          secao?: string
+          secao?: string | null
+          secao_id?: string | null
           usa_estoque?: boolean
           visivel?: boolean
         }
@@ -2011,6 +2017,13 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: true
             referencedRelation: "vw_catalogo_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loja_vitrine_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "cat_secoes"
             referencedColumns: ["id"]
           },
         ]

@@ -13,7 +13,7 @@ import { diaMesSP, linkWhatsApp, reais } from '@/lib/formato'
 import { catalogoDa, resumirSacola, totalDeItens } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
-import type { ComboLoja, ProdutoLoja, Vitrine } from '@/lib/vitrine/tipos'
+import { ehCombo, type ComboLoja, type ProdutoLoja, type SecaoLoja, type Vitrine } from '@/lib/vitrine/tipos'
 import { PainelProduto } from './PainelProduto'
 
 interface LojaProps {
@@ -22,6 +22,8 @@ interface LojaProps {
 }
 
 const tituloSecao = 'font-titulo text-[26px] font-normal uppercase tracking-[0.5px]'
+// Selo do cadastro ("Mais vendido", "Oferta", "Queridinho").
+const seloClasse = 'rounded-full bg-areia px-2 py-0.5 text-[11px] leading-tight font-bold text-marrom'
 const botaoAdicionar =
     'h-11 cursor-pointer rounded-[22px] border-[1.5px] border-marrom bg-creme px-4 text-sm font-bold text-marrom'
 
@@ -67,14 +69,12 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         }
     }, [])
 
+    // Abas: os combos da campanha (se houver) e as seções da tela Catálogo do sistema interno.
     const secoes = useMemo(
-        () =>
-            [
-                { id: 'combos', rotulo: 'Combos da Black', tem: vitrine.combos.length > 0 },
-                { id: 'massa', rotulo: 'Massa', tem: vitrine.massa.length > 0 },
-                { id: 'doces', rotulo: 'Doces', tem: vitrine.doces.length > 0 },
-                { id: 'zero', rotulo: 'Zero', tem: vitrine.zero.length > 0 },
-            ].filter((s) => s.tem),
+        () => [
+            ...(vitrine.combos.length > 0 ? [{ id: 'combos', rotulo: 'Combos da Black' }] : []),
+            ...vitrine.secoes.map((s) => ({ id: s.id, rotulo: s.nome })),
+        ],
         [vitrine],
     )
 
@@ -194,12 +194,70 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                             <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
                         )}
                         <span className="font-titulo text-xl leading-none">{reais(p.preco)}</span>
+                        {p.selo && <span className={cn(seloClasse, 'self-center')}>{p.selo}</span>}
                     </span>
                 </span>
             </button>
             {controle(p)}
         </article>
     )
+
+    // Seção com poucos produtos: cartões com foto grande, preço e botão alinhados no pé.
+    const cartaoProduto = (p: ProdutoLoja, prioridade: boolean) => (
+        <article key={p.id} className="flex flex-col gap-1.5 rounded-2xl border border-linha bg-white p-2.5">
+            <button
+                type="button"
+                onClick={(e) => abrir(p, e)}
+                className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
+            >
+                <span className="relative">
+                    <Foto
+                        url={p.imagemUrl}
+                        alt=""
+                        largura={170}
+                        prioridade={prioridade}
+                        className="h-[120px] w-full rounded-xl"
+                    />
+                    {p.selo && <span className={cn(seloClasse, 'absolute top-2 left-2')}>{p.selo}</span>}
+                </span>
+                <span className="text-sm leading-tight font-bold">{p.nome}</span>
+                {p.chamada && <span className="text-xs leading-snug text-texto-suave">{p.chamada}</span>}
+            </button>
+            {/* Preço e botão alinhados no pé do card, mesmo com nomes de tamanhos diferentes. */}
+            <div className="mt-auto flex flex-col gap-1.5">
+                <div className="flex items-baseline gap-1.5">
+                    {p.precoDe !== null && (
+                        <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
+                    )}
+                    <span className="font-titulo text-[22px]">{reais(p.preco)}</span>
+                </div>
+                {controle(p, true)}
+            </div>
+        </article>
+    )
+
+    const secaoDaLoja = (s: SecaoLoja, primeira: boolean) => {
+        const combosDaSecao = s.itens.filter(ehCombo)
+        const avulsos = s.itens.filter((p) => !ehCombo(p))
+        return (
+            <section
+                key={s.id}
+                id={s.id}
+                className={cn('flex scroll-mt-16 flex-col px-4 pt-6', s.formato === 'cartoes' ? 'gap-3' : 'gap-1')}
+            >
+                <h2 className={cn(tituloSecao, s.formato === 'lista' && 'mb-1')}>{s.nome}</h2>
+                {combosDaSecao.length > 0 && <div className="flex flex-col gap-3">{combosDaSecao.map(cardCombo)}</div>}
+                {s.formato === 'cartoes' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Sem combos da campanha no topo, as 2 primeiras fotos da 1ª seção são o maior conteúdo da tela. */}
+                        {avulsos.map((p, i) => cartaoProduto(p, primeira && i < 2))}
+                    </div>
+                ) : (
+                    avulsos.map(linhaProduto)
+                )}
+            </section>
+        )
+    }
 
     const cardCombo = (c: ComboLoja) => (
         <article key={c.id} className="flex gap-3 rounded-2xl border border-linha bg-white p-3">
@@ -310,66 +368,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 </section>
             )}
 
-            {vitrine.massa.length > 0 && (
-                <section id="massa" className="flex scroll-mt-16 flex-col gap-3 px-4 pt-6">
-                    <h2 className={tituloSecao}>Massa de pão de queijo</h2>
-                    <span className="-mt-1.5 text-[13px] text-texto-suave">
-                        Queijo Canastra de verdade. Parmesão e Meia Cura.
-                    </span>
-                    <div className="grid grid-cols-2 gap-3">
-                        {vitrine.massa.map((p, i) => (
-                            <article
-                                key={p.id}
-                                className="flex flex-col gap-1.5 rounded-2xl border border-linha bg-white p-2.5"
-                            >
-                                <button
-                                    type="button"
-                                    onClick={(e) => abrir(p, e)}
-                                    className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
-                                >
-                                    <Foto
-                                        url={p.imagemUrl}
-                                        alt=""
-                                        largura={170}
-                                        prioridade={!hero && i < 2}
-                                        className="h-[120px] w-full rounded-xl"
-                                    />
-                                    <span className="text-sm leading-tight font-bold">{p.nome}</span>
-                                    {p.chamada && (
-                                        <span className="text-xs leading-snug text-texto-suave">{p.chamada}</span>
-                                    )}
-                                </button>
-                                {/* Preço e botão alinhados no pé do card, mesmo com nomes de tamanhos diferentes. */}
-                                <div className="mt-auto flex flex-col gap-1.5">
-                                    <div className="flex items-baseline gap-1.5">
-                                        {p.precoDe !== null && (
-                                            <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
-                                        )}
-                                        <span className="font-titulo text-[22px]">{reais(p.preco)}</span>
-                                    </div>
-                                    {controle(p, true)}
-                                </div>
-                            </article>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {vitrine.doces.length > 0 && (
-                <section id="doces" className="flex scroll-mt-16 flex-col gap-1 px-4 pt-6">
-                    <h2 className={cn(tituloSecao, 'mb-1')}>Doces Duas Irmãs</h2>
-                    <span className="mb-1 text-[13px] text-texto-suave">Potes de 680 g e 400 g · sabores conforme estoque</span>
-                    {vitrine.doces.map(linhaProduto)}
-                </section>
-            )}
-
-            {vitrine.zero.length > 0 && (
-                <section id="zero" className="flex scroll-mt-16 flex-col gap-1 px-4 pt-6">
-                    <h2 className={cn(tituloSecao, 'mb-1')}>Linha zero</h2>
-                    <span className="mb-1 text-[13px] text-texto-suave">Zero adição de açúcares. Doce do mesmo jeito.</span>
-                    {vitrine.zero.map(linhaProduto)}
-                </section>
-            )}
+            {vitrine.secoes.map((s, i) => secaoDaLoja(s, i === 0 && vitrine.combos.length === 0))}
 
             <footer className="mx-4 mt-7 flex flex-col gap-2.5 border-t border-linha pt-5 text-[13px] text-texto-suave">
                 <span>Entregamos no ABC e em São Paulo · frete pelo bairro.</span>

@@ -107,7 +107,14 @@ export function PainelProduto({ produto, naSacola, focarFechar, onFechar, onConf
                         className="h-[220px] shrink-0 rounded-xl"
                     />
 
-                    <h1 className="mt-1 text-[22px] font-bold">{produto.nome}</h1>
+                    <div className="mt-1 flex flex-col items-start gap-1.5">
+                        {produto.selo && (
+                            <span className="rounded-full bg-areia px-2 py-0.5 text-[11px] leading-tight font-bold text-marrom">
+                                {produto.selo}
+                            </span>
+                        )}
+                        <h1 className="text-[22px] font-bold">{produto.nome}</h1>
+                    </div>
 
                     <div className="flex items-baseline gap-2">
                         {produto.precoDe !== null && (
@@ -126,6 +133,39 @@ export function PainelProduto({ produto, naSacola, focarFechar, onFechar, onConf
                                 <li key={i}>{linha}</li>
                             ))}
                         </ul>
+                    )}
+
+                    {produto.beneficios.length > 0 && (
+                        <ul className="flex list-none flex-col gap-1.5 p-0 text-sm">
+                            {produto.beneficios.map((b, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 16 16"
+                                        className="mt-0.5 h-4 w-4 shrink-0 text-verde"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M3 8.5l3 3 7-7" />
+                                    </svg>
+                                    {b}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {produto.preparo.length > 0 && (
+                        <section className="mt-2 flex flex-col gap-1.5">
+                            <h2 className="text-base font-bold">Modo de preparo</h2>
+                            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm marker:text-texto-suave">
+                                {produto.preparo.map((passo, i) => (
+                                    <li key={i}>{passo}</li>
+                                ))}
+                            </ul>
+                        </section>
                     )}
                 </div>
 

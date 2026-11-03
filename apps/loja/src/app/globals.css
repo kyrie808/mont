@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Paleta e fontes do wireframe aprovado (docs/loja-black/wireframe/LEIA-ME.md). */
+/* Paleta e fontes do wireframe aprovado (docs/loja/wireframe/LEIA-ME.md). */
 @theme {
     --color-creme: #FAF7F2;          /* fundo */
     --color-marrom: #2C1810;         /* texto, botões escuros */
