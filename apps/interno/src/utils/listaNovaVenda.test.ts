@@ -87,14 +87,58 @@ describe('montarGrupos — Mais vendidos', () => {
     })
 
     it(`limita a ${LIMITE_MAIS_VENDIDOS} e pula quem não está na lista (inativo ou fora de venda)`, () => {
-        const produtos = [baldinho, balde, palito, chipa, pdq25, palito2, cocada]
-        const ranking = ['sumiu', 'baldinho', 'palito', 'balde', 'chipa', 'pdq25', 'cocada', 'palito2']
+        const nono = p('nono', 'Nono do ranking')
+        const produtos = [baldinho, balde, palito, chipa, pdq25, palito2, cocada, avulso, nono]
+        const ranking = ['sumiu', 'baldinho', 'palito', 'balde', 'chipa', 'pdq25', 'cocada', 'palito2', 'avulso', 'nono']
         const grupos = montarGrupos(produtos, secoes, ranking)
-        expect(grupos[0].produtos.map((x) => x.id)).toEqual(['baldinho', 'palito', 'balde', 'chipa', 'pdq25', 'cocada'])
+        expect(grupos[0].produtos.map((x) => x.id)).toEqual(['baldinho', 'palito', 'balde', 'chipa', 'pdq25', 'cocada', 'palito2', 'avulso'])
     })
 
     it('sem ranking (carregando ou sem vendas), não mostra o grupo', () => {
         expect(montarGrupos([baldinho], secoes, []).map((g) => g.id)).toEqual(['resfriados'])
+    })
+
+    it('mostra até 8 no total', () => {
+        expect(LIMITE_MAIS_VENDIDOS).toBe(8)
+    })
+})
+
+describe('montarGrupos — fixados em Mais vendidos (pedido do Gilmar)', () => {
+    const brigadeiro = p('brigadeiro', 'Brigadeiro de Colher Zero 400g', { secaoId: 'doces', ordemVitrine: 9, fixoMaisVendidos: true })
+    const doceLeite = p('doce-leite', 'Doce de Leite Zero 400g', { secaoId: 'doces', ordemVitrine: 2, fixoMaisVendidos: true })
+
+    it('fixados vêm primeiro, um ao lado do outro (pelo nome), e o ranking completa depois', () => {
+        const grupos = montarGrupos([baldinho, palito, doceLeite, brigadeiro], secoes, ['palito', 'baldinho'])
+        expect(grupos[0].produtos.map((x) => x.id)).toEqual(['brigadeiro', 'doce-leite', 'palito', 'baldinho'])
+    })
+
+    it('não repete: fixado que também está no ranking aparece uma vez só, na posição de fixado', () => {
+        const grupos = montarGrupos([baldinho, palito, doceLeite, brigadeiro], secoes, ['doce-leite', 'palito', 'brigadeiro'])
+        expect(grupos[0].produtos.map((x) => x.id)).toEqual(['brigadeiro', 'doce-leite', 'palito'])
+    })
+
+    it('até 8 no total, contando os fixados', () => {
+        const produtos = [brigadeiro, doceLeite, baldinho, balde, palito, chipa, pdq25, palito2, cocada, avulso]
+        const ranking = ['baldinho', 'balde', 'palito', 'chipa', 'pdq25', 'palito2', 'cocada', 'avulso']
+        const ids = montarGrupos(produtos, secoes, ranking)[0].produtos.map((x) => x.id)
+        expect(ids).toEqual(['brigadeiro', 'doce-leite', 'baldinho', 'balde', 'palito', 'chipa', 'pdq25', 'palito2'])
+    })
+
+    it('aparece mesmo sem nenhuma venda nos 90 dias (ranking vazio)', () => {
+        const grupos = montarGrupos([brigadeiro, baldinho], secoes, [])
+        expect(grupos[0].id).toBe(ID_MAIS_VENDIDOS)
+        expect(grupos[0].produtos.map((x) => x.id)).toEqual(['brigadeiro'])
+    })
+
+    it('fixado inativo não aparece', () => {
+        const desligado = { ...brigadeiro, ativo: false }
+        const grupos = montarGrupos([desligado, baldinho], secoes, ['baldinho'])
+        expect(grupos[0].produtos.map((x) => x.id)).toEqual(['baldinho'])
+    })
+
+    it('continua também na seção dele', () => {
+        const grupos = montarGrupos([brigadeiro, doceLeite], secoes, [])
+        expect(grupos.find((g) => g.id === 'doces')?.produtos.map((x) => x.id)).toEqual(['doce-leite', 'brigadeiro'])
     })
 })
 

@@ -34,7 +34,7 @@ export class ProdutoService {
     async getAll(includeInactive: boolean = false): Promise<DomainProduto[]> {
         let query = supabase
             .from('produtos')
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, fixo_mais_vendidos')
             .order('nome')
 
         if (!includeInactive) {
@@ -67,7 +67,7 @@ export class ProdutoService {
     async getById(id: string): Promise<DomainProduto | null> {
         const { data, error } = await supabase
             .from('produtos')
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, fixo_mais_vendidos, sis_imagens_produto(url)')
             .eq('id', id)
             .single()
 
@@ -104,13 +104,14 @@ export class ProdutoService {
             visivel_catalogo: data.visivelCatalogo ?? true,
             eh_combo: data.ehCombo ?? false,
             secao_id: data.secaoId ?? null,
-            beneficios: data.beneficios ?? null
+            beneficios: data.beneficios ?? null,
+            fixo_mais_vendidos: data.fixoMaisVendidos ?? false
         }
 
         const { data: created, error } = await supabase
             .from('produtos')
             .insert(dbInsert)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, fixo_mais_vendidos, sis_imagens_produto(url)')
             .single()
 
         if (error) {
@@ -147,12 +148,13 @@ export class ProdutoService {
         if (data.ehCombo !== undefined) dbUpdate.eh_combo = data.ehCombo
         if (data.secaoId !== undefined) dbUpdate.secao_id = data.secaoId
         if (data.beneficios !== undefined) dbUpdate.beneficios = data.beneficios
+        if (data.fixoMaisVendidos !== undefined) dbUpdate.fixo_mais_vendidos = data.fixoMaisVendidos
 
         const { data: updated, error } = await supabase
             .from('produtos')
             .update(dbUpdate)
             .eq('id', id)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, fixo_mais_vendidos, sis_imagens_produto(url)')
             .single()
 
         if (error) {
@@ -168,7 +170,7 @@ export class ProdutoService {
             .from('produtos')
             .update({ estoque_atual: quantidade })
             .eq('id', id)
-            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, sis_imagens_produto(url)')
+            .select('id, nome, apelido, subtitulo, codigo, preco, custo, preco_ancoragem, unidade, estoque_atual, estoque_minimo, ativo, criado_em, atualizado_em, categoria, descricao, destaque, selo, slug, visivel_catalogo, instrucoes_preparo, peso_kg, eh_combo, secao_id, ordem_vitrine, beneficios, fixo_mais_vendidos, sis_imagens_produto(url)')
             .single()
 
         if (error) {

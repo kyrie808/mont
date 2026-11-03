@@ -31,6 +31,7 @@ export interface ProdutoFormValues {
     visivelCatalogo: boolean
     ehCombo: boolean
     secaoId: string
+    fixoMaisVendidos: boolean
 }
 
 export interface ProdutoFormSetters {
@@ -54,7 +55,14 @@ export interface ProdutoFormSetters {
     setVisivelCatalogo: (v: boolean) => void
     setEhCombo: (v: boolean) => void
     setSecaoId: (v: string) => void
+    setFixoMaisVendidos: (v: boolean) => void
 }
+
+/** "Sempre em Mais vendidos" da Nova Venda: os fixados vêm primeiro e o ranking completa até 8. */
+const FIXO_MAIS_VENDIDOS_OPTIONS = [
+    { label: 'Não — só se estiver entre os mais vendidos', value: 'false' },
+    { label: 'Sim — sempre no topo da Nova Venda', value: 'true' },
+]
 
 interface ComboPicker {
     componenteId: string
@@ -212,6 +220,13 @@ export function ProdutoFormFields({
                             onChange={(e) => setters.setEstoqueMinimo(e.target.value)}
                         />
                     )}
+
+                    <Select
+                        label="Sempre em Mais vendidos"
+                        value={values.fixoMaisVendidos ? 'true' : 'false'}
+                        onChange={(e) => setters.setFixoMaisVendidos(e.target.value === 'true')}
+                        options={FIXO_MAIS_VENDIDOS_OPTIONS}
+                    />
 
                     {/* Kit / Combo */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
