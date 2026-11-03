@@ -445,7 +445,7 @@ export function ProdutoFormFields({
                                     maxLength={160}
                                 />
                             )}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <Select
                                     label="Seção na loja"
                                     value={loja.valores.secaoId}
