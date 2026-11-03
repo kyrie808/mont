@@ -90,6 +90,8 @@ export interface DomainProduto {
     ehCombo?: boolean
     // Seção da vitrine (aba do catálogo) — FK cat_secoes
     secaoId?: string | null
+    // Ordem dentro da seção (arrastada na tela Catálogo)
+    ordemVitrine?: number
 }
 
 export interface DomainItemVenda {

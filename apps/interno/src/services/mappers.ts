@@ -149,7 +149,8 @@ export const toDomainProduto = (dbProduto: ProdutoRowWithImages): DomainProduto 
         beneficios: dbProduto.beneficios ?? null,
         visivelCatalogo: dbProduto.visivel_catalogo ?? true,
         ehCombo: dbProduto.eh_combo ?? false,
-        secaoId: dbProduto.secao_id ?? null
+        secaoId: dbProduto.secao_id ?? null,
+        ordemVitrine: dbProduto.ordem_vitrine
     }
 }
 
