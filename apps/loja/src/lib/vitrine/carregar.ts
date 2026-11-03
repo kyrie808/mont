@@ -69,16 +69,16 @@ export async function carregarVitrine(): Promise<Vitrine> {
         cliente
             .from('produtos')
             .select(
-                'id, codigo, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, visivel_catalogo, secao_id, ordem_vitrine, selo, beneficios, instrucoes_preparo',
+                'id, codigo, nome, slug, subtitulo, descricao, preco, preco_ancoragem, estoque_atual, eh_combo, visivel_catalogo, secao_id, ordem_vitrine, selo, beneficios, instrucoes_preparo',
             )
             .eq('ativo', true),
         cliente
             .from('loja_vitrine')
             .select(
-                'produto_id, secao_id, ordem_loja, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, frase_card',
+                'produto_id, secao_id, ordem_loja, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, frase_card, usar_ancoragem',
             )
             .eq('visivel', true),
-        cliente.from('cat_secoes').select('id, nome, slug').eq('ativa', true).order('ordem'),
+        cliente.from('cat_secoes').select('id, nome, slug, descricao').eq('ativa', true).order('ordem'),
     ])
     if (produtosRes.error) falha('os produtos', produtosRes.error.message)
     if (vitrineRes.error) falha('a vitrine', vitrineRes.error.message)

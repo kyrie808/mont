@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { Button, Input, Select, Badge, Tabs, TabsList, TabsTrigger } from '../../ui'
 import { formatCurrency } from '@mont/shared'
+import { AVISO_ANCORAGEM, SIM_NAO, type AbaLojaProps, type AbaProduto } from './abaLoja'
 
 // Campos compartilhados pelos modais de Criar e Editar produto. O estado e os handlers
 // continuam na página (Produtos.tsx); aqui só fica o JSX (antes duplicado). Cores cruas
@@ -80,6 +81,8 @@ interface ProdutoFormFieldsProps {
     produtoNome: (id: string) => string
     /** Bloco de imagem (só no modo edit). */
     imageSlot?: ReactNode
+    /** Aba "Loja" (só no modo edit). */
+    loja?: AbaLojaProps
 }
 
 const CATEGORIA_OPTIONS = [
@@ -119,17 +122,19 @@ export function ProdutoFormFields({
     onToggleBrinde,
     produtoNome,
     imageSlot,
+    loja,
 }: ProdutoFormFieldsProps) {
     const isEdit = mode === 'edit'
     const datalistId = `variacoes-sugestoes-${mode}`
-    const [aba, setAba] = useState<'sistema' | 'catalogo'>('sistema')
+    const [aba, setAba] = useState<AbaProduto>('sistema')
 
     return (
         <div className="space-y-4">
-            <Tabs value={aba} onValueChange={(v) => setAba(v as 'sistema' | 'catalogo')}>
+            <Tabs value={aba} onValueChange={(v) => setAba(v as AbaProduto)}>
                 <TabsList>
                     <TabsTrigger value="sistema">Sistema</TabsTrigger>
                     <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
+                    {loja && <TabsTrigger value="loja">Loja</TabsTrigger>}
                 </TabsList>
             </Tabs>
 
@@ -404,6 +409,104 @@ export function ProdutoFormFields({
                     />
 
                     {imageSlot}
+                </div>
+            )}
+
+            {/* ───────────── ABA LOJA ───────────── */}
+            {aba === 'loja' && loja && (
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Tudo aqui é opcional: vazio vale o cadastro. Salva junto com o produto.
+                    </p>
+                    {loja.carregando ? (
+                        <p className="text-sm text-muted-foreground">Carregando…</p>
+                    ) : (
+                        <>
+                            <Input
+                                label="Nome na loja"
+                                value={loja.valores.nomeLoja}
+                                onChange={(e) => loja.alterar({ nomeLoja: e.target.value })}
+                                placeholder={values.nome}
+                                maxLength={120}
+                            />
+                            <Input
+                                label="Frase do card"
+                                value={loja.valores.fraseCard}
+                                onChange={(e) => loja.alterar({ fraseCard: e.target.value })}
+                                placeholder="Ex.: Rende pra família toda."
+                                maxLength={80}
+                                helperText="Aparece sob o nome no card. Uma linha, até 80 caracteres."
+                            />
+                            {values.ehCombo && (
+                                <Input
+                                    label="Resumo do combo"
+                                    value={loja.valores.resumo}
+                                    onChange={(e) => loja.alterar({ resumo: e.target.value })}
+                                    maxLength={160}
+                                />
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <Select
+                                    label="Seção na loja"
+                                    value={loja.valores.secaoId}
+                                    onChange={(e) => loja.alterar({ secaoId: e.target.value })}
+                                    options={[{ label: 'Igual ao cadastro', value: '' }, ...secaoOptions]}
+                                />
+                                <Input
+                                    label="Ordem na loja"
+                                    type="number"
+                                    min={0}
+                                    value={loja.valores.ordemLoja}
+                                    onChange={(e) => loja.alterar({ ordemLoja: e.target.value })}
+                                    placeholder="Igual ao Catálogo"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Select
+                                    label="Esgotado agora"
+                                    value={String(loja.valores.esgotado)}
+                                    onChange={(e) => loja.alterar({ esgotado: e.target.value === 'true' })}
+                                    options={SIM_NAO}
+                                />
+                                <Select
+                                    label="Controlar pelo estoque"
+                                    value={String(loja.valores.usaEstoque)}
+                                    onChange={(e) => loja.alterar({ usaEstoque: e.target.value === 'true' })}
+                                    options={SIM_NAO}
+                                />
+                            </div>
+                            {values.ehCombo ? (
+                                <Select
+                                    label="Destaque no topo (campanha)"
+                                    value={String(loja.valores.destaqueHero)}
+                                    onChange={(e) => loja.alterar({ destaqueHero: e.target.value === 'true' })}
+                                    options={SIM_NAO}
+                                />
+                            ) : (
+                                <Select
+                                    label="Leva junto? (sugestão na sacola)"
+                                    value={String(loja.valores.levaJunto)}
+                                    onChange={(e) => loja.alterar({ levaJunto: e.target.value === 'true' })}
+                                    options={SIM_NAO}
+                                />
+                            )}
+                            <div className="space-y-2">
+                                <Select
+                                    label="Mostrar a ancoragem riscada"
+                                    value={String(loja.valores.usarAncoragem)}
+                                    onChange={(e) => loja.alterar({ usarAncoragem: e.target.value === 'true' })}
+                                    options={SIM_NAO}
+                                    disabled={!values.precoAncoragem && !loja.valores.usarAncoragem}
+                                />
+                                <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning-strong">
+                                    {values.precoAncoragem
+                                        ? `Ancoragem do cadastro: ${formatCurrency(Number(values.precoAncoragem))}. ${AVISO_ANCORAGEM}`
+                                        : 'Sem preço de ancoragem no cadastro (aba Catálogo).'}{' '}
+                                    Só vale fora de campanha; na campanha, o riscado é o preço normal.
+                                </p>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

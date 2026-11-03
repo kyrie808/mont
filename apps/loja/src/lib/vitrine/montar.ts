@@ -15,6 +15,7 @@ export interface LinhaProduto {
     subtitulo: string | null
     descricao: string | null
     preco: number
+    preco_ancoragem: number | null
     estoque_atual: number | null
     eh_combo: boolean
     visivel_catalogo: boolean
@@ -37,12 +38,14 @@ export interface LinhaVitrine {
     nome_loja: string | null
     resumo: string | null
     frase_card: string | null
+    usar_ancoragem: boolean
 }
 
 export interface LinhaSecao {
     id: string
     nome: string
     slug: string
+    descricao: string | null
 }
 
 export interface PrecoCampanha {
@@ -142,6 +145,14 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
     const porOrdem = (a: LinhaProduto, b: LinhaProduto) =>
         ordem(a) - ordem(b) || a.nome.localeCompare(b.nome, 'pt-BR')
 
+    // "De/por" só com preço já praticado (decisão de 03/11): na campanha, o preço normal do cadastro;
+    // fora dela, a ancoragem do cadastro só quando ligada na aba "Loja" do produto.
+    const precoRiscado = (p: LinhaProduto, preco: PrecoCampanha | undefined): number | null => {
+        if (preco) return p.preco > preco.pix ? p.preco : null
+        const ancoragem = complemento.get(p.id)?.usar_ancoragem ? p.preco_ancoragem : null
+        return ancoragem !== null && ancoragem > p.preco ? ancoragem : null
+    }
+
     const produtoDa = (p: LinhaProduto): ProdutoLoja => {
         const preco = d.precos.get(p.id)
         return {
@@ -157,8 +168,7 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
             beneficios: linhas(p.beneficios),
             preparo: linhas(p.instrucoes_preparo),
             preco: preco ? preco.pix : p.preco,
-            // Riscado só na campanha, e só com o preço normal (já praticado). Fora dela, sem "de/por" (decisão de 03/11).
-            precoDe: preco && p.preco > preco.pix ? p.preco : null,
+            precoDe: precoRiscado(p, preco),
             precoCredito: preco ? preco.credito : null,
             disponivel: disponivel(p.id),
         }
@@ -217,8 +227,8 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
             precoDe: null,
             disponivel: base.disponivel && fixos.every((f) => disponivel(f.produtoId)),
             resumo: complemento.get(p.id)?.resumo ?? null,
-            // "Separado" só na campanha (âncora aprovada em loja_precos).
-            ancora: preco ? preco.ancora : null,
+            // "Separado": na campanha, a âncora aprovada em loja_precos; fora dela, a ancoragem só se ligada.
+            ancora: preco ? preco.ancora : base.precoDe,
             fixos,
             grupos,
             montavel,
@@ -240,13 +250,14 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
         const chave = escolhida && ativas.has(escolhida) ? escolhida : SECAO_SEM_SECAO.id
         porSecao.set(chave, [...(porSecao.get(chave) ?? []), p])
     }
-    const secao = (id: string, nome: string, ancora: string): SecaoLoja[] => {
+    const secao = (id: string, nome: string, descricao: string | null, ancora: string): SecaoLoja[] => {
         const doGrupo = (porSecao.get(id) ?? []).sort(porOrdem)
         if (doGrupo.length === 0) return []
         return [
             {
                 id: ancora,
                 nome,
+                descricao,
                 // Combos da seção sempre vão em cartão próprio; o formato vale para os avulsos.
                 formato: doGrupo.filter((p) => !p.eh_combo).length <= LIMITE_CARTOES ? 'cartoes' : 'lista',
                 itens: doGrupo.map(itemDa),
@@ -254,8 +265,8 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
         ]
     }
     const secoes = [
-        ...d.secoes.flatMap((s) => secao(s.id, s.nome, `secao-${s.slug}`)),
-        ...secao(SECAO_SEM_SECAO.id, SECAO_SEM_SECAO.nome, SECAO_SEM_SECAO.id),
+        ...d.secoes.flatMap((s) => secao(s.id, s.nome, s.descricao, `secao-${s.slug}`)),
+        ...secao(SECAO_SEM_SECAO.id, SECAO_SEM_SECAO.nome, null, SECAO_SEM_SECAO.id),
     ]
 
     const levaJuntoLinha = visiveis.find((p) => !p.eh_combo && complemento.get(p.id)?.leva_junto)

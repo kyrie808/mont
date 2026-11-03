@@ -18,7 +18,7 @@ export interface ProdutoLoja {
     preparo: string[]
     /** Preço que vale agora: Pix da campanha, ou produtos.preco fora dela. */
     preco: number
-    /** Preço riscado ("de"): só durante a campanha, e é o preço normal do cadastro. Fora dela, NULL. */
+    /** Preço riscado ("de"): na campanha, o preço normal do cadastro; fora dela, a ancoragem só se ligada na aba "Loja". */
     precoDe: number | null
     /** Crédito 1x da tabela aprovada. Só durante a campanha. */
     precoCredito: number | null
@@ -72,6 +72,8 @@ export interface SecaoLoja {
     /** Âncora na página (#id). */
     id: string
     nome: string
+    /** Frase sob o título (cat_secoes.descricao). */
+    descricao: string | null
     formato: FormatoSecao
     itens: ProdutoLoja[]
 }

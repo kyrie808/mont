@@ -24,6 +24,8 @@ import { useProdutos } from '../hooks/useProdutos'
 import { useToast } from '../components/ui/Toast'
 import { formatCurrency } from '@mont/shared'
 import { produtoService } from '../services/produtoService'
+import { lojaProdutoService } from '../services/lojaProdutoService'
+import { LOJA_PRODUTO_PADRAO, lojaProdutoSchema, type LojaProdutoForm } from '../schemas/lojaProduto'
 import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domain'
 import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFields'
 import { ProdutoFormDesktop } from '../components/features/produtos/ProdutoFormDesktop'
@@ -130,6 +132,11 @@ export function Produtos() {
     const [editSecaoId, setEditSecaoId] = useState('')
     const [editComponentes, setEditComponentes] = useState<{ componenteId: string; quantidade: number; brinde: boolean }[]>([])
     const [isUpdating, setIsUpdating] = useState(false)
+    // Aba "Loja" (complemento da vitrine da loja). Sem carregar, a aba não aparece: salvar
+    // às cegas apagaria o que já está gravado.
+    const [editLoja, setEditLoja] = useState<LojaProdutoForm>(LOJA_PRODUTO_PADRAO)
+    const [editLojaOriginal, setEditLojaOriginal] = useState<LojaProdutoForm>(LOJA_PRODUTO_PADRAO)
+    const [estadoLoja, setEstadoLoja] = useState<'carregando' | 'pronta' | 'erro'>('carregando')
 
     // Picker de componentes (compartilhado — um modal aberto por vez)
     const [pickComponenteId, setPickComponenteId] = useState('')
@@ -177,6 +184,21 @@ export function Produtos() {
         setEditSecaoId(produto.secaoId ?? '')
         setPickComponenteId('')
         setPickQuantidade('1')
+        // Carrega a aba "Loja"
+        setEditLoja(LOJA_PRODUTO_PADRAO)
+        setEditLojaOriginal(LOJA_PRODUTO_PADRAO)
+        setEstadoLoja('carregando')
+        lojaProdutoService.obter(produto.id)
+            .then(loja => {
+                setEditLoja(loja)
+                setEditLojaOriginal(loja)
+                setEstadoLoja('pronta')
+            })
+            .catch(err => {
+                console.error('Erro ao carregar a aba Loja:', err)
+                setEstadoLoja('erro')
+                toast.error('Não foi possível carregar a aba Loja')
+            })
         // Carrega a composição existente (se for combo)
         setEditComponentes([])
         if (produto.ehCombo) {
@@ -312,6 +334,16 @@ export function Produtos() {
             return
         }
 
+        // Valida a aba "Loja" antes de gravar qualquer coisa (não salva o produto pela metade).
+        const lojaMudou = estadoLoja === 'pronta' && JSON.stringify(editLoja) !== JSON.stringify(editLojaOriginal)
+        if (lojaMudou) {
+            const lida = lojaProdutoSchema.safeParse(editLoja)
+            if (!lida.success) {
+                toast.error(lida.error.issues[0]?.message ?? 'Confira a aba Loja')
+                return
+            }
+        }
+
         setIsUpdating(true)
 
         const data: UpdateProduto = {
@@ -348,6 +380,7 @@ export function Produtos() {
             await updateProduto(editingProduto.id, data)
             // Sincroniza a composição: lista quando combo, vazio (limpa) quando não-combo
             await produtoService.replaceComponentes(editingProduto.id, editEhCombo ? editComponentes : [])
+            if (lojaMudou) await lojaProdutoService.salvar(editingProduto.id, editLoja)
             toast.success('Produto atualizado!')
             handleCloseEdit()
         } catch (e: unknown) {
@@ -657,6 +690,11 @@ export function Produtos() {
                                 onRemoveComponente={(id) => removeComponente('edit', id)}
                                 onToggleBrinde={(id) => toggleBrinde('edit', id)}
                                 produtoNome={produtoNome}
+                                loja={estadoLoja === 'erro' ? undefined : {
+                                    valores: editLoja,
+                                    alterar: (patch) => setEditLoja(atual => ({ ...atual, ...patch })),
+                                    carregando: estadoLoja === 'carregando',
+                                }}
                                 imageSlot={
                                     <div>
                                         <label className="block text-sm font-medium mb-1">

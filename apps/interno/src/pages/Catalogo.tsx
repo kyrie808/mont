@@ -90,18 +90,18 @@ export function Catalogo() {
         setFormOpen(true)
     }
 
-    const handleFormSubmit = async (values: { nome: string; ativa: boolean }) => {
+    const handleFormSubmit = async (values: { nome: string; ativa: boolean; descricao: string }) => {
         try {
             if (editTarget) {
                 await updateSecao(editTarget.id, values)
                 toast.success('Seção atualizada')
             } else {
-                const nova = await createSecao({ nome: values.nome })
+                const nova = await createSecao({ nome: values.nome, descricao: values.descricao })
                 setSelectedId(nova.id)
                 toast.success('Seção criada')
             }
         } catch (e) {
-            toast.error('Erro ao salvar seção')
+            toast.error(e instanceof Error && e.message.startsWith('Descrição') ? e.message : 'Erro ao salvar seção')
             throw e
         }
     }

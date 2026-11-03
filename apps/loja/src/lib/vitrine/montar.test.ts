@@ -4,8 +4,8 @@ import { ehCombo } from './tipos'
 
 // Parte A da paridade: a loja monta a vitrine pelo cadastro do sistema interno.
 
-const CONGELADOS = { id: 'sec-cong', nome: 'Congelados', slug: 'congelados' }
-const RESFRIADOS = { id: 'sec-resf', nome: 'Resfriados', slug: 'resfriados' }
+const CONGELADOS = { id: 'sec-cong', nome: 'Congelados', slug: 'congelados', descricao: null }
+const RESFRIADOS = { id: 'sec-resf', nome: 'Resfriados', slug: 'resfriados', descricao: 'Queijo Canastra de verdade.' }
 
 function produto(id: string, extra: Partial<LinhaProduto> = {}): LinhaProduto {
     return {
@@ -16,6 +16,7 @@ function produto(id: string, extra: Partial<LinhaProduto> = {}): LinhaProduto {
         subtitulo: null,
         descricao: null,
         preco: 30,
+        preco_ancoragem: null,
         estoque_atual: 0,
         eh_combo: false,
         visivel_catalogo: true,
@@ -40,6 +41,7 @@ function linhaVitrine(produtoId: string, extra: Partial<LinhaVitrine> = {}): Lin
         nome_loja: null,
         resumo: null,
         frase_card: null,
+        usar_ancoragem: false,
         ...extra,
     }
 }
@@ -125,9 +127,30 @@ describe('vitrine pelo cadastro', () => {
         expect(disp).toEqual({ chave: false, estoque: false, livre: true, tem: true })
     })
 
-    it('fora de campanha não há preço riscado (a ancoragem do cadastro não vai para a loja)', () => {
-        const p = montarVitrine(dados({ produtos: [produto('balde', { preco: 75 })] })).secoes[0]!.itens[0]!
+    it('fora de campanha não há preço riscado, mesmo com ancoragem no cadastro', () => {
+        const p = montarVitrine(dados({ produtos: [produto('balde', { preco: 75, preco_ancoragem: 99 })] })).secoes[0]!
+            .itens[0]!
         expect([p.preco, p.precoDe, p.precoCredito]).toEqual([75, null, null])
+    })
+
+    it('ancoragem só quando ligada na aba "Loja" do produto (e só se for maior que o preço)', () => {
+        const d = dados({
+            produtos: [
+                produto('a', { preco: 75, preco_ancoragem: 85 }),
+                produto('b', { preco: 30, preco_ancoragem: 30 }),
+                produto('c', { preco: 40, preco_ancoragem: null }),
+            ],
+            vitrine: ['a', 'b', 'c'].map((id) => linhaVitrine(id, { usar_ancoragem: true })),
+        })
+        expect(montarVitrine(d).secoes[0]!.itens.map((p) => p.precoDe)).toEqual([85, null, null])
+    })
+
+    it('descrição da seção vem da tela Catálogo', () => {
+        const d = dados({ produtos: [produto('massa', { secao_id: RESFRIADOS.id }), produto('chipa')] })
+        expect(montarVitrine(d).secoes.map((s) => [s.nome, s.descricao])).toEqual([
+            ['Congelados', null],
+            ['Resfriados', 'Queijo Canastra de verdade.'],
+        ])
     })
 
     it('na campanha, riscado = preço normal do cadastro (75 → 65); sem desconto, sem riscado', () => {

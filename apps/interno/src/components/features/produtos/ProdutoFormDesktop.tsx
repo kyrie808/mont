@@ -3,6 +3,7 @@ import { X, ChevronDown } from 'lucide-react'
 import { Button, Badge, Tabs, TabsList, TabsTrigger } from '../../ui'
 import { cn, formatCurrency } from '@mont/shared'
 import type { ProdutoFormValues, ProdutoFormSetters } from './ProdutoFormFields'
+import { AVISO_ANCORAGEM, SIM_NAO, type AbaLojaProps, type AbaProduto } from './abaLoja'
 
 // Versão DESKTOP (≥lg) do formulário de produto — tokenizada e DENSA (grid de 4 colunas)
 // pra caber em ~85vh SEM scroll. Mesma interface de props do ProdutoFormFields (mobile,
@@ -71,23 +72,40 @@ interface Props {
     onToggleBrinde: (componenteId: string) => void
     produtoNome: (id: string) => string
     imageSlot?: ReactNode
+    /** Aba "Loja" (só no modo edit). */
+    loja?: AbaLojaProps
 }
 
 export function ProdutoFormDesktop({
     mode, values, setters, custoEfetivo, margem, showMargem,
     componentes, componenteOptions, secaoOptions, pick,
-    onAddComponente, onRemoveComponente, onToggleBrinde, produtoNome, imageSlot,
+    onAddComponente, onRemoveComponente, onToggleBrinde, produtoNome, imageSlot, loja,
 }: Props) {
     const isEdit = mode === 'edit'
     const datalistId = `variacoes-sugestoes-desktop-${mode}`
-    const [aba, setAba] = useState<'sistema' | 'catalogo'>('sistema')
+    const [aba, setAba] = useState<AbaProduto>('sistema')
+
+    // Sim/Não da aba Loja (mesmo padrão dos selects da aba Catálogo).
+    const simNao = (valor: boolean, alterar: (v: boolean) => void, disabled = false) => (
+        <SelectWrap>
+            <select
+                value={String(valor)}
+                onChange={(e) => alterar(e.target.value === 'true')}
+                className={selectCls}
+                disabled={disabled}
+            >
+                {SIM_NAO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+        </SelectWrap>
+    )
 
     return (
         <div className="space-y-4">
-            <Tabs value={aba} onValueChange={(v) => setAba(v as 'sistema' | 'catalogo')}>
+            <Tabs value={aba} onValueChange={(v) => setAba(v as AbaProduto)}>
                 <TabsList>
                     <TabsTrigger value="sistema">Sistema</TabsTrigger>
                     <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
+                    {loja && <TabsTrigger value="loja">Loja</TabsTrigger>}
                 </TabsList>
             </Tabs>
 
@@ -375,6 +393,101 @@ export function ProdutoFormDesktop({
                     </Field>
 
                     {imageSlot && <div className="col-span-4">{imageSlot}</div>}
+                </div>
+            )}
+
+            {/* ───────────── ABA LOJA ───────────── */}
+            {aba === 'loja' && loja && (
+                <div className="grid grid-cols-4 gap-x-4 gap-y-3">
+                    <p className="col-span-4 text-sm text-muted-foreground">
+                        Tudo aqui é opcional: vazio vale o cadastro. Salva junto com o produto.
+                    </p>
+                    {loja.carregando ? (
+                        <p className="col-span-4 text-sm text-muted-foreground">Carregando…</p>
+                    ) : (
+                        <>
+                            <Field label="Nome na loja" className="col-span-2">
+                                <input
+                                    value={loja.valores.nomeLoja}
+                                    onChange={(e) => loja.alterar({ nomeLoja: e.target.value })}
+                                    className={cn(inputBase, fieldH)}
+                                    placeholder={values.nome}
+                                    maxLength={120}
+                                />
+                            </Field>
+                            <Field label={`Frase do card (${loja.valores.fraseCard.length}/80)`} className="col-span-2">
+                                <input
+                                    value={loja.valores.fraseCard}
+                                    onChange={(e) => loja.alterar({ fraseCard: e.target.value })}
+                                    className={cn(inputBase, fieldH)}
+                                    placeholder="Ex.: Rende pra família toda."
+                                    maxLength={80}
+                                />
+                            </Field>
+                            {values.ehCombo && (
+                                <Field label="Resumo do combo" className="col-span-4">
+                                    <input
+                                        value={loja.valores.resumo}
+                                        onChange={(e) => loja.alterar({ resumo: e.target.value })}
+                                        className={cn(inputBase, fieldH)}
+                                        maxLength={160}
+                                    />
+                                </Field>
+                            )}
+
+                            <Field label="Seção na loja">
+                                <SelectWrap>
+                                    <select
+                                        value={loja.valores.secaoId}
+                                        onChange={(e) => loja.alterar({ secaoId: e.target.value })}
+                                        className={selectCls}
+                                    >
+                                        <option value="">Igual ao cadastro</option>
+                                        {secaoOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    </select>
+                                </SelectWrap>
+                            </Field>
+                            <Field label="Ordem na loja">
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={loja.valores.ordemLoja}
+                                    onChange={(e) => loja.alterar({ ordemLoja: e.target.value })}
+                                    className={cn(inputBase, fieldH, 'tabular-nums')}
+                                    placeholder="Igual ao Catálogo"
+                                />
+                            </Field>
+                            <Field label="Esgotado agora">
+                                {simNao(loja.valores.esgotado, (v) => loja.alterar({ esgotado: v }))}
+                            </Field>
+                            <Field label="Controlar pelo estoque">
+                                {simNao(loja.valores.usaEstoque, (v) => loja.alterar({ usaEstoque: v }))}
+                            </Field>
+
+                            {values.ehCombo ? (
+                                <Field label="Destaque no topo (campanha)">
+                                    {simNao(loja.valores.destaqueHero, (v) => loja.alterar({ destaqueHero: v }))}
+                                </Field>
+                            ) : (
+                                <Field label="Leva junto? (sacola)">
+                                    {simNao(loja.valores.levaJunto, (v) => loja.alterar({ levaJunto: v }))}
+                                </Field>
+                            )}
+                            <Field label="Mostrar a ancoragem riscada">
+                                {simNao(
+                                    loja.valores.usarAncoragem,
+                                    (v) => loja.alterar({ usarAncoragem: v }),
+                                    !values.precoAncoragem && !loja.valores.usarAncoragem,
+                                )}
+                            </Field>
+                            <p className="col-span-2 self-end rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning-strong">
+                                {values.precoAncoragem
+                                    ? `Ancoragem do cadastro: ${formatCurrency(Number(values.precoAncoragem))}. ${AVISO_ANCORAGEM}`
+                                    : 'Sem preço de ancoragem no cadastro (aba Catálogo).'}{' '}
+                                Só vale fora de campanha; na campanha, o riscado é o preço normal.
+                            </p>
+                        </>
+                    )}
                 </div>
             )}
         </div>
