@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import {
@@ -113,6 +113,7 @@ export function Produtos() {
     const [newVisivelCatalogo, setNewVisivelCatalogo] = useState(true)
     const [newEhCombo, setNewEhCombo] = useState(false)
     const [newSecaoId, setNewSecaoId] = useState('')
+    const [newFixoMaisVendidos, setNewFixoMaisVendidos] = useState(false)
     const [newComponentes, setNewComponentes] = useState<{ componenteId: string; quantidade: number; brinde: boolean }[]>([])
     const [isCreating, setIsCreating] = useState(false)
 
@@ -140,6 +141,7 @@ export function Produtos() {
     const [editVisivelCatalogo, setEditVisivelCatalogo] = useState(true)
     const [editEhCombo, setEditEhCombo] = useState(false)
     const [editSecaoId, setEditSecaoId] = useState('')
+    const [editFixoMaisVendidos, setEditFixoMaisVendidos] = useState(false)
     const [editComponentes, setEditComponentes] = useState<{ componenteId: string; quantidade: number; brinde: boolean }[]>([])
     const [isUpdating, setIsUpdating] = useState(false)
 
@@ -187,6 +189,7 @@ export function Produtos() {
         setEditVisivelCatalogo(produto.visivelCatalogo ?? true)
         setEditEhCombo(produto.ehCombo ?? false)
         setEditSecaoId(produto.secaoId ?? '')
+        setEditFixoMaisVendidos(produto.fixoMaisVendidos ?? false)
         setPickComponenteId('')
         setPickQuantidade('1')
         // Carrega a composição existente (se for combo)
@@ -240,6 +243,7 @@ export function Produtos() {
         setNewVisivelCatalogo(true)
         setNewEhCombo(false)
         setNewSecaoId('')
+        setNewFixoMaisVendidos(false)
         setNewComponentes([])
         setPickComponenteId('')
         setPickQuantidade('1')
@@ -289,6 +293,7 @@ export function Produtos() {
             visivelCatalogo: newVisivelCatalogo,
             ehCombo: newEhCombo,
             secaoId: newSecaoId || null,
+            fixoMaisVendidos: newFixoMaisVendidos,
         } as CreateProduto
 
         if (newEhCombo && newComponentes.length === 0) {
@@ -348,6 +353,7 @@ export function Produtos() {
             visivelCatalogo: editVisivelCatalogo,
             ehCombo: editEhCombo,
             secaoId: editSecaoId || null,
+            fixoMaisVendidos: editFixoMaisVendidos,
         } as UpdateProduto
 
         if (editEhCombo && editComponentes.length === 0) {
@@ -615,7 +621,7 @@ export function Produtos() {
                                     descricao: newDescricao, pesoKg: newPesoKg, slug: newSlug,
                                     instrucoesPreparo: newInstrucoesPreparo, destaque: newDestaque, selo: newSelo,
                                     visivelCatalogo: newVisivelCatalogo, ehCombo: newEhCombo,
-                                    secaoId: newSecaoId, beneficios: newBeneficios,
+                                    secaoId: newSecaoId, beneficios: newBeneficios, fixoMaisVendidos: newFixoMaisVendidos,
                                 }}
                                 setters={{
                                     setNome: setNewNome, setCodigo: setNewCodigo, setApelido: setNewApelido,
@@ -624,7 +630,7 @@ export function Produtos() {
                                     setAtivo: () => {}, setCategoria: setNewCategoria, setDescricao: setNewDescricao,
                                     setPesoKg: setNewPesoKg, setSlug: setNewSlug, setInstrucoesPreparo: setNewInstrucoesPreparo,
                                     setDestaque: setNewDestaque, setSelo: setNewSelo, setVisivelCatalogo: setNewVisivelCatalogo, setEhCombo: setNewEhCombo,
-                                    setSecaoId: setNewSecaoId, setBeneficios: setNewBeneficios,
+                                    setSecaoId: setNewSecaoId, setBeneficios: setNewBeneficios, setFixoMaisVendidos: setNewFixoMaisVendidos,
                                 }}
                                 custoEfetivo={newCustoEfetivo}
                                 margem={newMargem}
@@ -672,7 +678,7 @@ export function Produtos() {
                                     descricao: editDescricao, pesoKg: editPesoKg, slug: editSlug,
                                     instrucoesPreparo: editInstrucoesPreparo, destaque: editDestaque, selo: editSelo,
                                     visivelCatalogo: editVisivelCatalogo, ehCombo: editEhCombo,
-                                    secaoId: editSecaoId, beneficios: editBeneficios,
+                                    secaoId: editSecaoId, beneficios: editBeneficios, fixoMaisVendidos: editFixoMaisVendidos,
                                 }}
                                 setters={{
                                     setNome: setEditNome, setCodigo: setEditCodigo, setApelido: setEditApelido,
@@ -681,7 +687,7 @@ export function Produtos() {
                                     setAtivo: setEditAtivo, setCategoria: setEditCategoria, setDescricao: setEditDescricao,
                                     setPesoKg: setEditPesoKg, setSlug: setEditSlug, setInstrucoesPreparo: setEditInstrucoesPreparo,
                                     setDestaque: setEditDestaque, setSelo: setEditSelo, setVisivelCatalogo: setEditVisivelCatalogo, setEhCombo: setEditEhCombo,
-                                    setSecaoId: setEditSecaoId, setBeneficios: setEditBeneficios,
+                                    setSecaoId: setEditSecaoId, setBeneficios: setEditBeneficios, setFixoMaisVendidos: setEditFixoMaisVendidos,
                                 }}
                                 custoEfetivo={editCustoEfetivo}
                                 margem={editMargem}

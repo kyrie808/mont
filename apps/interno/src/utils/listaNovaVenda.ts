@@ -6,7 +6,7 @@
  * ficam só as regras, sem banco: quem chama já entrega os produtos à venda e o ranking.
  */
 
-export const LIMITE_MAIS_VENDIDOS = 6
+export const LIMITE_MAIS_VENDIDOS = 8
 export const DIAS_MAIS_VENDIDOS = 90
 export const ID_MAIS_VENDIDOS = 'mais-vendidos'
 export const ID_OUTROS = 'outros'
@@ -19,6 +19,8 @@ export interface ProdutoLista {
     ordemVitrine?: number | null
     apelido?: string | null
     codigo?: string | null
+    /** "Sempre em Mais vendidos" (edição de produto): entra no topo, vendendo ou não. */
+    fixoMaisVendidos?: boolean
 }
 
 export interface SecaoLista {
@@ -59,8 +61,9 @@ const porOrdemVitrine = (a: ProdutoLista, b: ProdutoLista) =>
     (a.ordemVitrine ?? 0) - (b.ordemVitrine ?? 0) || a.nome.localeCompare(b.nome, 'pt-BR')
 
 /**
- * Mais vendidos (até 6, na ordem do ranking) + uma seção por seção do Catálogo que tenha
- * produto à venda + "Outros" (sem seção) no fim. Produto inativo nunca entra, venha de onde vier.
+ * Mais vendidos (até 8: primeiro os fixados, pelo nome, depois o ranking sem repetir) + uma
+ * seção por seção do Catálogo que tenha produto à venda + "Outros" (sem seção) no fim.
+ * Produto inativo nunca entra, venha de onde vier.
  */
 export function montarGrupos<T extends ProdutoLista>(
     produtos: T[],
@@ -71,10 +74,15 @@ export function montarGrupos<T extends ProdutoLista>(
     const porId = new Map(ativos.map((p) => [p.id, p]))
     const grupos: GrupoLista<T>[] = []
 
-    const maisVendidos = ranking
+    const fixados = ativos
+        .filter((p) => p.fixoMaisVendidos)
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    const idsFixados = new Set(fixados.map((p) => p.id))
+    const doRanking = ranking
+        .filter((id) => !idsFixados.has(id))
         .map((id) => porId.get(id))
         .filter((p): p is T => p !== undefined)
-        .slice(0, LIMITE_MAIS_VENDIDOS)
+    const maisVendidos = [...fixados, ...doRanking].slice(0, LIMITE_MAIS_VENDIDOS)
     if (maisVendidos.length > 0) grupos.push({ id: ID_MAIS_VENDIDOS, nome: 'Mais vendidos', produtos: maisVendidos })
 
     const idsSecao = new Set(secoes.map((s) => s.id))

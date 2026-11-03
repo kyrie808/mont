@@ -92,6 +92,8 @@ export interface DomainProduto {
     secaoId?: string | null
     // Ordem dentro da seção (arrastada na tela Catálogo)
     ordemVitrine?: number
+    // "Sempre em Mais vendidos" na Nova Venda (só interno; a loja não lê)
+    fixoMaisVendidos?: boolean
 }
 
 export interface DomainItemVenda {
