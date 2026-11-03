@@ -230,14 +230,15 @@ export function NovaVenda() {
         setMontando(null)
     }
 
-    const handleUpdateQuantity = (chave: string, delta: number) => {
+    // `avisar: false` = lista do celular (a linha volta a mostrar só o "+").
+    const handleUpdateQuantity = (chave: string, delta: number, { avisar = true }: { avisar?: boolean } = {}) => {
         const item = cart.find((i) => i.chave === chave)
         if (!item) return
 
         const newQty = item.quantidade + delta
         if (newQty <= 0) {
             removeItem(chave)
-            toast.success('Item removido')
+            if (avisar) toast.success('Item removido')
         } else {
             updateQuantity(chave, newQty)
         }
@@ -402,7 +403,7 @@ export function NovaVenda() {
                                         maisVendidos={maisVendidos}
                                         getQuantity={getCartQuantity}
                                         onAdd={(p) => handleAddToCart(p, { avisar: false })}
-                                        onUpdateQuantity={handleUpdateQuantity}
+                                        onUpdateQuantity={(chave, delta) => handleUpdateQuantity(chave, delta, { avisar: false })}
                                         acaoCombo={acaoCombo}
                                     />
                                 </div>
