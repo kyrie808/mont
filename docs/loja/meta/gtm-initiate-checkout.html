@@ -1,0 +1,63 @@
+<!--
+  Meta InitiateCheckout da loja (loja.montdistribuidora.com.br), no GTM-W6CXZC3R.
+
+  O arquivo inteiro pode ser colado na tag: o GTM aceita este comentário.
+
+  PASSO A PASSO
+  1. Acionador: Acionadores > Novo
+     - Nome: "begin_checkout da loja"
+     - Tipo: Evento personalizado
+     - Nome do evento: begin_checkout
+     - Este acionador é disparado em: Alguns eventos personalizados
+     - Condição: event_id | corresponde à expressão regular | ^checkout_
+       (a loja manda event_id "checkout_<chave>"; o begin_checkout do catálogo antigo não tem
+       esse id e continua só no GA4, sem mudar nada)
+
+  2. Tag: Tags > Nova
+     - Nome: "Meta InitiateCheckout"
+     - Tipo: HTML personalizado
+     - HTML: este arquivo inteiro
+     - Opções avançadas > Opções de disparo da tag: Uma vez por evento
+     - Acionamento: "begin_checkout da loja" (do passo 1)
+
+  3. Variáveis: o código usa as variáveis da camada de dados ecommerce.items, ecommerce.value e
+     event_id, as mesmas que as tags da Meta já usam (ViewContent usa items e value; o Lead usa
+     event_id). Se no seu container elas tiverem outro nome, troque no código abaixo pelos nomes
+     que aparecem nessas tags (o ícone de bloco ao lado do HTML mostra a lista). Se o GTM
+     reclamar de "variável desconhecida" ao salvar, é isso.
+
+  4. Teste: Visualizar (modo Preview) no build da branch, que já carrega o GTM:
+     https://mont-loja-e81yxg5ru-kyrie808s-projects.vercel.app
+     (o link é protegido pela Vercel: abra logado na Vercel no mesmo navegador). Coloque um
+     produto na sacola e entre em "Seus dados". No Tag Assistant, o evento begin_checkout tem que
+     mostrar "Meta InitiateCheckout" em "Tags disparadas". Depois, Enviar > Publicar.
+     Publicar antes de a loja nova ir ao ar não muda nada: nenhum site manda ainda o
+     begin_checkout com event_id "checkout_".
+
+  O servidor da loja manda o mesmo InitiateCheckout pela API de Conversões, com o mesmo
+  event_id e os mesmos dados, e a Meta conta uma vez só.
+-->
+<script>
+  (function () {
+    if (typeof fbq !== "function") return;
+    var items = {{ecommerce.items}} || [];
+    var ids = [];
+    var contents = [];
+    var numItems = 0;
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i] || {};
+      var quantidade = item.quantity || 1;
+      ids.push(item.item_id || "");
+      contents.push({ id: item.item_id || "", quantity: quantidade, item_price: item.price || 0 });
+      numItems += quantidade;
+    }
+    fbq("track", "InitiateCheckout", {
+      content_type: "product",
+      content_ids: ids,
+      contents: contents,
+      num_items: numItems,
+      value: {{ecommerce.value}} || 0,
+      currency: "BRL"
+    }, { eventID: {{event_id}} });
+  })();
+</script>

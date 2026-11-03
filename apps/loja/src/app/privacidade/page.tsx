@@ -24,8 +24,12 @@ export default function PaginaPrivacidade() {
                 <h1 className="font-titulo text-[26px] font-normal uppercase tracking-[0.5px]">Política de privacidade</h1>
                 <p className="text-texto-suave">Texto provisório. A versão final desta política será publicada aqui.</p>
                 <p>
-                    Usamos seus dados (nome, WhatsApp e endereço) só para entregar o seu pedido e avisar o andamento
+                    Usamos seus dados (nome, WhatsApp e endereço) para entregar o seu pedido e avisar o andamento
                     dele. Ofertas pelo WhatsApp só com a sua autorização, e dá para sair quando quiser.
+                </p>
+                <p>
+                    Para medir nossos anúncios, enviamos à Meta (Facebook e Instagram) o seu nome e o seu telefone de
+                    forma criptografada (hash), sem que dê para ler os dados originais.
                 </p>
             </article>
         </div>
