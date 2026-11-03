@@ -1,26 +1,34 @@
-# Briefing — Loja Mont (Black 2026) · `apps/loja`
+# Briefing — Loja Mont · `apps/loja` (a Black 2026 é a primeira campanha)
 
 > Para o Claude Code. Escrito em 29/10/2026. Diretor: Luccas.
-> Leia este arquivo inteiro, o `CLAUDE.md` da raiz e `docs/loja-black/wireframe/LEIA-ME.md` antes de qualquer ação.
+> Leia este arquivo inteiro, o `CLAUDE.md` da raiz e `docs/loja/wireframe/LEIA-ME.md` antes de qualquer ação.
 > Trabalhe **uma fase por vez**. Ao fim de cada fase: pare, reporte ponto a ponto (regra do `CLAUDE.md`) e espere autorização.
+
+> **Correção de rumo (02/11/2026) — prevalece sobre o resto deste briefing.**
+> - `apps/loja` **não é uma loja da Black**. É o **catálogo/loja definitivo da Mont** e vai **substituir o `apps/catalogo`**, que sai do ar em breve. Depois da troca, a loja responde em `montdistribuidora.com.br`.
+> - A **Black é só uma campanha dentro da loja** (preços e combos com período, em `loja_campanhas`/`loja_precos`). Sem campanha vigente, a loja continua vendendo a linha inteira, inclusive congelados.
+> - **O sistema interno é a única fonte.** Tudo o que se cadastra, edita, esconde ou mostra lá (produto, foto, preço, descrição, visibilidade, seção, ordem, esgotado, combos e sabores, campanha) vale na loja, **sem SQL e sem depender do Claude**.
+> - A loja tem que estar **100% integrada ao sistema interno e ao WhatsApp**, como o catálogo antigo está hoje (pedido no sistema, contato/CRM, mensagem no WhatsApp, eventos da Meta).
+> - `loja_vitrine` vira **complemento opcional** (seção e ordem só se quiser diferente do cadastro, frase do card, destaque, "leva junto?"), editável numa aba **"Loja"** na tela de produto do sistema interno.
+> - Paridade com o catálogo antigo e plano de troca: `docs/loja/paridade-catalogo.md`.
 
 ## 1. O que é e por quê
 
 A Mont vai rodar a **Black da Mont de 03/11 a 30/11/2026**, com anúncios no Meta levando para uma loja.
 O catálogo atual (`apps/catalogo`) não converte: mistura institucional com loja, não é pensado para celular e não deixa o cliente escolher sabores dentro de um combo.
 
-Vamos criar uma **loja nova**, mobile-first, em um app novo do monorepo: `apps/loja`.
-**Não mexa em `apps/catalogo`** — ele continua no ar como está. Nada de reaproveitar componentes dele; padrões podem ser lidos como referência.
+Vamos criar uma **loja nova**, mobile-first, em um app novo do monorepo: `apps/loja`. Ela é a base definitiva e **substitui o `apps/catalogo`** (ver a correção de rumo acima).
+**Não mexa em `apps/catalogo`** enquanto ele estiver no ar; ele sai do ar pelo plano de troca. Nada de reaproveitar componentes dele; padrões podem ser lidos como referência.
 
-Objetivo da loja: o cliente que vem do anúncio escolhe produto e sabor, paga na hora (Pix ou cartão via InfinitePay), e o pedido entra **certo** no sistema interno (Jarvis), com cada sabor registrado.
+Objetivo da loja: o cliente que vem do anúncio escolhe produto e sabor, paga na hora (Pix ou cartão via InfinitePay), e o pedido entra **certo** no sistema interno (sistema interno), com cada sabor registrado.
 
 Essa versão é a base definitiva: depois da Black virão área do cliente, login por código no WhatsApp, cashback/Saldo Mont e acompanhamento de pedido completo. Construa pensando nisso, mas **só o escopo deste briefing**.
 
 ## 2. A fonte da verdade visual: o wireframe
 
-O wireframe aprovado está em `docs/loja-black/wireframe/` (9 telas, uma por arquivo `.dc.html`). **Siga 100%**: layout, ordem dos blocos, textos de interface, hierarquia, tamanhos, cores, estados (esgotado, 0/6, botão desabilitado), navegação entre telas.
+O wireframe aprovado está em `docs/loja/wireframe/` (9 telas, uma por arquivo `.dc.html`). **Siga 100%**: layout, ordem dos blocos, textos de interface, hierarquia, tamanhos, cores, estados (esgotado, 0/6, botão desabilitado), navegação entre telas.
 
-Como ler os arquivos: veja `docs/loja-black/wireframe/LEIA-ME.md`. Resumo: estilos inline = especificação; `renderVals()` = dados de exemplo e lógica de estado; `<sc-for>` = lista; `<sc-if>` = condicional; `href="X.dc.html"` = navegação para a tela X.
+Como ler os arquivos: veja `docs/loja/wireframe/LEIA-ME.md`. Resumo: estilos inline = especificação; `renderVals()` = dados de exemplo e lógica de estado; `<sc-for>` = lista; `<sc-if>` = condicional; `href="X.dc.html"` = navegação para a tela X.
 
 O que **não** é literal no wireframe:
 - **Dados de produto** (nomes, preços, sabores, estoque) são exemplos. Na loja vêm do banco (seção 5). Os nomes reais dos sabores no banco são diferentes do wireframe (ex.: "Doce de Leite com Geleia de Ameixa 680g", não "Ameixa").
@@ -67,17 +75,17 @@ Qualquer divergência que você ache necessária em relação ao wireframe: **pa
 Use isto como ponto de partida e **confirme tudo na Fase 0**:
 
 - **`produtos`** já tem `preco`, `preco_ancoragem`, `categoria` (`refrigerado`, `doces`, `congelado`, `combo`), `eh_combo`, `visivel_catalogo`, `estoque_atual`, `slug`, `ordem_vitrine`, `secao_id`.
-- **Combos da Black já cadastrados como um produto por sabor** (ex.: "Kit Top — Geleia de Goiaba (Black)"). É exatamente o que **não** queremos. O modelo certo é **um combo com itens fixos + grupos de escolha** (ex.: Combo Família = 1 balde 4 kg + 2 baldinhos 1 kg fixos + "escolha 6 doces 680 g", podendo repetir). O pedido precisa registrar cada sabor escolhido como item, para o estoque e o Jarvis enxergarem.
+- **Combos da Black já cadastrados como um produto por sabor** (ex.: "Kit Top — Geleia de Goiaba (Black)"). É exatamente o que **não** queremos. O modelo certo é **um combo com itens fixos + grupos de escolha** (ex.: Combo Família = 1 balde 4 kg + 2 baldinhos 1 kg fixos + "escolha 6 doces 680 g", podendo repetir). O pedido precisa registrar cada sabor escolhido como item, para o estoque e o sistema interno enxergarem.
 - **`estoque_atual` não é confiável hoje** (há negativos, ex.: Massa 1 kg −34, Massa 4 kg −7). A disponibilidade de um sabor na loja **não pode** depender só desse número. Proponha uma regra na Fase 0, por exemplo uma flag de "disponível na loja" ou estoque > 0 só para doces depois da contagem física.
 - **Pipeline de pedido do catálogo:**
   - `criar_pedido(...)` cria `cat_pedidos` + `cat_itens_pedido` + `vendas` + `itens_venda`.
   - Os triggers `fn_sync_cat_pedido_to_venda` e `fn_sync_venda_to_cat_pedido` mantêm os dois lados em sincronia.
   - `fn_cat_pedidos_link_contato` liga o pedido ao contato.
   - Os triggers de estoque (`fn_estoque_*`) mexem no estoque.
-  - A loja nova deve **entrar por esse pipeline** (ou por uma evolução dele), para que o pedido apareça no Jarvis. Não pode haver um caminho paralelo que o Jarvis não veja.
+  - A loja nova deve **entrar por esse pipeline** (ou por uma evolução dele), para que o pedido apareça no sistema interno. Não pode haver um caminho paralelo que o sistema interno não veja.
 - **`vendas.status`** hoje só tem `entregue` e `cancelada`. Já existem `ordem_rota`, `entregador_id` e `data_entrega_prevista`. Os estados do acompanhamento (recebido, pago, separado, saiu para entrega, entregue) **não existem como dado**.
 - **`contatos`** tem `telefone_norm` e `telefone_wa`. Use-os para ligar pedido a cliente.
-- **Preço da Black:** `produtos.preco` é o preço normal. A Black vale só à vista e só de 03 a 30/11, e o fiado continua com preço normal no Jarvis. **Não sobrescreva `produtos.preco`.** Proponha uma camada de preço de campanha com início e fim.
+- **Preço da Black:** `produtos.preco` é o preço normal. A Black vale só à vista e só de 03 a 30/11, e o fiado continua com preço normal no sistema interno. **Não sobrescreva `produtos.preco`.** Proponha uma camada de preço de campanha com início e fim.
 - **Valores em reais** (numeric). Horário de São Paulo em tudo.
 
 ## 6. Regras de negócio (inegociáveis)
@@ -132,8 +140,8 @@ Leia e explique:
 - como o catálogo atual monta a sacola e envia o WhatsApp;
 - onde o monorepo já fala com a Evolution API (se fala).
 
-Entregue um documento `docs/loja-black/diagnostico-fase0.md` com:
-- O caminho que o pedido vai fazer, da loja até o Jarvis, e o que precisa mudar nele.
+Entregue um documento `docs/loja/diagnostico-fase0.md` com:
+- O caminho que o pedido vai fazer, da loja até o sistema interno, e o que precisa mudar nele.
 - **Proposta de modelo de dados**, só em descrição, sem SQL ainda. Precisa cobrir:
   - combo com itens fixos e grupos de escolha;
   - preço de campanha com período;
@@ -177,7 +185,7 @@ Entregue um documento `docs/loja-black/diagnostico-fase0.md` com:
 - Criação atômica do pedido: preço recalculado no servidor, sabores do combo como itens, vínculo com o contato pelo telefone, status "aguardando pagamento".
 
 **Aceite:**
-- Um pedido de teste aparece no Jarvis com cada sabor listado e o total certo.
+- Um pedido de teste aparece no sistema interno com cada sabor listado e o total certo.
 - Com `SELECT`, mostrar `cat_pedidos`, os itens e `vendas` desse pedido.
 - Pedido de teste limpo depois, com backup em CSV antes do `DELETE`.
 
@@ -186,7 +194,7 @@ Entregue um documento `docs/loja-black/diagnostico-fase0.md` com:
 - Criação do link com `order_nsu`.
 - `redirect_url` e webhook (route handler, resposta rápida).
 - Conferência com `payment_check` antes de marcar como pago.
-- Pagamento registrado no Jarvis como venda paga, pelo caminho que ele já usa (`registrar_pagamento_venda` ou equivalente).
+- Pagamento registrado no sistema interno como venda paga, pelo caminho que ele já usa (`registrar_pagamento_venda` ou equivalente).
 - Job de 15 e 30 min: Vercel Cron ou `pg_cron` (proponha qual).
 
 **Aceite:**
@@ -205,7 +213,7 @@ Entregue um documento `docs/loja-black/diagnostico-fase0.md` com:
 ### Fase 5 — Acompanhar pedido (tela 08)
 - A página mostra os 5 passos do wireframe.
 - "Recebido" e "Pago" são automáticos.
-- "Separado" e "Saiu para entrega" precisam de uma ação de quem opera (Jarvis ou `apps/entregador`). Proponha onde, sem implementar fora de `apps/loja` antes de aprovar.
+- "Separado" e "Saiu para entrega" precisam de uma ação de quem opera (sistema interno ou `apps/entregador`). Proponha onde, sem implementar fora de `apps/loja` antes de aprovar.
 - "Você é a Nª parada" usa `vendas.ordem_rota`, quando existir.
 
 ## 8. Fora de escopo agora
@@ -215,7 +223,7 @@ Entregue um documento `docs/loja-black/diagnostico-fase0.md` com:
 - Pagar na entrega.
 - Lojas de app.
 - PWA.
-- Congelados.
+- ~~Congelados.~~ (02/11: a loja definitiva vende a linha inteira, congelados inclusive.)
 - Qualquer mudança em `apps/catalogo`, `apps/interno` ou `apps/entregador` sem aprovação explícita.
 
 ## 9. Decisões pendentes (com o Luccas)
@@ -228,6 +236,6 @@ Entregue um documento `docs/loja-black/diagnostico-fase0.md` com:
 - Congelados (preço normal) entram ou não na loja durante a Black.
 
 ## 10. Referências
-- Wireframe (canvas, só leitura): https://claude.ai/artifact/E2KTqtUQ6NXazo9N6GxsY8 — cópia local em `docs/loja-black/wireframe/`.
+- Wireframe (canvas, só leitura): https://claude.ai/artifact/E2KTqtUQ6NXazo9N6GxsY8 — cópia local em `docs/loja/wireframe/`.
 - Análise da loja de referência (Adega Anita's): https://claude.ai/artifact/TfoZ9GCBCi1mMyt4ULVbXk
 - Guia de marca: skills `mont-brand-voice` e `mont-design-guide`.

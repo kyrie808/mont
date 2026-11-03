@@ -1,10 +1,31 @@
-# Decisões sobre o diagnóstico da Fase 0 — Loja Mont (Black 2026)
+# Decisões sobre o diagnóstico da Fase 0 — Loja Mont
 
 > Respostas do Luccas às perguntas P1–P15 de `diagnostico-fase0.md`. 30/10/2026.
 > Este documento **prevalece sobre o `BRIEFING.md`** onde os dois divergirem.
 > Situação de cada item:
 > - **DECIDIDO:** pode implementar.
 > - **PENDENTE GILMAR:** não implemente o dado. Deixe o esquema pronto e o valor em aberto.
+
+## Correção de rumo: a loja é o catálogo definitivo (02/11)
+- **DECIDIDO:** `apps/loja` é o **novo catálogo/loja definitivo da Mont** e substitui o `apps/catalogo`, que sai do ar em breve. A Black é **só uma campanha** dentro dela.
+- **DECIDIDO (regra principal):** a loja fica **100% integrada ao sistema interno e ao WhatsApp**, como o catálogo antigo. O **sistema interno é a única fonte**: o que se cadastra, edita, esconde ou mostra lá vale na loja, sem SQL e sem depender do Claude.
+- **DECIDIDO:** `loja_vitrine` vira **complemento opcional** (seção, ordem, frase, destaque, "leva junto?"), editável numa aba **"Loja"** na tela de produto do sistema interno. Produto novo visível no cadastro aparece na loja sozinho.
+- **Itens abaixo que esta decisão substitui ou põe em revisão:**
+  - "Domínio `loja.montdistribuidora.com.br`" (Lançamento): vale até a troca; depois a loja responde em `montdistribuidora.com.br`.
+  - "Congelados ficam fora da loja na Black" (Lançamento): a loja definitiva vende a linha inteira.
+  - P5 "A chave Esgotado é operada pelo Luccas (SQL/MCP)": passa para a aba "Loja" do sistema interno.
+  - P7 "O cálculo por distância do catálogo não entra na loja": **em revisão**. O frete precisa ter paridade com o catálogo antigo (decisão pendente em `paridade-catalogo.md`).
+  - P15 (Purchase no pagamento aprovado): sem pagamento online, o Purchase da loja sai na entrega, como nas outras vendas.
+- Diagnóstico de paridade, proposta, plano de troca e estimativa: `paridade-catalogo.md` (**APROVADO 02/11**).
+
+## Decisões da paridade (02/11)
+- **D1 — DECIDIDO:** frete por **distância de rota**, como o catálogo antigo (`configuracoes.frete_config`: R$ 5/10/15 pelo CEP; fora do alcance, "a combinar"), **mais retirada**. A tabela por cidade (P7) fica para depois.
+- **D2 — PENDENTE LUCCAS:** hero animado em versão leve + seção "Quem somos", ou só a seção "Quem somos". Regra já dada: se o hero baixar o Lighthouse mobile para menos de 90, fica só a seção.
+- **D3 — DECIDIDO:** abas da loja = seções da tela Catálogo do sistema interno (`cat_secoes`), na ordem de lá.
+- **D4 — DECIDIDO:** combos permanentes entram na loja com o preço do cadastro, obedecendo ao "Visível no catálogo".
+- **D5 — DECIDIDO:** depois da troca, o `apps/catalogo` é apagado do repositório (sem arquivar em `_parked/`).
+- **D6 — DECIDIDO:** a pasta dos documentos passa a ser `docs/loja/`.
+- **Ordem aprovada:** A → B → G → F → E → D → C → troca. Uma parte por vez, com resumo e prints antes de seguir; backup antes de mudança no banco; testes; sem PR; merge na main só com OK.
 
 ## Nomes dos combos (02/11)
 - **DECIDIDO:** nomes novos no sistema interno, na Nova Venda e na loja (só o nome visível, em `produtos.nome` e `loja_vitrine.nome_loja`; ids, códigos e vendas antigas não mudam):
