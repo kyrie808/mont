@@ -16,7 +16,6 @@ function produto(id: string, extra: Partial<LinhaProduto> = {}): LinhaProduto {
         subtitulo: null,
         descricao: null,
         preco: 30,
-        preco_ancoragem: null,
         estoque_atual: 0,
         eh_combo: false,
         visivel_catalogo: true,
@@ -126,12 +125,22 @@ describe('vitrine pelo cadastro', () => {
         expect(disp).toEqual({ chave: false, estoque: false, livre: true, tem: true })
     })
 
-    it('preço "de" = preço de ancoragem do cadastro fora de campanha (só se for maior)', () => {
+    it('fora de campanha não há preço riscado (a ancoragem do cadastro não vai para a loja)', () => {
+        const p = montarVitrine(dados({ produtos: [produto('balde', { preco: 75 })] })).secoes[0]!.itens[0]!
+        expect([p.preco, p.precoDe, p.precoCredito]).toEqual([75, null, null])
+    })
+
+    it('na campanha, riscado = preço normal do cadastro (75 → 65); sem desconto, sem riscado', () => {
         const d = dados({
-            produtos: [produto('a', { preco: 75, preco_ancoragem: 99 }), produto('b', { preco: 30, preco_ancoragem: 30 })],
+            campanha: { nome: 'Black', fim: '2026-11-30T23:59:59-03:00' },
+            produtos: [produto('balde', { preco: 75 }), produto('igual', { preco: 30 })],
+            precos: new Map([
+                ['balde', { pix: 65, credito: 68, ancora: null }],
+                ['igual', { pix: 30, credito: 31, ancora: null }],
+            ]),
         })
-        const [a, b] = montarVitrine(d).secoes[0]!.itens
-        expect([a?.preco, a?.precoDe, b?.precoDe]).toEqual([75, 99, null])
+        const [balde, igual] = montarVitrine(d).secoes[0]!.itens
+        expect([balde?.preco, balde?.precoDe, balde?.precoCredito, igual?.precoDe]).toEqual([65, 75, 68, null])
     })
 
     it('selo, benefícios e modo de preparo vêm do cadastro', () => {
@@ -188,13 +197,13 @@ describe('combos', () => {
         expect(dentro.hero?.id).toBe('dupla')
     })
 
-    it('combo permanente: na seção do cadastro, preço do cadastro, obedece ao "Visível no catálogo"', () => {
-        const permanente = produto('kit', { eh_combo: true, preco: 95, preco_ancoragem: 115 })
+    it('combo permanente: na seção do cadastro, preço do cadastro, sem "separado", obedece ao "Visível no catálogo"', () => {
+        const permanente = produto('kit', { eh_combo: true, preco: 95 })
         const fixosKit = [{ combo_id: 'kit', quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Zero' } }]
         const v = montarVitrine(dados({ produtos: [permanente, produto('zero')], fixos: fixosKit }))
         const kit = v.secoes[0]!.itens.find((p) => p.id === 'kit')!
         expect(ehCombo(kit)).toBe(true)
-        expect(ehCombo(kit) && [kit.preco, kit.ancora, kit.montavel]).toEqual([95, 115, true])
+        expect(ehCombo(kit) && [kit.preco, kit.ancora, kit.montavel]).toEqual([95, null, true])
 
         const escondido = montarVitrine(
             dados({ produtos: [{ ...permanente, visivel_catalogo: false }, produto('zero')], fixos: fixosKit }),

@@ -69,7 +69,7 @@ export async function carregarVitrine(): Promise<Vitrine> {
         cliente
             .from('produtos')
             .select(
-                'id, codigo, nome, slug, subtitulo, descricao, preco, preco_ancoragem, estoque_atual, eh_combo, visivel_catalogo, secao_id, ordem_vitrine, selo, beneficios, instrucoes_preparo',
+                'id, codigo, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, visivel_catalogo, secao_id, ordem_vitrine, selo, beneficios, instrucoes_preparo',
             )
             .eq('ativo', true),
         cliente

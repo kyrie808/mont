@@ -18,7 +18,7 @@ export interface ProdutoLoja {
     preparo: string[]
     /** Preço que vale agora: Pix da campanha, ou produtos.preco fora dela. */
     preco: number
-    /** Preço riscado ("de"): o normal durante a campanha; fora dela, o preço de ancoragem do cadastro. */
+    /** Preço riscado ("de"): só durante a campanha, e é o preço normal do cadastro. Fora dela, NULL. */
     precoDe: number | null
     /** Crédito 1x da tabela aprovada. Só durante a campanha. */
     precoCredito: number | null

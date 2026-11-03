@@ -15,7 +15,6 @@ export interface LinhaProduto {
     subtitulo: string | null
     descricao: string | null
     preco: number
-    preco_ancoragem: number | null
     estoque_atual: number | null
     eh_combo: boolean
     visivel_catalogo: boolean
@@ -145,7 +144,6 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
 
     const produtoDa = (p: LinhaProduto): ProdutoLoja => {
         const preco = d.precos.get(p.id)
-        const ancoragem = p.preco_ancoragem !== null && p.preco_ancoragem > p.preco ? p.preco_ancoragem : null
         return {
             id: p.id,
             slug: p.slug,
@@ -159,7 +157,8 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
             beneficios: linhas(p.beneficios),
             preparo: linhas(p.instrucoes_preparo),
             preco: preco ? preco.pix : p.preco,
-            precoDe: preco ? (p.preco > preco.pix ? p.preco : null) : ancoragem,
+            // Riscado só na campanha, e só com o preço normal (já praticado). Fora dela, sem "de/por" (decisão de 03/11).
+            precoDe: preco && p.preco > preco.pix ? p.preco : null,
             precoCredito: preco ? preco.credito : null,
             disponivel: disponivel(p.id),
         }
@@ -218,7 +217,8 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
             precoDe: null,
             disponivel: base.disponivel && fixos.every((f) => disponivel(f.produtoId)),
             resumo: complemento.get(p.id)?.resumo ?? null,
-            ancora: preco ? preco.ancora : base.precoDe,
+            // "Separado" só na campanha (âncora aprovada em loja_precos).
+            ancora: preco ? preco.ancora : null,
             fixos,
             grupos,
             montavel,
