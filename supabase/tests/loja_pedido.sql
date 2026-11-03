@@ -218,8 +218,8 @@ BEGIN
   -- ── L5: permissões ──
   casos := casos + 1;
   BEGIN
-    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text)', 'EXECUTE')
-       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text)', 'EXECUTE') THEN
+    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE')
+       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE') THEN
       RAISE EXCEPTION 'loja_criar_pedido aberta fora do service_role';
     END IF;
     IF has_function_privilege('authenticated', 'public.criar_venda_em(uuid, date, text, numeric, jsonb, uuid, date, uuid, text, boolean, numeric, text, date, text, timestamptz, text, uuid, text)', 'EXECUTE')

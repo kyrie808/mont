@@ -348,6 +348,8 @@ export type Database = {
           contato_id: string | null
           criado_em: string | null
           endereco_entrega: string | null
+          fbc: string | null
+          fbp: string | null
           frete: number | null
           id: string
           indicado_por: string | null
@@ -367,6 +369,11 @@ export type Database = {
           telefone_cliente: string
           total: number | null
           uf: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
           atualizado_em?: string | null
@@ -379,6 +386,8 @@ export type Database = {
           contato_id?: string | null
           criado_em?: string | null
           endereco_entrega?: string | null
+          fbc?: string | null
+          fbp?: string | null
           frete?: number | null
           id?: string
           indicado_por?: string | null
@@ -398,6 +407,11 @@ export type Database = {
           telefone_cliente: string
           total?: number | null
           uf?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
           atualizado_em?: string | null
@@ -410,6 +424,8 @@ export type Database = {
           contato_id?: string | null
           criado_em?: string | null
           endereco_entrega?: string | null
+          fbc?: string | null
+          fbp?: string | null
           frete?: number | null
           id?: string
           indicado_por?: string | null
@@ -429,6 +445,11 @@ export type Database = {
           telefone_cliente?: string
           total?: number | null
           uf?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: [
           {
@@ -515,6 +536,7 @@ export type Database = {
         Row: {
           ativa: boolean
           created_at: string
+          descricao: string | null
           id: string
           nome: string
           ordem: number
@@ -524,6 +546,7 @@ export type Database = {
         Insert: {
           ativa?: boolean
           created_at?: string
+          descricao?: string | null
           id?: string
           nome: string
           ordem?: number
@@ -533,6 +556,7 @@ export type Database = {
         Update: {
           ativa?: boolean
           created_at?: string
+          descricao?: string | null
           id?: string
           nome?: string
           ordem?: number
@@ -1952,6 +1976,7 @@ export type Database = {
           resumo: string | null
           secao_id: string | null
           usa_estoque: boolean
+          usar_ancoragem: boolean
           visivel: boolean
         }
         Insert: {
@@ -1967,6 +1992,7 @@ export type Database = {
           resumo?: string | null
           secao_id?: string | null
           usa_estoque?: boolean
+          usar_ancoragem?: boolean
           visivel?: boolean
         }
         Update: {
@@ -1982,6 +2008,7 @@ export type Database = {
           resumo?: string | null
           secao_id?: string | null
           usa_estoque?: boolean
+          usar_ancoragem?: boolean
           visivel?: boolean
         }
         Relationships: [
@@ -2169,6 +2196,8 @@ export type Database = {
           event_id: string
           event_time: string
           evento: string
+          fbc: string | null
+          fbp: string | null
           id: string
           moeda: string
           motivo_descarte: string | null
@@ -2187,6 +2216,8 @@ export type Database = {
           event_id: string
           event_time: string
           evento: string
+          fbc?: string | null
+          fbp?: string | null
           id?: string
           moeda?: string
           motivo_descarte?: string | null
@@ -2205,6 +2236,8 @@ export type Database = {
           event_id?: string
           event_time?: string
           evento?: string
+          fbc?: string | null
+          fbp?: string | null
           id?: string
           moeda?: string
           motivo_descarte?: string | null
@@ -4710,6 +4743,7 @@ export type Database = {
       }
       loja_criar_pedido: {
         Args: {
+          p_atribuicao?: Json
           p_bairro: string
           p_cep: string
           p_chave: string
@@ -4745,6 +4779,22 @@ export type Database = {
           p_uf: string
         }
         Returns: string
+      }
+      loja_salvar_vitrine: {
+        Args: {
+          p_destaque_hero: boolean
+          p_disponivel: boolean
+          p_frase_card: string
+          p_leva_junto: boolean
+          p_nome_loja: string
+          p_ordem_loja?: number
+          p_produto_id: string
+          p_resumo: string
+          p_secao_id?: string
+          p_usa_estoque: boolean
+          p_usar_ancoragem: boolean
+        }
+        Returns: undefined
       }
       preco_tabela: {
         Args: { p_em?: string; p_produto_id: string; p_tabela: string }

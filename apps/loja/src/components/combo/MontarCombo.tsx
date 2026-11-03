@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Foto } from '@/components/Foto'
 import { PrecoCombo } from './PrecoCombo'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
+import { medirAdicao, medirVisualizacao } from '@/lib/medicao/dataLayer'
 import { rotuloItem, totalDeItens } from '@/lib/sacola/calculo'
 import type { Escolha } from '@/lib/sacola/esquema'
 import { useSacola } from '@/lib/sacola/store'
@@ -31,6 +32,10 @@ function escolhidos(q: Quantidades, grupo: GrupoCombo): number {
 export function MontarCombo({ combo }: { combo: ComboLoja }) {
     const pronta = useSacolaPronta()
     const chaveEdicao = useSearchParams().get('editar')
+    // Abrir o combo para montar = ViewContent (editar sabores de um que já está na sacola, não).
+    useEffect(() => {
+        if (!chaveEdicao) medirVisualizacao(combo)
+    }, [combo, chaveEdicao])
     // Remonta quando a sacola hidrata, para pré-carregar os sabores na edição.
     return <Editor key={pronta ? 'pronta' : 'carregando'} combo={combo} chaveEdicao={pronta ? chaveEdicao : null} />
 }
@@ -62,6 +67,7 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
             router.push('/sacola')
         } else {
             adicionarCombo(combo.id, escolhas)
+            medirAdicao(combo)
             router.push('/')
         }
     }

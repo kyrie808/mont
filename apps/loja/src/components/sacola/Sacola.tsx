@@ -7,6 +7,7 @@ import { EsqueletoLinhas } from '@/components/Esqueleto'
 import { Foto } from '@/components/Foto'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
+import { medirAdicao } from '@/lib/medicao/dataLayer'
 import { catalogoDa, descreverCombo, resumirSacola } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
@@ -144,7 +145,10 @@ export function Sacola({ vitrine }: SacolaProps) {
                                     nome={linha.produto.nome}
                                     quantidade={linha.quantidade}
                                     onMenos={() => definirQuantidade(linha.produto.id, linha.quantidade - 1)}
-                                    onMais={() => definirQuantidade(linha.produto.id, linha.quantidade + 1)}
+                                    onMais={() => {
+                                        definirQuantidade(linha.produto.id, linha.quantidade + 1)
+                                        medirAdicao(linha.produto)
+                                    }}
                                     maisDesabilitado={!linha.vendavel}
                                 />
                             </article>
@@ -162,7 +166,10 @@ export function Sacola({ vitrine }: SacolaProps) {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => adicionarProduto(leva.id, 1)}
+                                onClick={() => {
+                                    adicionarProduto(leva.id, 1)
+                                    medirAdicao(leva)
+                                }}
                                 aria-label={`Adicionar ${leva.nome}`}
                                 className="h-11 cursor-pointer rounded-[22px] border-[1.5px] border-marrom bg-transparent px-3.5 text-[13px] font-bold text-marrom"
                             >
