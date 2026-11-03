@@ -1947,11 +1947,9 @@ export type Database = {
           frase_card: string | null
           leva_junto: boolean
           nome_loja: string | null
-          ordem: number
           ordem_loja: number | null
           produto_id: string
           resumo: string | null
-          secao: string | null
           secao_id: string | null
           usa_estoque: boolean
           visivel: boolean
@@ -1964,11 +1962,9 @@ export type Database = {
           frase_card?: string | null
           leva_junto?: boolean
           nome_loja?: string | null
-          ordem?: number
           ordem_loja?: number | null
           produto_id: string
           resumo?: string | null
-          secao?: string | null
           secao_id?: string | null
           usa_estoque?: boolean
           visivel?: boolean
@@ -1981,11 +1977,9 @@ export type Database = {
           frase_card?: string | null
           leva_junto?: boolean
           nome_loja?: string | null
-          ordem?: number
           ordem_loja?: number | null
           produto_id?: string
           resumo?: string | null
-          secao?: string | null
           secao_id?: string | null
           usa_estoque?: boolean
           visivel?: boolean

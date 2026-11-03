@@ -129,7 +129,7 @@ BEGIN
     INSERT INTO public.loja_vitrine (produto_id) VALUES (v_chipa);
     SELECT * INTO r FROM public.loja_vitrine WHERE produto_id = v_chipa;
     SET LOCAL ROLE service_role;
-    IF NOT r.visivel OR NOT r.disponivel OR r.secao IS NOT NULL OR r.secao_id IS NOT NULL OR r.ordem_loja IS NOT NULL THEN
+    IF NOT r.visivel OR NOT r.disponivel OR r.secao_id IS NOT NULL OR r.ordem_loja IS NOT NULL THEN
       RAISE EXCEPTION 'linha mínima = %', row_to_json(r);
     END IF;
     passou := passou + 1;
