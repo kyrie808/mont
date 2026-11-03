@@ -30,6 +30,7 @@ import { ProdutoFormDesktop } from '../components/features/produtos/ProdutoFormD
 import { ProdutosDataGrid } from '../components/features/produtos/ProdutosDataGrid'
 import { useSecoes } from '../hooks/useSecoes'
 import { useIsDesktop } from '../hooks/useIsDesktop'
+import { produtosDoCadastro } from '../utils/produtosCadastro'
 
 
 export function Produtos() {
@@ -48,9 +49,20 @@ export function Produtos() {
     const filterBaixoEstoque = searchParams.get('filtro') === 'baixo_estoque'
     // Busca (desktop) por nome/código — no mobile o campo não existe, então fica vazio (sem efeito).
     const [searchTerm, setSearchTerm] = useState('')
+    // Desativado fica fora da lista por padrão; `?desativados=1` traz de volta (sobrevive ao voltar da edição).
+    const mostrarDesativados = searchParams.get('desativados') === '1'
+    const desativadosCount = produtos.filter(p => !p.ativo).length
+
+    const toggleDesativados = () => {
+        setSearchParams(prev => {
+            if (mostrarDesativados) prev.delete('desativados')
+            else prev.set('desativados', '1')
+            return prev
+        })
+    }
 
     const filteredProdutos = useMemo(() => {
-        let result = produtos
+        let result = produtosDoCadastro(produtos, mostrarDesativados)
 
         if (filterBaixoEstoque) {
             result = result.filter(p => {
@@ -68,7 +80,7 @@ export function Produtos() {
             )
         }
         return result
-    }, [produtos, filterBaixoEstoque, searchTerm])
+    }, [produtos, mostrarDesativados, filterBaixoEstoque, searchTerm])
 
     const clearFilter = () => {
         setSearchParams(prev => {
@@ -494,6 +506,20 @@ export function Produtos() {
                                 />
                             </div>
 
+                            {desativadosCount > 0 && (
+                                <div className="flex justify-end lg:hidden">
+                                    <Button
+                                        variant={mostrarDesativados ? 'primary' : 'outline'}
+                                        size="sm"
+                                        className="h-11"
+                                        aria-pressed={mostrarDesativados}
+                                        onClick={toggleDesativados}
+                                    >
+                                        Mostrar desativados ({desativadosCount})
+                                    </Button>
+                                </div>
+                            )}
+
                             {/* KPIs — DESKTOP (≥lg): cadastro (estoque vive no /estoque) */}
                             <div className="hidden lg:grid lg:grid-cols-3 lg:gap-4">
                                 <KpiCardDesktop title="Ativos" value={produtosAtivos.toString()} subtitle="Produtos à venda" />
@@ -514,6 +540,17 @@ export function Produtos() {
                                         aria-label="Buscar produtos"
                                     />
                                 </div>
+                                {desativadosCount > 0 && (
+                                    <Button
+                                        variant={mostrarDesativados ? 'primary' : 'outline'}
+                                        size="sm"
+                                        className="ml-auto shrink-0"
+                                        aria-pressed={mostrarDesativados}
+                                        onClick={toggleDesativados}
+                                    >
+                                        Mostrar desativados ({desativadosCount})
+                                    </Button>
+                                )}
                             </div>
 
                             {/* MOBILE (<lg): grade de cards — intocada (mobile sagrado) */}
