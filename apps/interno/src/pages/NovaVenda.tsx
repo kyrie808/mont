@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
-import { useCombosMontagem, usePrecosVigentes, useProdutos } from '../hooks/useProdutos'
+import { useCombosMontagem, useMaisVendidos, usePrecosVigentes, useProdutos } from '../hooks/useProdutos'
+import { useSecoes } from '../hooks/useSecoes'
 import { useCartStore, precificar, type CartItem } from '../stores/useCartStore'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
@@ -19,6 +20,7 @@ import { SeletorTabelaPreco } from '../components/features/vendas/NovaVenda/Sele
 import { MontarComboDialog } from '../components/features/vendas/NovaVenda/MontarComboDialog'
 import { precoNaTabela, produtosAVenda, resumoEscolhas, type EscolhaCombo, type TabelaPreco } from '../utils/tabelaPreco'
 import { agoraSimulado } from '../lib/agoraSimulado'
+import { contarItens } from '../utils/listaNovaVenda'
 import type { PagamentoImediato, OpcoesEntrega } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
 import { vendaService } from '../services/vendaService'
 import { User, ShoppingBag, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
@@ -39,7 +41,11 @@ export function NovaVenda() {
     const isEditing = Boolean(id)
     const toast = useToast()
 
-    const { produtos: todosProdutos, loading: loadingTodosProdutos } = useProdutos()
+    // Sempre atual: produto desativado em outro aparelho não pode seguir na lista por cache.
+    const { produtos: todosProdutos, loading: loadingTodosProdutos } = useProdutos(false, { sempreAtual: true })
+    // Celular: lista agrupada pelas seções da tela Catálogo + mais vendidos dos últimos 90 dias.
+    const { secoes } = useSecoes()
+    const maisVendidos = useMaisVendidos()
     // Black: combos com escolha de sabor + preço por tabela (Pix/dinheiro, cartão, normal).
     const { combos, loading: loadingCombos } = useCombosMontagem()
     const { precos, campanha, foraDeVenda, loading: loadingPrecos } = usePrecosVigentes()
@@ -169,6 +175,7 @@ export function NovaVenda() {
         () => Math.round(carrinho.reduce((acc, item) => acc + item.subtotal * 100, 0)) / 100,
         [carrinho]
     )
+    const quantidadeItens = contarItens(cart)
 
 
     // Handlers
@@ -176,7 +183,8 @@ export function NovaVenda() {
     const getCartQuantity = (produtoId: string) =>
         cart.filter((i) => i.produto_id === produtoId).reduce((acc, i) => acc + i.quantidade, 0)
 
-    const handleAddToCart = (exibido: DomainProduto) => {
+    // `avisar: false` = lista do celular: a própria linha e a barra de baixo já mostram a mudança.
+    const handleAddToCart = (exibido: DomainProduto, { avisar = true }: { avisar?: boolean } = {}) => {
         // Guarda o produto do cadastro (a vitrine mostra uma cópia com o preço da tabela).
         const produto = produtosPorId.get(exibido.id) ?? exibido
         const acao = acaoCombo(produto)
@@ -196,7 +204,7 @@ export function NovaVenda() {
             // Combo fixo (Dupla Zero): vai como combo, sem sabores a escolher.
             escolhas: produto.ehCombo ? [] : undefined,
         })
-        toast.success('Adicionado ao carrinho')
+        if (avisar) toast.success('Adicionado ao carrinho')
     }
 
     const confirmarMontagem = (escolhas: EscolhaCombo[]) => {
@@ -381,15 +389,6 @@ export function NovaVenda() {
                         {/* Step 1: Produtos */}
                         {currentStep === 1 && (
                             <div className="flex-1 flex flex-col min-w-0 animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="p-4 border-b border-border bg-card flex items-center justify-between">
-                                    <h2 className="text-lg font-bold flex items-center gap-2">
-                                        <ShoppingBag className="h-5 w-5 text-primary" />
-                                        Adicionar Produtos
-                                    </h2>
-                                    <div className="text-sm font-medium text-primary">
-                                        Total: {formatCurrency(cartTotal)}
-                                    </div>
-                                </div>
                                 {campanha && (
                                     <div className="border-b border-border bg-card px-4 py-3">
                                         <SeletorTabelaPreco tabela={tabela} onChange={setTabela} campanha={campanha} />
@@ -399,8 +398,10 @@ export function NovaVenda() {
                                     <ProductList
                                         produtos={produtos}
                                         loading={loadingProdutos}
+                                        secoes={secoes}
+                                        maisVendidos={maisVendidos}
                                         getQuantity={getCartQuantity}
-                                        onAdd={handleAddToCart}
+                                        onAdd={(p) => handleAddToCart(p, { avisar: false })}
                                         onUpdateQuantity={handleUpdateQuantity}
                                         acaoCombo={acaoCombo}
                                     />
@@ -434,26 +435,30 @@ export function NovaVenda() {
                             </div>
                         )}
 
-                        {/* Barra de navegação fixa (mobile) — fina + translúcida, acima da BottomNav.
+                        {/* Barra fixa do passo Produtos (mobile) — itens + total + Próximo, acima da BottomNav.
                             `fixed` (não sticky) por causa do overflow-x-hidden do AppLayout. */}
-                        {currentStep > 0 && currentStep < 2 && (
+                        {currentStep === 1 && (
                             <div className="fixed inset-x-0 bottom-20 z-30 border-t border-border bg-card/80 backdrop-blur-md px-4 py-2 md:hidden">
-                                <div className="flex gap-3 max-w-sm mx-auto">
-                                    {currentStep > 0 && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={prevStep}
-                                            className="h-12 rounded-2xl flex-1 flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                                        >
-                                            <ChevronLeft className="h-5 w-5" />
-                                            Voltar
-                                        </Button>
-                                    )}
+                                <div className="flex items-center gap-3 max-w-sm mx-auto">
+                                    <Button
+                                        variant="outline"
+                                        onClick={prevStep}
+                                        aria-label="Voltar para o cliente"
+                                        className="size-12 shrink-0 rounded-2xl p-0 flex items-center justify-center active:scale-95 transition-transform"
+                                    >
+                                        <ChevronLeft className="h-5 w-5" />
+                                    </Button>
+                                    <div className="min-w-0 flex-1" aria-live="polite">
+                                        <p className="text-xs text-muted-foreground tabular-nums">
+                                            {quantidadeItens === 0 ? 'Carrinho vazio' : `${quantidadeItens} ${quantidadeItens === 1 ? 'item' : 'itens'}`}
+                                        </p>
+                                        <p className="text-lg font-bold leading-tight tabular-nums text-foreground">{formatCurrency(cartTotal)}</p>
+                                    </div>
                                     <Button
                                         variant="primary"
                                         onClick={() => nextStep()}
-                                        disabled={(currentStep === 0 && !selectedContato) || (currentStep === 1 && cart.length === 0)}
-                                        className="flex-2 h-12 rounded-2xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                        disabled={cart.length === 0}
+                                        className="h-12 shrink-0 rounded-2xl px-5 font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
                                     >
                                         Próximo
                                         <ChevronRight className="h-5 w-5" />

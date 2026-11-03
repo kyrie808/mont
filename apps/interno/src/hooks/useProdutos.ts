@@ -3,17 +3,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { produtoService } from '../services/produtoService'
 import type { CreateProduto, UpdateProduto } from '../types/domain'
 import type { MapaPrecos } from '../utils/tabelaPreco'
+import { DIAS_MAIS_VENDIDOS, rankingMaisVendidos } from '../utils/listaNovaVenda'
+import { hojeSP, somarDias } from '../utils/pedidosLoja'
 
 // Referência estável enquanto carrega: evita recalcular o carrinho a cada render.
 const SEM_PRECOS: MapaPrecos = new Map()
 const NADA_FORA_DE_VENDA: ReadonlySet<string> = new Set()
 
-export function useProdutos(includeInactive: boolean = false) {
+/**
+ * `sempreAtual`: rebusca ao abrir a tela e ao voltar para o app, mesmo com a lista em memória
+ * (Nova Venda: produto desativado em outro aparelho não pode continuar aparecendo).
+ */
+export function useProdutos(includeInactive: boolean = false, { sempreAtual = false }: { sempreAtual?: boolean } = {}) {
     const queryClient = useQueryClient()
 
     const { data: produtos, isLoading: loading, error, refetch } = useQuery({
         queryKey: ['produtos', includeInactive],
         queryFn: () => produtoService.getAll(includeInactive),
+        ...(sempreAtual && { refetchOnMount: 'always' as const, refetchOnWindowFocus: 'always' as const }),
     })
 
     const createMutation = useMutation({
@@ -94,6 +101,20 @@ export function usePrecosVigentes() {
         foraDeVenda: data?.foraDeVenda ?? NADA_FORA_DE_VENDA,
         loading,
     }
+}
+
+const SEM_RANKING: string[] = []
+
+/** Ids dos produtos por número de vendas nos últimos 90 dias (maior primeiro). Vazio enquanto carrega. */
+export function useMaisVendidos() {
+    const { data } = useQuery({
+        queryKey: ['mais-vendidos'],
+        queryFn: async () => rankingMaisVendidos(
+            await produtoService.getItensVendidosDesde(somarDias(hojeSP(), -DIAS_MAIS_VENDIDOS))
+        ),
+        staleTime: 1000 * 60 * 60,
+    })
+    return data ?? SEM_RANKING
 }
 
 const SEM_NOMES = new Map<string, string>()

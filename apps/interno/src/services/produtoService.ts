@@ -5,6 +5,7 @@ import type {
 } from '@mont/shared'
 import type { DomainProduto, CreateProduto, UpdateProduto, DomainProdutoComponente, ComboMontagem } from '../types/domain'
 import type { MapaPrecos } from '../utils/tabelaPreco'
+import type { LinhaVendida } from '../utils/listaNovaVenda'
 import { agoraSimulado } from '../lib/agoraSimulado'
 
 export interface PrecosVigentes {
@@ -246,6 +247,27 @@ export class ProdutoService {
                     opcoes: [...(g.opcoes || [])].sort((a, b) => a.ordem - b.ordem).map((o) => o.produto_id),
                 })),
         }))
+    }
+
+    /* MAIS VENDIDOS — itens vendidos desde `desde` (aaaa-mm-dd), sem canceladas nem brindes.
+       Só (produto, venda): quem conta e ordena é `rankingMaisVendidos`. Paginado porque o
+       PostgREST corta em 1.000 linhas (90 dias hoje ≈ 500). */
+    async getItensVendidosDesde(desde: string): Promise<LinhaVendida[]> {
+        const PAGINA = 1000
+        const linhas: LinhaVendida[] = []
+        for (let inicio = 0; ; inicio += PAGINA) {
+            const { data, error } = await supabase
+                .from('itens_venda')
+                .select('id, produto_id, venda_id, vendas!inner(data, status, forma_pagamento)')
+                .gte('vendas.data', desde)
+                .neq('vendas.status', 'cancelada')
+                .neq('vendas.forma_pagamento', 'brinde')
+                .order('id')
+                .range(inicio, inicio + PAGINA - 1)
+            if (error) throw error
+            for (const item of data || []) linhas.push({ produtoId: item.produto_id, vendaId: item.venda_id })
+            if (!data || data.length < PAGINA) return linhas
+        }
     }
 
     /* NOMES POR ID — p. ex. o nome do combo no recibo (itens_venda.combo_id não tem FK, de
