@@ -14,6 +14,8 @@ export interface FreteConfig {
     origem: { lat: number; lng: number; label?: string; cep?: string }
     faixas: FreteFaixa[]
     foraDoAlcance: 'a_combinar'
+    /** Região de valor fixo pela cidade do CEP (ex.: ABC = R$ 5). Sem tela: a aba Frete só preserva. */
+    regiaoFixa?: { nome: string; valor: number; cidades: string[] }
 }
 
 export const FRETE_CONFIG_DEFAULT: FreteConfig = {

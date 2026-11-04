@@ -1,13 +1,27 @@
 import { getFreteConfig } from './config'
-import { geocodeCep } from './geocode'
+import { geocodeCep, viaCep } from './geocode'
 import { calcularFretePorDistancia } from './calc'
 import { roadDistanceKm } from './distance'
 import type { FreteResultado } from './types'
+
+const normalizar = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
 /** Calcula o frete para um CEP de destino (server-side). Degrada para "a combinar". */
 export async function calcularFreteParaCep(cep: string): Promise<FreteResultado> {
     const config = await getFreteConfig()
     if (!config) return { disponivel: false, frete: 0, distanciaKm: null, motivo: 'sem_config' }
+
+    // Região de valor fixo pela cidade do CEP (ABC = R$ 5), a mesma regra da loja (04/11/2026).
+    // Com a região configurada, sem a cidade do CEP não dá para saber: "a combinar".
+    if (config.regiaoFixa) {
+        const endereco = await viaCep((cep || '').replace(/\D/g, ''))
+        if (!endereco?.localidade) return { disponivel: false, frete: 0, distanciaKm: null, motivo: 'sem_coordenada' }
+        const cidade = normalizar(endereco.localidade)
+        if (config.regiaoFixa.cidades.some((c) => normalizar(c) === cidade) && config.regiaoFixa.valor > 0) {
+            return { disponivel: true, frete: config.regiaoFixa.valor, distanciaKm: null, motivo: 'ok' }
+        }
+    }
 
     const destino = await geocodeCep(cep)
     if (!destino) return { disponivel: false, frete: 0, distanciaKm: null, motivo: 'sem_coordenada' }
