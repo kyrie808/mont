@@ -32,6 +32,8 @@ const esquemaGeocodeOrs = z.object({
         z.object({
             geometry: z.object({ coordinates: z.tuple([z.number(), z.number()]) }),
             properties: z.object({
+                layer: z.string().optional(),
+                match_type: z.string().optional(),
                 locality: z.string().optional(),
                 localadmin: z.string().optional(),
                 county: z.string().optional(),
@@ -39,6 +41,9 @@ const esquemaGeocodeOrs = z.object({
         }),
     ),
 })
+
+/** Só rua ou endereço: centro de bairro ou de cidade cobraria a faixa errada. */
+const CAMADAS_PRECISAS = new Set(['address', 'street'])
 
 async function lerJson(url: string, cabecalhos?: Record<string, string>): Promise<unknown> {
     try {
@@ -72,40 +77,59 @@ async function nominatim(parametros: string): Promise<Coordenada | null> {
         : null
 }
 
-/** Geocodificador do OpenRouteService (Pelias), aceito só se o resultado estiver na cidade do CEP. */
-async function geocodeOrs(e: Endereco, chave: string): Promise<Coordenada | null> {
+type CoordenadaOrs = Coordenada & { camada: string }
+
+/** Primeiro resultado do OpenRouteService que seja rua/endereço (sem "fallback") na cidade do CEP. */
+async function primeiroAceito(url: string, cidadeDoCep: string): Promise<CoordenadaOrs | null> {
+    const lido = esquemaGeocodeOrs.safeParse(await lerJson(url))
+    if (!lido.success) return null
+    const cidade = normalizarCidade(cidadeDoCep)
+    for (const f of lido.data.features) {
+        const { layer, match_type, locality, localadmin, county } = f.properties
+        if (!layer || !CAMADAS_PRECISAS.has(layer) || match_type === 'fallback') continue
+        if (![locality, localadmin, county].some((c) => c !== undefined && normalizarCidade(c) === cidade)) continue
+        const [lng, lat] = f.geometry.coordinates
+        return { lat, lng, camada: layer }
+    }
+    return null
+}
+
+/** Geocodificador do OpenRouteService (Pelias): estruturado e, se não achar, por texto livre. */
+async function geocodeOrs(e: Endereco, chave: string): Promise<CoordenadaOrs | null> {
     if (!e.logradouro) return null
-    const parametros = new URLSearchParams({
+    const estruturado = new URLSearchParams({
         api_key: chave,
         address: e.logradouro,
         locality: e.cidade,
         region: e.uf,
         country: 'BRA',
-        size: '1',
+        layers: 'address,street',
+        size: '5',
     })
-    if (e.bairro) parametros.set('neighbourhood', e.bairro)
-    const lido = esquemaGeocodeOrs.safeParse(
-        await lerJson(`https://api.openrouteservice.org/geocode/search/structured?${parametros}`),
-    )
-    const primeiro = lido.success ? lido.data.features[0] : undefined
-    if (!primeiro) return null
-    const { locality, localadmin, county } = primeiro.properties
-    const cidade = normalizarCidade(e.cidade)
-    if (![locality, localadmin, county].some((c) => c !== undefined && normalizarCidade(c) === cidade)) return null
-    const [lng, lat] = primeiro.geometry.coordinates
-    return { lat, lng }
+    if (e.bairro) estruturado.set('neighbourhood', e.bairro)
+    const achado = await primeiroAceito(`https://api.openrouteservice.org/geocode/search/structured?${estruturado}`, e.cidade)
+    if (achado) return achado
+    const texto = new URLSearchParams({
+        api_key: chave,
+        text: [e.logradouro, e.bairro, e.cidade, e.uf].filter(Boolean).join(', '),
+        'boundary.country': 'BRA',
+        layers: 'address,street',
+        size: '5',
+    })
+    return primeiroAceito(`https://api.openrouteservice.org/geocode/search?${texto}`, e.cidade)
 }
 
-async function coordenada(cep: string, e: Endereco, chave: string): Promise<Coordenada | null> {
+async function coordenada(cep: string, e: Endereco, chave: string): Promise<(Coordenada & { fonte: string }) | null> {
     // 1) Rua + bairro + cidade (o bairro desambigua ruas com o mesmo nome). 2) Pelo CEP, onde o OSM tem.
     if (e.logradouro && e.bairro) {
         const porRua = await nominatim(`q=${encodeURIComponent(`${e.logradouro}, ${e.bairro}, ${e.cidade}, ${e.uf}`)}`)
-        if (porRua) return porRua
+        if (porRua) return { ...porRua, fonte: 'nominatim-rua' }
     }
     const porCep = await nominatim(`postalcode=${cep.slice(0, 5)}-${cep.slice(5)}`)
-    if (porCep) return porCep
+    if (porCep) return { ...porCep, fonte: 'nominatim-cep' }
     // 3) Geocodificador do OpenRouteService.
-    return geocodeOrs(e, chave)
+    const ors = await geocodeOrs(e, chave)
+    return ors ? { lat: ors.lat, lng: ors.lng, fonte: `ors-${ors.camada}` } : null
 }
 
 async function distanciaDeRotaKm(origem: Coordenada, destino: Coordenada, chave: string): Promise<number | null> {
@@ -143,7 +167,10 @@ export async function estimarFretePorCep(cepBruto: string): Promise<FreteEstimad
         if (!destino) return A_COMBINAR
         const distancia = await distanciaDeRotaKm(config.data.origem, destino, chave)
         if (distancia === null) return A_COMBINAR
-        return { frete: fretePorDistancia(distancia, config.data) }
+        const frete = fretePorDistancia(distancia, config.data)
+        // Conferência das faixas fora do ABC: de onde veio o ponto e a distância (sem dado pessoal).
+        console.info('[frete]', cep.slice(0, 5), destino.fonte, `${distancia.toFixed(1)} km`, frete ?? 'a combinar')
+        return { frete }
     } catch (erro) {
         console.error('[loja] falha ao estimar o frete', erro)
         return A_COMBINAR
