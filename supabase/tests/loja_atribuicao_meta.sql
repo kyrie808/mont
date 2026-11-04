@@ -132,9 +132,9 @@ BEGIN
     IF to_regprocedure('public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text)') IS NOT NULL THEN
       RAISE EXCEPTION 'a versão de 13 argumentos ainda existe (PostgREST ficaria ambíguo)';
     END IF;
-    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE')
-       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE')
-       OR NOT has_function_privilege('service_role', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE') THEN
+    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb, text, text, text, numeric)', 'EXECUTE')
+       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb, text, text, text, numeric)', 'EXECUTE')
+       OR NOT has_function_privilege('service_role', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb, text, text, text, numeric)', 'EXECUTE') THEN
       RAISE EXCEPTION 'permissões de loja_criar_pedido';
     END IF;
     passou := passou + 1;

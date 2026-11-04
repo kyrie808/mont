@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { cn } from '@mont/shared'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { z } from 'zod'
-import { enviarPedido, registrarInicioCheckout } from '@/app/checkout/acoes'
+import { enviarPedido, estimarFrete, registrarInicioCheckout } from '@/app/checkout/acoes'
 import { linkWhatsApp, reais } from '@/lib/formato'
 import { itensGA4 } from '@/lib/medicao/conteudo'
 import { medir } from '@/lib/medicao/dataLayer'
@@ -12,7 +13,7 @@ import { idInicioCheckout, idLead } from '@/lib/medicao/ids'
 import { atribuicaoAtual } from '@/lib/medicao/origem'
 import { guardarEnviado, novaChavePedido } from '@/lib/pedido/enviado'
 import { faltaParaEnviar, frasesDoQueFalta } from '@/lib/pedido/faltando'
-import { TEXTO_OFERTAS } from '@/lib/pedido/esquema'
+import { TEXTO_OFERTAS, type FormaEntrega, type FormaPagamento } from '@/lib/pedido/esquema'
 import { catalogoDa, resumirSacola } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
@@ -49,6 +50,55 @@ const campo =
     'placeholder:text-texto-suave focus:border-marrom'
 const rotulo = 'text-[13px] font-bold'
 
+const ENTREGAS: { valor: FormaEntrega; rotulo: string }[] = [
+    { valor: 'entrega', rotulo: 'Entrega' },
+    { valor: 'retirada', rotulo: 'Retiro na Mont' },
+]
+const PAGAMENTOS: { valor: FormaPagamento; rotulo: string }[] = [
+    { valor: 'pix', rotulo: 'Pix' },
+    { valor: 'dinheiro', rotulo: 'Dinheiro' },
+    { valor: 'cartao', rotulo: 'Cartão' },
+]
+
+type Frete = { status: 'vazio' | 'calculando' } | { status: 'pronto'; valor: number | null }
+
+/** Escolha em botões (um toque), no lugar de um select. */
+function Escolha<T extends string>({
+    rotulo: titulo,
+    opcoes,
+    valor,
+    onChange,
+}: {
+    rotulo: string
+    opcoes: { valor: T; rotulo: string }[]
+    valor: T
+    onChange: (v: T) => void
+}) {
+    return (
+        <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+            <legend className={cn(rotulo, 'mb-1.5 p-0')}>{titulo}</legend>
+            <div className="flex gap-2">
+                {opcoes.map((o) => (
+                    <button
+                        key={o.valor}
+                        type="button"
+                        aria-pressed={valor === o.valor}
+                        onClick={() => onChange(o.valor)}
+                        className={cn(
+                            'h-12 flex-1 cursor-pointer rounded-xl border px-2 text-[15px] font-bold',
+                            valor === o.valor
+                                ? 'border-marrom bg-marrom text-creme'
+                                : 'border-texto-suave/80 bg-white text-marrom',
+                        )}
+                    >
+                        {o.rotulo}
+                    </button>
+                ))}
+            </div>
+        </fieldset>
+    )
+}
+
 /** Tela 05: dados de entrega e envio do pedido pelo WhatsApp (sem pagamento online, decisão de 02/11). */
 export function Dados({ vitrine, whatsapp }: DadosProps) {
     const router = useRouter()
@@ -66,6 +116,12 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
     const [cidade, setCidade] = useState('')
     const [uf, setUf] = useState('')
     const [complemento, setComplemento] = useState('')
+    const [entrega, setEntrega] = useState<FormaEntrega>('entrega')
+    const [pagamento, setPagamento] = useState<FormaPagamento>('pix')
+    const [indicadoPor, setIndicadoPor] = useState('')
+    const [frete, setFrete] = useState<Frete>({ status: 'vazio' })
+    // Só vale a resposta do último CEP digitado (o cliente pode trocar antes de a anterior chegar).
+    const ultimoCep = useRef('')
     const [ofertas, setOfertas] = useState(false)
     const [site, setSite] = useState('')
     const [cepStatus, setCepStatus] = useState<'vazio' | 'buscando' | 'ok' | 'erro'>('vazio')
@@ -87,8 +143,26 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
         void registrarInicioCheckout({ chave, itens, atribuicao: atribuicaoAtual() }).catch(() => undefined)
     }, [pronta, resumo, chave, itens])
 
+    /** Prévia do frete pelo CEP (o servidor recalcula ao gravar o pedido). */
+    function estimar(digitos: string) {
+        ultimoCep.current = digitos
+        if (digitos.length !== 8) {
+            setFrete({ status: 'vazio' })
+            return
+        }
+        setFrete({ status: 'calculando' })
+        estimarFrete({ cep: digitos })
+            .then((r) => {
+                if (ultimoCep.current === digitos) setFrete({ status: 'pronto', valor: r.frete })
+            })
+            .catch(() => {
+                if (ultimoCep.current === digitos) setFrete({ status: 'pronto', valor: null })
+            })
+    }
+
     async function buscarCep(valor: string) {
         const digitos = valor.replace(/\D/g, '')
+        estimar(digitos)
         if (digitos.length !== 8) {
             setCepStatus('vazio')
             return
@@ -112,12 +186,40 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
     }
 
     const sacolaVazia = pronta && resumo.linhas.length === 0
-    const envio = { chave, nome, telefone, cep, logradouro, numero, complemento, bairro, cidade, uf, ofertas, site, itens }
+    const retirada = entrega === 'retirada'
+    const envio = {
+        chave,
+        nome,
+        telefone,
+        entrega,
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        uf,
+        pagamento,
+        indicadoPor,
+        ofertas,
+        site,
+        itens,
+    }
     // Mesma regra do servidor: vale o CEP achado ou o endereço digitado à mão (CEP novo, ViaCEP fora do ar).
     const faltando = faltaParaEnviar(envio)
     const comecou = [telefone, nome, cep, numero, logradouro].some((v) => v.trim() !== '')
     const podeEnviar =
-        pronta && !sacolaVazia && !resumo.temPendencia && cepStatus !== 'buscando' && faltando.length === 0 && !enviando
+        pronta &&
+        !sacolaVazia &&
+        !resumo.temPendencia &&
+        (retirada || cepStatus !== 'buscando') &&
+        faltando.length === 0 &&
+        !enviando
+    const textoFrete = retirada
+        ? 'Retirada na Mont: dia e horário combinamos no WhatsApp.'
+        : frete.status === 'pronto' && frete.valor !== null
+          ? `Frete estimado: ${reais(frete.valor)} · dia de entrega combinamos no WhatsApp.`
+          : 'Frete e dia de entrega: combinamos no WhatsApp.'
 
     function enviar() {
         if (!podeEnviar) return
@@ -183,7 +285,7 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                                     </li>
                                 ))}
                             </ul>
-                            <p className="mt-2 text-xs text-texto-suave">Frete e dia de entrega: combinamos no WhatsApp.</p>
+                            <p className="mt-2 text-xs text-texto-suave">{textoFrete}</p>
                         </details>
                     )}
 
@@ -220,135 +322,180 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                         />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="col-span-2 flex flex-col gap-1.5">
-                            <label className={rotulo} htmlFor="cep">
-                                CEP
-                            </label>
-                            <input
-                                id="cep"
-                                inputMode="numeric"
-                                autoComplete="postal-code"
-                                placeholder="09600-000"
-                                value={cep}
-                                onChange={(e) => {
-                                    const valor = mascaraCep(e.target.value)
-                                    setCep(valor)
-                                    void buscarCep(valor)
-                                }}
-                                className={campo}
-                                required
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className={rotulo} htmlFor="num">
-                                Número
-                            </label>
-                            <input
-                                id="num"
-                                inputMode="numeric"
-                                value={numero}
-                                onChange={(e) => setNumero(e.target.value)}
-                                className={campo}
-                                maxLength={20}
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div role="status" className="text-xs text-texto-suave empty:hidden">
-                        {cepStatus === 'buscando' && 'Buscando o endereço…'}
-                        {cepStatus === 'erro' && (
-                            <>
-                                Não achamos esse CEP. Confira os números ou preencha o endereço abaixo. Dúvida?{' '}
-                                <a href={linkWhatsApp(whatsapp)} target="_blank" rel="noopener noreferrer" className="font-bold">
-                                    Fale com a gente no WhatsApp
-                                </a>
-                                .
-                            </>
-                        )}
-                    </div>
+                    <Escolha rotulo="Como você quer receber?" opcoes={ENTREGAS} valor={entrega} onChange={setEntrega} />
+                    {retirada && (
+                        <p className="-mt-1 text-xs text-texto-suave">
+                            Você busca na Mont. Dia e horário a gente combina no WhatsApp.
+                        </p>
+                    )}
 
-                    <div className="flex flex-col gap-1.5">
-                        <label className={rotulo} htmlFor="rua">
-                            {cepStatus === 'erro' ? 'Rua' : 'Rua (preenche pelo CEP)'}
-                        </label>
-                        <input
-                            id="rua"
-                            autoComplete="address-line1"
-                            value={logradouro}
-                            onChange={(e) => setLogradouro(e.target.value)}
-                            className={campo}
-                            maxLength={120}
-                            required
-                        />
-                        {cepStatus === 'ok' && (
-                            <span className="text-xs text-texto-suave">
-                                {[bairro, `${cidade}/${uf}`].filter(Boolean).join(' · ')}
-                            </span>
-                        )}
-                    </div>
-
-                    {cepStatus === 'erro' && (
+                    {!retirada && (
                         <>
-                            <div className="flex flex-col gap-1.5">
-                                <label className={rotulo} htmlFor="bairro">
-                                    Bairro
-                                </label>
-                                <input
-                                    id="bairro"
-                                    autoComplete="address-level3"
-                                    value={bairro}
-                                    onChange={(e) => setBairro(e.target.value)}
-                                    className={campo}
-                                    maxLength={80}
-                                />
-                            </div>
                             <div className="grid grid-cols-3 gap-2">
                                 <div className="col-span-2 flex flex-col gap-1.5">
-                                    <label className={rotulo} htmlFor="cidade">
-                                        Cidade
+                                    <label className={rotulo} htmlFor="cep">
+                                        CEP
                                     </label>
                                     <input
-                                        id="cidade"
-                                        autoComplete="address-level2"
-                                        value={cidade}
-                                        onChange={(e) => setCidade(e.target.value)}
+                                        id="cep"
+                                        inputMode="numeric"
+                                        autoComplete="postal-code"
+                                        placeholder="09600-000"
+                                        value={cep}
+                                        onChange={(e) => {
+                                            const valor = mascaraCep(e.target.value)
+                                            setCep(valor)
+                                            void buscarCep(valor)
+                                        }}
                                         className={campo}
-                                        maxLength={80}
                                         required
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className={rotulo} htmlFor="uf">
-                                        Estado (UF)
+                                    <label className={rotulo} htmlFor="num">
+                                        Número
                                     </label>
                                     <input
-                                        id="uf"
-                                        autoComplete="address-level1"
-                                        autoCapitalize="characters"
-                                        placeholder="SP"
-                                        value={uf}
-                                        onChange={(e) => setUf(e.target.value.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase())}
+                                        id="num"
+                                        inputMode="numeric"
+                                        value={numero}
+                                        onChange={(e) => setNumero(e.target.value)}
                                         className={campo}
-                                        maxLength={2}
+                                        maxLength={20}
                                         required
                                     />
                                 </div>
                             </div>
+                            <div role="status" className="text-xs text-texto-suave empty:hidden">
+                                {cepStatus === 'buscando' && 'Buscando o endereço…'}
+                                {cepStatus === 'erro' && (
+                                    <>
+                                        Não achamos esse CEP. Confira os números ou preencha o endereço abaixo. Dúvida?{' '}
+                                        <a
+                                            href={linkWhatsApp(whatsapp)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-bold"
+                                        >
+                                            Fale com a gente no WhatsApp
+                                        </a>
+                                        .
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className={rotulo} htmlFor="rua">
+                                    {cepStatus === 'erro' ? 'Rua' : 'Rua (preenche pelo CEP)'}
+                                </label>
+                                <input
+                                    id="rua"
+                                    autoComplete="address-line1"
+                                    value={logradouro}
+                                    onChange={(e) => setLogradouro(e.target.value)}
+                                    className={campo}
+                                    maxLength={120}
+                                    required
+                                />
+                                {cepStatus === 'ok' && (
+                                    <span className="text-xs text-texto-suave">
+                                        {[bairro, `${cidade}/${uf}`].filter(Boolean).join(' · ')}
+                                    </span>
+                                )}
+                            </div>
+
+                            {cepStatus === 'erro' && (
+                                <>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className={rotulo} htmlFor="bairro">
+                                            Bairro
+                                        </label>
+                                        <input
+                                            id="bairro"
+                                            autoComplete="address-level3"
+                                            value={bairro}
+                                            onChange={(e) => setBairro(e.target.value)}
+                                            className={campo}
+                                            maxLength={80}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="col-span-2 flex flex-col gap-1.5">
+                                            <label className={rotulo} htmlFor="cidade">
+                                                Cidade
+                                            </label>
+                                            <input
+                                                id="cidade"
+                                                autoComplete="address-level2"
+                                                value={cidade}
+                                                onChange={(e) => setCidade(e.target.value)}
+                                                className={campo}
+                                                maxLength={80}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className={rotulo} htmlFor="uf">
+                                                Estado (UF)
+                                            </label>
+                                            <input
+                                                id="uf"
+                                                autoComplete="address-level1"
+                                                autoCapitalize="characters"
+                                                placeholder="SP"
+                                                value={uf}
+                                                onChange={(e) => setUf(e.target.value.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase())}
+                                                className={campo}
+                                                maxLength={2}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className={rotulo} htmlFor="comp">
+                                    Complemento ou ponto de referência
+                                </label>
+                                <input
+                                    id="comp"
+                                    placeholder="Ex.: portão verde, casa 2"
+                                    value={complemento}
+                                    onChange={(e) => setComplemento(e.target.value)}
+                                    className={campo}
+                                    maxLength={120}
+                                />
+                            </div>
+
+                            <p role="status" className="rounded-xl bg-areia px-3.5 py-3 text-sm font-medium empty:hidden">
+                                {frete.status === 'calculando' && 'Calculando o frete pelo seu CEP…'}
+                                {frete.status === 'pronto' &&
+                                    (frete.valor !== null
+                                        ? `Frete estimado: ${reais(frete.valor)}. A Mont confirma no WhatsApp.`
+                                        : 'Frete a combinar: a Mont passa o valor no WhatsApp.')}
+                            </p>
                         </>
                     )}
 
+                    <Escolha rotulo="Como prefere pagar?" opcoes={PAGAMENTOS} valor={pagamento} onChange={setPagamento} />
+                    {pagamento === 'cartao' && (
+                        <p className="-mt-1 text-xs text-texto-suave">
+                            No cartão vale o preço do cartão. A Mont confirma o valor no WhatsApp.
+                        </p>
+                    )}
+
                     <div className="flex flex-col gap-1.5">
-                        <label className={rotulo} htmlFor="comp">
-                            Complemento ou ponto de referência
+                        <label className={rotulo} htmlFor="indicado">
+                            Quem indicou a Mont para você? <span className="font-medium text-texto-suave">(opcional)</span>
                         </label>
                         <input
-                            id="comp"
-                            placeholder="Ex.: portão verde, casa 2"
-                            value={complemento}
-                            onChange={(e) => setComplemento(e.target.value)}
+                            id="indicado"
+                            autoComplete="off"
+                            value={indicadoPor}
+                            onChange={(e) => setIndicadoPor(e.target.value)}
                             className={campo}
-                            maxLength={120}
+                            maxLength={80}
                         />
                     </div>
 

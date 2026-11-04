@@ -7,6 +7,7 @@ const completo = {
     chave: 'f92c393e-625c-4e7f-99bf-c4d636035388',
     nome: 'Maria Souza',
     telefone: '(11) 98765-4321',
+    entrega: 'entrega' as const,
     cep: '09784-410',
     logradouro: 'Rua João XXIII',
     numero: '39',
@@ -14,6 +15,8 @@ const completo = {
     bairro: 'Montanhão',
     cidade: 'São Bernardo do Campo',
     uf: 'SP',
+    pagamento: 'pix' as const,
+    indicadoPor: '',
     ofertas: false,
     site: '',
     itens: sacola,
@@ -39,6 +42,13 @@ describe('faltaParaEnviar', () => {
 
     it('CEP incompleto e rua vazia', () => {
         expect(faltaParaEnviar({ ...completo, cep: '0978', logradouro: '' })).toEqual(['CEP', 'rua'])
+    })
+
+    it('retirada na Mont não pede endereço', () => {
+        expect(
+            faltaParaEnviar({ ...completo, entrega: 'retirada', cep: '', logradouro: '', numero: '', cidade: '', uf: '' }),
+        ).toEqual([])
+        expect(faltaParaEnviar({ ...completo, entrega: 'retirada', cep: '', nome: '' })).toEqual(['seu nome'])
     })
 
     it('não fala da chave, da armadilha de robô nem da sacola', () => {

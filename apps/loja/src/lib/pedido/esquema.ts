@@ -13,31 +13,53 @@ export function normalizarTelefone(v: string): string {
     return (d.length === 12 || d.length === 13) && d.startsWith('55') ? d.slice(2) : d
 }
 
-/** Envio da tela 05. A sacola vai só com identificadores: o preço é sempre do banco. */
-export const esquemaEnvioPedido = z.object({
-    chave: z.guid(),
-    nome: z.string().trim().min(2, 'Informe seu nome').max(80),
-    telefone: z
-        .string()
-        .transform(normalizarTelefone)
-        .refine((t) => /^[1-9]{2}9\d{8}$/.test(t), 'WhatsApp inválido'),
-    cep: z
-        .string()
-        .transform(soDigitos)
-        .refine((c) => /^\d{8}$/.test(c), 'CEP inválido'),
-    logradouro: z.string().trim().min(2, 'Informe a rua').max(120),
-    numero: z.string().trim().min(1, 'Informe o número').max(20),
-    complemento: z.string().trim().max(120),
-    bairro: z.string().trim().max(80),
-    cidade: z.string().trim().min(2, 'CEP sem cidade').max(80),
-    uf: z.string().trim().regex(/^[A-Za-z]{2}$/, 'CEP sem estado'),
-    ofertas: z.boolean(),
-    /** Armadilha para robô: campo escondido que gente de verdade deixa vazio. */
-    site: z.string().max(0),
-    itens: z.array(esquemaItemSacola).min(1, 'Sacola vazia').max(30),
-    /** fbp/fbc/UTMs (cat_pedidos), para o Purchase da entrega sair ligado ao anúncio. Inválido = sem atribuição. */
-    atribuicao: esquemaAtribuicao.optional().catch(undefined),
-})
+export const FORMAS_ENTREGA = ['entrega', 'retirada'] as const
+export const FORMAS_PAGAMENTO = ['pix', 'dinheiro', 'cartao'] as const
+export type FormaEntrega = (typeof FORMAS_ENTREGA)[number]
+export type FormaPagamento = (typeof FORMAS_PAGAMENTO)[number]
+
+/**
+ * Envio da tela 05. A sacola vai só com identificadores: o preço é sempre do banco.
+ * Retirada na Mont dispensa o endereço; na entrega, ele é obrigatório (mesmas mensagens de antes).
+ */
+export const esquemaEnvioPedido = z
+    .object({
+        chave: z.guid(),
+        nome: z.string().trim().min(2, 'Informe seu nome').max(80),
+        telefone: z
+            .string()
+            .transform(normalizarTelefone)
+            .refine((t) => /^[1-9]{2}9\d{8}$/.test(t), 'WhatsApp inválido'),
+        entrega: z.enum(FORMAS_ENTREGA),
+        cep: z.string().transform(soDigitos),
+        logradouro: z.string().trim().max(120),
+        numero: z.string().trim().max(20),
+        complemento: z.string().trim().max(120),
+        bairro: z.string().trim().max(80),
+        cidade: z.string().trim().max(80),
+        uf: z.string().trim().max(2),
+        /** Preferência do cliente; a forma que vale é a que o Gilmar escolhe ao confirmar. */
+        pagamento: z.enum(FORMAS_PAGAMENTO),
+        /** "Quem indicou a Mont para você?" (opcional, texto livre). */
+        indicadoPor: z.string().trim().max(80),
+        ofertas: z.boolean(),
+        /** Armadilha para robô: campo escondido que gente de verdade deixa vazio. */
+        site: z.string().max(0),
+        itens: z.array(esquemaItemSacola).min(1, 'Sacola vazia').max(30),
+        /** fbp/fbc/UTMs (cat_pedidos), para o Purchase da entrega sair ligado ao anúncio. Inválido = sem atribuição. */
+        atribuicao: esquemaAtribuicao.optional().catch(undefined),
+    })
+    .superRefine((d, ctx) => {
+        if (d.entrega !== 'entrega') return
+        const exigir = (ok: boolean, campo: string, message: string) => {
+            if (!ok) ctx.addIssue({ code: 'custom', path: [campo], message })
+        }
+        exigir(/^\d{8}$/.test(d.cep), 'cep', 'CEP inválido')
+        exigir(d.logradouro.length >= 2, 'logradouro', 'Informe a rua')
+        exigir(d.numero.length >= 1, 'numero', 'Informe o número')
+        exigir(d.cidade.length >= 2, 'cidade', 'CEP sem cidade')
+        exigir(/^[A-Za-z]{2}$/.test(d.uf), 'uf', 'CEP sem estado')
+    })
 
 export type EnvioPedido = z.input<typeof esquemaEnvioPedido>
 

@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { formatCurrency } from '@mont/shared'
 import { cn } from '@mont/shared'
 import { Button, Drawer } from '../../ui'
+import { FormIndicacao } from '../contatos/form/FormIndicacao'
+import type { DomainContato, IndicadorRef } from '../../../types/domain'
 import type { ConfirmarPedidoLoja, FormaPagamentoLoja, PedidoLoja } from '../../../services/pedidosLojaService'
 import { diaMes, enderecoDiferente, hojeSP, somarDias } from '../../../utils/pedidosLoja'
 
@@ -22,37 +24,89 @@ interface ConfirmarPedidoDrawerProps {
     confirmando: boolean
     onClose: () => void
     onConfirmar: (dados: ConfirmarPedidoLoja) => void
+    /** Busca de clientes para "Quem indicou" (a mesma do cadastro de cliente). */
+    buscarContatos: (termo: string) => Promise<DomainContato[]>
 }
 
 /** Frete, data de entrega e forma de pagamento em toques; o pedido vira venda pendente. */
-export function ConfirmarPedidoDrawer({ pedido, confirmando, onClose, onConfirmar }: ConfirmarPedidoDrawerProps) {
+export function ConfirmarPedidoDrawer({ pedido, ...resto }: ConfirmarPedidoDrawerProps) {
     if (!pedido) return null
     // A chave reinicia o formulário a cada pedido aberto.
-    return <Formulario key={pedido.id} pedido={pedido} confirmando={confirmando} onClose={onClose} onConfirmar={onConfirmar} />
+    return <Formulario key={pedido.id} pedido={pedido} {...resto} />
 }
 
-function Formulario({ pedido, confirmando, onClose, onConfirmar }: ConfirmarPedidoDrawerProps & { pedido: PedidoLoja }) {
+/** Frete que já vem marcado: a estimativa pelo CEP. "A combinar" (ou retirada) não marca nada. */
+function freteInicial(pedido: PedidoLoja): { frete: number | 'outro' | null; outro: string } {
+    const estimado = pedido.entrega === 'entrega' ? pedido.freteEstimado : null
+    if (estimado === null) return { frete: null, outro: '' }
+    return (FRETES as readonly number[]).includes(estimado)
+        ? { frete: estimado, outro: '' }
+        : { frete: 'outro', outro: String(estimado).replace('.', ',') }
+}
+
+function Formulario({
+    pedido,
+    confirmando,
+    onClose,
+    onConfirmar,
+    buscarContatos,
+}: Omit<ConfirmarPedidoDrawerProps, 'pedido'> & { pedido: PedidoLoja }) {
     const hoje = hojeSP()
     const amanha = somarDias(hoje, 1)
+    const retirada = pedido.entrega === 'retirada'
+    const inicial = freteInicial(pedido)
 
-    const [frete, setFrete] = useState<number | 'outro' | null>(null)
-    const [freteOutro, setFreteOutro] = useState('')
+    const [frete, setFrete] = useState<number | 'outro' | null>(inicial.frete)
+    const [freteOutro, setFreteOutro] = useState(inicial.outro)
     const [data, setData] = useState<string | null>(null)
     const [dataOutra, setDataOutra] = useState(false)
-    const [forma, setForma] = useState<FormaPagamentoLoja | null>(null)
+    const [forma, setForma] = useState<FormaPagamentoLoja | null>(pedido.pagamentoPreferido)
     const [atualizarEndereco, setAtualizarEndereco] = useState(false)
 
-    const freteValor = frete === 'outro' ? Number(freteOutro.replace(',', '.')) : frete
+    // "Quem indicou" (Ranking): começa pela busca com o que o cliente escreveu.
+    const indicadorAtual = pedido.cadastro?.indicador ?? null
+    const [indicador, setIndicador] = useState<IndicadorRef | null>(null)
+    const [busca, setBusca] = useState(pedido.indicadoPor ?? '')
+    const [resultados, setResultados] = useState<DomainContato[]>([])
+    const buscando = !indicadorAtual && !indicador && busca.trim().length >= 2
+    const sugestoes = buscando ? resultados : []
+    useEffect(() => {
+        if (!buscando) return
+        let vivo = true
+        const espera = setTimeout(() => {
+            buscarContatos(busca.trim())
+                .then((r) => {
+                    if (vivo) setResultados(r.filter((c) => c.id !== pedido.cadastro?.id))
+                })
+                .catch(() => {
+                    if (vivo) setResultados([])
+                })
+        }, 300)
+        return () => {
+            vivo = false
+            clearTimeout(espera)
+        }
+    }, [buscando, busca, buscarContatos, pedido.cadastro?.id])
+
+    const freteValor = retirada ? 0 : frete === 'outro' ? Number(freteOutro.replace(',', '.')) : frete
     const freteOk = freteValor !== null && Number.isFinite(freteValor) && freteValor >= 0 && freteValor <= 500
     const pronto = freteOk && data !== null && forma !== null
-    const perguntaEndereco = enderecoDiferente(
-        { logradouro: pedido.logradouro, numero: pedido.numeroEndereco },
-        pedido.cadastro ? { logradouro: pedido.cadastro.logradouro, numero: pedido.cadastro.numero } : null,
-    )
+    const perguntaEndereco =
+        !retirada &&
+        enderecoDiferente(
+            { logradouro: pedido.logradouro, numero: pedido.numeroEndereco },
+            pedido.cadastro ? { logradouro: pedido.cadastro.logradouro, numero: pedido.cadastro.numero } : null,
+        )
 
     const confirmar = () => {
         if (!pronto || freteValor === null || data === null || forma === null || confirmando) return
-        onConfirmar({ frete: freteValor, dataEntrega: data, forma, atualizarEndereco: perguntaEndereco && atualizarEndereco })
+        onConfirmar({
+            frete: freteValor,
+            dataEntrega: data,
+            forma,
+            atualizarEndereco: perguntaEndereco && atualizarEndereco,
+            indicadoPorId: indicador?.id ?? null,
+        })
     }
 
     return (
@@ -70,27 +124,39 @@ function Formulario({ pedido, confirmando, onClose, onConfirmar }: ConfirmarPedi
             }
         >
             <div className="space-y-6 p-4">
-                <Grupo titulo="Frete">
-                    {FRETES.map((v) => (
-                        <Opcao key={v} ativa={frete === v} onClick={() => setFrete(v)}>
-                            {v === 0 ? 'Grátis' : formatCurrency(v)}
-                        </Opcao>
-                    ))}
-                    <Opcao ativa={frete === 'outro'} onClick={() => setFrete('outro')}>Outro</Opcao>
-                    {frete === 'outro' && (
-                        <input
-                            aria-label="Valor do frete"
-                            inputMode="decimal"
-                            placeholder="0,00"
-                            autoFocus
-                            value={freteOutro}
-                            onChange={(e) => setFreteOutro(e.target.value.replace(/[^\d,.]/g, ''))}
-                            className={cn(inputBase, 'basis-full tabular-nums')}
-                        />
-                    )}
-                </Grupo>
+                {retirada ? (
+                    <section className="rounded-xl border border-border bg-muted p-3 text-sm text-foreground">
+                        <p className="font-medium">Retirada na Mont</p>
+                        <p className="text-xs text-muted-foreground">Sem frete. O cliente busca no dia combinado.</p>
+                    </section>
+                ) : (
+                    <Grupo titulo="Frete">
+                        {FRETES.map((v) => (
+                            <Opcao key={v} ativa={frete === v} onClick={() => setFrete(v)}>
+                                {v === 0 ? 'Grátis' : formatCurrency(v)}
+                            </Opcao>
+                        ))}
+                        <Opcao ativa={frete === 'outro'} onClick={() => setFrete('outro')}>Outro</Opcao>
+                        {frete === 'outro' && (
+                            <input
+                                aria-label="Valor do frete"
+                                inputMode="decimal"
+                                placeholder="0,00"
+                                autoFocus
+                                value={freteOutro}
+                                onChange={(e) => setFreteOutro(e.target.value.replace(/[^\d,.]/g, ''))}
+                                className={cn(inputBase, 'basis-full tabular-nums')}
+                            />
+                        )}
+                        <p className="basis-full text-xs text-muted-foreground">
+                            {pedido.freteEstimado !== null
+                                ? `Estimado pelo CEP: ${formatCurrency(pedido.freteEstimado)}. Troque se combinou outro.`
+                                : 'Frete a combinar: escolha o valor (ou Grátis) que você combinou.'}
+                        </p>
+                    </Grupo>
+                )}
 
-                <Grupo titulo="Entrega">
+                <Grupo titulo={retirada ? 'Dia de retirada' : 'Entrega'}>
                     <Opcao ativa={!dataOutra && data === hoje} onClick={() => { setDataOutra(false); setData(hoje) }}>
                         Hoje · {diaMes(hoje)}
                     </Opcao>
@@ -101,7 +167,7 @@ function Formulario({ pedido, confirmando, onClose, onConfirmar }: ConfirmarPedi
                     {dataOutra && (
                         <input
                             type="date"
-                            aria-label="Data de entrega"
+                            aria-label={retirada ? 'Dia de retirada' : 'Data de entrega'}
                             min={hoje}
                             value={data ?? ''}
                             onChange={(e) => setData(e.target.value || null)}
@@ -116,16 +182,50 @@ function Formulario({ pedido, confirmando, onClose, onConfirmar }: ConfirmarPedi
                             {f.rotulo}
                         </Opcao>
                     ))}
+                    {pedido.pagamentoPreferido && (
+                        <p className="basis-full text-xs text-muted-foreground">
+                            O cliente prefere {FORMAS.find((f) => f.valor === pedido.pagamentoPreferido)?.rotulo}.
+                        </p>
+                    )}
                     {forma === 'cartao' && (
                         <p className="basis-full text-xs text-muted-foreground">
                             No cartão, os produtos seguem a tabela do cartão; o total aparece depois de confirmar.
                         </p>
                     )}
                     {forma === 'dinheiro' && (
-                        <p className="basis-full text-xs text-muted-foreground">O entregador recebe na entrega.</p>
+                        <p className="basis-full text-xs text-muted-foreground">
+                            {retirada ? 'Recebe na retirada.' : 'O entregador recebe na entrega.'}
+                        </p>
                     )}
                 </Grupo>
 
+                <section className="space-y-2">
+                    <h3 className="text-sm font-medium text-foreground">Quem indicou</h3>
+                    {indicadorAtual ? (
+                        <p className="text-sm text-muted-foreground">
+                            Já indicado por {indicadorAtual.nome} no cadastro.
+                        </p>
+                    ) : (
+                        <>
+                            <p className="text-xs text-muted-foreground">
+                                {pedido.indicadoPor
+                                    ? `O cliente escreveu: “${pedido.indicadoPor}”. Escolha o cliente para contar no Ranking.`
+                                    : 'Opcional. Escolha o cliente que indicou para contar no Ranking.'}
+                            </p>
+                            <FormIndicacao
+                                selectedIndicador={indicador}
+                                handleClearIndicador={() => setIndicador(null)}
+                                indicadorSearch={busca}
+                                setIndicadorSearch={setBusca}
+                                showIndicadorDropdown={sugestoes.length > 0}
+                                indicadorResults={sugestoes}
+                                handleSelectIndicador={(c) => setIndicador({ id: c.id, nome: c.nome, telefone: c.telefone })}
+                            />
+                        </>
+                    )}
+                </section>
+
+                {!retirada && (
                 <section className="space-y-2">
                     <h3 className="text-sm font-medium text-foreground">Endereço do pedido</h3>
                     <p className="text-sm text-muted-foreground">{pedido.endereco}</p>
@@ -146,6 +246,7 @@ function Formulario({ pedido, confirmando, onClose, onConfirmar }: ConfirmarPedi
                         </label>
                     )}
                 </section>
+                )}
             </div>
         </Drawer>
     )

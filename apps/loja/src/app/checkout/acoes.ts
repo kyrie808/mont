@@ -5,6 +5,8 @@ import { after } from 'next/server'
 import { z } from 'zod'
 import { ambiente } from '@/lib/ambiente'
 import { linkWhatsApp } from '@/lib/formato'
+import type { FreteEstimado } from '@/lib/frete/calculo'
+import { estimarFretePorCep } from '@/lib/frete/estimar'
 import { enviarEventoSite, type EnvioSite } from '@/lib/medicao/capi'
 import { dadosDoCheckout } from '@/lib/medicao/conteudo'
 import { idInicioCheckout, idLead } from '@/lib/medicao/ids'
@@ -58,6 +60,15 @@ export async function registrarInicioCheckout(entrada: unknown): Promise<void> {
     after(() => enviarEventoSite(envio))
 }
 
+const esquemaCep = z.object({ cep: z.string().max(12) })
+
+/** Tela 05: frete estimado pelo CEP (mesmo cálculo do catálogo antigo). Falha = "a combinar". */
+export async function estimarFrete(entrada: unknown): Promise<FreteEstimado> {
+    const lido = esquemaCep.safeParse(entrada)
+    if (!lido.success) return { frete: null }
+    return estimarFretePorCep(lido.data.cep)
+}
+
 /**
  * Tela 05 → grava o pedido (RPC loja_criar_pedido, que valida e precifica tudo no banco) e
  * devolve o link do WhatsApp da Mont com a mensagem pronta. O pedido só vira venda quando a
@@ -82,6 +93,9 @@ export async function enviarPedido(entrada: unknown): Promise<ResultadoEnvio> {
               },
     )
 
+    // Frete recalculado aqui (o que a tela mostrou é só prévia). Retirada não tem frete.
+    const { frete: freteEstimado } = d.entrega === 'entrega' ? await estimarFretePorCep(d.cep) : { frete: null }
+
     const banco = criarClienteServico()
     const { data, error } = await banco
         .rpc('loja_criar_pedido', {
@@ -99,6 +113,10 @@ export async function enviarPedido(entrada: unknown): Promise<ResultadoEnvio> {
             p_ofertas: d.ofertas,
             p_ofertas_texto: TEXTO_OFERTAS,
             p_atribuicao: { ...atribuicao },
+            p_entrega: d.entrega,
+            p_pagamento: d.pagamento,
+            p_indicado_por: d.indicadoPor || undefined,
+            p_frete_estimado: freteEstimado ?? undefined,
         })
         .single()
 
@@ -124,7 +142,11 @@ export async function enviarPedido(entrada: unknown): Promise<ResultadoEnvio> {
         numero: data.numero_pedido,
         total: Number(data.total),
         nome: d.nome,
+        entrega: d.entrega,
         endereco: { logradouro: d.logradouro, numero: d.numero, complemento: d.complemento, bairro: d.bairro, cidade: d.cidade },
+        freteEstimado,
+        pagamento: d.pagamento,
+        indicadoPor: d.indicadoPor,
         itens: d.itens,
         vitrine,
     })

@@ -1,8 +1,10 @@
 import { MessageCircle } from 'lucide-react'
 import { formatCurrency } from '@mont/shared'
 import { Button } from '../../ui'
-import type { PedidoLoja } from '../../../services/pedidosLojaService'
+import type { FormaPagamentoLoja, PedidoLoja } from '../../../services/pedidosLojaService'
 import { agruparItens, quandoSP } from '../../../utils/pedidosLoja'
+
+const ROTULO_PAGAMENTO: Record<FormaPagamentoLoja, string> = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão' }
 
 interface PedidoLojaCardProps {
     pedido: PedidoLoja
@@ -55,7 +57,22 @@ export function PedidoLojaCard({ pedido, nomes, onConfirmar, onDescartar }: Pedi
                 )}
             </ul>
 
-            <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">{pedido.endereco}</p>
+            <div className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+                {pedido.entrega === 'retirada' ? (
+                    <p className="font-semibold text-foreground">Retirada na Mont</p>
+                ) : (
+                    <>
+                        <p>{pedido.endereco}</p>
+                        <p>
+                            {pedido.freteEstimado !== null
+                                ? `Frete estimado pelo CEP: ${formatCurrency(pedido.freteEstimado)}`
+                                : 'Frete a combinar'}
+                        </p>
+                    </>
+                )}
+                {pedido.pagamentoPreferido && <p>Prefere pagar: {ROTULO_PAGAMENTO[pedido.pagamentoPreferido]}</p>}
+                {pedido.indicadoPor && <p>Indicado por: {pedido.indicadoPor}</p>}
+            </div>
 
             <div className="mt-3 flex items-center gap-2">
                 <a
