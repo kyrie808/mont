@@ -49,3 +49,33 @@ describe('VendaCard payment badge', () => {
     expect(screen.getAllByText(/^Brinde$/).length).toBeGreaterThan(0)
   })
 })
+
+describe('VendaCard selo de origem', () => {
+  it('venda da loja mostra o selo "Loja"; a do catálogo, "Catálogo Online"', () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <VendaCard venda={makeVenda({ origem: 'loja' })} onDeleteClick={vi.fn()} />
+      </MemoryRouter>
+    )
+    expect(screen.getByText(/^Loja$/)).toBeInTheDocument()
+    expect(screen.queryByText('Catálogo Online')).not.toBeInTheDocument()
+
+    rerender(
+      <MemoryRouter>
+        <VendaCard venda={makeVenda({ origem: 'catalogo' })} onDeleteClick={vi.fn()} />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Catálogo Online')).toBeInTheDocument()
+    expect(screen.queryByText(/^Loja$/)).not.toBeInTheDocument()
+  })
+
+  it('venda direta não tem selo de origem', () => {
+    render(
+      <MemoryRouter>
+        <VendaCard venda={makeVenda({ origem: null })} onDeleteClick={vi.fn()} />
+      </MemoryRouter>
+    )
+    expect(screen.queryByText(/^Loja$/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Catálogo Online')).not.toBeInTheDocument()
+  })
+})

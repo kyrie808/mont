@@ -30,6 +30,17 @@ export interface ConfirmarPedidoLoja {
 }
 
 export const pedidosLojaService = {
+    /** Quantos pedidos da loja esperam confirmação (contador do menu). */
+    async contarPendentes(): Promise<number> {
+        const { count, error } = await supabase
+            .from('cat_pedidos')
+            .select('id', { count: 'exact', head: true })
+            .eq('canal', 'loja')
+            .eq('status', 'pendente')
+        if (error) throw error
+        return count ?? 0
+    },
+
     /** Fila de pedidos da loja esperando confirmação, mais novos primeiro. */
     async listarPendentes(): Promise<PedidoLoja[]> {
         const { data, error } = await supabase

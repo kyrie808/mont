@@ -12,6 +12,18 @@ export function usePedidosLoja() {
     })
 }
 
+/**
+ * Contador do item "Pedidos da loja" no menu (celular e desktop). Fica sob a mesma chave da fila,
+ * então confirmar ou descartar atualiza na hora; sozinho, rebusca a cada minuto e ao voltar ao app.
+ */
+export function useContagemPedidosLoja() {
+    return useQuery({
+        queryKey: [...CHAVE, 'contagem'],
+        queryFn: () => pedidosLojaService.contarPendentes(),
+        refetchInterval: 60_000,
+    })
+}
+
 export function useConfirmarPedidoLoja() {
     const queryClient = useQueryClient()
     return useMutation({

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Calendar, DollarSign, Monitor, Truck, Trash2 } from 'lucide-react'
+import { Calendar, DollarSign, Monitor, Store, Truck, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent, CardFooter, Button } from '../../../components/ui'
 import { formatDate, formatCurrency } from '@mont/shared'
 import { FORMA_PAGAMENTO_LABELS } from '../../../constants'
@@ -100,6 +100,12 @@ export function VendaCard({ venda, onDeleteClick }: VendaCardProps) {
                             <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-card flex items-center gap-1.5">
                                 <Monitor className="h-3.5 w-3.5" />
                                 <span>Catálogo Online</span>
+                            </div>
+                        )}
+                        {venda.origem === 'loja' && (
+                            <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-card flex items-center gap-1.5">
+                                <Store className="h-3.5 w-3.5" />
+                                <span>Loja</span>
                             </div>
                         )}
                     </div>

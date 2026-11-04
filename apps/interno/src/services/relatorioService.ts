@@ -78,12 +78,6 @@ export const relatorioService = {
 
     // ── Marketing ─────────────────────────────────────────────────────────────
 
-    async getMarketingPedidos(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_marketing_pedidos_periodo'>> {
-        const { data, error } = await supabase.rpc('rpt_marketing_pedidos_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
-        if (error) throw error
-        return data ?? []
-    },
-
     /** Aquisição mensal por origem (view vitalícia; a aba recorta client-side). */
     async getAquisicaoMensal(): Promise<Tables<'rpt_aquisicao_mensal'>[]> {
         const { data, error } = await supabase.from('rpt_aquisicao_mensal').select('*')
