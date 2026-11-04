@@ -19,6 +19,10 @@ export const esquemaFreteConfig = z.object({
     regiaoFixa: z
         .object({ nome: z.string(), valor: z.number().positive(), cidades: z.array(z.string()).min(1) })
         .optional(),
+    /** Bairros com valor fixo (bairro + cidade do ViaCEP), depois do ABC e antes da distância. */
+    bairrosFixos: z
+        .array(z.object({ bairro: z.string().min(1), cidade: z.string().min(1), valor: z.number().positive() }))
+        .optional(),
 })
 
 export type FreteConfig = z.infer<typeof esquemaFreteConfig>
@@ -36,6 +40,14 @@ export function normalizarCidade(cidade: string): string {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim()
+}
+
+/** Valor fixo do bairro (bairro + cidade do ViaCEP), sem acento e sem maiúscula; senão `null`. */
+export function valorDoBairro(bairro: string | null | undefined, cidade: string | null | undefined, config: FreteConfig): number | null {
+    if (!bairro || !cidade) return null
+    const [b, c] = [normalizarCidade(bairro), normalizarCidade(cidade)]
+    const achado = (config.bairrosFixos ?? []).find((f) => normalizarCidade(f.bairro) === b && normalizarCidade(f.cidade) === c)
+    return achado ? Math.round(achado.valor * 100) / 100 : null
 }
 
 /** Valor fixo da região (ABC) quando a cidade do CEP está nela; senão `null` (vale a distância). */

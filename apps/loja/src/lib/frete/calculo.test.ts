@@ -1,5 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { fretePorDistancia, valorDaRegiao, type FreteConfig } from './calculo'
+import { fretePorDistancia, valorDaRegiao, valorDoBairro, type FreteConfig } from './calculo'
+
+describe('bairros com valor fixo', () => {
+    const config: FreteConfig = {
+        modo: 'valor_fixo',
+        origem: { lat: -23.72, lng: -46.52 },
+        faixas: [{ ateKm: 21, valorFixo: 10 }],
+        bairrosFixos: [
+            { bairro: 'Interlagos', cidade: 'São Paulo', valor: 15 },
+            { bairro: 'Vila Nova', cidade: 'São Paulo', valor: 15 },
+        ],
+    }
+
+    it('bairro + cidade do ViaCEP, sem acento e sem diferença de maiúscula', () => {
+        expect(valorDoBairro('Interlagos', 'São Paulo', config)).toBe(15)
+        expect(valorDoBairro('VILA NOVA', 'sao paulo', config)).toBe(15)
+    })
+
+    it('outro bairro, ou o mesmo nome em outra cidade, não vale (fica para a distância)', () => {
+        expect(valorDoBairro('Vila Moraes', 'São Paulo', config)).toBeNull()
+        expect(valorDoBairro('Vila Nova', 'São Bernardo do Campo', config)).toBeNull()
+        expect(valorDoBairro(null, 'São Paulo', config)).toBeNull()
+        expect(valorDoBairro('Interlagos', 'São Paulo', { ...config, bairrosFixos: undefined })).toBeNull()
+    })
+})
 
 // Regra final de 04/11/2026: ABC = R$ 5 pela cidade do CEP; fora dele, até 21 km R$ 10, até 35 km R$ 15.
 const REGRA_FINAL: FreteConfig = {

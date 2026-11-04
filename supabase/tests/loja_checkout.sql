@@ -5,7 +5,7 @@
 -- cat_pedidos.numero_pedido usa uma sequência temporária (nextval escapa do rollback).
 -- Pedidos criados como o servidor da loja (service_role); confirmados como a CONTA-TESTE (admin).
 -- Telefones fictícios com o prefixo 119000020.
---   SUITE_OK     loja_checkout 9/9 | [...]
+--   SUITE_OK     loja_checkout 10/10 | [...]
 
 DO $suite$
 DECLARE
@@ -194,6 +194,36 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'F9 valor da região (ABC) e das faixas valem; outro não', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'F9 valor da região (ABC) e das faixas valem; outro não', 'ok', false, 'erro', SQLERRM);
+  END;
+  -- ── F10: valor de um bairro fixo (frete_config.bairrosFixos) também vale; outro valor não ──
+  casos := casos + 1;
+  BEGIN
+    RESET ROLE;
+    UPDATE public.configuracoes
+       SET valor = valor || jsonb_build_object('bairrosFixos', jsonb_build_array(
+                       jsonb_build_object('bairro', 'Bairro Suíte', 'cidade', 'São Paulo', 'valor', 12)))
+     WHERE chave = 'frete_config';
+    SET LOCAL ROLE service_role;
+    SELECT lp.pedido_id INTO ped_x FROM public.loja_criar_pedido(
+      gen_random_uuid(), 'Cliente Bairro', c_tel || '12', '04815270', 'Rua Teste', '10', NULL, 'Bairro Suíte',
+      'São Paulo', 'SP', itens, false, NULL, NULL, 'entrega', 'pix', NULL, 12) lp;
+    IF (SELECT frete_estimado FROM public.cat_pedidos WHERE id = ped_x) IS DISTINCT FROM 12 THEN
+      RAISE EXCEPTION 'não aceitou o valor do bairro (12)';
+    END IF;
+    SELECT lp.pedido_id INTO ped_x FROM public.loja_criar_pedido(
+      gen_random_uuid(), 'Cliente Bairro', c_tel || '13', '04815270', 'Rua Teste', '10', NULL, 'Bairro Suíte',
+      'São Paulo', 'SP', itens, false, NULL, NULL, 'entrega', 'pix', NULL, 13) lp;
+    IF (SELECT frete_estimado FROM public.cat_pedidos WHERE id = ped_x) IS NOT NULL THEN
+      RAISE EXCEPTION 'aceitou 13, que não está configurado';
+    END IF;
+    IF has_function_privilege('anon', 'public.loja_frete_estimado_valido(numeric)', 'EXECUTE')
+       OR has_function_privilege('authenticated', 'public.loja_frete_estimado_valido(numeric)', 'EXECUTE') THEN
+      RAISE EXCEPTION 'loja_frete_estimado_valido aberta ao público';
+    END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'F10 valor do bairro fixo vale; outro não', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'F10 valor do bairro fixo vale; outro não', 'ok', false, 'erro', SQLERRM);
   END;
   RESET ROLE;
 

@@ -1,6 +1,13 @@
 import { z } from 'zod'
 import { criarClienteServico } from '@/lib/supabase/servico'
-import { esquemaFreteConfig, fretePorDistancia, normalizarCidade, valorDaRegiao, type FreteEstimado } from './calculo'
+import {
+    esquemaFreteConfig,
+    fretePorDistancia,
+    normalizarCidade,
+    valorDaRegiao,
+    valorDoBairro,
+    type FreteEstimado,
+} from './calculo'
 
 // Só no servidor (server actions da loja): usa a chave de serviço e a ORS_API_KEY.
 // CEP → ViaCEP (cidade). Cidade do ABC → valor fixo da região, sem distância.
@@ -158,7 +165,8 @@ export async function estimarFretePorCep(cepBruto: string): Promise<FreteEstimad
         // Sem a cidade do CEP não dá para saber se é ABC: melhor "a combinar" do que cobrar a faixa errada.
         const endereco = await enderecoDoCep(cep)
         if (!endereco) return A_COMBINAR
-        const fixo = valorDaRegiao(endereco.cidade, config.data)
+        // Valores fixos não dependem do mapa: ABC pela cidade, depois os bairros cadastrados.
+        const fixo = valorDaRegiao(endereco.cidade, config.data) ?? valorDoBairro(endereco.bairro, endereco.cidade, config.data)
         if (fixo !== null) return { frete: fixo }
 
         const chave = process.env.ORS_API_KEY

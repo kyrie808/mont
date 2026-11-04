@@ -4710,6 +4710,10 @@ export type Database = {
         }
         Returns: string
       }
+      loja_frete_estimado_valido: {
+        Args: { p_valor: number }
+        Returns: boolean
+      }
       preco_tabela: {
         Args: { p_em?: string; p_produto_id: string; p_tabela: string }
         Returns: number
