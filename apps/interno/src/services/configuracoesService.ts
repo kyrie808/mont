@@ -16,6 +16,14 @@ export interface FreteConfig {
     foraDoAlcance: 'a_combinar'
     /** Região de valor fixo pela cidade do CEP (ex.: ABC = R$ 5). Sem tela: a aba Frete só preserva. */
     regiaoFixa?: { nome: string; valor: number; cidades: string[] }
+    /** Bairros com valor fixo (bairro + cidade do ViaCEP), depois do ABC e antes da distância. */
+    bairrosFixos?: BairroFixo[]
+}
+
+export interface BairroFixo {
+    bairro: string
+    cidade: string
+    valor: number
 }
 
 export const FRETE_CONFIG_DEFAULT: FreteConfig = {
