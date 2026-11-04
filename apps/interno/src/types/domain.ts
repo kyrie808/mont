@@ -94,6 +94,9 @@ export interface DomainProduto {
     ordemVitrine?: number
     // "Sempre em Mais vendidos" na Nova Venda (só interno; a loja não lê)
     fixoMaisVendidos?: boolean
+    // Loja: "Esgotado" de um toque (tira da venda e dos sabores dos combos) e nome que o cliente vê
+    esgotado?: boolean
+    nomeLoja?: string | null
 }
 
 export interface DomainItemVenda {

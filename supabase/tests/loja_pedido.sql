@@ -8,7 +8,7 @@
 --
 -- Cenário (só dentro da transação):
 --   * a campanha "Black da Mont 2026" fica ligada e valendo desde ontem;
---   * estoque dos doces usados vai a 100 (o estoque real não pode decidir o teste);
+--   * os produtos usados ficam sem "Esgotado" (a marca real não pode decidir o teste);
 --   * cat_pedidos.numero_pedido usa uma sequência temporária, para não queimar números reais
 --     (nextval escapa do rollback);
 --   * um combo de teste fora do catálogo e de qualquer campanha (L3), para a recusa não depender
@@ -78,8 +78,11 @@ BEGIN
 
   -- ── Ajustes de cenário (descartados no fim) ──
   UPDATE public.loja_campanhas SET ativa = true, inicio = now() - interval '1 day' WHERE id = v_campanha;
-  UPDATE public.produtos SET estoque_atual = 100
-   WHERE id IN (SELECT produto_id FROM public.loja_vitrine WHERE usa_estoque);
+  UPDATE public.produtos SET esgotado = false
+   WHERE id IN (v_balde, v_dl, v_cocada, v_familia, v_par, v_dupla)
+      OR id IN (SELECT componente_id FROM public.produto_componentes WHERE combo_id IN (v_familia, v_par, v_dupla))
+      OR id IN (SELECT o.produto_id FROM public.combo_grupo_opcoes o JOIN public.combo_grupos g ON g.id = o.grupo_id
+                 WHERE g.combo_id IN (v_familia, v_par, v_dupla));
   CREATE SEQUENCE public.tmp_suite_loja_pedido_seq START 900001;
   ALTER TABLE public.cat_pedidos ALTER COLUMN numero_pedido SET DEFAULT nextval('public.tmp_suite_loja_pedido_seq');
   INSERT INTO public.produtos (nome, codigo, preco, custo, unidade, ativo, visivel_catalogo, eh_combo, categoria)
@@ -183,29 +186,61 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'L3 recusas da loja', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- ── L4: com "controlar pelo estoque" ligado, estoque do doce menor que o pedido recusa ──
-  -- (Desde 20261102112056 os doces vendem só pela chave manual; o cenário liga o controle na cocada.)
+  -- ── L4: "Esgotado" no cadastro (produtos.esgotado) recusa avulso, sabor de combo, item fixo e o combo ──
+  -- (O estoque não decide nada: estoque zerado continua vendendo.)
   casos := casos + 1;
   BEGIN
     RESET ROLE;
-    UPDATE public.loja_vitrine SET usa_estoque = true WHERE produto_id = v_cocada;
-    UPDATE public.produtos SET estoque_atual = 2 WHERE id = v_cocada;
+    UPDATE public.produtos SET esgotado = true WHERE id = v_cocada;
+    UPDATE public.produtos SET estoque_atual = 0 WHERE id = v_dl;
     SET LOCAL ROLE service_role;
     BEGIN
       PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
-        jsonb_build_array(jsonb_build_object('combo_id', v_familia, 'escolhas', esc_familia)), false, NULL);
-      RAISE EXCEPTION 'aceitou 3 cocadas com 2 no estoque';
+        jsonb_build_array(jsonb_build_object('produto_id', v_cocada, 'quantidade', 1)), false, NULL);
+      RAISE EXCEPTION 'aceitou avulso esgotado';
     EXCEPTION WHEN invalid_parameter_value THEN
-      IF SQLERRM NOT LIKE '%Sem estoque suficiente%' THEN RAISE EXCEPTION 'estoque: %', SQLERRM; END IF;
+      IF SQLERRM <> 'Produto indisponível' THEN RAISE EXCEPTION 'avulso: %', SQLERRM; END IF;
+    END;
+    BEGIN
+      PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
+        jsonb_build_array(jsonb_build_object('combo_id', v_familia, 'escolhas', esc_familia)), false, NULL);
+      RAISE EXCEPTION 'aceitou sabor esgotado';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE 'Esgotado: %' THEN RAISE EXCEPTION 'sabor: %', SQLERRM; END IF;
     END;
     RESET ROLE;
-    UPDATE public.produtos SET estoque_atual = 100 WHERE id = v_cocada;
-    UPDATE public.loja_vitrine SET usa_estoque = false WHERE produto_id = v_cocada;
+    UPDATE public.produtos SET esgotado = false WHERE id = v_cocada;
+    UPDATE public.produtos SET esgotado = true WHERE id = v_balde;
     SET LOCAL ROLE service_role;
+    BEGIN
+      PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
+        jsonb_build_array(jsonb_build_object('combo_id', v_par, 'escolhas', esc_par)), false, NULL);
+      RAISE EXCEPTION 'aceitou combo com item fixo esgotado';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE 'Esgotado: %' THEN RAISE EXCEPTION 'fixo: %', SQLERRM; END IF;
+    END;
+    RESET ROLE;
+    UPDATE public.produtos SET esgotado = false WHERE id = v_balde;
+    UPDATE public.produtos SET esgotado = true WHERE id = v_dupla;
+    SET LOCAL ROLE service_role;
+    BEGIN
+      PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
+        jsonb_build_array(jsonb_build_object('combo_id', v_dupla, 'escolhas', '[]'::jsonb)), false, NULL);
+      RAISE EXCEPTION 'aceitou combo esgotado';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM <> 'Combo indisponível' THEN RAISE EXCEPTION 'combo: %', SQLERRM; END IF;
+    END;
+    RESET ROLE;
+    UPDATE public.produtos SET esgotado = false WHERE id = v_dupla;
+    SET LOCAL ROLE service_role;
+    -- Doce de leite com estoque 0 e sem "Esgotado": vende.
+    PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
+      jsonb_build_array(jsonb_build_object('produto_id', v_dl, 'quantidade', 3)), false, NULL);
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'L4 estoque insuficiente recusa', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'L4 esgotado no cadastro recusa; estoque não decide', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'L4 estoque insuficiente recusa', 'ok', false, 'erro', SQLERRM);
+    SET LOCAL ROLE service_role;
+    resultados := resultados || jsonb_build_object('caso', 'L4 esgotado no cadastro recusa; estoque não decide', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- Pedidos para os casos de confirmação.

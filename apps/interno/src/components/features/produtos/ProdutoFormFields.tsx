@@ -15,6 +15,7 @@ export interface ProdutoFormValues {
     codigo: string
     apelido: string
     subtitulo: string
+    nomeLoja: string
     preco: string
     custo: string
     precoAncoragem: string
@@ -39,6 +40,7 @@ export interface ProdutoFormSetters {
     setCodigo: (v: string) => void
     setApelido: (v: string) => void
     setSubtitulo: (v: string) => void
+    setNomeLoja: (v: string) => void
     setPreco: (v: string) => void
     setCusto: (v: string) => void
     setPrecoAncoragem: (v: string) => void
@@ -304,6 +306,20 @@ export function ProdutoFormFields({
                         onChange={(e) => setters.setCategoria(e.target.value)}
                         options={CATEGORIA_OPTIONS}
                     />
+
+                    <div>
+                        <label htmlFor={`${mode}-nome-loja`} className="block text-sm font-medium mb-1">Nome na loja</label>
+                        <input
+                            id={`${mode}-nome-loja`}
+                            type="text"
+                            maxLength={80}
+                            placeholder="Opcional — vazio usa o nome do produto"
+                            value={values.nomeLoja}
+                            onChange={(e) => setters.setNomeLoja(e.target.value)}
+                            className={inputCru}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Nome que o cliente vê na loja (ex.: Balde de massa 4 kg)</p>
+                    </div>
 
                     <div>
                         <label htmlFor={`${mode}-subtitulo`} className="block text-sm font-medium mb-1">Variação / Subtítulo</label>

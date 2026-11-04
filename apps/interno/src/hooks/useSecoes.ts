@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { secaoService } from '../services/secaoService'
+import { secaoService, type SecaoPatch } from '../services/secaoService'
 
 export function useSecoes() {
     const queryClient = useQueryClient()
@@ -17,12 +17,12 @@ export function useSecoes() {
     }
 
     const createMutation = useMutation({
-        mutationFn: (input: { nome: string }) => secaoService.createSecao(input),
+        mutationFn: (input: { nome: string; descricao?: string }) => secaoService.createSecao(input),
         onSuccess: invalidate,
     })
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, patch }: { id: string; patch: { nome?: string; ativa?: boolean } }) =>
+        mutationFn: ({ id, patch }: { id: string; patch: SecaoPatch }) =>
             secaoService.updateSecao(id, patch),
         onSuccess: invalidate,
     })
@@ -37,8 +37,8 @@ export function useSecoes() {
         onSuccess: invalidate,
     })
 
-    const createSecao = useCallback((input: { nome: string }) => createMutation.mutateAsync(input), [createMutation])
-    const updateSecao = useCallback((id: string, patch: { nome?: string; ativa?: boolean }) => updateMutation.mutateAsync({ id, patch }), [updateMutation])
+    const createSecao = useCallback((input: { nome: string; descricao?: string }) => createMutation.mutateAsync(input), [createMutation])
+    const updateSecao = useCallback((id: string, patch: SecaoPatch) => updateMutation.mutateAsync({ id, patch }), [updateMutation])
     const deleteSecao = useCallback((id: string) => deleteMutation.mutateAsync(id), [deleteMutation])
     const reorderSecoes = useCallback((ids: string[]) => reorderMutation.mutateAsync(ids), [reorderMutation])
 

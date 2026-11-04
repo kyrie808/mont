@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useCallback, useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import {
@@ -28,6 +28,7 @@ import type { DomainProduto, CreateProduto, UpdateProduto } from '../types/domai
 import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFields'
 import { ProdutoFormDesktop } from '../components/features/produtos/ProdutoFormDesktop'
 import { ProdutosDataGrid } from '../components/features/produtos/ProdutosDataGrid'
+import { EsgotadoToggle } from '../components/features/produtos/EsgotadoToggle'
 import { useSecoes } from '../hooks/useSecoes'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { produtosDoCadastro } from '../utils/produtosCadastro'
@@ -98,6 +99,7 @@ export function Produtos() {
     const [newCodigo, setNewCodigo] = useState('')
     const [newApelido, setNewApelido] = useState('')
     const [newSubtitulo, setNewSubtitulo] = useState('')
+    const [newNomeLoja, setNewNomeLoja] = useState('')
     const [newPreco, setNewPreco] = useState('')
     const [newCusto, setNewCusto] = useState('')
     const [newUnidade, setNewUnidade] = useState('kg')
@@ -124,6 +126,7 @@ export function Produtos() {
     const [editCodigo, setEditCodigo] = useState('')
     const [editApelido, setEditApelido] = useState('')
     const [editSubtitulo, setEditSubtitulo] = useState('')
+    const [editNomeLoja, setEditNomeLoja] = useState('')
     const [editPreco, setEditPreco] = useState('')
     const [editCusto, setEditCusto] = useState('')
     const [editEstoqueMinimo, setEditEstoqueMinimo] = useState('')
@@ -171,6 +174,7 @@ export function Produtos() {
         setEditCodigo(produto.codigo)
         setEditApelido(produto.apelido || '')
         setEditSubtitulo(produto.subtitulo || '')
+        setEditNomeLoja(produto.nomeLoja || '')
         setEditPreco(String(produto.preco))
         setEditCusto(String(produto.custo))
         setEditEstoqueMinimo(String(produto.estoqueMinimo || 10))
@@ -228,6 +232,7 @@ export function Produtos() {
         setNewCodigo('')
         setNewApelido('')
         setNewSubtitulo('')
+        setNewNomeLoja('')
         setNewPreco('')
         setNewCusto('')
         setNewUnidade('kg')
@@ -277,6 +282,7 @@ export function Produtos() {
             codigo: newCodigo.trim(),
             apelido: newApelido.trim() || null,
             subtitulo: newSubtitulo.trim() || null,
+            nomeLoja: newNomeLoja.trim() || null,
             preco,
             custo,
             unidade: newUnidade,
@@ -336,6 +342,7 @@ export function Produtos() {
             codigo: editCodigo.trim(),
             apelido: editApelido.trim() || null,
             subtitulo: editSubtitulo.trim() || null,
+            nomeLoja: editNomeLoja.trim() || null,
             preco,
             custo,
             estoqueMinimo: parseInt(editEstoqueMinimo) || 10,
@@ -398,6 +405,22 @@ export function Produtos() {
             setUploadingImage(false)
         }
     }
+
+    // "Esgotado" de um toque (lista de Produtos): na loja, tira da venda e dos sabores dos combos.
+    const [alternandoEsgotado, setAlternandoEsgotado] = useState<string | null>(null)
+    const alternarEsgotado = useCallback(async (produto: DomainProduto) => {
+        const esgotado = !produto.esgotado
+        setAlternandoEsgotado(produto.id)
+        try {
+            await updateProduto(produto.id, { esgotado })
+            toast.success(esgotado ? `${produto.nome}: esgotado na loja` : `${produto.nome} voltou a vender na loja`)
+        } catch (e: unknown) {
+            console.error(e)
+            toast.error('Não foi possível mudar o esgotado. Tente de novo.')
+        } finally {
+            setAlternandoEsgotado(null)
+        }
+    }, [updateProduto, toast])
 
     const calcularMargem = (preco: number, custo: number): number => {
         if (preco === 0) return 0
@@ -591,6 +614,14 @@ export function Produtos() {
                                                         <span className="text-sm text-gray-400">Estoque: {produto.estoqueAtual}</span>
                                                     </div>
                                                 </div>
+                                                {produto.ativo && (
+                                                    <EsgotadoToggle
+                                                        nome={produto.nome}
+                                                        esgotado={produto.esgotado ?? false}
+                                                        onToggle={() => alternarEsgotado(produto)}
+                                                        disabled={alternandoEsgotado === produto.id}
+                                                    />
+                                                )}
                                             </div>
                                         </Card>
                                     )
@@ -599,7 +630,12 @@ export function Produtos() {
 
                             {/* DESKTOP (≥lg): data grid denso — sort + paginação próprios sobre o conjunto filtrado inteiro */}
                             <div className="hidden lg:block">
-                                <ProdutosDataGrid produtos={filteredProdutos} onEdit={handleOpenEdit} />
+                                <ProdutosDataGrid
+                                    produtos={filteredProdutos}
+                                    onEdit={handleOpenEdit}
+                                    onToggleEsgotado={alternarEsgotado}
+                                    alternandoEsgotado={alternandoEsgotado}
+                                />
                             </div>
                         </div>
                     )}
@@ -615,7 +651,7 @@ export function Produtos() {
                             <FieldsComponent
                                 mode="create"
                                 values={{
-                                    nome: newNome, codigo: newCodigo, apelido: newApelido, subtitulo: newSubtitulo,
+                                    nome: newNome, codigo: newCodigo, apelido: newApelido, subtitulo: newSubtitulo, nomeLoja: newNomeLoja,
                                     preco: newPreco, custo: newCusto, precoAncoragem: '',
                                     estoqueMinimo: newEstoqueMinimo, ativo: true, categoria: newCategoria,
                                     descricao: newDescricao, pesoKg: newPesoKg, slug: newSlug,
@@ -625,7 +661,7 @@ export function Produtos() {
                                 }}
                                 setters={{
                                     setNome: setNewNome, setCodigo: setNewCodigo, setApelido: setNewApelido,
-                                    setSubtitulo: setNewSubtitulo, setPreco: setNewPreco, setCusto: setNewCusto,
+                                    setSubtitulo: setNewSubtitulo, setNomeLoja: setNewNomeLoja, setPreco: setNewPreco, setCusto: setNewCusto,
                                     setPrecoAncoragem: () => {}, setEstoqueMinimo: setNewEstoqueMinimo,
                                     setAtivo: () => {}, setCategoria: setNewCategoria, setDescricao: setNewDescricao,
                                     setPesoKg: setNewPesoKg, setSlug: setNewSlug, setInstrucoesPreparo: setNewInstrucoesPreparo,
@@ -672,7 +708,7 @@ export function Produtos() {
                             <FieldsComponent
                                 mode="edit"
                                 values={{
-                                    nome: editNome, codigo: editCodigo, apelido: editApelido, subtitulo: editSubtitulo,
+                                    nome: editNome, codigo: editCodigo, apelido: editApelido, subtitulo: editSubtitulo, nomeLoja: editNomeLoja,
                                     preco: editPreco, custo: editCusto, precoAncoragem: editPrecoAncoragem,
                                     estoqueMinimo: editEstoqueMinimo, ativo: editAtivo, categoria: editCategoria,
                                     descricao: editDescricao, pesoKg: editPesoKg, slug: editSlug,
@@ -682,7 +718,7 @@ export function Produtos() {
                                 }}
                                 setters={{
                                     setNome: setEditNome, setCodigo: setEditCodigo, setApelido: setEditApelido,
-                                    setSubtitulo: setEditSubtitulo, setPreco: setEditPreco, setCusto: setEditCusto,
+                                    setSubtitulo: setEditSubtitulo, setNomeLoja: setEditNomeLoja, setPreco: setEditPreco, setCusto: setEditCusto,
                                     setPrecoAncoragem: setEditPrecoAncoragem, setEstoqueMinimo: setEditEstoqueMinimo,
                                     setAtivo: setEditAtivo, setCategoria: setEditCategoria, setDescricao: setEditDescricao,
                                     setPesoKg: setEditPesoKg, setSlug: setEditSlug, setInstrucoesPreparo: setEditInstrucoesPreparo,

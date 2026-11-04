@@ -299,7 +299,17 @@ export function ProdutoFormDesktop({
                         />
                     </Field>
 
-                    <Field label="Variação / subtítulo" className="col-span-4">
+                    <Field label="Nome na loja" className="col-span-2">
+                        <input
+                            type="text"
+                            maxLength={80}
+                            value={values.nomeLoja}
+                            onChange={(e) => setters.setNomeLoja(e.target.value)}
+                            className={cn(inputBase, fieldH)}
+                            placeholder="Opcional — vazio usa o nome do produto"
+                        />
+                    </Field>
+                    <Field label="Variação / subtítulo" className="col-span-2">
                         <input
                             type="text"
                             list={datalistId}

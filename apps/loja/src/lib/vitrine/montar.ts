@@ -2,22 +2,28 @@ import type { SeloVariant } from '@mont/shared'
 import type { ComboLoja, GrupoCombo, ItemFixo, ProdutoLoja, SecaoLoja, Vitrine } from './tipos'
 
 // Monta a vitrine a partir do CADASTRO do sistema interno (função pura; as consultas ficam em carregar.ts).
-// Regra (Parte A da paridade, 02/11/2026):
+// Regra (Partes A e B da paridade, 02 e 04/11/2026):
 // - aparece o produto ativo com "Visível no catálogo"; combo de campanha aparece durante a campanha;
-// - abas = seções ativas da tela Catálogo, na ordem de lá; sem seção (ou seção desligada) = "Mais produtos";
-// - loja_vitrine é complemento opcional: nome, frase, seção/ordem só da loja, destaque, "leva junto?", esgotado.
+// - abas = seções ativas da tela Catálogo, na ordem de lá (com a frase da seção); sem seção = "Mais produtos";
+// - ordem = a da tela Catálogo (ordem_vitrine), inclusive a dos combos da campanha;
+// - nome = "Nome na loja" do cadastro, senão o nome; o card mostra o subtítulo do cadastro;
+// - "Esgotado" do cadastro tira da venda e dos sabores dos combos; o estoque não decide nada;
+// - banner = combo da campanha com "Destaque" no cadastro, senão o primeiro;
+// - texto do combo e "separado" saem dos itens (separado = soma no preço vigente).
 
 export interface LinhaProduto {
     id: string
     codigo: string
     nome: string
+    nome_loja: string | null
     slug: string
     subtitulo: string | null
     descricao: string | null
     preco: number
-    estoque_atual: number | null
     eh_combo: boolean
     visivel_catalogo: boolean
+    esgotado: boolean
+    destaque: boolean | null
     secao_id: string | null
     ordem_vitrine: number
     selo: string | null
@@ -25,30 +31,16 @@ export interface LinhaProduto {
     instrucoes_preparo: string | null
 }
 
-/** Linha de loja_vitrine que vale (visivel = true; a leitura pública só enxerga essas). */
-export interface LinhaVitrine {
-    produto_id: string
-    secao_id: string | null
-    ordem_loja: number | null
-    disponivel: boolean
-    usa_estoque: boolean
-    destaque_hero: boolean
-    leva_junto: boolean
-    nome_loja: string | null
-    resumo: string | null
-    frase_card: string | null
-}
-
 export interface LinhaSecao {
     id: string
     nome: string
     slug: string
+    descricao: string | null
 }
 
 export interface PrecoCampanha {
     pix: number
     credito: number
-    ancora: number | null
 }
 
 export interface LinhaFixo {
@@ -73,7 +65,6 @@ export interface DadosVitrine {
     campanha: { nome: string; fim: string } | null
     /** Produtos ATIVOS do cadastro (visíveis ou não: os escondidos ainda podem ser item de combo). */
     produtos: LinhaProduto[]
-    vitrine: LinhaVitrine[]
     /** Seções ATIVAS da tela Catálogo, já na ordem. */
     secoes: LinhaSecao[]
     /** Preços da campanha vigente, por produto. Vazio fora de campanha. */
@@ -108,10 +99,7 @@ function linhas(texto: string | null): string[] {
         .filter(Boolean)
 }
 
-/** Doce controlado pelo estoque só está à venda com estoque livre. */
-function temEstoqueLivre(estoqueAtual: number | null): boolean {
-    return (estoqueAtual ?? 0) > 0
-}
+const emCentavos = (valor: number) => Math.round(valor * 100)
 
 /** Aparece na loja: "Visível no catálogo", ou combo com preço na campanha vigente. */
 export function apareceNaLoja(
@@ -121,35 +109,40 @@ export function apareceNaLoja(
     return p.visivel_catalogo || (p.eh_combo && precos.has(p.id))
 }
 
+/** "Balde 4 kg + 2× Baldinho 1 kg + 6 doces à escolha + Doce de leite 400 g de brinde". */
+export function resumoDoCombo(fixos: ItemFixo[], grupos: GrupoCombo[]): string | null {
+    const item = (f: ItemFixo) => (f.quantidade > 1 ? `${f.quantidade}× ${f.nome}` : f.nome)
+    const partes = [
+        ...fixos.filter((f) => !f.brinde).map(item),
+        ...grupos.map((g) => `${g.quantidade} ${g.quantidade === 1 ? g.rotuloSingular : g.rotuloPlural} à escolha`),
+        ...fixos.filter((f) => f.brinde).map((f) => `${item(f)} de brinde`),
+    ]
+    return partes.length > 0 ? partes.join(' + ') : null
+}
+
 export function montarVitrine(d: DadosVitrine): Vitrine {
     const produtos = new Map(d.produtos.map((p) => [p.id, p]))
-    const complemento = new Map(d.vitrine.map((v) => [v.produto_id, v]))
-    const nomeNaLoja = (id: string, nome: string) => complemento.get(id)?.nome_loja ?? nome
-
-    // Esgotado: só pela loja_vitrine (chave manual, ou estoque quando ela manda controlar).
+    const nomeNaLoja = (id: string, nome: string) => produtos.get(id)?.nome_loja ?? nome
     const disponivel = (id: string): boolean => {
         const p = produtos.get(id)
-        if (!p) return false
-        const v = complemento.get(id)
-        if (!v) return true
-        return v.disponivel && (!v.usa_estoque || temEstoqueLivre(p.estoque_atual))
+        return p !== undefined && !p.esgotado
     }
+    // Preço que vale agora para um item: o Pix da campanha, se ele tiver; senão, o do cadastro.
+    const vigente = (id: string): number | null => d.precos.get(id)?.pix ?? produtos.get(id)?.preco ?? null
 
     const ehDaCampanha = (p: LinhaProduto) => p.eh_combo && d.precos.has(p.id)
     const visiveis = d.produtos.filter((p) => apareceNaLoja(p, d.precos))
 
-    const ordem = (p: LinhaProduto) => complemento.get(p.id)?.ordem_loja ?? p.ordem_vitrine
     const porOrdem = (a: LinhaProduto, b: LinhaProduto) =>
-        ordem(a) - ordem(b) || a.nome.localeCompare(b.nome, 'pt-BR')
+        a.ordem_vitrine - b.ordem_vitrine || a.nome.localeCompare(b.nome, 'pt-BR')
 
     const produtoDa = (p: LinhaProduto): ProdutoLoja => {
         const preco = d.precos.get(p.id)
         return {
             id: p.id,
             slug: p.slug,
-            nome: nomeNaLoja(p.id, p.nome),
+            nome: p.nome_loja ?? p.nome,
             subtitulo: p.subtitulo,
-            chamada: complemento.get(p.id)?.frase_card ?? null,
             descricao: p.descricao,
             // Capa cadastrada no sistema primeiro; sem ela, a composição provisória do combo (se houver).
             imagemUrl: d.imagens.get(p.id) ?? d.fotoProvisoria(p.codigo),
@@ -160,7 +153,7 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
             // Riscado só na campanha, e só com o preço normal (já praticado). Fora dela, sem "de/por" (decisão de 03/11).
             precoDe: preco && p.preco > preco.pix ? p.preco : null,
             precoCredito: preco ? preco.credito : null,
-            disponivel: disponivel(p.id),
+            disponivel: !p.esgotado,
         }
     }
 
@@ -198,9 +191,25 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
         gruposPorCombo.set(g.combo_id, lista)
     }
 
+    // "Separado": soma dos itens no preço vigente (brinde incluso); cada grupo pelo sabor mais barato.
+    // Sem preço para algum item (ou grupo sem opções), não exibe.
+    const separado = (fixos: ItemFixo[], grupos: GrupoCombo[]): number | null => {
+        let centavos = 0
+        for (const f of fixos) {
+            const preco = vigente(f.produtoId)
+            if (preco === null) return null
+            centavos += emCentavos(preco) * f.quantidade
+        }
+        for (const g of grupos) {
+            const precos = g.opcoes.map((o) => vigente(o.produtoId)).filter((p): p is number => p !== null)
+            if (precos.length === 0) return null
+            centavos += emCentavos(Math.min(...precos)) * g.quantidade
+        }
+        return fixos.length + grupos.length > 0 ? centavos / 100 : null
+    }
+
     const comboDa = (p: LinhaProduto): ComboLoja => {
         const base = produtoDa(p)
-        const preco = d.precos.get(p.id)
         const grupos = gruposPorCombo.get(p.id) ?? []
         const fixos = fixosPorCombo.get(p.id) ?? []
         // Combo só de itens fixos (ex.: Dupla Zero) vai direto para a sacola.
@@ -216,9 +225,8 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
             ...base,
             precoDe: null,
             disponivel: base.disponivel && fixos.every((f) => disponivel(f.produtoId)),
-            resumo: complemento.get(p.id)?.resumo ?? null,
-            // "Separado" só na campanha (âncora aprovada em loja_precos).
-            ancora: preco ? preco.ancora : null,
+            resumo: resumoDoCombo(fixos, grupos),
+            ancora: separado(fixos, grupos),
             fixos,
             grupos,
             montavel,
@@ -227,26 +235,28 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
 
     const itemDa = (p: LinhaProduto): ProdutoLoja => (p.eh_combo ? comboDa(p) : produtoDa(p))
 
-    // Combos da campanha: bloco próprio no topo, com o destaque (hero).
-    const combos = visiveis.filter(ehDaCampanha).sort(porOrdem).map(comboDa)
-    const hero = combos.find((c) => complemento.get(c.id)?.destaque_hero) ?? null
+    // Combos da campanha: bloco próprio no topo, na ordem da tela Catálogo; o banner é o de "Destaque".
+    const daCampanha = visiveis.filter(ehDaCampanha).sort(porOrdem)
+    const combos = daCampanha.map(comboDa)
+    const destaque = daCampanha.find((p) => p.destaque)
+    const hero = (destaque ? combos.find((c) => c.id === destaque.id) : combos[0]) ?? null
 
     // Demais produtos (e combos permanentes) nas seções da tela Catálogo.
     const ativas = new Set(d.secoes.map((s) => s.id))
     const porSecao = new Map<string, LinhaProduto[]>()
     for (const p of visiveis) {
         if (ehDaCampanha(p)) continue
-        const escolhida = complemento.get(p.id)?.secao_id ?? p.secao_id
-        const chave = escolhida && ativas.has(escolhida) ? escolhida : SECAO_SEM_SECAO.id
+        const chave = p.secao_id && ativas.has(p.secao_id) ? p.secao_id : SECAO_SEM_SECAO.id
         porSecao.set(chave, [...(porSecao.get(chave) ?? []), p])
     }
-    const secao = (id: string, nome: string, ancora: string): SecaoLoja[] => {
+    const secao = (id: string, nome: string, ancora: string, descricao: string | null): SecaoLoja[] => {
         const doGrupo = (porSecao.get(id) ?? []).sort(porOrdem)
         if (doGrupo.length === 0) return []
         return [
             {
                 id: ancora,
                 nome,
+                descricao,
                 // Combos da seção sempre vão em cartão próprio; o formato vale para os avulsos.
                 formato: doGrupo.filter((p) => !p.eh_combo).length <= LIMITE_CARTOES ? 'cartoes' : 'lista',
                 itens: doGrupo.map(itemDa),
@@ -254,17 +264,9 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
         ]
     }
     const secoes = [
-        ...d.secoes.flatMap((s) => secao(s.id, s.nome, `secao-${s.slug}`)),
-        ...secao(SECAO_SEM_SECAO.id, SECAO_SEM_SECAO.nome, SECAO_SEM_SECAO.id),
+        ...d.secoes.flatMap((s) => secao(s.id, s.nome, `secao-${s.slug}`, s.descricao)),
+        ...secao(SECAO_SEM_SECAO.id, SECAO_SEM_SECAO.nome, SECAO_SEM_SECAO.id, null),
     ]
 
-    const levaJuntoLinha = visiveis.find((p) => !p.eh_combo && complemento.get(p.id)?.leva_junto)
-
-    return {
-        campanha: d.campanha,
-        hero,
-        combos,
-        secoes,
-        levaJunto: levaJuntoLinha ? produtoDa(levaJuntoLinha) : null,
-    }
+    return { campanha: d.campanha, hero, combos, secoes }
 }

@@ -48,7 +48,7 @@ BEGIN
 
   -- ── Ajustes de cenário (descartados no fim) ──
   UPDATE public.produtos SET estoque_atual = 100 WHERE id = v_balde;
-  UPDATE public.loja_vitrine SET disponivel = true WHERE produto_id = v_balde;
+  UPDATE public.produtos SET esgotado = false WHERE id = v_balde;
   CREATE SEQUENCE public.tmp_suite_loja_atribuicao_seq START 900101;
   ALTER TABLE public.cat_pedidos ALTER COLUMN numero_pedido SET DEFAULT nextval('public.tmp_suite_loja_atribuicao_seq');
 

@@ -2,16 +2,18 @@
 
 import Link from 'next/link'
 import { cn } from '@mont/shared'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { indicacoesDaSacola } from '@/app/sacola/acoes'
 import { EsqueletoLinhas } from '@/components/Esqueleto'
 import { Foto } from '@/components/Foto'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
 import { medirAdicao } from '@/lib/medicao/dataLayer'
 import { catalogoDa, descreverCombo, resumirSacola } from '@/lib/sacola/calculo'
+import { escolherLevaJunto, idsDaSacola } from '@/lib/sacola/levaJunto'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
-import type { Vitrine } from '@/lib/vitrine/tipos'
+import type { ProdutoLoja, Vitrine } from '@/lib/vitrine/tipos'
 
 interface SacolaProps {
     vitrine: Vitrine
@@ -20,7 +22,7 @@ interface SacolaProps {
 const SEM_BAIRROS: ReadonlySet<string> = new Set()
 
 /**
- * Tela 04: sacola e "Leva junto?". Sem cálculo de frete (decisão de 02/11): frete e dia de
+ * Tela 04: sacola e "Leva junto?" (automático, pelas vendas). Sem cálculo de frete (decisão de 02/11): frete e dia de
  * entrega são combinados no WhatsApp, depois que o pedido chega.
  */
 export function Sacola({ vitrine }: SacolaProps) {
@@ -40,7 +42,19 @@ export function Sacola({ vitrine }: SacolaProps) {
         manterSomente(new Set([...catalogo.produtos.keys(), ...catalogo.combos.keys()]), SEM_BAIRROS)
     }, [pronta, catalogo, manterSomente])
 
-    const leva = vitrine.levaJunto
+    // "Leva junto?": uma sugestão por visita, pelas vendas reais do que está na sacola ao abrir a tela.
+    const [leva, setLeva] = useState<ProdutoLoja | null>(null)
+    const pediuSugestao = useRef(false)
+    useEffect(() => {
+        if (!pronta || pediuSugestao.current) return
+        pediuSugestao.current = true
+        const naSacola = idsDaSacola(itens, catalogo)
+        if (naSacola.length === 0) return
+        indicacoesDaSacola(naSacola)
+            .then((ranking) => setLeva(escolherLevaJunto(ranking, catalogo, new Set(naSacola))))
+            .catch(() => setLeva(null))
+    }, [pronta, itens, catalogo])
+
     const mostrarLevaJunto =
         leva !== null && leva.disponivel && !itens.some((i) => i.tipo === 'produto' && i.produtoId === leva.id)
     const podeContinuar = resumo.linhas.length > 0 && !resumo.temPendencia

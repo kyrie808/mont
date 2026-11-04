@@ -5,9 +5,8 @@ export interface ProdutoLoja {
     id: string
     slug: string
     nome: string
+    /** Subtítulo do cadastro: a frase curta sob o nome no card. NULL = sem frase. */
     subtitulo: string | null
-    /** Frase curta sob o nome no card (loja_vitrine.frase_card). NULL = sem frase. */
-    chamada: string | null
     descricao: string | null
     imagemUrl: string | null
     /** Selo do cadastro já em texto ("Mais vendido", "Oferta", "Queridinho"). NULL = sem selo. */
@@ -51,8 +50,9 @@ export interface GrupoCombo {
 }
 
 export interface ComboLoja extends ProdutoLoja {
+    /** Texto montado dos itens (fixos, grupos de escolha e brinde). */
     resumo: string | null
-    /** "separado: a partir de". NULL = não exibir. */
+    /** "Separado": soma dos itens no preço vigente (cada grupo pelo sabor mais barato). NULL = não exibir. */
     ancora: number | null
     fixos: ItemFixo[]
     grupos: GrupoCombo[]
@@ -72,6 +72,8 @@ export interface SecaoLoja {
     /** Âncora na página (#id). */
     id: string
     nome: string
+    /** Frase sob o título (cat_secoes.descricao, editável na tela Catálogo). */
+    descricao: string | null
     formato: FormatoSecao
     itens: ProdutoLoja[]
 }
@@ -87,5 +89,4 @@ export interface Vitrine {
     /** Combos da campanha vigente (bloco próprio, no topo). */
     combos: ComboLoja[]
     secoes: SecaoLoja[]
-    levaJunto: ProdutoLoja | null
 }

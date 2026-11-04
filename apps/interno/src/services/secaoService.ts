@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Secao, SecaoInsert, SecaoUpdate } from '@mont/shared'
+import { descricaoSecaoSchema } from '../schemas/secao'
 
 /** Sanitiza um slug pra URL-safe. 'secao' como fallback se vazio. */
 function slugify(value: string | null | undefined): string {
@@ -12,6 +13,20 @@ function slugify(value: string | null | undefined): string {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
     return out || 'secao'
+}
+
+/** Campos editáveis da seção. `descricao` vazia = sem frase na loja. */
+export interface SecaoPatch {
+    nome?: string
+    ativa?: boolean
+    descricao?: string
+}
+
+/** Valida a descrição (uma linha, até 120) e converte vazio em NULL. */
+function descricaoValida(descricao: string): string | null {
+    const lida = descricaoSecaoSchema.safeParse(descricao)
+    if (!lida.success) throw new Error(lida.error.issues[0]?.message ?? 'Descrição da seção inválida')
+    return lida.data
 }
 
 export interface SecaoComContagem extends Secao {
@@ -76,7 +91,8 @@ export class SecaoService {
         return `${base}-${Date.now().toString(36)}`
     }
 
-    async createSecao(input: { nome: string }): Promise<Secao> {
+    async createSecao(input: { nome: string; descricao?: string }): Promise<Secao> {
+        const descricao = descricaoValida(input.descricao ?? '')
         const { data: maxRow } = await supabase
             .from('cat_secoes')
             .select('ordem')
@@ -92,6 +108,7 @@ export class SecaoService {
             slug,
             ordem: proximaOrdem,
             ativa: true,
+            descricao,
         }
 
         const { data, error } = await supabase.from('cat_secoes').insert(payload).select('*').single()
@@ -99,10 +116,11 @@ export class SecaoService {
         return data
     }
 
-    async updateSecao(id: string, patch: { nome?: string; ativa?: boolean }): Promise<Secao> {
+    async updateSecao(id: string, patch: SecaoPatch): Promise<Secao> {
         const update: SecaoUpdate = {}
         if (patch.nome !== undefined) update.nome = patch.nome.trim()
         if (patch.ativa !== undefined) update.ativa = patch.ativa
+        if (patch.descricao !== undefined) update.descricao = descricaoValida(patch.descricao)
         update.updated_at = new Date().toISOString()
 
         const { data, error } = await supabase.from('cat_secoes').update(update).eq('id', id).select('*').single()
