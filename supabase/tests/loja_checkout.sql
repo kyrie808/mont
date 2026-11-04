@@ -5,7 +5,7 @@
 -- cat_pedidos.numero_pedido usa uma sequência temporária (nextval escapa do rollback).
 -- Pedidos criados como o servidor da loja (service_role); confirmados como a CONTA-TESTE (admin).
 -- Telefones fictícios com o prefixo 119000020.
---   SUITE_OK     loja_checkout 8/8 | [...]
+--   SUITE_OK     loja_checkout 9/9 | [...]
 
 DO $suite$
 DECLARE
@@ -159,6 +159,41 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'F5 chamada antiga da loja segue funcionando', 'ok', true);
   EXCEPTION WHEN others THEN
     resultados := resultados || jsonb_build_object('caso', 'F5 chamada antiga da loja segue funcionando', 'ok', false, 'erro', SQLERRM);
+  END;
+  -- ── F9: regra final do frete — o valor fixo da região (ABC) também vale como frete estimado ──
+  casos := casos + 1;
+  BEGIN
+    RESET ROLE;
+    UPDATE public.configuracoes
+       SET valor = valor
+                   || jsonb_build_object('faixas', jsonb_build_array(
+                          jsonb_build_object('ateKm', 21, 'valorFixo', 10), jsonb_build_object('ateKm', 35, 'valorFixo', 15)))
+                   || jsonb_build_object('regiaoFixa', jsonb_build_object('nome', 'ABC', 'valor', 5,
+                          'cidades', jsonb_build_array('São Bernardo do Campo', 'Santo André', 'Diadema')))
+     WHERE chave = 'frete_config';
+    SET LOCAL ROLE service_role;
+    SELECT lp.pedido_id INTO ped_x FROM public.loja_criar_pedido(
+      gen_random_uuid(), 'Cliente ABC', c_tel || '09', '09750000', 'Rua Teste', '10', NULL, NULL,
+      'São Bernardo do Campo', 'SP', itens, false, NULL, NULL, 'entrega', 'pix', NULL, 5) lp;
+    IF (SELECT frete_estimado FROM public.cat_pedidos WHERE id = ped_x) IS DISTINCT FROM 5 THEN
+      RAISE EXCEPTION 'não aceitou o valor da região (5)';
+    END IF;
+    SELECT lp.pedido_id INTO ped_x FROM public.loja_criar_pedido(
+      gen_random_uuid(), 'Cliente SP', c_tel || '10', '04146080', 'Rua Teste', '10', NULL, NULL,
+      'São Paulo', 'SP', itens, false, NULL, NULL, 'entrega', 'pix', NULL, 15) lp;
+    IF (SELECT frete_estimado FROM public.cat_pedidos WHERE id = ped_x) IS DISTINCT FROM 15 THEN
+      RAISE EXCEPTION 'não aceitou a faixa de 15';
+    END IF;
+    SELECT lp.pedido_id INTO ped_x FROM public.loja_criar_pedido(
+      gen_random_uuid(), 'Cliente SP', c_tel || '11', '04146080', 'Rua Teste', '10', NULL, NULL,
+      'São Paulo', 'SP', itens, false, NULL, NULL, 'entrega', 'pix', NULL, 7) lp;
+    IF (SELECT frete_estimado FROM public.cat_pedidos WHERE id = ped_x) IS NOT NULL THEN
+      RAISE EXCEPTION 'aceitou 7, que não é nem região nem faixa';
+    END IF;
+    passou := passou + 1;
+    resultados := resultados || jsonb_build_object('caso', 'F9 valor da região (ABC) e das faixas valem; outro não', 'ok', true);
+  EXCEPTION WHEN others THEN
+    resultados := resultados || jsonb_build_object('caso', 'F9 valor da região (ABC) e das faixas valem; outro não', 'ok', false, 'erro', SQLERRM);
   END;
   RESET ROLE;
 

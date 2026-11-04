@@ -1,6 +1,8 @@
 import { z } from 'zod'
 
-// Frete por distância de ROTA (o mesmo cálculo do catálogo antigo, decisão D1 da paridade).
+// Frete da loja (decisão D1 da paridade + regra final de 04/11/2026):
+// 1. cidade do CEP numa região de valor fixo (o ABC) → esse valor, sem olhar a distância;
+// 2. fora dela, pela distância de ROTA (faixas); além da última faixa → "a combinar".
 // A config vive em configuracoes.chave = 'frete_config' (aba Frete do sistema interno).
 
 export const esquemaFreteConfig = z.object({
@@ -13,6 +15,10 @@ export const esquemaFreteConfig = z.object({
             valorFixo: z.number().optional(),
         }),
     ),
+    /** Ex.: ABC = R$ 5 em qualquer bairro, pela cidade do CEP (ViaCEP). */
+    regiaoFixa: z
+        .object({ nome: z.string(), valor: z.number().positive(), cidades: z.array(z.string()).min(1) })
+        .optional(),
 })
 
 export type FreteConfig = z.infer<typeof esquemaFreteConfig>
@@ -20,6 +26,24 @@ export type FreteConfig = z.infer<typeof esquemaFreteConfig>
 /** `frete` em reais quando calculado; `null` = "a combinar" (fora do alcance, sem rota, sem config). */
 export interface FreteEstimado {
     frete: number | null
+}
+
+/** "São Bernardo do Campo" e "sao bernardo do campo" são a mesma cidade. */
+export function normalizarCidade(cidade: string): string {
+    return cidade
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+/** Valor fixo da região (ABC) quando a cidade do CEP está nela; senão `null` (vale a distância). */
+export function valorDaRegiao(cidade: string | null | undefined, config: FreteConfig): number | null {
+    const regiao = config.regiaoFixa
+    if (!regiao || !cidade) return null
+    const alvo = normalizarCidade(cidade)
+    return regiao.cidades.some((c) => normalizarCidade(c) === alvo) ? Math.round(regiao.valor * 100) / 100 : null
 }
 
 /**

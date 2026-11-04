@@ -17,6 +17,8 @@ export interface FreteConfig {
     faixas: FreteFaixa[]
     /** Comportamento além da última faixa. */
     foraDoAlcance: 'a_combinar'
+    /** Região de valor fixo pela cidade do CEP (ex.: ABC = R$ 5), antes da distância. */
+    regiaoFixa?: { nome: string; valor: number; cidades: string[] }
 }
 
 export interface FreteResultado {

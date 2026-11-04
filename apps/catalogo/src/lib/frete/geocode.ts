@@ -32,7 +32,7 @@ async function nominatim(params: string): Promise<Coord | null> {
     }
 }
 
-async function viaCep(
+export async function viaCep(
     cep: string,
 ): Promise<{ logradouro?: string; bairro?: string; localidade?: string; uf?: string } | null> {
     try {
