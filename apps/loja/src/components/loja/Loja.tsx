@@ -230,7 +230,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     {p.selo && <span className={cn(seloClasse, 'absolute top-2 left-2')}>{p.selo}</span>}
                 </span>
                 <span className="text-sm leading-tight font-bold">{p.nome}</span>
-                {p.chamada && <span className="text-xs leading-snug text-texto-suave">{p.chamada}</span>}
+                {p.subtitulo && <span className="text-xs leading-snug text-texto-suave">{p.subtitulo}</span>}
             </button>
             {/* Preço e botão alinhados no pé do card, mesmo com nomes de tamanhos diferentes. */}
             <div className="mt-auto flex flex-col gap-1.5">
@@ -255,6 +255,11 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 className={cn('flex scroll-mt-16 flex-col px-4 pt-6', s.formato === 'cartoes' ? 'gap-3' : 'gap-1')}
             >
                 <h2 className={cn(tituloSecao, s.formato === 'lista' && 'mb-1')}>{s.nome}</h2>
+                {s.descricao && (
+                    <span className={cn('text-[13px] text-texto-suave', s.formato === 'lista' ? 'mb-1' : '-mt-1.5')}>
+                        {s.descricao}
+                    </span>
+                )}
                 {combosDaSecao.length > 0 && <div className="flex flex-col gap-3">{combosDaSecao.map(cardCombo)}</div>}
                 {s.formato === 'cartoes' ? (
                     <div className="grid grid-cols-2 gap-3">

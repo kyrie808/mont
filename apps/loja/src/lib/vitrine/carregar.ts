@@ -30,11 +30,11 @@ async function precosDaCampanha(cliente: Cliente, campanhaId: string | null): Pr
     if (!campanhaId) return precos
     const { data, error } = await cliente
         .from('loja_precos')
-        .select('produto_id, preco_pix, preco_credito_1x, ancora')
+        .select('produto_id, preco_pix, preco_credito_1x')
         .eq('campanha_id', campanhaId)
     if (error) falha('os preços', error.message)
     for (const p of data ?? []) {
-        precos.set(p.produto_id, { pix: p.preco_pix, credito: p.preco_credito_1x, ancora: p.ancora })
+        precos.set(p.produto_id, { pix: p.preco_pix, credito: p.preco_credito_1x })
     }
     return precos
 }
@@ -60,28 +60,21 @@ async function imagensPorProduto(cliente: Cliente, ids: string[]): Promise<Map<s
     return mapa
 }
 
-/** Lê o cadastro do sistema interno (produtos, seções da tela Catálogo, complemento da loja) e monta a vitrine. */
+/** Lê o cadastro do sistema interno (produtos e seções da tela Catálogo) e monta a vitrine. */
 export async function carregarVitrine(): Promise<Vitrine> {
     const cliente = await criarClienteServidor()
 
-    const [campanha, produtosRes, vitrineRes, secoesRes] = await Promise.all([
+    const [campanha, produtosRes, secoesRes] = await Promise.all([
         campanhaVigente(cliente),
         cliente
             .from('produtos')
             .select(
-                'id, codigo, nome, slug, subtitulo, descricao, preco, estoque_atual, eh_combo, visivel_catalogo, secao_id, ordem_vitrine, selo, beneficios, instrucoes_preparo',
+                'id, codigo, nome, nome_loja, slug, subtitulo, descricao, preco, eh_combo, visivel_catalogo, esgotado, destaque, secao_id, ordem_vitrine, selo, beneficios, instrucoes_preparo',
             )
             .eq('ativo', true),
-        cliente
-            .from('loja_vitrine')
-            .select(
-                'produto_id, secao_id, ordem_loja, disponivel, usa_estoque, destaque_hero, leva_junto, nome_loja, resumo, frase_card',
-            )
-            .eq('visivel', true),
-        cliente.from('cat_secoes').select('id, nome, slug').eq('ativa', true).order('ordem'),
+        cliente.from('cat_secoes').select('id, nome, slug, descricao').eq('ativa', true).order('ordem'),
     ])
     if (produtosRes.error) falha('os produtos', produtosRes.error.message)
-    if (vitrineRes.error) falha('a vitrine', vitrineRes.error.message)
     if (secoesRes.error) falha('as seções', secoesRes.error.message)
 
     const produtos = produtosRes.data ?? []
@@ -113,7 +106,6 @@ export async function carregarVitrine(): Promise<Vitrine> {
     return montarVitrine({
         campanha: campanha ? { nome: campanha.nome, fim: campanha.fim } : null,
         produtos,
-        vitrine: vitrineRes.data ?? [],
         secoes: secoesRes.data ?? [],
         precos,
         fixos: fixosRes.data ?? [],

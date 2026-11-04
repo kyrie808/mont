@@ -1,24 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { montarVitrine, type DadosVitrine, type LinhaProduto, type LinhaVitrine, type PrecoCampanha } from './montar'
-import { ehCombo } from './tipos'
+import { montarVitrine, resumoDoCombo, type DadosVitrine, type LinhaGrupo, type LinhaProduto, type PrecoCampanha } from './montar'
+import { ehCombo, type ComboLoja } from './tipos'
 
-// Parte A da paridade: a loja monta a vitrine pelo cadastro do sistema interno.
+// Partes A e B da paridade: a loja monta a vitrine só pelo cadastro do sistema interno.
 
-const CONGELADOS = { id: 'sec-cong', nome: 'Congelados', slug: 'congelados' }
-const RESFRIADOS = { id: 'sec-resf', nome: 'Resfriados', slug: 'resfriados' }
+const CONGELADOS = { id: 'sec-cong', nome: 'Congelados', slug: 'congelados', descricao: null }
+const RESFRIADOS = { id: 'sec-resf', nome: 'Resfriados', slug: 'resfriados', descricao: 'Queijo Canastra de verdade.' }
+const BLACK = { nome: 'Black', fim: '2026-11-30T23:59:59-03:00' }
 
 function produto(id: string, extra: Partial<LinhaProduto> = {}): LinhaProduto {
     return {
         id,
         codigo: id,
         nome: id,
+        nome_loja: null,
         slug: id,
         subtitulo: null,
         descricao: null,
         preco: 30,
-        estoque_atual: 0,
         eh_combo: false,
         visivel_catalogo: true,
+        esgotado: false,
+        destaque: false,
         secao_id: CONGELADOS.id,
         ordem_vitrine: 0,
         selo: null,
@@ -28,27 +31,10 @@ function produto(id: string, extra: Partial<LinhaProduto> = {}): LinhaProduto {
     }
 }
 
-function linhaVitrine(produtoId: string, extra: Partial<LinhaVitrine> = {}): LinhaVitrine {
-    return {
-        produto_id: produtoId,
-        secao_id: null,
-        ordem_loja: null,
-        disponivel: true,
-        usa_estoque: false,
-        destaque_hero: false,
-        leva_junto: false,
-        nome_loja: null,
-        resumo: null,
-        frase_card: null,
-        ...extra,
-    }
-}
-
 function dados(extra: Partial<DadosVitrine> = {}): DadosVitrine {
     return {
         campanha: null,
         produtos: [],
-        vitrine: [],
         secoes: [CONGELADOS, RESFRIADOS],
         precos: new Map<string, PrecoCampanha>(),
         fixos: [],
@@ -62,7 +48,7 @@ function dados(extra: Partial<DadosVitrine> = {}): DadosVitrine {
 const nomesDasSecoes = (d: DadosVitrine) => montarVitrine(d).secoes.map((s) => [s.nome, s.itens.map((p) => p.id)])
 
 describe('vitrine pelo cadastro', () => {
-    it('produto novo visível aparece sozinho, sem linha na vitrine da loja', () => {
+    it('produto novo visível aparece sozinho', () => {
         expect(nomesDasSecoes(dados({ produtos: [produto('chipa')] }))).toEqual([['Congelados', ['chipa']]])
     })
 
@@ -71,14 +57,14 @@ describe('vitrine pelo cadastro', () => {
         expect(v.secoes).toEqual([])
     })
 
-    it('abas na ordem das seções da tela Catálogo; seção vazia não aparece', () => {
+    it('abas na ordem das seções da tela Catálogo, com a frase da seção; seção vazia não aparece', () => {
         const d = dados({
             produtos: [produto('massa', { secao_id: RESFRIADOS.id }), produto('chipa')],
             secoes: [RESFRIADOS, CONGELADOS],
         })
-        expect(nomesDasSecoes(d)).toEqual([
-            ['Resfriados', ['massa']],
-            ['Congelados', ['chipa']],
+        expect(montarVitrine(d).secoes.map((s) => [s.nome, s.descricao, s.itens.map((p) => p.id)])).toEqual([
+            ['Resfriados', 'Queijo Canastra de verdade.', ['massa']],
+            ['Congelados', null, ['chipa']],
         ])
     })
 
@@ -92,17 +78,11 @@ describe('vitrine pelo cadastro', () => {
         ])
     })
 
-    it('ordem do cadastro (ordem_vitrine, depois nome); a ordem só da loja vence', () => {
+    it('ordem da tela Catálogo (ordem_vitrine, depois nome)', () => {
         const d = dados({
             produtos: [produto('b', { ordem_vitrine: 1 }), produto('a', { ordem_vitrine: 1 }), produto('c', { ordem_vitrine: 0 })],
-            vitrine: [linhaVitrine('c', { ordem_loja: 9 })],
         })
-        expect(nomesDasSecoes(d)).toEqual([['Congelados', ['a', 'b', 'c']]])
-    })
-
-    it('seção só da loja (loja_vitrine.secao_id) vence a do cadastro', () => {
-        const d = dados({ produtos: [produto('chipa')], vitrine: [linhaVitrine('chipa', { secao_id: RESFRIADOS.id })] })
-        expect(nomesDasSecoes(d)).toEqual([['Resfriados', ['chipa']]])
+        expect(nomesDasSecoes(d)).toEqual([['Congelados', ['c', 'a', 'b']]])
     })
 
     it('até 4 avulsos: cartões; mais que isso: lista', () => {
@@ -112,17 +92,10 @@ describe('vitrine pelo cadastro', () => {
         expect(montarVitrine(cinco).secoes[0]?.formato).toBe('lista')
     })
 
-    it('esgotado só pela loja: chave manual, ou estoque quando ela manda controlar', () => {
-        const d = dados({
-            produtos: [produto('livre'), produto('chave'), produto('estoque', { estoque_atual: 0 }), produto('tem', { estoque_atual: 3 })],
-            vitrine: [
-                linhaVitrine('chave', { disponivel: false }),
-                linhaVitrine('estoque', { usa_estoque: true }),
-                linhaVitrine('tem', { usa_estoque: true }),
-            ],
-        })
+    it('"Esgotado" do cadastro tira da venda; o estoque não decide', () => {
+        const d = dados({ produtos: [produto('livre'), produto('esgotado', { esgotado: true })] })
         const disp = Object.fromEntries(montarVitrine(d).secoes[0]!.itens.map((p) => [p.id, p.disponivel]))
-        expect(disp).toEqual({ chave: false, estoque: false, livre: true, tem: true })
+        expect(disp).toEqual({ esgotado: false, livre: true })
     })
 
     it('fora de campanha não há preço riscado (a ancoragem do cadastro não vai para a loja)', () => {
@@ -132,11 +105,11 @@ describe('vitrine pelo cadastro', () => {
 
     it('na campanha, riscado = preço normal do cadastro (75 → 65); sem desconto, sem riscado', () => {
         const d = dados({
-            campanha: { nome: 'Black', fim: '2026-11-30T23:59:59-03:00' },
+            campanha: BLACK,
             produtos: [produto('balde', { preco: 75 }), produto('igual', { preco: 30 })],
             precos: new Map([
-                ['balde', { pix: 65, credito: 68, ancora: null }],
-                ['igual', { pix: 30, credito: 31, ancora: null }],
+                ['balde', { pix: 65, credito: 68 }],
+                ['igual', { pix: 30, credito: 31 }],
             ]),
         })
         const [balde, igual] = montarVitrine(d).secoes[0]!.itens
@@ -161,49 +134,80 @@ describe('vitrine pelo cadastro', () => {
         ])
     })
 
-    it('nome e frase da loja vencem o nome do cadastro', () => {
+    it('"Nome na loja" vence o nome do cadastro; o card mostra o subtítulo', () => {
         const d = dados({
-            produtos: [produto('massa', { nome: 'Massa Pão de Queijo 4kg' })],
-            vitrine: [linhaVitrine('massa', { nome_loja: 'Balde de massa 4 kg', frase_card: 'Rende pra família toda.' })],
+            produtos: [
+                produto('massa', {
+                    nome: 'Massa Pão de Queijo 4kg',
+                    nome_loja: 'Balde de massa 4 kg',
+                    subtitulo: 'Rende pra família toda.',
+                }),
+                produto('chipa', { nome: 'Chipa 1kg' }),
+            ],
         })
-        const p = montarVitrine(d).secoes[0]!.itens[0]!
-        expect([p.nome, p.chamada]).toEqual(['Balde de massa 4 kg', 'Rende pra família toda.'])
+        expect(montarVitrine(d).secoes[0]!.itens.map((p) => [p.nome, p.subtitulo])).toEqual([
+            ['Chipa 1kg', null],
+            ['Balde de massa 4 kg', 'Rende pra família toda.'],
+        ])
     })
 })
 
 describe('combos', () => {
-    const fixos = [{ combo_id: 'dupla', quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Zero' } }]
+    const fixosDupla = [
+        { combo_id: 'dupla', quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Doce zero' } },
+        { combo_id: 'dupla', quantidade: 1, brinde: false, componente: { id: 'brig', nome: 'Brigadeiro zero' } },
+    ]
+    const comboDaCampanha = (id: string, extra: Partial<LinhaProduto> = {}) =>
+        produto(id, { eh_combo: true, visivel_catalogo: false, secao_id: 'sec-combos', ...extra })
 
     it('combo da campanha: só durante a campanha, no bloco próprio, mesmo sem "Visível no catálogo"', () => {
         const base = {
-            produtos: [produto('dupla', { eh_combo: true, visivel_catalogo: false, secao_id: null }), produto('zero')],
-            fixos,
-            vitrine: [linhaVitrine('dupla', { destaque_hero: true })],
+            produtos: [comboDaCampanha('dupla'), produto('zero', { preco: 45 }), produto('brig', { preco: 45 })],
+            fixos: fixosDupla,
         }
         const fora = montarVitrine(dados(base))
         expect(fora.combos).toEqual([])
-        expect(fora.secoes.flatMap((s) => s.itens.map((p) => p.id))).toEqual(['zero'])
+        expect(fora.hero).toBeNull()
 
         const dentro = montarVitrine(
             dados({
                 ...base,
-                campanha: { nome: 'Black', fim: '2026-11-30T23:59:59-03:00' },
-                precos: new Map([['dupla', { pix: 75, credito: 78, ancora: 78 }]]),
+                campanha: BLACK,
+                precos: new Map([
+                    ['dupla', { pix: 75, credito: 78 }],
+                    ['zero', { pix: 39, credito: 41 }],
+                    ['brig', { pix: 39, credito: 41 }],
+                ]),
             }),
         )
+        // "Separado" no preço VIGENTE (o da campanha): 39 + 39 = 78, nunca 45 + 45.
         expect(dentro.combos.map((c) => [c.id, c.preco, c.precoCredito, c.ancora, c.montavel])).toEqual([
             ['dupla', 75, 78, 78, true],
         ])
-        expect(dentro.hero?.id).toBe('dupla')
     })
 
-    it('combo permanente: na seção do cadastro, preço do cadastro, sem "separado", obedece ao "Visível no catálogo"', () => {
+    it('combos da campanha na ordem da tela Catálogo; banner = o de "Destaque", senão o primeiro', () => {
+        const precos = new Map([
+            ['a', { pix: 50, credito: 52 }],
+            ['b', { pix: 60, credito: 62 }],
+        ])
+        const fixos = ['a', 'b'].map((c) => ({ combo_id: c, quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Zero' } }))
+        const produtos = [comboDaCampanha('a', { ordem_vitrine: 2 }), comboDaCampanha('b', { ordem_vitrine: 1 }), produto('zero')]
+        const sem = montarVitrine(dados({ campanha: BLACK, produtos, precos, fixos }))
+        expect([sem.combos.map((c) => c.id), sem.hero?.id]).toEqual([['b', 'a'], 'b'])
+
+        const com = montarVitrine(
+            dados({ campanha: BLACK, produtos: [{ ...produtos[0]!, destaque: true }, produtos[1]!, produtos[2]!], precos, fixos }),
+        )
+        expect(com.hero?.id).toBe('a')
+    })
+
+    it('combo permanente: na seção do cadastro, preço do cadastro, "separado" no preço normal', () => {
         const permanente = produto('kit', { eh_combo: true, preco: 95 })
-        const fixosKit = [{ combo_id: 'kit', quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Zero' } }]
-        const v = montarVitrine(dados({ produtos: [permanente, produto('zero')], fixos: fixosKit }))
+        const fixosKit = [{ combo_id: 'kit', quantidade: 2, brinde: false, componente: { id: 'zero', nome: 'Zero' } }]
+        const v = montarVitrine(dados({ produtos: [permanente, produto('zero', { preco: 55 })], fixos: fixosKit }))
         const kit = v.secoes[0]!.itens.find((p) => p.id === 'kit')!
-        expect(ehCombo(kit)).toBe(true)
-        expect(ehCombo(kit) && [kit.preco, kit.ancora, kit.montavel]).toEqual([95, null, true])
+        expect(ehCombo(kit) && [kit.preco, kit.ancora, kit.montavel, kit.resumo]).toEqual([95, 110, true, '2× Zero'])
 
         const escondido = montarVitrine(
             dados({ produtos: [{ ...permanente, visivel_catalogo: false }, produto('zero')], fixos: fixosKit }),
@@ -211,14 +215,112 @@ describe('combos', () => {
         expect(escondido.secoes.flatMap((s) => s.itens.map((p) => p.id))).toEqual(['zero'])
     })
 
-    it('combo com item fixo esgotado fica esgotado', () => {
+    it('"separado" com sabores: cada grupo pelo sabor mais barato, brinde incluso (Café da Tarde = 108)', () => {
+        const grupos: LinhaGrupo[] = [
+            {
+                id: 'g1',
+                combo_id: 'cafe',
+                titulo: 'Escolha 1 geleia de 680 g',
+                rotulo_singular: 'geleia',
+                rotulo_plural: 'geleias',
+                quantidade: 1,
+                permite_repetir: true,
+                opcoes: [
+                    { produto_id: 'morango', ordem: 1, produto: { nome: 'Geleia de morango' } },
+                    { produto_id: 'vermelhas', ordem: 2, produto: { nome: 'Geleia de frutas vermelhas' } },
+                ],
+            },
+        ]
+        const fixos = [
+            { combo_id: 'cafe', quantidade: 2, brinde: false, componente: { id: 'baldinho', nome: 'Baldinho 1 kg' } },
+            { combo_id: 'cafe', quantidade: 1, brinde: true, componente: { id: 'dl400', nome: 'Doce de leite 400 g' } },
+        ]
         const v = montarVitrine(
             dados({
-                produtos: [produto('kit', { eh_combo: true }), produto('zero')],
-                fixos: [{ combo_id: 'kit', quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Zero' } }],
-                vitrine: [linhaVitrine('zero', { disponivel: false })],
+                campanha: BLACK,
+                produtos: [
+                    comboDaCampanha('cafe'),
+                    produto('baldinho', { preco: 30 }),
+                    produto('dl400', { preco: 25 }),
+                    produto('morango', { preco: 39 }),
+                    produto('vermelhas', { preco: 41 }),
+                ],
+                precos: new Map([
+                    ['cafe', { pix: 89, credito: 92 }],
+                    ['baldinho', { pix: 27, credito: 28 }],
+                    ['dl400', { pix: 21, credito: 22 }],
+                    ['morango', { pix: 33, credito: 34 }],
+                    ['vermelhas', { pix: 35, credito: 36 }],
+                ]),
+                fixos,
+                grupos,
             }),
         )
-        expect(v.secoes[0]!.itens.find((p) => p.id === 'kit')?.disponivel).toBe(false)
+        const cafe = v.combos[0] as ComboLoja
+        expect([cafe.ancora, cafe.resumo]).toEqual([108, '2× Baldinho 1 kg + 1 geleia à escolha + Doce de leite 400 g de brinde'])
+    })
+
+    it('"Esgotado" num item fixo esgota o combo; num sabor, tira só a opção', () => {
+        const grupos: LinhaGrupo[] = [
+            {
+                id: 'g1',
+                combo_id: 'trio',
+                titulo: 'Escolha 3 doces',
+                rotulo_singular: 'doce',
+                rotulo_plural: 'doces',
+                quantidade: 3,
+                permite_repetir: true,
+                opcoes: [
+                    { produto_id: 'coco', ordem: 1, produto: { nome: 'Coco' } },
+                    { produto_id: 'milho', ordem: 2, produto: { nome: 'Milho' } },
+                ],
+            },
+        ]
+        const v = montarVitrine(
+            dados({
+                produtos: [
+                    produto('kit', { eh_combo: true }),
+                    produto('zero', { esgotado: true }),
+                    produto('trio', { eh_combo: true }),
+                    produto('coco', { esgotado: true }),
+                    produto('milho'),
+                ],
+                fixos: [{ combo_id: 'kit', quantidade: 1, brinde: false, componente: { id: 'zero', nome: 'Zero' } }],
+                grupos,
+            }),
+        )
+        const itens = v.secoes[0]!.itens
+        const trio = itens.find((p) => p.id === 'trio') as ComboLoja
+        expect(itens.find((p) => p.id === 'kit')?.disponivel).toBe(false)
+        expect([trio.disponivel, trio.montavel, trio.grupos[0]!.opcoes.map((o) => o.disponivel)]).toEqual([true, true, [false, true]])
+    })
+})
+
+describe('resumoDoCombo', () => {
+    it('itens fixos, grupos de escolha e brinde, nessa ordem', () => {
+        expect(
+            resumoDoCombo(
+                [
+                    { produtoId: 'b', nome: 'Balde 4 kg', quantidade: 1, brinde: false },
+                    { produtoId: 'd', nome: 'Doce de leite 400 g', quantidade: 1, brinde: true },
+                    { produtoId: 'm', nome: 'Baldinho 1 kg', quantidade: 2, brinde: false },
+                ],
+                [
+                    {
+                        id: 'g',
+                        titulo: 'Escolha 6 doces',
+                        rotuloSingular: 'doce',
+                        rotuloPlural: 'doces',
+                        quantidade: 6,
+                        permiteRepetir: true,
+                        opcoes: [],
+                    },
+                ],
+            ),
+        ).toBe('Balde 4 kg + 2× Baldinho 1 kg + 6 doces à escolha + Doce de leite 400 g de brinde')
+    })
+
+    it('sem itens, sem texto', () => {
+        expect(resumoDoCombo([], [])).toBeNull()
     })
 })

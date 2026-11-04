@@ -1,6 +1,6 @@
 -- Suíte: a loja vende pelo CADASTRO do sistema interno (Parte A da paridade, 02/11/2026).
--- Regra: produto ativo + "Visível no catálogo" vale na loja sem linha em loja_vitrine;
--- loja_vitrine é complemento opcional (esgotado, nome, seção/ordem só da loja...).
+-- Regra: produto ativo + "Visível no catálogo" vale na loja; "Esgotado" e "Nome na loja" moram no
+-- próprio cadastro (produtos.esgotado / produtos.nome_loja, Parte B, 04/11/2026).
 -- Combo de campanha aparece/vende só durante a campanha (mesmo sem "Visível no catálogo").
 --
 -- PADRÃO "TRANSAÇÃO DESCARTADA": um DO-block que SEMPRE termina em RAISE EXCEPTION; nada é gravado,
@@ -28,7 +28,6 @@ BEGIN
     'cat_pedidos', (SELECT count(*) FROM public.cat_pedidos),
     'cat_itens_pedido', (SELECT count(*) FROM public.cat_itens_pedido),
     'produtos', (SELECT count(*) FROM public.produtos),
-    'loja_vitrine', (SELECT count(*) FROM public.loja_vitrine),
     'campanha', (SELECT jsonb_agg(jsonb_build_array(ativa, inicio, fim)) FROM public.loja_campanhas),
     'numero_pedido_seq', (SELECT last_value FROM public.cat_pedidos_numero_pedido_seq)
   );
@@ -48,15 +47,14 @@ BEGIN
      OR v_mesa IS NULL OR v_dupla IS NULL THEN
     RAISE EXCEPTION 'SUITE_ABORTADA: produtos do cenário não encontrados';
   END IF;
-  IF EXISTS (SELECT 1 FROM public.loja_vitrine WHERE produto_id = v_chipa) THEN
-    RAISE EXCEPTION 'SUITE_ABORTADA: a Chipa 1kg já tem linha na vitrine; o cenário pede um produto só do cadastro';
-  END IF;
 
   -- ── Ajustes de cenário (descartados no fim) ──
   -- Campanha pausada no início (como está hoje); V6 liga.
   UPDATE public.loja_campanhas SET ativa = false WHERE id = v_campanha;
   -- A Chipa começa visível no catálogo (V1); V2 a esconde. O teste não depende do estado real dela.
-  UPDATE public.produtos SET visivel_catalogo = true WHERE id = v_chipa;
+  UPDATE public.produtos SET visivel_catalogo = true, esgotado = false WHERE id = v_chipa;
+  UPDATE public.produtos SET esgotado = false WHERE id IN (v_dupla, v_baldinho)
+     OR id IN (SELECT componente_id FROM public.produto_componentes WHERE combo_id = v_dupla);
   CREATE SEQUENCE public.tmp_suite_loja_vitrine_seq START 910001;
   ALTER TABLE public.cat_pedidos ALTER COLUMN numero_pedido SET DEFAULT nextval('public.tmp_suite_loja_vitrine_seq');
   -- Combo permanente de teste: 2 baldinhos por R$ 50, visível no catálogo, fora de qualquer campanha.
@@ -129,28 +127,39 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'V3 inativo é recusado', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- V4: linha da vitrine só com o mínimo: valores padrão valem (visível, disponível, sem seção própria).
+  -- V4: "Nome na loja" (produtos.nome_loja): sem espaço nas pontas, sem quebra de linha, 2 a 80 letras.
   casos := casos + 1;
   BEGIN
     RESET ROLE;
-    INSERT INTO public.loja_vitrine (produto_id) VALUES (v_chipa);
-    SELECT * INTO r FROM public.loja_vitrine WHERE produto_id = v_chipa;
-    SET LOCAL ROLE service_role;
-    IF NOT r.visivel OR NOT r.disponivel OR r.secao_id IS NOT NULL OR r.ordem_loja IS NOT NULL THEN
-      RAISE EXCEPTION 'linha mínima = %', row_to_json(r);
+    UPDATE public.produtos SET nome_loja = 'Chipa de queijo 1 kg' WHERE id = v_chipa;
+    BEGIN
+      UPDATE public.produtos SET nome_loja = ' Chipa ' WHERE id = v_chipa;
+      RAISE EXCEPTION 'aceitou nome com espaço nas pontas';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    BEGIN
+      UPDATE public.produtos SET nome_loja = E'Chipa
+1 kg' WHERE id = v_chipa;
+      RAISE EXCEPTION 'aceitou nome com quebra de linha';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    IF (SELECT nome_loja FROM public.produtos WHERE id = v_chipa) <> 'Chipa de queijo 1 kg' THEN
+      RAISE EXCEPTION 'nome na loja não gravou';
     END IF;
+    UPDATE public.produtos SET nome_loja = NULL WHERE id = v_chipa;
+    SET LOCAL ROLE service_role;
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'V4 linha mínima com padrões', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'V4 nome na loja com formato', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'V4 linha mínima com padrões', 'ok', false, 'erro', SQLERRM);
+    SET LOCAL ROLE service_role;
+    resultados := resultados || jsonb_build_object('caso', 'V4 nome na loja com formato', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- V5: marcado "Esgotado" na vitrine: recusado; a mesma marca numa linha desligada (visivel=false) é ignorada.
+  -- V5: "Esgotado" no cadastro recusa e desmarcar volta a vender; o público não consegue mudar a marca.
   casos := casos + 1;
   BEGIN
     RESET ROLE;
-    INSERT INTO public.loja_vitrine (produto_id, disponivel) VALUES (v_chipa, false)
-      ON CONFLICT (produto_id) DO UPDATE SET disponivel = false, visivel = true;
+    UPDATE public.produtos SET esgotado = true WHERE id = v_chipa;
     SET LOCAL ROLE service_role;
     BEGIN
       PERFORM public.loja_criar_pedido(gen_random_uuid(), 'Cliente Suíte', c_tel || '05', '09750000',
@@ -158,19 +167,29 @@ BEGIN
         jsonb_build_array(jsonb_build_object('produto_id', v_chipa, 'quantidade', 1)), false, NULL);
       RAISE EXCEPTION 'aceitou produto esgotado';
     EXCEPTION WHEN invalid_parameter_value THEN
-      NULL;
+      IF SQLERRM <> 'Produto indisponível' THEN RAISE EXCEPTION 'mensagem = %', SQLERRM; END IF;
     END;
     RESET ROLE;
-    UPDATE public.loja_vitrine SET visivel = false WHERE produto_id = v_chipa;
+    PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+    SET LOCAL ROLE anon;
+    UPDATE public.produtos SET esgotado = false WHERE id = v_chipa;
+    RESET ROLE;
+    IF NOT (SELECT esgotado FROM public.produtos WHERE id = v_chipa) THEN
+      RAISE EXCEPTION 'o público desmarcou o esgotado';
+    END IF;
+    UPDATE public.produtos SET esgotado = false WHERE id = v_chipa;
+    PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
     SET LOCAL ROLE service_role;
     SELECT * INTO r FROM public.loja_criar_pedido(gen_random_uuid(), 'Cliente Suíte', c_tel || '06', '09750000',
       'Rua Teste', '1', NULL, NULL, 'São Bernardo do Campo', 'SP',
       jsonb_build_array(jsonb_build_object('produto_id', v_chipa, 'quantidade', 1)), false, NULL);
-    IF r.pedido_id IS NULL THEN RAISE EXCEPTION 'linha desligada bloqueou o pedido'; END IF;
+    IF r.pedido_id IS NULL THEN RAISE EXCEPTION 'desmarcado não voltou a vender'; END IF;
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'V5 esgotado recusa; linha desligada não vale', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'V5 esgotado no cadastro; público não muda', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'V5 esgotado recusa; linha desligada não vale', 'ok', false, 'erro', SQLERRM);
+    PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+    SET LOCAL ROLE service_role;
+    resultados := resultados || jsonb_build_object('caso', 'V5 esgotado no cadastro; público não muda', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- V6: combo de campanha com a campanha pausada: recusado.
@@ -257,6 +276,5 @@ $suite$;
 -- Contagens para rodar antes e depois (têm que bater):
 -- SELECT (SELECT count(*) FROM public.contatos) contatos, (SELECT count(*) FROM public.cat_pedidos) cat_pedidos,
 --        (SELECT count(*) FROM public.cat_itens_pedido) cat_itens_pedido, (SELECT count(*) FROM public.produtos) produtos,
---        (SELECT count(*) FROM public.loja_vitrine) loja_vitrine,
 --        (SELECT jsonb_agg(jsonb_build_array(ativa, inicio, fim)) FROM public.loja_campanhas) campanha,
 --        (SELECT last_value FROM public.cat_pedidos_numero_pedido_seq) numero_pedido_seq;

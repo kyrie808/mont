@@ -6,18 +6,20 @@ interface Props {
     isOpen: boolean
     onClose: () => void
     initial: Secao | null
-    onSubmit: (values: { nome: string; ativa: boolean }) => Promise<void>
+    onSubmit: (values: { nome: string; ativa: boolean; descricao: string }) => Promise<void>
 }
 
 export function SecaoFormModal({ isOpen, onClose, initial, onSubmit }: Props) {
     const [nome, setNome] = useState('')
     const [ativa, setAtiva] = useState(true)
+    const [descricao, setDescricao] = useState('')
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         if (isOpen) {
             setNome(initial?.nome ?? '')
             setAtiva(initial?.ativa ?? true)
+            setDescricao(initial?.descricao ?? '')
             setSaving(false)
         }
     }, [isOpen, initial])
@@ -26,7 +28,7 @@ export function SecaoFormModal({ isOpen, onClose, initial, onSubmit }: Props) {
         if (!nome.trim()) return
         setSaving(true)
         try {
-            await onSubmit({ nome: nome.trim(), ativa })
+            await onSubmit({ nome: nome.trim(), ativa, descricao })
             onClose()
         } finally {
             setSaving(false)
@@ -41,6 +43,14 @@ export function SecaoFormModal({ isOpen, onClose, initial, onSubmit }: Props) {
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Ex: Combos, Resfriados, Congelados"
+                />
+                <Input
+                    label="Descrição na loja (opcional)"
+                    value={descricao}
+                    onChange={(e) => setDescricao(e.target.value)}
+                    placeholder="Ex: Queijo Canastra de verdade. Parmesão e Meia Cura."
+                    maxLength={120}
+                    helperText="Aparece sob o título da seção na loja. Uma linha, até 120 caracteres."
                 />
                 {initial && (
                     <Select

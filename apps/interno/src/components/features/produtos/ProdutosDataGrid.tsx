@@ -17,6 +17,7 @@ import { formatCurrency, cn } from '@mont/shared'
 import type { DomainProduto } from '@/types/domain'
 import { estoqueStatus, ESTOQUE_STATUS_BADGE } from '@/utils/estoqueStatus'
 import { useColumnSizing } from '@/hooks/useColumnSizing'
+import { EsgotadoToggle } from './EsgotadoToggle'
 
 // Mesma regra de margem da página (calcularMargem): (preco - custo) / preco.
 function margemPct(preco: number, custo: number): number {
@@ -40,9 +41,12 @@ function EstoqueBadge({ produto }: { produto: DomainProduto }) {
 interface ProdutosDataGridProps {
     produtos: DomainProduto[]
     onEdit: (produto: DomainProduto) => void
+    onToggleEsgotado: (produto: DomainProduto) => void
+    /** Produto com o "Esgotado" sendo gravado agora (botão desabilitado). */
+    alternandoEsgotado: string | null
 }
 
-export function ProdutosDataGrid({ produtos, onEdit }: ProdutosDataGridProps) {
+export function ProdutosDataGrid({ produtos, onEdit, onToggleEsgotado, alternandoEsgotado }: ProdutosDataGridProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
     const [colSizing, setColSizing] = useColumnSizing('grid-produtos')
 
@@ -109,7 +113,21 @@ export function ProdutosDataGrid({ produtos, onEdit }: ProdutosDataGridProps) {
                     : <span className={cn(badgeBase, 'bg-muted text-muted-foreground border-border')}>Inativo</span>
             ),
         },
-    ], [])
+        {
+            accessorKey: 'esgotado',
+            header: ({ column }) => <DataGridColumnHeader column={column} title="Loja" />,
+            cell: ({ row }) =>
+                row.original.ativo ? (
+                    <EsgotadoToggle
+                        compacto
+                        nome={row.original.nome}
+                        esgotado={row.original.esgotado ?? false}
+                        onToggle={() => onToggleEsgotado(row.original)}
+                        disabled={alternandoEsgotado === row.original.id}
+                    />
+                ) : null,
+        },
+    ], [onToggleEsgotado, alternandoEsgotado])
 
     const table = useReactTable({
         data: produtos,

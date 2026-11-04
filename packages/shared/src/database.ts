@@ -1976,7 +1976,6 @@ export type Database = {
           resumo: string | null
           secao_id: string | null
           usa_estoque: boolean
-          usar_ancoragem: boolean
           visivel: boolean
         }
         Insert: {
@@ -1992,7 +1991,6 @@ export type Database = {
           resumo?: string | null
           secao_id?: string | null
           usa_estoque?: boolean
-          usar_ancoragem?: boolean
           visivel?: boolean
         }
         Update: {
@@ -2008,7 +2006,6 @@ export type Database = {
           resumo?: string | null
           secao_id?: string | null
           usa_estoque?: boolean
-          usar_ancoragem?: boolean
           visivel?: boolean
         }
         Relationships: [
@@ -2748,12 +2745,14 @@ export type Database = {
           descricao: string | null
           destaque: boolean | null
           eh_combo: boolean
+          esgotado: boolean
           estoque_atual: number | null
           estoque_minimo: number | null
           fixo_mais_vendidos: boolean
           id: string
           instrucoes_preparo: string | null
           nome: string
+          nome_loja: string | null
           ordem_vitrine: number
           peso_kg: number | null
           preco: number
@@ -2777,12 +2776,14 @@ export type Database = {
           descricao?: string | null
           destaque?: boolean | null
           eh_combo?: boolean
+          esgotado?: boolean
           estoque_atual?: number | null
           estoque_minimo?: number | null
           fixo_mais_vendidos?: boolean
           id?: string
           instrucoes_preparo?: string | null
           nome: string
+          nome_loja?: string | null
           ordem_vitrine?: number
           peso_kg?: number | null
           preco: number
@@ -2806,12 +2807,14 @@ export type Database = {
           descricao?: string | null
           destaque?: boolean | null
           eh_combo?: boolean
+          esgotado?: boolean
           estoque_atual?: number | null
           estoque_minimo?: number | null
           fixo_mais_vendidos?: boolean
           id?: string
           instrucoes_preparo?: string | null
           nome?: string
+          nome_loja?: string | null
           ordem_vitrine?: number
           peso_kg?: number | null
           preco?: number
@@ -4782,22 +4785,6 @@ export type Database = {
           p_uf: string
         }
         Returns: string
-      }
-      loja_salvar_vitrine: {
-        Args: {
-          p_destaque_hero: boolean
-          p_disponivel: boolean
-          p_frase_card: string
-          p_leva_junto: boolean
-          p_nome_loja: string
-          p_ordem_loja?: number
-          p_produto_id: string
-          p_resumo: string
-          p_secao_id?: string
-          p_usa_estoque: boolean
-          p_usar_ancoragem: boolean
-        }
-        Returns: undefined
       }
       preco_tabela: {
         Args: { p_em?: string; p_produto_id: string; p_tabela: string }
