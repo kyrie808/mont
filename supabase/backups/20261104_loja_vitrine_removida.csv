@@ -1,0 +1,23 @@
+produto_id,visivel,disponivel,usa_estoque,destaque_hero,leva_junto,nome_loja,resumo,criado_em,atualizado_em,frase_card,secao_id,ordem_loja
+026f67b0-8574-408b-823b-d93fa526de21,true,true,false,false,false,Doce de leite tradicional 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+1d83ab4f-0cbb-42e3-8eaf-aab4ec41a75f,true,true,false,false,false,Geleia de frutas vermelhas 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+1d9b45f3-8834-4840-b218-8eb90227c500,true,true,false,true,false,Mesa Cheia,Balde 4 kg + 2 baldinhos 1 kg + 6 doces 680 g à escolha,2026-10-30 05:13:38.133541+00,2026-11-03 02:35:29.329727+00,NULL,NULL,1
+3074f382-ee98-4cf5-9d6d-e403c7d61166,true,true,false,false,false,Balde de massa 4 kg,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 12:06:46.618005+00,Queijo Canastra de verdade. Rende pra família toda.,NULL,NULL
+487fef98-5d10-42e4-a628-2f7d176ce87e,true,true,false,false,false,Baldinho de massa 1 kg,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 12:06:46.618005+00,Pra experimentar ou pro café da semana.,NULL,NULL
+5eab3cf4-b21f-46e8-a6da-a63eea0c09c4,true,true,false,false,false,Par Mineiro,Balde 4 kg + 1 doce 680 g à escolha,2026-10-30 05:13:38.133541+00,2026-11-03 02:35:29.329727+00,NULL,NULL,2
+658a747e-7e1e-4f43-90ea-db8c9b04e654,true,true,false,false,false,Geleia de morango 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+67c49a99-1144-4e54-9591-43354c36cd15,true,true,false,false,false,Doce de leite com coco 400 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+6df32aa5-9932-418c-b920-e35b8160e1d7,true,true,false,false,false,Doce de leite com coco 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+870e4563-de3b-4d68-bdf7-2c839ac862e7,true,true,false,false,false,Cocada cremosa 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+97f4680c-bdb7-4d24-9c94-449ca0b2ada4,true,true,false,false,false,Doce de milho 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+9820a42a-6459-4967-9fa6-a8edf5740f4b,true,true,false,false,false,Cocada cremosa com maracujá 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+a3a3be4e-6dac-46b8-b6f5-537e1ec8db84,true,true,false,false,false,Doce de leite com geleia de ameixa 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+b9b1575f-03c5-4397-ab1a-31d3f23b26c2,true,true,false,false,false,Doce de leite com geleia de café 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+c93e59d2-7678-4057-bcba-4629d1c46310,true,true,false,false,false,Doce de leite zero 400 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+cbf5c4e0-0b3c-43f5-bec5-131d6f350d77,true,true,false,false,false,Ambrosia 400 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+d1ea5fd3-9f63-4a1e-9894-1194aa78c6c5,true,true,false,false,false,Trio Mineiro,3 doces 680 g à escolha,2026-10-30 05:13:38.133541+00,2026-11-03 02:35:29.329727+00,NULL,NULL,4
+d371c052-8152-49b0-9ce7-ca27f1c3d2ed,true,true,false,false,false,Dupla Zero,Doce de leite zero 400 g + brigadeiro de colher zero 400 g,2026-10-30 05:13:38.133541+00,2026-11-03 02:35:29.329727+00,NULL,NULL,5
+d57053d0-4686-4488-9c47-5a5ca23b07ea,true,true,false,false,false,Geleia de goiaba 680 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+f63e92fb-6918-4e3a-8af0-7aa5e2b6b978,true,true,false,false,true,Doce de leite tradicional 400 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
+fb5c4652-0bbc-46c3-88d0-de14e80e6a15,true,true,false,false,false,Café da Tarde,2 baldinhos 1 kg + 1 geleia 680 g à escolha + doce de leite 400 g de brinde,2026-11-02 06:49:47.653184+00,2026-11-03 02:35:29.329727+00,NULL,NULL,3
+fd133482-7777-4b46-911b-1c404ecd6161,true,true,false,false,false,Brigadeiro de colher zero 400 g,NULL,2026-10-30 05:13:38.133541+00,2026-11-02 11:20:56.782167+00,NULL,NULL,NULL
