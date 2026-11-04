@@ -346,19 +346,14 @@ export class ProdutoService {
         if (error) throw error
     }
 
-    /* Apaga do bucket as fotos que saíram da galeria, se nenhum outro produto ainda usa
-       (melhor esforço: a galeria já foi gravada; arquivo que sobrar não aparece em lugar nenhum). */
+    /* Apaga do bucket as fotos que saíram da galeria, pela mesma Edge Function do upload (service role:
+       o Storage recusa o JWT do interno). Ela só apaga o arquivo que nenhum produto usa mais. Melhor
+       esforço: a galeria já foi gravada, e um arquivo que sobrar não aparece em lugar nenhum. */
     async apagarArquivosDeFotos(urls: string[]): Promise<void> {
         if (urls.length === 0) return
-        const { data: emUso, error: erroUso } = await supabase.from('cat_imagens_produto').select('url').in('url', urls)
-        if (erroUso) return
-        const usadas = new Set((emUso || []).map((l) => l.url))
-        const nomes = urls
-            .filter((u) => !usadas.has(u))
-            .map((u) => u.split('/').pop())
-            .filter((n): n is string => Boolean(n))
-        if (nomes.length === 0) return
-        const { error } = await supabase.storage.from('products').remove(nomes)
+        const form = new FormData()
+        form.append('remover', JSON.stringify(urls))
+        const { error } = await supabase.functions.invoke('upload-product-image', { body: form })
         if (error) console.warn('[Galeria] Não apagou os arquivos do bucket:', error.message)
     }
 }
