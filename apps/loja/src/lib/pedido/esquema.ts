@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { esquemaAtribuicao } from '@/lib/medicao/origem'
 import { esquemaItemSacola } from '@/lib/sacola/esquema'
 
 /** Texto do aceite exatamente como aparece na tela 05 (guardado com o pedido — LGPD). */
@@ -34,6 +35,8 @@ export const esquemaEnvioPedido = z.object({
     /** Armadilha para robô: campo escondido que gente de verdade deixa vazio. */
     site: z.string().max(0),
     itens: z.array(esquemaItemSacola).min(1, 'Sacola vazia').max(30),
+    /** fbp/fbc/UTMs (cat_pedidos), para o Purchase da entrega sair ligado ao anúncio. Inválido = sem atribuição. */
+    atribuicao: esquemaAtribuicao.optional().catch(undefined),
 })
 
 export type EnvioPedido = z.input<typeof esquemaEnvioPedido>

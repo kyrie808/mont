@@ -10,7 +10,9 @@
 --   * a campanha "Black da Mont 2026" fica ligada e valendo desde ontem;
 --   * estoque dos doces usados vai a 100 (o estoque real não pode decidir o teste);
 --   * cat_pedidos.numero_pedido usa uma sequência temporária, para não queimar números reais
---     (nextval escapa do rollback).
+--     (nextval escapa do rollback);
+--   * um combo de teste fora do catálogo e de qualquer campanha (L3), para a recusa não depender
+--     de um combo real continuar existindo.
 -- Cria os pedidos como o servidor da loja (service_role) e confirma como a CONTA-TESTE (admin),
 -- igual ao app. Telefones fictícios com o prefixo 119000017.
 
@@ -26,7 +28,7 @@ DECLARE
 
   v_campanha uuid;
   v_balde uuid; v_dl uuid; v_cocada uuid;
-  v_familia uuid; v_par uuid; v_dupla uuid; v_kit_top uuid;
+  v_familia uuid; v_par uuid; v_dupla uuid; v_fora uuid;
   g_familia uuid; g_par uuid;
   esc_familia jsonb; esc_par jsonb;
   ped_a uuid; ped_b uuid; ped_c uuid; ped_d uuid; ped_e uuid;
@@ -63,11 +65,10 @@ BEGIN
   SELECT id INTO v_familia FROM public.produtos WHERE codigo = 'combo_black_familia';
   SELECT id INTO v_par FROM public.produtos WHERE codigo = 'combo_black_balde_doce';
   SELECT id INTO v_dupla FROM public.produtos WHERE codigo = 'combo_black_dupla_zero';
-  SELECT id INTO v_kit_top FROM public.produtos WHERE codigo = 'combo_black_kit_top_morango';
   SELECT id INTO g_familia FROM public.combo_grupos WHERE combo_id = v_familia;
   SELECT id INTO g_par FROM public.combo_grupos WHERE combo_id = v_par;
   IF v_campanha IS NULL OR v_balde IS NULL OR v_dl IS NULL OR v_cocada IS NULL OR v_familia IS NULL
-     OR v_par IS NULL OR v_dupla IS NULL OR v_kit_top IS NULL OR g_familia IS NULL OR g_par IS NULL THEN
+     OR v_par IS NULL OR v_dupla IS NULL OR g_familia IS NULL OR g_par IS NULL THEN
     RAISE EXCEPTION 'SUITE_ABORTADA: cenário da Black não encontrado';
   END IF;
   esc_familia := jsonb_build_array(
@@ -81,6 +82,9 @@ BEGIN
    WHERE id IN (SELECT produto_id FROM public.loja_vitrine WHERE usa_estoque);
   CREATE SEQUENCE public.tmp_suite_loja_pedido_seq START 900001;
   ALTER TABLE public.cat_pedidos ALTER COLUMN numero_pedido SET DEFAULT nextval('public.tmp_suite_loja_pedido_seq');
+  INSERT INTO public.produtos (nome, codigo, preco, custo, unidade, ativo, visivel_catalogo, eh_combo, categoria)
+  VALUES ('Combo Suíte Fora da Vitrine', 'combo_suite_fora_vitrine', 50, 0, 'un', true, false, true, 'combo')
+  RETURNING id INTO v_fora;
 
   -- ── Como o servidor da loja ──
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
@@ -155,10 +159,10 @@ BEGIN
     END;
     BEGIN
       PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
-        jsonb_build_array(jsonb_build_object('combo_id', v_kit_top, 'escolhas', '[]'::jsonb)), false, NULL);
+        jsonb_build_array(jsonb_build_object('combo_id', v_fora, 'escolhas', '[]'::jsonb)), false, NULL);
       RAISE EXCEPTION 'aceitou combo fora da vitrine';
     EXCEPTION WHEN invalid_parameter_value THEN
-      IF SQLERRM NOT LIKE '%indisponível%' THEN RAISE EXCEPTION 'kit top: %', SQLERRM; END IF;
+      IF SQLERRM NOT LIKE '%indisponível%' THEN RAISE EXCEPTION 'fora da vitrine: %', SQLERRM; END IF;
     END;
     BEGIN
       PERFORM * FROM public.loja_criar_pedido(gen_random_uuid(), 'Fulano', '11900001702', '09750000', 'Rua', '1', NULL, NULL, 'SBC', 'SP',
@@ -218,8 +222,8 @@ BEGIN
   -- ── L5: permissões ──
   casos := casos + 1;
   BEGIN
-    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text)', 'EXECUTE')
-       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text)', 'EXECUTE') THEN
+    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE')
+       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE') THEN
       RAISE EXCEPTION 'loja_criar_pedido aberta fora do service_role';
     END IF;
     IF has_function_privilege('authenticated', 'public.criar_venda_em(uuid, date, text, numeric, jsonb, uuid, date, uuid, text, boolean, numeric, text, date, text, timestamptz, text, uuid, text)', 'EXECUTE')

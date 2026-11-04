@@ -18,7 +18,7 @@ DECLARE
   antes jsonb;
 
   v_campanha uuid;
-  v_chipa uuid; v_abobora uuid; v_baldinho uuid; v_mesa uuid; v_dupla uuid; v_dl680 uuid;
+  v_chipa uuid; v_baldinho uuid; v_mesa uuid; v_dupla uuid; v_dl680 uuid;
   v_permanente uuid;
   r record;
   n int;
@@ -40,12 +40,11 @@ BEGIN
 
   SELECT id INTO v_campanha FROM public.loja_campanhas WHERE nome = 'Black da Mont 2026';
   SELECT id INTO v_chipa FROM public.produtos WHERE nome = 'Chipa 1kg' AND ativo;
-  SELECT id INTO v_abobora FROM public.produtos WHERE nome = 'Doce de Abóbora com Coco 400g';
   SELECT id INTO v_baldinho FROM public.produtos WHERE codigo = 'balde_pao_queijo_1kg';
   SELECT id INTO v_dl680 FROM public.produtos WHERE codigo = 'doce_leite_tradicional_680g';
   SELECT id INTO v_mesa FROM public.produtos WHERE codigo = 'combo_black_familia';
   SELECT id INTO v_dupla FROM public.produtos WHERE codigo = 'combo_black_dupla_zero';
-  IF v_campanha IS NULL OR v_chipa IS NULL OR v_abobora IS NULL OR v_baldinho IS NULL OR v_dl680 IS NULL
+  IF v_campanha IS NULL OR v_chipa IS NULL OR v_baldinho IS NULL OR v_dl680 IS NULL
      OR v_mesa IS NULL OR v_dupla IS NULL THEN
     RAISE EXCEPTION 'SUITE_ABORTADA: produtos do cenário não encontrados';
   END IF;
@@ -56,6 +55,8 @@ BEGIN
   -- ── Ajustes de cenário (descartados no fim) ──
   -- Campanha pausada no início (como está hoje); V6 liga.
   UPDATE public.loja_campanhas SET ativa = false WHERE id = v_campanha;
+  -- A Chipa começa visível no catálogo (V1); V2 a esconde. O teste não depende do estado real dela.
+  UPDATE public.produtos SET visivel_catalogo = true WHERE id = v_chipa;
   CREATE SEQUENCE public.tmp_suite_loja_vitrine_seq START 910001;
   ALTER TABLE public.cat_pedidos ALTER COLUMN numero_pedido SET DEFAULT nextval('public.tmp_suite_loja_vitrine_seq');
   -- Combo permanente de teste: 2 baldinhos por R$ 50, visível no catálogo, fora de qualquer campanha.
@@ -85,14 +86,20 @@ BEGIN
   -- V2: "Visível no catálogo" desligado: recusado.
   casos := casos + 1;
   BEGIN
+    RESET ROLE;
+    UPDATE public.produtos SET visivel_catalogo = false WHERE id = v_chipa;
+    SET LOCAL ROLE service_role;
     BEGIN
       PERFORM public.loja_criar_pedido(gen_random_uuid(), 'Cliente Suíte', c_tel || '02', '09750000',
         'Rua Teste', '1', NULL, NULL, 'São Bernardo do Campo', 'SP',
-        jsonb_build_array(jsonb_build_object('produto_id', v_abobora, 'quantidade', 1)), false, NULL);
+        jsonb_build_array(jsonb_build_object('produto_id', v_chipa, 'quantidade', 1)), false, NULL);
       RAISE EXCEPTION 'aceitou produto escondido';
     EXCEPTION WHEN invalid_parameter_value THEN
       IF SQLERRM <> 'Produto indisponível' THEN RAISE EXCEPTION 'mensagem = %', SQLERRM; END IF;
     END;
+    RESET ROLE;
+    UPDATE public.produtos SET visivel_catalogo = true WHERE id = v_chipa;
+    SET LOCAL ROLE service_role;
     passou := passou + 1;
     resultados := resultados || jsonb_build_object('caso', 'V2 escondido no cadastro é recusado', 'ok', true);
   EXCEPTION WHEN others THEN

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Foto } from '@/components/Foto'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
+import { medirVisualizacao } from '@/lib/medicao/dataLayer'
 import type { ProdutoLoja } from '@/lib/vitrine/tipos'
 
 interface PainelProdutoProps {
@@ -24,6 +25,11 @@ export function PainelProduto({ produto, naSacola, focarFechar, onFechar, onConf
     const [quantidade, setQuantidade] = useState(naSacola > 0 ? naSacola : 1)
     const painel = useRef<HTMLElement>(null)
     const fechar = useRef<HTMLButtonElement>(null)
+
+    // O painel abre um produto por vez (key = id na Loja): abrir = ViewContent.
+    useEffect(() => {
+        medirVisualizacao(produto)
+    }, [produto])
 
     useEffect(() => {
         const overflowAntes = document.body.style.overflow

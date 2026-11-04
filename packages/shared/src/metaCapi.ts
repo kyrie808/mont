@@ -34,6 +34,15 @@ export interface UserDataMeta extends UserDataBase {
     /** Cru, sem hash — a Meta casa o clique pelo valor exato. */
     ctwa_clid?: string
     whatsapp_business_account_id?: string
+    /** Cookies do pixel (pedido da loja), crus: a Meta casa o clique do anúncio no site pelo valor exato. */
+    fbc?: string
+    fbp?: string
+}
+
+/** Clique do site guardado no pedido da loja (cat_pedidos → meta_eventos). */
+export interface CliqueSite {
+    fbc?: string | null
+    fbp?: string | null
 }
 
 export interface EventoFila {
@@ -72,9 +81,12 @@ export function montarEvento(
     ctwaClid: string | null | undefined,
     canal: CanalMeta,
     wabaId: string | null | undefined,
+    clique: CliqueSite = {},
 ): EventoMeta {
     const user_data: UserDataMeta = { ...base }
     if (ctwaClid) user_data.ctwa_clid = ctwaClid
+    if (clique.fbc) user_data.fbc = clique.fbc
+    if (clique.fbp) user_data.fbp = clique.fbp
 
     const evento: EventoMeta = {
         event_name: ev.evento,

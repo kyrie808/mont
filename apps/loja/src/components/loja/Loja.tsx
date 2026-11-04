@@ -10,6 +10,7 @@ import { Foto } from '@/components/Foto'
 import { IconeSacola } from '@/components/IconeSacola'
 import { Seletor } from '@/components/Seletor'
 import { diaMesSP, linkWhatsApp, reais } from '@/lib/formato'
+import { medirAdicao } from '@/lib/medicao/dataLayer'
 import { catalogoDa, resumirSacola, totalDeItens } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
@@ -111,6 +112,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     autoFocus={foco?.id === p.id && foco.alvo === 'adicionar'}
                     onClick={() => {
                         definirQuantidade(p.id, 1)
+                        medirAdicao(p)
                         setFoco({ id: p.id, alvo: 'mais' })
                     }}
                     className={cn(botaoAdicionar, larguraTotal && 'w-full')}
@@ -128,7 +130,10 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     if (q === 1) setFoco({ id: p.id, alvo: 'adicionar' })
                     definirQuantidade(p.id, q - 1)
                 }}
-                onMais={() => definirQuantidade(p.id, q + 1)}
+                onMais={() => {
+                    definirQuantidade(p.id, q + 1)
+                    medirAdicao(p)
+                }}
                 focarMais={foco?.id === p.id && foco.alvo === 'mais'}
                 animar
                 className={cn(larguraTotal && 'w-full justify-between')}
@@ -152,6 +157,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     autoFocus={foco?.id === c.id && foco.alvo === 'adicionar'}
                     onClick={() => {
                         adicionarCombo(c.id, [])
+                        medirAdicao(c)
                         setFoco({ id: c.id, alvo: 'mais' })
                     }}
                     className="flex h-11 cursor-pointer items-center rounded-[22px] bg-laranja px-4 text-sm font-bold text-marrom"
@@ -170,7 +176,10 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     if (q === 1) setFoco({ id: c.id, alvo: 'adicionar' })
                     if (ultimo?.tipo === 'combo') removerCombo(ultimo.chave)
                 }}
-                onMais={() => adicionarCombo(c.id, [])}
+                onMais={() => {
+                    adicionarCombo(c.id, [])
+                    medirAdicao(c)
+                }}
                 maisDesabilitado={q >= 99}
                 focarMais={foco?.id === c.id && foco.alvo === 'mais'}
                 animar
@@ -409,6 +418,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     focarFechar={abertoPorTeclado}
                     onFechar={fechar}
                     onConfirmar={(q) => {
+                        medirAdicao(produtoAberto, q - quantidadeDe(produtoAberto.id))
                         definirQuantidade(produtoAberto.id, q)
                         fechar()
                     }}

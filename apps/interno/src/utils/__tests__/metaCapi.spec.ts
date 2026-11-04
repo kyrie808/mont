@@ -102,6 +102,26 @@ describe('montarEvento', () => {
         montarEvento(LEAD, base, CLID, 'business_messaging', WABA)
         expect(base).toEqual(BASE)
     })
+
+    // Pedido da loja: o clique do anúncio no site (cookies do pixel) vai cru no Purchase da entrega.
+    const FBC = 'fb.1.1762170000000.IwAR2xYz_ab-CD'
+    const FBP = 'fb.1.1762170000000.1234567890'
+
+    it('Purchase de pedido da loja leva fbc e fbp crus no user_data, em physical_store', () => {
+        const e = montarEvento(PURCHASE, BASE, null, 'physical_store', null, { fbc: FBC, fbp: FBP })
+        expect(e.action_source).toBe('physical_store')
+        expect(e.user_data).toEqual({ ...BASE, fbc: FBC, fbp: FBP })
+    })
+
+    it('fbc/fbp convivem com o ctwa_clid e não mexem no canal de mensagens', () => {
+        const e = montarEvento(PURCHASE, BASE, CLID, 'business_messaging', WABA, { fbc: FBC, fbp: null })
+        expect(e.user_data).toEqual({ ...BASE, ctwa_clid: CLID, whatsapp_business_account_id: WABA, fbc: FBC })
+    })
+
+    it('sem clique do site não inventa as chaves', () => {
+        expect(montarEvento(PURCHASE, BASE, null, 'physical_store', null, { fbc: null, fbp: '' }).user_data).toEqual(BASE)
+        expect(montarEvento(PURCHASE, BASE, null, 'physical_store', null).user_data).toEqual(BASE)
+    })
 })
 
 describe('erroTransitorio', () => {

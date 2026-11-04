@@ -2,10 +2,14 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { z } from 'zod'
-import { enviarPedido } from '@/app/checkout/acoes'
+import { enviarPedido, registrarInicioCheckout } from '@/app/checkout/acoes'
 import { linkWhatsApp, reais } from '@/lib/formato'
+import { itensGA4 } from '@/lib/medicao/conteudo'
+import { medir } from '@/lib/medicao/dataLayer'
+import { idInicioCheckout, idLead } from '@/lib/medicao/ids'
+import { atribuicaoAtual } from '@/lib/medicao/origem'
 import { guardarEnviado, novaChavePedido } from '@/lib/pedido/enviado'
 import { faltaParaEnviar, frasesDoQueFalta } from '@/lib/pedido/faltando'
 import { TEXTO_OFERTAS } from '@/lib/pedido/esquema'
@@ -70,6 +74,19 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
     // Uma chave por tela: tocar de novo (ou rede instável) devolve o mesmo pedido, não cria outro.
     const [chave] = useState(novaChavePedido)
 
+    // Entrou em "Seus dados" com algo à venda na sacola → InitiateCheckout (navegador + servidor, mesmo id).
+    const inicioMedido = useRef(false)
+    useEffect(() => {
+        if (!pronta || inicioMedido.current || resumo.totalPix <= 0) return
+        inicioMedido.current = true
+        medir({
+            event: 'begin_checkout',
+            event_id: idInicioCheckout(chave),
+            ecommerce: { currency: 'BRL', value: resumo.totalPix, items: itensGA4(resumo) },
+        })
+        void registrarInicioCheckout({ chave, itens, atribuicao: atribuicaoAtual() }).catch(() => undefined)
+    }, [pronta, resumo, chave, itens])
+
     async function buscarCep(valor: string) {
         const digitos = valor.replace(/\D/g, '')
         if (digitos.length !== 8) {
@@ -105,8 +122,9 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
     function enviar() {
         if (!podeEnviar) return
         setErro(null)
+        medir({ event: 'whatsapp_click', event_id: idLead(chave), click_location: 'enviar_pedido' })
         iniciarEnvio(async () => {
-            const resultado = await enviarPedido(envio)
+            const resultado = await enviarPedido({ ...envio, atribuicao: atribuicaoAtual() })
             if (!resultado.ok) {
                 setErro(resultado.erro)
                 return

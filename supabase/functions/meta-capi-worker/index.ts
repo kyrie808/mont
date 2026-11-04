@@ -1,6 +1,7 @@
 // Edge Function: meta-capi-worker
 // Flush de hora em hora da outbox `meta_eventos` → Meta Conversions API (offline events).
-// Blueprint §4. Lead + Purchase por match de telefone/hash (+ ctwa_clid quando há).
+// Blueprint §4. Lead + Purchase por match de telefone/hash (+ ctwa_clid quando há; + fbc/fbp
+// do pedido da loja, gravados no envio do pedido pelo site).
 //
 // O CANAL (`action_source`) é decidido AQUI, não no trigger — ver `metaCapi.ts`. Sem WABA
 // tudo vai `physical_store`; com WABA e clid vai `business_messaging`, e se a Meta recusar
@@ -82,6 +83,9 @@ interface EventoRow {
   valor: number | null
   moeda: string
   ctwa_clid: string | null
+  /** Clique do site (pedido da loja), copiado pelo trigger. */
+  fbp: string | null
+  fbc: string | null
   tentativas: number
   contato: ContatoMatch | null
 }
@@ -181,7 +185,7 @@ Deno.serve(async (req: Request) => {
   let consulta = admin
     .from('meta_eventos')
     .select(`
-      id, evento, event_id, event_time, valor, moeda, ctwa_clid, tentativas,
+      id, evento, event_id, event_time, valor, moeda, ctwa_clid, fbp, fbc, tentativas,
       contato:contatos ( id, telefone, nome, cidade, uf, cep, ctwa_clid )
     `)
     .or(`status.eq.pendente,and(status.eq.erro,tentativas.lt.${MAX_TENTATIVAS})`)
@@ -220,9 +224,10 @@ Deno.serve(async (req: Request) => {
 
     const base = await buildUserData(ev)
     const clid = ev.ctwa_clid ?? ev.contato?.ctwa_clid ?? null
+    const clique = { fbc: ev.fbc, fbp: ev.fbp }
 
     let canal: CanalMeta = escolherCanal(clid, wabaId)
-    let resposta = await enviar(endpoint, montarEvento(ev, base, clid, canal, wabaId), accessToken, testEventCode)
+    let resposta = await enviar(endpoint, montarEvento(ev, base, clid, canal, wabaId, clique), accessToken, testEventCode)
 
     // A Meta recusou o canal de mensagens de forma definitiva → mesmo evento, mesmo
     // event_id, como loja física. Não duplica: o recusado não foi registrado por ela.
@@ -230,7 +235,7 @@ Deno.serve(async (req: Request) => {
     if (!resposta.ok && canal === 'business_messaging' && !erroTransitorio(resposta.status, resposta.corpo)) {
       fallback = { fallback_de: canal, erro_original: resposta.corpo }
       canal = 'physical_store'
-      resposta = await enviar(endpoint, montarEvento(ev, base, clid, canal, wabaId), accessToken, testEventCode)
+      resposta = await enviar(endpoint, montarEvento(ev, base, clid, canal, wabaId, clique), accessToken, testEventCode)
       fallbacks++
     }
 

@@ -40,7 +40,8 @@ export function mensagemDoPedido({ numero, total, nome, endereco, itens, vitrine
     )
 
     return [
-        'Oi, Mont! Fiz um pedido pela loja 🧀',
+        // Sem emoji: no computador, o redirecionamento do wa.me troca emoji fora do básico por "�".
+        'Oi, Mont! Fiz um pedido pela loja.',
         '',
         `*Pedido nº ${numero}*`,
         '',
