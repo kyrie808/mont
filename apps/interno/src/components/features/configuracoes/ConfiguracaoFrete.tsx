@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Truck, Plus, Trash2, Save } from 'lucide-react'
+import { formatCurrency } from '@mont/shared'
 import { Card, Input, Button } from '../../ui'
 import { useToast } from '../../ui/Toast'
 import { configuracoesService, FRETE_CONFIG_DEFAULT, type BairroFixo, type FreteConfig, type FreteFaixa } from '../../../services/configuracoesService'
