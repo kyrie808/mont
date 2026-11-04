@@ -28,8 +28,8 @@ export default function PaginaPrivacidade() {
                     dele. Ofertas pelo WhatsApp só com a sua autorização, e dá para sair quando quiser.
                 </p>
                 <p>
-                    Para medir nossos anúncios, enviamos à Meta (Facebook e Instagram) o seu nome e o seu telefone de
-                    forma criptografada (hash), sem que dê para ler os dados originais.
+                    Para medir nossos anúncios, enviamos à Meta (Facebook e Instagram) o seu nome, o seu telefone e o
+                    seu CEP de forma criptografada (hash), sem que dê para ler os dados originais.
                 </p>
             </article>
         </div>
