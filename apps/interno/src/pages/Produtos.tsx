@@ -29,6 +29,7 @@ import { ProdutoFormFields } from '../components/features/produtos/ProdutoFormFi
 import { ProdutoFormDesktop } from '../components/features/produtos/ProdutoFormDesktop'
 import { ProdutosDataGrid } from '../components/features/produtos/ProdutosDataGrid'
 import { EsgotadoToggle } from '../components/features/produtos/EsgotadoToggle'
+import { GaleriaFotosProduto } from '../components/features/produtos/GaleriaFotosProduto'
 import { useSecoes } from '../hooks/useSecoes'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { produtosDoCadastro } from '../utils/produtosCadastro'
@@ -120,8 +121,6 @@ export function Produtos() {
     const [isCreating, setIsCreating] = useState(false)
 
     // Form states for edit
-    const [uploadingImage, setUploadingImage] = useState(false)
-    const [editImagemUrl, setEditImagemUrl] = useState<string | null>(null)
     const [editNome, setEditNome] = useState('')
     const [editCodigo, setEditCodigo] = useState('')
     const [editApelido, setEditApelido] = useState('')
@@ -180,7 +179,6 @@ export function Produtos() {
         setEditEstoqueMinimo(String(produto.estoqueMinimo || 10))
         setEditAtivo(produto.ativo)
         setEditCategoria(produto.categoria || '')
-        setEditImagemUrl(produto.imagemUrl || null)
         setEditUnidade(produto.unidade || 'un')
         setEditPrecoAncoragem(produto.precoAncoragem?.toString() || '')
         setEditDescricao(produto.descricao || '')
@@ -380,29 +378,6 @@ export function Produtos() {
             toast.error(e instanceof Error ? e.message : 'Erro ao atualizar produto. Tente novamente.')
         } finally {
             setIsUpdating(false)
-        }
-    }
-
-    const handleImageUpload = async (file: File) => {
-        setUploadingImage(true)
-        try {
-            const url = await produtoService.uploadImage(file, editImagemUrl)
-            await produtoService.addImageReference(editingProduto!.id, url)
-            setEditImagemUrl(url)
-            toast.success('Imagem atualizada!')
-        } catch (err: unknown) {
-            console.error('[Upload] Erro completo:', err)
-            const error = err as Error
-
-            if (error?.message?.includes('maximum allowed size')) {
-                toast.error('Imagem muito grande. O limite é 5MB. Comprima a imagem e tente novamente.')
-            } else if (error?.message?.includes('mime type')) {
-                toast.error('Formato não suportado. Use PNG, JPG ou WebP.')
-            } else {
-                toast.error(`Erro no upload: ${error?.message || 'Tente novamente.'}`)
-            }
-        } finally {
-            setUploadingImage(false)
         }
     }
 
@@ -736,46 +711,7 @@ export function Produtos() {
                                 onRemoveComponente={(id) => removeComponente('edit', id)}
                                 onToggleBrinde={(id) => toggleBrinde('edit', id)}
                                 produtoNome={produtoNome}
-                                imageSlot={
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                            Imagem do Produto
-                                        </label>
-                                        {editImagemUrl && (
-                                            <div className="relative inline-block">
-                                                <img src={editImagemUrl}
-                                                    className="w-20 h-20 object-cover rounded-lg mb-2" alt="Imagem do produto" />
-                                                <button
-                                                    onClick={async () => {
-                                                        if (!confirm('Remover imagem do produto?')) return
-                                                        try {
-                                                            await produtoService.deleteImage(editingProduto!.id, editImagemUrl)
-                                                            setEditImagemUrl(null)
-                                                            toast.success('Imagem removida com sucesso')
-                                                        } catch (err: unknown) {
-                                                            console.error('Erro ao excluir:', err)
-                                                            toast.error('Erro ao excluir produto')
-                                                        }
-                                                    }}
-                                                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md"
-                                                    title="Remover imagem"
-                                                    aria-label="Remover imagem"
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </button>
-                                            </div>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={e => e.target.files?.[0] &&
-                                                handleImageUpload(e.target.files[0])}
-                                            disabled={uploadingImage}
-                                            className="text-sm"
-                                        />
-                                        {uploadingImage && <p className="text-xs mt-1">Enviando...</p>}
-                                    </div>
-                                }
+                                imageSlot={editingProduto ? <GaleriaFotosProduto produtoId={editingProduto.id} /> : undefined}
                             />
 
                             <ModalActions>

@@ -384,6 +384,23 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
 
             {vitrine.secoes.map((s, i) => secaoDaLoja(s, i === 0 && vitrine.combos.length === 0))}
 
+            {/* Só texto (sem foto nem script): não pesa no celular. /sobre do catálogo antigo cai aqui. */}
+            <section id="quem-somos" aria-labelledby="titulo-quem-somos" className="mx-4 mt-8 flex scroll-mt-16 flex-col gap-2.5">
+                <h2 id="titulo-quem-somos" className={tituloSecao}>
+                    Quem somos
+                </h2>
+                <p className="text-[15px] leading-relaxed">
+                    A Mont nasceu na cozinha de casa, em São Bernardo, com uma escolha simples: usar Queijo Canastra de
+                    verdade. Parmesão e Meia Cura, sem conservante. Pão de queijo que não é oco e não murcha.
+                </p>
+                <p className="text-[15px] leading-relaxed">Junto vêm os doces mineiros Duas Irmãs, para completar a mesa.</p>
+                <p className="text-[15px] leading-relaxed">Entregamos em todo o ABC e em São Paulo.</p>
+                <p className="text-sm leading-relaxed text-marrom-medio">
+                    <strong className="font-bold text-marrom">Como funciona:</strong> monte seu pedido · envie pelo WhatsApp ·
+                    receba em casa ou retire na Mont.
+                </p>
+            </section>
+
             <footer className="mx-4 mt-7 flex flex-col gap-2.5 border-t border-linha pt-5 text-[13px] text-texto-suave">
                 <span>Entregamos no ABC e em São Paulo · frete pelo bairro.</span>
                 <a href={linkWhatsApp(whatsapp)} target="_blank" rel="noopener noreferrer" className="font-bold">
