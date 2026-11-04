@@ -225,9 +225,10 @@ function Formulario({
                     )}
                 </section>
 
+                {!retirada && (
                 <section className="space-y-2">
-                    <h3 className="text-sm font-medium text-foreground">{retirada ? 'Retirada' : 'Endereço do pedido'}</h3>
-                    <p className="text-sm text-muted-foreground">{retirada ? 'Retirada na Mont' : pedido.endereco}</p>
+                    <h3 className="text-sm font-medium text-foreground">Endereço do pedido</h3>
+                    <p className="text-sm text-muted-foreground">{pedido.endereco}</p>
                     {perguntaEndereco && pedido.cadastro && (
                         <label className="flex items-start gap-3 rounded-xl border border-border bg-muted p-3 text-sm text-foreground">
                             <input
@@ -245,6 +246,7 @@ function Formulario({
                         </label>
                     )}
                 </section>
+                )}
             </div>
         </Drawer>
     )
