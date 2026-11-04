@@ -9,7 +9,11 @@ import { ConfirmarPedidoDrawer } from '../components/features/pedidos-loja/Confi
 import { useConfirmarPedidoLoja, useDescartarPedidoLoja, usePedidosLoja } from '../hooks/usePedidosLoja'
 import { useNomesProdutos } from '../hooks/useProdutos'
 import type { PedidoLoja } from '../services/pedidosLojaService'
+import { contatoService } from '../services/contatoService'
 import { DIAS_NA_LISTA_PRINCIPAL, separarPorIdade } from '../utils/pedidosLoja'
+
+/** "Quem indicou" na confirmação: a mesma busca de clientes do cadastro. */
+const buscarIndicadores = (termo: string) => contatoService.func(termo)
 
 function mensagemDeErro(err: unknown): string {
     return err instanceof Error && err.message ? err.message : 'Não foi possível concluir. Tente de novo.'
@@ -97,6 +101,7 @@ export function PedidosLoja() {
             <ConfirmarPedidoDrawer
                 pedido={confirmando}
                 confirmando={confirmarMut.isPending}
+                buscarContatos={buscarIndicadores}
                 onClose={() => { if (!confirmarMut.isPending) setConfirmando(null) }}
                 onConfirmar={(dados) => {
                     if (!confirmando || confirmarMut.isPending) return

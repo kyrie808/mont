@@ -351,6 +351,7 @@ export type Database = {
           fbc: string | null
           fbp: string | null
           frete: number | null
+          frete_estimado: number | null
           id: string
           indicado_por: string | null
           itens_loja: Json | null
@@ -389,6 +390,7 @@ export type Database = {
           fbc?: string | null
           fbp?: string | null
           frete?: number | null
+          frete_estimado?: number | null
           id?: string
           indicado_por?: string | null
           itens_loja?: Json | null
@@ -427,6 +429,7 @@ export type Database = {
           fbc?: string | null
           fbp?: string | null
           frete?: number | null
+          frete_estimado?: number | null
           id?: string
           indicado_por?: string | null
           itens_loja?: Json | null
@@ -4658,6 +4661,7 @@ export type Database = {
           p_atualizar_endereco?: boolean
           p_data_entrega: string
           p_forma_pagamento: string
+          p_indicado_por_id?: string
           p_pedido_id: string
           p_taxa_entrega: number
         }
@@ -4671,12 +4675,16 @@ export type Database = {
           p_chave: string
           p_cidade: string
           p_complemento: string
+          p_entrega?: string
+          p_frete_estimado?: number
+          p_indicado_por?: string
           p_itens: Json
           p_logradouro: string
           p_nome: string
           p_numero: string
           p_ofertas: boolean
           p_ofertas_texto: string
+          p_pagamento?: string
           p_telefone: string
           p_uf: string
         }

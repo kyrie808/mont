@@ -5,6 +5,11 @@ import type { ItemPedidoLoja } from '../utils/pedidosLoja'
    vira venda quando confirmado aqui (RPC loja_confirmar_pedido, idempotente). 02/11/2026. */
 
 export type FormaPagamentoLoja = 'pix' | 'dinheiro' | 'cartao'
+export type FormaEntregaLoja = 'entrega' | 'retirada'
+
+const FORMAS_PAGAMENTO: readonly FormaPagamentoLoja[] = ['pix', 'dinheiro', 'cartao']
+const ehFormaPagamento = (v: string | null): v is FormaPagamentoLoja =>
+    v !== null && (FORMAS_PAGAMENTO as readonly string[]).includes(v)
 
 export interface PedidoLoja {
     id: string
@@ -17,8 +22,24 @@ export interface PedidoLoja {
     total: number
     criadoEm: string
     ofertasWhatsapp: boolean
+    /** Entrega no endereço ou retirada na Mont (sem endereço e sem frete). */
+    entrega: FormaEntregaLoja
+    /** Frete estimado pelo CEP na loja; null = "a combinar" (ou retirada). */
+    freteEstimado: number | null
+    /** Como o cliente prefere pagar (a forma que vale é a escolhida ao confirmar). */
+    pagamentoPreferido: FormaPagamentoLoja | null
+    /** "Quem indicou a Mont" como o cliente escreveu (texto livre). */
+    indicadoPor: string | null
     /** Cliente já cadastrado com este telefone (ligado na hora do pedido). */
-    cadastro: { id: string; nome: string; logradouro: string | null; numero: string | null; endereco: string | null } | null
+    cadastro: {
+        id: string
+        nome: string
+        logradouro: string | null
+        numero: string | null
+        endereco: string | null
+        /** Quem já indicou este cliente (Ranking); a confirmação não troca. */
+        indicador: { id: string; nome: string } | null
+    } | null
     itens: ItemPedidoLoja[]
 }
 
@@ -27,6 +48,8 @@ export interface ConfirmarPedidoLoja {
     dataEntrega: string
     forma: FormaPagamentoLoja
     atualizarEndereco: boolean
+    /** Cliente que indicou (contatos.indicado_por_id, conta no Ranking de Indicações). */
+    indicadoPorId: string | null
 }
 
 export const pedidosLojaService = {
@@ -47,8 +70,11 @@ export const pedidosLojaService = {
             .from('cat_pedidos')
             .select(`
                 id, numero_pedido, nome_cliente, telefone_cliente, endereco_entrega, logradouro, numero,
-                total, criado_em, ofertas_whatsapp,
-                cadastro:contatos(id, nome, logradouro, numero, endereco),
+                total, criado_em, ofertas_whatsapp, metodo_entrega, frete_estimado, metodo_pagamento, indicado_por,
+                cadastro:contatos!cat_pedidos_contato_id_fkey(
+                    id, nome, logradouro, numero, endereco,
+                    indicador:contatos!indicado_por_id(id, nome)
+                ),
                 itens:cat_itens_pedido(id, produto_id, nome_produto, quantidade, total, combo_id, combo_instancia)
             `)
             .eq('canal', 'loja')
@@ -67,7 +93,19 @@ export const pedidosLojaService = {
             total: Number(p.total ?? 0),
             criadoEm: p.criado_em ?? '',
             ofertasWhatsapp: p.ofertas_whatsapp,
-            cadastro: p.cadastro,
+            entrega: p.metodo_entrega === 'retirada' ? 'retirada' : 'entrega',
+            freteEstimado: p.frete_estimado === null ? null : Number(p.frete_estimado),
+            pagamentoPreferido: ehFormaPagamento(p.metodo_pagamento) ? p.metodo_pagamento : null,
+            indicadoPor: p.indicado_por?.trim() || null,
+            cadastro: p.cadastro && {
+                id: p.cadastro.id,
+                nome: p.cadastro.nome,
+                logradouro: p.cadastro.logradouro,
+                numero: p.cadastro.numero,
+                endereco: p.cadastro.endereco,
+                // Junção de contatos com ele mesmo: o PostgREST pode devolver lista ou objeto (igual ao mapper de contatos).
+                indicador: (Array.isArray(p.cadastro.indicador) ? p.cadastro.indicador[0] : p.cadastro.indicador) ?? null,
+            },
             itens: p.itens.map((i) => ({
                 id: i.id,
                 produtoId: i.produto_id,
@@ -88,6 +126,7 @@ export const pedidosLojaService = {
             p_data_entrega: dados.dataEntrega,
             p_forma_pagamento: dados.forma,
             p_atualizar_endereco: dados.atualizarEndereco,
+            p_indicado_por_id: dados.indicadoPorId ?? undefined,
         })
         if (error) throw error
         const { data: venda, error: erroVenda } = await supabase.from('vendas').select('total').eq('id', vendaId).single()

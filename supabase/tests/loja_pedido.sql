@@ -257,16 +257,16 @@ BEGIN
   -- ── L5: permissões ──
   casos := casos + 1;
   BEGIN
-    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE')
-       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb)', 'EXECUTE') THEN
+    IF has_function_privilege('anon', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb, text, text, text, numeric)', 'EXECUTE')
+       OR has_function_privilege('authenticated', 'public.loja_criar_pedido(uuid, text, text, text, text, text, text, text, text, text, jsonb, boolean, text, jsonb, text, text, text, numeric)', 'EXECUTE') THEN
       RAISE EXCEPTION 'loja_criar_pedido aberta fora do service_role';
     END IF;
     IF has_function_privilege('authenticated', 'public.criar_venda_em(uuid, date, text, numeric, jsonb, uuid, date, uuid, text, boolean, numeric, text, date, text, timestamptz, text, uuid, text)', 'EXECUTE')
        OR has_function_privilege('anon', 'public.criar_venda_em(uuid, date, text, numeric, jsonb, uuid, date, uuid, text, boolean, numeric, text, date, text, timestamptz, text, uuid, text)', 'EXECUTE') THEN
       RAISE EXCEPTION 'criar_venda_em exposta';
     END IF;
-    IF has_function_privilege('anon', 'public.loja_confirmar_pedido(uuid, numeric, date, text, boolean)', 'EXECUTE')
-       OR NOT has_function_privilege('authenticated', 'public.loja_confirmar_pedido(uuid, numeric, date, text, boolean)', 'EXECUTE')
+    IF has_function_privilege('anon', 'public.loja_confirmar_pedido(uuid, numeric, date, text, boolean, uuid)', 'EXECUTE')
+       OR NOT has_function_privilege('authenticated', 'public.loja_confirmar_pedido(uuid, numeric, date, text, boolean, uuid)', 'EXECUTE')
        OR has_function_privilege('anon', 'public.loja_descartar_pedido(uuid)', 'EXECUTE') THEN
       RAISE EXCEPTION 'permissões da confirmação/descarte';
     END IF;
