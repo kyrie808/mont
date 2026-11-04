@@ -609,9 +609,9 @@ export function Produtos() {
                                                 <div className="flex-1 min-w-0">
                                                     <h3 className="font-bold truncate">{produto.nome}</h3>
                                                     <div className="text-sm text-gray-500 font-mono">#{produto.codigo}</div>
-                                                    <div className="flex gap-4 mt-1">
+                                                    <div className="flex flex-wrap gap-x-4 mt-1">
                                                         <span className="text-sm font-semibold">{formatCurrency(produto.preco)}</span>
-                                                        <span className="text-sm text-gray-400">Estoque: {produto.estoqueAtual}</span>
+                                                        <span className="text-sm text-gray-400 whitespace-nowrap">Estoque: {produto.estoqueAtual}</span>
                                                     </div>
                                                 </div>
                                                 {produto.ativo && (
