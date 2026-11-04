@@ -4940,6 +4940,10 @@ export type Database = {
           tentativas: number
         }[]
       }
+      salvar_fotos_produto: {
+        Args: { p_produto_id: string; p_urls: string[] }
+        Returns: undefined
+      }
       sugerir_metas: {
         Args: { p_mes: string }
         Returns: {

@@ -11,6 +11,8 @@ function produto(id: string, disponivel = true): ProdutoLoja {
         subtitulo: null,
         descricao: null,
         imagemUrl: null,
+        fotos: [],
+        categoria: null,
         selo: null,
         beneficios: [],
         preparo: [],

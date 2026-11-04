@@ -19,6 +19,7 @@ export interface LinhaProduto {
     slug: string
     subtitulo: string | null
     descricao: string | null
+    categoria: string | null
     preco: number
     eh_combo: boolean
     visivel_catalogo: boolean
@@ -71,8 +72,8 @@ export interface DadosVitrine {
     precos: Map<string, PrecoCampanha>
     fixos: LinhaFixo[]
     grupos: LinhaGrupo[]
-    /** Capa de cada produto (cat_imagens_produto). */
-    imagens: Map<string, string>
+    /** Fotos de cada produto (cat_imagens_produto), capa primeiro. */
+    imagens: Map<string, string[]>
     /** Foto provisória de combo pelo código (usada só sem capa cadastrada). */
     fotoProvisoria: (codigo: string) => string | null
 }
@@ -109,6 +110,26 @@ export function apareceNaLoja(
     return p.visivel_catalogo || (p.eh_combo && precos.has(p.id))
 }
 
+/**
+ * Fotos de cada produto (linhas de cat_imagens_produto já na ordem do cadastro): a capa ("cover")
+ * vai na frente, mesmo que a ordem diga outra coisa; sem capa, a de menor ordem é a primeira.
+ */
+export function fotosEmOrdem(linhas: { produto_id: string | null; url: string; tipo: string }[]): Map<string, string[]> {
+    const mapa = new Map<string, string[]>()
+    const capas = new Map<string, string>()
+    for (const img of linhas) {
+        if (!img.produto_id) continue
+        const fotos = mapa.get(img.produto_id) ?? []
+        if (!fotos.includes(img.url)) fotos.push(img.url)
+        mapa.set(img.produto_id, fotos)
+        if (img.tipo === 'cover' && !capas.has(img.produto_id)) capas.set(img.produto_id, img.url)
+    }
+    for (const [id, capa] of capas) {
+        mapa.set(id, [capa, ...(mapa.get(id) ?? []).filter((url) => url !== capa)])
+    }
+    return mapa
+}
+
 /** "Balde 4 kg + 2× Baldinho 1 kg + 6 doces à escolha + Doce de leite 400 g de brinde". */
 export function resumoDoCombo(fixos: ItemFixo[], grupos: GrupoCombo[]): string | null {
     const item = (f: ItemFixo) => (f.quantidade > 1 ? `${f.quantidade}× ${f.nome}` : f.nome)
@@ -138,14 +159,19 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
 
     const produtoDa = (p: LinhaProduto): ProdutoLoja => {
         const preco = d.precos.get(p.id)
+        // Fotos cadastradas no sistema primeiro; sem nenhuma, a composição provisória do combo (se houver).
+        const cadastradas = d.imagens.get(p.id) ?? []
+        const provisoria = cadastradas.length === 0 ? d.fotoProvisoria(p.codigo) : null
+        const fotos = provisoria ? [provisoria] : cadastradas
         return {
             id: p.id,
             slug: p.slug,
             nome: p.nome_loja ?? p.nome,
             subtitulo: p.subtitulo,
             descricao: p.descricao,
-            // Capa cadastrada no sistema primeiro; sem ela, a composição provisória do combo (se houver).
-            imagemUrl: d.imagens.get(p.id) ?? d.fotoProvisoria(p.codigo),
+            imagemUrl: fotos[0] ?? null,
+            fotos,
+            categoria: p.categoria,
             selo: rotuloSelo(p.selo),
             beneficios: linhas(p.beneficios),
             preparo: linhas(p.instrucoes_preparo),
@@ -184,7 +210,7 @@ export function montarVitrine(d: DadosVitrine): Vitrine {
                 .map((o) => ({
                     produtoId: o.produto_id,
                     nome: nomeNaLoja(o.produto_id, o.produto.nome),
-                    imagemUrl: d.imagens.get(o.produto_id) ?? null,
+                    imagemUrl: d.imagens.get(o.produto_id)?.[0] ?? null,
                     disponivel: disponivel(o.produto_id),
                 })),
         })

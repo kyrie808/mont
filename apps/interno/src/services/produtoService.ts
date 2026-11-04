@@ -323,28 +323,43 @@ export class ProdutoService {
         if (error) throw error
     }
 
-    async addImageReference(produtoId: string, url: string): Promise<void> {
-        const { error } = await supabase.rpc('add_image_reference', {
-            p_produto_id: produtoId,
-            p_url: url
-        })
+    /* GALERIA — fotos do produto em cat_imagens_produto, capa ("cover") primeiro e depois a ordem
+       do cadastro. A capa é a foto do card da loja, da prévia do link e das listas do sistema. */
+    async getFotos(produtoId: string): Promise<string[]> {
+        const { data, error } = await supabase
+            .from('cat_imagens_produto')
+            .select('url, tipo, ordem')
+            .eq('produto_id', produtoId)
+            .eq('ativo', true)
+            .order('ordem')
+        if (error) throw error
+        const linhas = data || []
+        const capa = linhas.find((l) => l.tipo === 'cover')?.url
+        const urls = linhas.map((l) => l.url)
+        return capa ? [capa, ...urls.filter((u) => u !== capa)] : urls
+    }
 
+    /* Substitui a galeria inteira numa transação (RPC salvar_fotos_produto, só admin): a 1ª é a capa
+       e é copiada para sis_imagens_produto. Lista vazia = produto sem foto. */
+    async salvarFotos(produtoId: string, urls: string[]): Promise<void> {
+        const { error } = await supabase.rpc('salvar_fotos_produto', { p_produto_id: produtoId, p_urls: urls })
         if (error) throw error
     }
 
-    async deleteImage(produtoId: string, imageUrl: string): Promise<void> {
-        const fileName = imageUrl.split('/').pop()
-        if (!fileName) throw new Error('URL de imagem inválida')
-
-        // 1. Remove das tabelas via RPC
-        const { error: rpcError } = await supabase
-            .rpc('delete_image_reference', { p_produto_id: produtoId })
-        if (rpcError) throw rpcError
-
-        // 2. Deleta arquivo do bucket
-        const { error: storageError } = await supabase
-            .storage.from('products').remove([fileName])
-        if (storageError) console.warn('[DeleteImage] Storage error:', storageError)
+    /* Apaga do bucket as fotos que saíram da galeria, se nenhum outro produto ainda usa
+       (melhor esforço: a galeria já foi gravada; arquivo que sobrar não aparece em lugar nenhum). */
+    async apagarArquivosDeFotos(urls: string[]): Promise<void> {
+        if (urls.length === 0) return
+        const { data: emUso, error: erroUso } = await supabase.from('cat_imagens_produto').select('url').in('url', urls)
+        if (erroUso) return
+        const usadas = new Set((emUso || []).map((l) => l.url))
+        const nomes = urls
+            .filter((u) => !usadas.has(u))
+            .map((u) => u.split('/').pop())
+            .filter((n): n is string => Boolean(n))
+        if (nomes.length === 0) return
+        const { error } = await supabase.storage.from('products').remove(nomes)
+        if (error) console.warn('[Galeria] Não apagou os arquivos do bucket:', error.message)
     }
 }
 

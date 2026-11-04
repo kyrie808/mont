@@ -8,7 +8,12 @@ export interface ProdutoLoja {
     /** Subtítulo do cadastro: a frase curta sob o nome no card. NULL = sem frase. */
     subtitulo: string | null
     descricao: string | null
+    /** Capa: a foto do card e da prévia do link. */
     imagemUrl: string | null
+    /** Galeria do cadastro, capa primeiro (página e painel do produto). Sem foto: vazia. */
+    fotos: string[]
+    /** Categoria do cadastro (congelado, refrigerado…): complemento do "Leve junto". */
+    categoria: string | null
     /** Selo do cadastro já em texto ("Mais vendido", "Oferta", "Queridinho"). NULL = sem selo. */
     selo: string | null
     /** Benefícios do cadastro, um por linha. */

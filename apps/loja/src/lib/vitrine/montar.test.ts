@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { montarVitrine, resumoDoCombo, type DadosVitrine, type LinhaGrupo, type LinhaProduto, type PrecoCampanha } from './montar'
+import { fotosEmOrdem, montarVitrine, resumoDoCombo, type DadosVitrine, type LinhaGrupo, type LinhaProduto, type PrecoCampanha } from './montar'
 import { ehCombo, type ComboLoja } from './tipos'
 
 // Partes A e B da paridade: a loja monta a vitrine só pelo cadastro do sistema interno.
@@ -17,6 +17,7 @@ function produto(id: string, extra: Partial<LinhaProduto> = {}): LinhaProduto {
         slug: id,
         subtitulo: null,
         descricao: null,
+        categoria: null,
         preco: 30,
         eh_combo: false,
         visivel_catalogo: true,
@@ -322,5 +323,34 @@ describe('resumoDoCombo', () => {
 
     it('sem itens, sem texto', () => {
         expect(resumoDoCombo([], [])).toBeNull()
+    })
+})
+
+describe('galeria do produto', () => {
+    it('capa na frente, depois a ordem do cadastro; sem capa, a de menor ordem', () => {
+        const mapa = fotosEmOrdem([
+            { produto_id: 'balde', url: 'b2', tipo: 'detail' },
+            { produto_id: 'balde', url: 'capa', tipo: 'cover' },
+            { produto_id: 'balde', url: 'b3', tipo: 'detail' },
+            { produto_id: 'chipa', url: 'c1', tipo: 'detail' },
+            { produto_id: null, url: 'solta', tipo: 'cover' },
+        ])
+        expect(mapa.get('balde')).toEqual(['capa', 'b2', 'b3'])
+        expect(mapa.get('chipa')).toEqual(['c1'])
+        expect(mapa.size).toBe(2)
+    })
+
+    it('card e prévia usam a capa; a galeria leva todas; sem foto cadastrada, a provisória do combo', () => {
+        const v = montarVitrine(
+            dados({
+                produtos: [produto('balde'), produto('chipa'), produto('combo', { eh_combo: true })],
+                imagens: new Map([['balde', ['capa', 'b2']]]),
+                fotoProvisoria: (codigo) => (codigo === 'combo' ? '/combos/combo.webp' : null),
+            }),
+        )
+        const itens = new Map(v.secoes.flatMap((s) => s.itens).map((p) => [p.id, p]))
+        expect([itens.get('balde')?.imagemUrl, itens.get('balde')?.fotos]).toEqual(['capa', ['capa', 'b2']])
+        expect([itens.get('chipa')?.imagemUrl, itens.get('chipa')?.fotos]).toEqual([null, []])
+        expect(itens.get('combo')?.fotos).toEqual(['/combos/combo.webp'])
     })
 })
