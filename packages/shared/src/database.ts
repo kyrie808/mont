@@ -4908,23 +4908,6 @@ export type Database = {
           unidade: string
         }[]
       }
-      rpt_marketing_pedidos_periodo: {
-        Args: { p_ate?: string; p_desde?: string }
-        Returns: {
-          data_venda: string
-          entregas_count: number
-          faturamento: number
-          faturamento_direto: number
-          faturamento_online: number
-          mes_iso: string
-          pedidos_diretos: number
-          pedidos_online: number
-          retiradas_count: number
-          semana_iso: string
-          ticket_medio: number
-          total_pedidos: number
-        }[]
-      }
       rpt_promocoes_periodo: {
         Args: { p_ate?: string; p_desde?: string }
         Returns: {

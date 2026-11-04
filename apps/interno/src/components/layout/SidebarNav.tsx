@@ -4,6 +4,7 @@ import { cn } from '@mont/shared'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '@/hooks/useAuth'
 import { NAV_GROUPS, NOVA_VENDA_PATH } from './navConfig'
+import { ContadorNav } from './ContadorNav'
 
 /**
  * Sidebar persistente de desktop (≥lg). Reusa a fonte única de navegação (navConfig)
@@ -88,6 +89,7 @@ export function SidebarNav() {
                                             />
                                             <Icon className={cn('size-[18px] shrink-0', active && 'text-primary')} />
                                             <span className="flex-1 text-left">{item.label}</span>
+                                            {item.contador && <ContadorNav tipo={item.contador} />}
                                             {item.locked && <Lock className="size-3 shrink-0" />}
                                         </button>
                                     )

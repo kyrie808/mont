@@ -6,6 +6,7 @@ import { cn } from '@mont/shared'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '@/hooks/useAuth'
 import { NAV_GROUPS } from './navConfig'
+import { ContadorNav } from './ContadorNav'
 
 interface NavigationDrawerProps {
     isOpen: boolean
@@ -92,6 +93,7 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                                                 >
                                                     <Icon className="h-4 w-4 shrink-0" />
                                                     <span className="flex-1 text-left">{item.label}</span>
+                                                    {item.contador && <ContadorNav tipo={item.contador} />}
                                                     {item.locked && <Lock className="h-3 w-3 shrink-0" />}
                                                 </button>
                                             )

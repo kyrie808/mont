@@ -29,6 +29,8 @@ export interface NavItem {
     path: string
     icon: LucideIcon
     locked?: boolean
+    /** Número ao lado do item (ex.: pedidos da loja esperando confirmação). */
+    contador?: 'pedidos-loja'
 }
 
 export interface NavGroup {
@@ -45,7 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
             { label: 'Clientes',    path: '/contatos',         icon: Users },
             { label: 'Nova Venda',  path: NOVA_VENDA_PATH,     icon: Plus },
             { label: 'Vendas',      path: '/vendas',           icon: ShoppingCart },
-            { label: 'Pedidos da loja', path: '/pedidos-loja', icon: Store },
+            { label: 'Pedidos da loja', path: '/pedidos-loja', icon: Store, contador: 'pedidos-loja' },
             { label: 'Entregas',    path: '/entregas',         icon: Truck },
             { label: 'Agenda',      path: '/agenda',           icon: CalendarDays },
         ],

@@ -72,14 +72,6 @@ export function useRptProjecaoPagamentos() {
 
 // ── Marketing ─────────────────────────────────────────────────────────────────
 
-export function useRptMarketingPedidos(periodo: PeriodoRel) {
-    return useQuery({
-        queryKey: ['relatorio', 'marketing_pedidos', periodoKey(periodo)],
-        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getMarketingPedidos(desde, ate) },
-        staleTime: STALE_TIME,
-    })
-}
-
 /** Aquisição mensal por origem (vitalícia; a aba recorta por período no client). */
 export function useRptAquisicaoMensal() {
     return useQuery({
