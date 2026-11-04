@@ -2750,6 +2750,7 @@ export type Database = {
           eh_combo: boolean
           estoque_atual: number | null
           estoque_minimo: number | null
+          fixo_mais_vendidos: boolean
           id: string
           instrucoes_preparo: string | null
           nome: string
@@ -2778,6 +2779,7 @@ export type Database = {
           eh_combo?: boolean
           estoque_atual?: number | null
           estoque_minimo?: number | null
+          fixo_mais_vendidos?: boolean
           id?: string
           instrucoes_preparo?: string | null
           nome: string
@@ -2806,6 +2808,7 @@ export type Database = {
           eh_combo?: boolean
           estoque_atual?: number | null
           estoque_minimo?: number | null
+          fixo_mais_vendidos?: boolean
           id?: string
           instrucoes_preparo?: string | null
           nome?: string

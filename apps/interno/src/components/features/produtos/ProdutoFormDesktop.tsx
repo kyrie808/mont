@@ -31,6 +31,11 @@ const SELO_OPTIONS = [
     { value: 'oferta', label: 'Oferta' },
     { value: 'queridinho', label: 'Queridinho' },
 ]
+// "Sempre em Mais vendidos" da Nova Venda: os fixados vêm primeiro e o ranking completa até 8.
+const FIXO_MAIS_VENDIDOS_OPTIONS = [
+    { label: 'Não — só se estiver entre os mais vendidos', value: 'false' },
+    { label: 'Sim — sempre no topo da Nova Venda', value: 'true' },
+]
 const SUBTITULO_SUGESTOES = ['25gr por unidade', '50gr por unidade', '75gr por unidade', '100gr por unidade', '1 baldinho', '1 balde', 'combo']
 
 function Field({ label, required, className, children }: {
@@ -179,6 +184,17 @@ export function ProdutoFormDesktop({
                             >
                                 <option value="false">Não — produto simples</option>
                                 <option value="true">Sim — combo de vários produtos</option>
+                            </select>
+                        </SelectWrap>
+                    </Field>
+                    <Field label="Sempre em Mais vendidos" className="col-span-2">
+                        <SelectWrap>
+                            <select
+                                value={values.fixoMaisVendidos ? 'true' : 'false'}
+                                onChange={(e) => setters.setFixoMaisVendidos(e.target.value === 'true')}
+                                className={selectCls}
+                            >
+                                {FIXO_MAIS_VENDIDOS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                             </select>
                         </SelectWrap>
                     </Field>
