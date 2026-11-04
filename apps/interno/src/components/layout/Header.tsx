@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 
 import { cn } from '@mont/shared'
+import { PontoMenu } from './PontoMenu'
 
 interface HeaderProps {
     title: string
@@ -49,10 +50,11 @@ export function Header({
                 {showMenu && !showBack && (
                     <button
                         aria-label="Abrir menu"
-                        className="lg:hidden flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors -ml-2 text-foreground"
+                        className="relative lg:hidden flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors -ml-2 text-foreground"
                         onClick={onMenuClick}
                     >
                         <Menu className="h-6 w-6" />
+                        <PontoMenu />
                     </button>
                 )}
             </div>
