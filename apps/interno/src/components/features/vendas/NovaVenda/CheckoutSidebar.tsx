@@ -10,7 +10,7 @@ import { Button } from '../../../ui/Button'
 import { cn } from '@mont/shared'
 import type { OpcoesEntrega, PagamentoImediato } from './pos/FinalizarVendaDrawer'
 import { SeletorTabelaPreco } from './SeletorTabelaPreco'
-import { ROTULO_TABELA, tabelaDaVenda, type TabelaPreco } from '../../../../utils/tabelaPreco'
+import { motivoDaTabela, tabelaDaVenda, type TabelaPreco } from '../../../../utils/tabelaPreco'
 
 interface CheckoutSidebarProps {
     onBack: () => void
@@ -19,8 +19,7 @@ interface CheckoutSidebarProps {
     contatoId: string
     contatoNome: string
     items: VendaFormData['itens']
-    /** Tabela escolhida no carrinho e a campanha valendo (null = fora de campanha). */
-    tabelaEscolhida: TabelaPreco
+    /** Campanha valendo (null = fora de campanha). A tabela sai da forma de pagamento. */
     campanha: { nome: string; fim: string } | null
     onTabelaEscolhida: (tabela: TabelaPreco) => void
     /** Avisa a tabela que vale agora (null ao sair), para o total mostrar o preço certo. */
@@ -34,7 +33,8 @@ const SALE_TYPES = [
     { id: 'brinde', label: 'Brinde', icon: Gift },
 ] as const
 
-// Entrega com data prevista: como o cliente paga. "Já pago" registra o pagamento agora.
+// Como o cliente paga (venda comum). Pix/Cartão/Dinheiro = a forma da venda (e a tabela da Black);
+// "Já pago" registra o pagamento agora. Sem escolher: preço normal. Com data de entrega é obrigatório.
 const PAGAMENTOS_ENTREGA = [
     { id: 'pix', label: 'Pix', icon: QrCode },
     { id: 'cartao', label: 'Cartão', icon: CreditCard },
@@ -50,7 +50,6 @@ export function CheckoutSidebar({
     contatoId,
     contatoNome,
     items,
-    tabelaEscolhida,
     campanha,
     onTabelaEscolhida,
     onTabelaEfetiva,
@@ -110,23 +109,23 @@ export function CheckoutSidebar({
     // Entrega com data prevista e venda comum: o aviso do #ENTREGAS precisa dizer como cobrar,
     // então a forma de pagamento é obrigatória (fiado e brinde já dizem por si).
     const exigePagamento = tipoEntrega === 'entrega' && !!dataEntregaPrevista && formaPagamento === 'venda'
-    const pagamentoFaltando = exigePagamento && (!pagamentoEntrega || (pagamentoEntrega === 'ja_pago' && !contaId))
+    const pagamentoFaltando = formaPagamento === 'venda'
+        && ((exigePagamento && !pagamentoEntrega) || (pagamentoEntrega === 'ja_pago' && !contaId))
 
+    // Tocar de novo na forma escolhida desfaz a escolha (volta ao preço normal), exceto quando a
+    // data de entrega a exige. Dinheiro "na entrega" só vale quando um entregador leva.
     const escolherPagamentoEntrega = (opcao: PagamentoEntrega) => {
-        setPagamentoEntrega(opcao)
-        setValue('pagamento_na_entrega', opcao === 'ja_pago' ? null : opcao)
-        setValue('dinheiro_na_entrega', opcao === 'dinheiro')
+        const nova = pagamentoEntrega === opcao && !exigePagamento ? null : opcao
+        setPagamentoEntrega(nova)
+        setValue('pagamento_na_entrega', nova === null || nova === 'ja_pago' ? null : nova)
+        setValue('dinheiro_na_entrega', tipoEntrega === 'entrega' && nova === 'dinheiro')
     }
-    // Forma de pagamento já decidida (na entrega, ou "Já pago"): ela escolhe a tabela.
-    const metodoDefinido: PagamentoImediato['metodo'] | null = !exigePagamento || !pagamentoEntrega
+    // Forma de pagamento escolhida (a pagar, ou "Já pago"): ela escolhe a tabela. Sem ela, normal.
+    const metodoDefinido: PagamentoImediato['metodo'] | null = formaPagamento !== 'venda' || !pagamentoEntrega
         ? null
         : pagamentoEntrega === 'ja_pago' ? metodoPago : pagamentoEntrega
-    const tabelaEfetiva = tabelaDaVenda(formaPagamento, metodoDefinido, tabelaEscolhida)
-    const tabelaTravadaPor = formaPagamento === 'fiado' || formaPagamento === 'brinde'
-        ? 'Fiado e brinde usam o preço normal.'
-        : metodoDefinido
-            ? `Recebendo em ${metodoDefinido === 'cartao' ? 'cartão' : metodoDefinido === 'pix' ? 'Pix' : 'dinheiro'}: vale a tabela ${ROTULO_TABELA[tabelaEfetiva]}.`
-            : null
+    const tabelaEfetiva = tabelaDaVenda(formaPagamento, metodoDefinido)
+    const tabelaTravadaPor = motivoDaTabela(formaPagamento, metodoDefinido)
 
     useEffect(() => {
         onTabelaEfetiva(tabelaEfetiva)
@@ -177,8 +176,7 @@ export function CheckoutSidebar({
             setValue('entregador_id', null)
             setValue('observacao_entregador', '')
             setValue('data_entrega_prevista', null)
-            setValue('pagamento_na_entrega', null)
-            setPagamentoEntrega(null)
+            // A forma escolhida (e a tabela) continua; só o "dinheiro na entrega" deixa de valer.
             setValue('dinheiro_na_entrega', false)
         }
     }
@@ -195,11 +193,11 @@ export function CheckoutSidebar({
     const onSubmit = async (data: VendaFormData) => {
         try {
             setIsSubmitting(true)
-            const pagamento: PagamentoImediato | undefined = exigePagamento && pagamentoEntrega === 'ja_pago'
+            const pagamento: PagamentoImediato | undefined = formaPagamento === 'venda' && pagamentoEntrega === 'ja_pago'
                 ? { metodo: metodoPago, contaId }
                 : undefined
-            // Fora da exigência (sem data, fiado, brinde), a escolha não vale.
-            const dados: VendaFormData = exigePagamento ? data : { ...data, pagamento_na_entrega: null }
+            // Fiado e brinde: a forma escolhida para a venda comum não vale.
+            const dados: VendaFormData = formaPagamento === 'venda' ? data : { ...data, pagamento_na_entrega: null }
             await onConfirm(dados, pagamento, { entregaImediata: tipoEntrega === 'retirada', tabela: tabelaEfetiva })
         } catch (error) {
             console.error('Erro ao finalizar venda:', error)
@@ -256,10 +254,70 @@ export function CheckoutSidebar({
                             )
                         })}
                     </div>
-                    <p className="text-[11px] text-muted-foreground italic">
-                        A forma de pagamento (PIX, dinheiro, cartão) é informada ao quitar a venda.
-                    </p>
                 </div>
+
+                {formaPagamento === 'venda' && (
+                    <div className="space-y-2">
+                        <span className="text-xs font-medium text-muted-foreground block">
+                            Como o cliente paga?
+                        </span>
+                        <div className="grid grid-cols-4 gap-2">
+                            {PAGAMENTOS_ENTREGA.map((opt) => {
+                                const Icon = opt.icon
+                                const isSelected = pagamentoEntrega === opt.id
+                                return (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        aria-pressed={isSelected}
+                                        onClick={() => escolherPagamentoEntrega(opt.id)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center p-2 rounded-xl border transition-all gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                                            isSelected
+                                                ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
+                                                : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight">{opt.label}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        {pagamentoEntrega === 'ja_pago' && (
+                            <div className="grid grid-cols-2 gap-2">
+                                <select
+                                    aria-label="Como foi pago"
+                                    value={metodoPago}
+                                    onChange={(e) => setMetodoPago(e.target.value as PagamentoImediato['metodo'])}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                >
+                                    <option value="pix">Pix</option>
+                                    <option value="dinheiro">Dinheiro</option>
+                                    <option value="cartao">Cartão</option>
+                                </select>
+                                <select
+                                    aria-label="Conta que recebeu"
+                                    value={contaId}
+                                    onChange={(e) => setContaId(e.target.value)}
+                                    className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                                >
+                                    <option value="">Conta…</option>
+                                    {contasAtivas.map((ct) => (
+                                        <option key={ct.id} value={ct.id}>{ct.nome}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        {pagamentoFaltando && (
+                            <p className="text-[11px] font-medium text-warning-strong">
+                                {pagamentoEntrega === 'ja_pago'
+                                    ? 'Escolha a conta que recebeu o pagamento.'
+                                    : 'Com data de entrega, diga como o cliente vai pagar: o entregador precisa saber o que cobrar.'}
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 <SeletorTabelaPreco
                     tabela={tabelaEfetiva}
@@ -405,68 +463,6 @@ export function CheckoutSidebar({
                                     className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
                                 />
                             </div>
-                            {exigePagamento && (
-                                <div className="space-y-2">
-                                    <span className="text-xs font-medium text-muted-foreground block">
-                                        Como o cliente vai pagar?
-                                    </span>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {PAGAMENTOS_ENTREGA.map((opt) => {
-                                            const Icon = opt.icon
-                                            const isSelected = pagamentoEntrega === opt.id
-                                            return (
-                                                <button
-                                                    key={opt.id}
-                                                    type="button"
-                                                    aria-pressed={isSelected}
-                                                    onClick={() => escolherPagamentoEntrega(opt.id)}
-                                                    className={cn(
-                                                        "flex flex-col items-center justify-center p-2 rounded-xl border transition-all gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-                                                        isSelected
-                                                            ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
-                                                            : "border-border bg-background text-muted-foreground hover:bg-muted"
-                                                    )}
-                                                >
-                                                    <Icon className="w-4 h-4" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight">{opt.label}</span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                    {pagamentoEntrega === 'ja_pago' && (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <select
-                                                aria-label="Como foi pago"
-                                                value={metodoPago}
-                                                onChange={(e) => setMetodoPago(e.target.value as PagamentoImediato['metodo'])}
-                                                className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
-                                            >
-                                                <option value="pix">Pix</option>
-                                                <option value="dinheiro">Dinheiro</option>
-                                                <option value="cartao">Cartão</option>
-                                            </select>
-                                            <select
-                                                aria-label="Conta que recebeu"
-                                                value={contaId}
-                                                onChange={(e) => setContaId(e.target.value)}
-                                                className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring text-sm"
-                                            >
-                                                <option value="">Conta…</option>
-                                                {contasAtivas.map((ct) => (
-                                                    <option key={ct.id} value={ct.id}>{ct.nome}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
-                                    {pagamentoFaltando && (
-                                        <p className="text-[11px] font-medium text-warning-strong">
-                                            {pagamentoEntrega === 'ja_pago'
-                                                ? 'Escolha a conta que recebeu o pagamento.'
-                                                : 'Com data de entrega, diga como o cliente vai pagar: o entregador precisa saber o que cobrar.'}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
                             <div>
                                 <label className="text-xs font-medium text-muted-foreground block mb-1.5">
                                     Instrução para o entregador (horário, portaria, maquininha)

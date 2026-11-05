@@ -17,13 +17,15 @@ interface PosCartProps {
     seletorTabela?: ReactNode
     /** Sabores escolhidos de um combo, em texto, ou null para item avulso. */
     resumoCombo?: (item: CartItem) => string | null
+    /** Combo no preço normal: "Fiado: R$ 345,00 · no Pix: R$ 199,00" (null = sem nota). */
+    notaLinha?: (item: CartItem) => string | null
     /** Reabre o seletor de sabores de um combo montado. */
     onEditarCombo?: (chave: string) => void
 }
 
 // Carrinho persistente do PDV (espelha o Cart da Adega, tema Mont): cliente no topo →
 // itens (scroll) → rodapé fixo com Total + "Ir para pagamento".
-export function PosCart({ items, total, selectedContato, onSelectContato, onUpdateQuantity, onClear, onCheckout, seletorTabela, resumoCombo, onEditarCombo }: PosCartProps) {
+export function PosCart({ items, total, selectedContato, onSelectContato, onUpdateQuantity, onClear, onCheckout, seletorTabela, resumoCombo, notaLinha, onEditarCombo }: PosCartProps) {
     const [clienteOpen, setClienteOpen] = useState(false)
     const triggerRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
@@ -134,12 +136,13 @@ export function PosCart({ items, total, selectedContato, onSelectContato, onUpda
                 <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
                     {items.map((item) => {
                         const sabores = resumoCombo?.(item) ?? null
+                        const nota = notaLinha?.(item) ?? null
                         return (
                         <div key={item.chave} className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-semibold text-foreground">{item.produto.nome}</p>
                                 {sabores && <p className="text-xs leading-snug text-muted-foreground">{sabores}</p>}
-                                <p className="text-xs text-muted-foreground">{formatCurrency(item.preco_unitario)} un.</p>
+                                <p className="text-xs text-muted-foreground">{nota ?? `${formatCurrency(item.preco_unitario)} un.`}</p>
                                 {item.escolhas && item.escolhas.length > 0 && onEditarCombo && (
                                     <button
                                         type="button"

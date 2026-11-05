@@ -222,10 +222,11 @@ export interface CreateVenda {
     dataPrevistaPagamento?: string | null
     itens: ItemCreateVenda[]
     /**
-     * Tabela de preço (Black: pix = Pix/dinheiro, cartao, normal). Com ela o SERVIDOR decide o
-     * preço de tudo e abre os combos em itens; sem ela, vale o preço mandado (chamadores antigos).
+     * Tabela de preço (Black: pix = Pix/dinheiro, cartao, normal). Obrigatória (04/11/2026): o
+     * SERVIDOR decide o preço de tudo pela tabela e abre os combos em itens; ela tem que bater com
+     * a forma de pagamento (fiado e venda sem forma = normal).
      */
-    tabela?: TabelaPreco
+    tabela: TabelaPreco
     // Entrega: entregador atribuído (null/undefined = retirada) + nota pro entregador.
     entregadorId?: string | null
     observacaoEntregador?: string | null
@@ -243,7 +244,9 @@ export interface CreateVenda {
 // `status` sai do Omit porque na criação ele é restrito a pendente/entregue,
 // enquanto a edição também aceita 'cancelada'. Sem o Omit, a interseção dos dois
 // tipos elimina 'cancelada' e cancelar venda para de compilar.
-export type UpdateVenda = Partial<Omit<CreateVenda, 'itens' | 'status'>> & {
+// Sem a forma de pagamento e a tabela: trocar a forma de uma venda salva não recalcula o preço,
+// então não se troca por aqui (o banco recusa fiado fora da tabela normal).
+export type UpdateVenda = Partial<Omit<CreateVenda, 'itens' | 'status' | 'formaPagamento' | 'tabela'>> & {
     status?: VendaStatus
     pago?: boolean
 }

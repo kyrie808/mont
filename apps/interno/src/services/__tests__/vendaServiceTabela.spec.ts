@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 /**
  * Black (30/10/2026): a Nova Venda manda a TABELA de preço e os combos com os sabores; o
  * servidor (`criar_venda` com `p_tabela`) recalcula o preço de tudo e abre o combo em itens.
- * Aqui o que se protege é o payload: sem `p_tabela` o servidor volta ao comportamento antigo
- * (preço do cliente) e combo com sabor é recusado.
+ * Aqui o que se protege é o payload: a tabela vai sempre (desde 04/11/2026 o servidor recusa venda
+ * sem tabela, e fiado/venda sem forma só na normal).
  */
 
 const rpc = vi.fn().mockResolvedValue({ data: 'venda-nova', error: null })
@@ -51,11 +51,21 @@ describe('vendaService.createVenda — tabela e combos', () => {
         ])
     })
 
-    it('sem tabela, não manda p_tabela (chamadores antigos seguem iguais)', async () => {
+    it('venda sem forma de pagamento vai na tabela normal', async () => {
         await vendaService.createVenda({
             contatoId: 'c-1', data: '2026-10-30', formaPagamento: 'venda', taxaEntrega: 0,
             itens: [{ produtoId: 'balde', quantidade: 1, precoUnitario: 75, subtotal: 75 }],
+            tabela: 'normal',
         }, 'idem-3')
-        expect(payload().p_tabela).toBeUndefined()
+        expect(payload().p_tabela).toBe('normal')
+    })
+
+    it('editar a venda só manda os campos editáveis (a forma de pagamento não está entre eles)', async () => {
+        const { supabase } = await import('../../lib/supabase')
+        const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+        vi.mocked(supabase.from).mockReturnValue({ update } as unknown as ReturnType<typeof supabase.from>)
+        vi.spyOn(vendaService, 'getVendaById').mockResolvedValue({} as Awaited<ReturnType<typeof vendaService.getVendaById>>)
+        await vendaService.updateVenda('v-1', { dataEntregaPrevista: '2026-11-10' })
+        expect(update).toHaveBeenCalledWith({ data_entrega_prevista: '2026-11-10' })
     })
 })

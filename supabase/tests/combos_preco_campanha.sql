@@ -319,10 +319,11 @@ BEGIN
   VALUES ('Suite combos', c_tel || '01', 'B2C', 'cliente', 'direto') RETURNING id INTO v_contato;
 
   -- ── C11: venda no Pix com 2 baldes + 1 Combo Família = 329 + frete 10 ──
+  -- (desde 04/11 a Black exige a forma definida: 'pix' e 'pix', não 'venda' + 'pix')
   casos := casos + 1;
   BEGIN
     v_venda := public.criar_venda(
-      v_contato, current_date, 'venda', 10,
+      v_contato, current_date, 'pix', 10,
       jsonb_build_array(
         jsonb_build_object('produto_id', v_balde, 'quantidade', 2, 'preco_unitario', 1, 'subtotal', 2),
         jsonb_build_object('combo_id', v_familia, 'quantidade', 1, 'escolhas', v_escolhas_familia)),
@@ -346,7 +347,7 @@ BEGIN
   casos := casos + 1;
   BEGIN
     v_venda := public.criar_venda(
-      v_contato, current_date, 'venda', 0,
+      v_contato, current_date, 'cartao', 0,
       jsonb_build_array(jsonb_build_object('combo_id', v_familia, 'quantidade', 2, 'escolhas', v_escolhas_familia)),
       gen_random_uuid(), p_tabela => 'cartao');
     SELECT count(DISTINCT combo_instancia) INTO n FROM public.itens_venda WHERE venda_id = v_venda;
@@ -380,19 +381,21 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'C13 fiado: recusa Pix, aceita normal = 75', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- ── C14: sem tabela, comportamento antigo (preço do chamador) ──
+  -- ── C14: sem tabela recusa (desde 04/11; antes aceitava o preço mandado por quem chamou) ──
   casos := casos + 1;
   BEGIN
-    v_venda := public.criar_venda(v_contato, current_date, 'venda', 0,
-      jsonb_build_array(jsonb_build_object('produto_id', v_balde, 'quantidade', 1, 'preco_unitario', 70, 'subtotal', 70)),
-      gen_random_uuid());
-    SELECT vd.total INTO x FROM public.vendas vd WHERE vd.id = v_venda;
-    IF x <> 70 THEN RAISE EXCEPTION 'total = %', x; END IF;
-    IF (SELECT tabela_preco FROM public.vendas WHERE id = v_venda) IS NOT NULL THEN RAISE EXCEPTION 'tabela deveria ser nula'; END IF;
+    BEGIN
+      PERFORM public.criar_venda(v_contato, current_date, 'venda', 0,
+        jsonb_build_array(jsonb_build_object('produto_id', v_balde, 'quantidade', 1, 'preco_unitario', 70, 'subtotal', 70)),
+        gen_random_uuid());
+      RAISE EXCEPTION 'aceitou venda sem tabela';
+    EXCEPTION WHEN invalid_parameter_value THEN
+      IF SQLERRM NOT LIKE '%obrigatória%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
+    END;
     passou := passou + 1;
-    resultados := resultados || jsonb_build_object('caso', 'C14 sem tabela = comportamento antigo', 'ok', true);
+    resultados := resultados || jsonb_build_object('caso', 'C14 sem tabela recusa', 'ok', true);
   EXCEPTION WHEN others THEN
-    resultados := resultados || jsonb_build_object('caso', 'C14 sem tabela = comportamento antigo', 'ok', false, 'erro', SQLERRM);
+    resultados := resultados || jsonb_build_object('caso', 'C14 sem tabela recusa', 'ok', false, 'erro', SQLERRM);
   END;
 
   -- ── C15: combo sem tabela, ou combo mandado como avulso, recusa ──
@@ -406,7 +409,7 @@ BEGIN
     EXCEPTION WHEN invalid_parameter_value THEN NULL;
     END;
     BEGIN
-      PERFORM public.criar_venda(v_contato, current_date, 'venda', 0,
+      PERFORM public.criar_venda(v_contato, current_date, 'pix', 0,
         jsonb_build_array(jsonb_build_object('produto_id', v_dupla, 'quantidade', 1)),
         gen_random_uuid(), p_tabela => 'pix');
       RAISE EXCEPTION 'aceitou combo como avulso';
@@ -423,7 +426,7 @@ BEGIN
   BEGIN
     SELECT jsonb_object_agg(id, estoque_atual) INTO est_antes
       FROM public.produtos WHERE id IN (v_balde, v_baldinho, v_dl, v_coco, v_cocada, v_milho, v_familia);
-    v_venda := public.criar_venda(v_contato, current_date, 'venda', 0,
+    v_venda := public.criar_venda(v_contato, current_date, 'pix', 0,
       jsonb_build_array(jsonb_build_object('combo_id', v_familia, 'quantidade', 1, 'escolhas', v_escolhas_familia)),
       gen_random_uuid(), p_status => 'entregue', p_tabela => 'pix');
     FOR r IN
@@ -540,7 +543,7 @@ BEGIN
     resultados := resultados || jsonb_build_object('caso', 'C22 Kit Top antigo inativo', 'ok', false, 'erro', SQLERRM);
   END;
 
-  -- ── C26: combo da campanha como item avulso sem tabela (tela antiga) recusa ──
+  -- ── C26: combo da campanha como item avulso sem tabela (tela antiga) recusa: desde 04/11, pela tabela obrigatória ──
   casos := casos + 1;
   BEGIN
     BEGIN
@@ -549,7 +552,7 @@ BEGIN
         gen_random_uuid());
       RAISE EXCEPTION 'aceitou combo da campanha como avulso sem tabela';
     EXCEPTION WHEN invalid_parameter_value THEN
-      IF SQLERRM NOT LIKE '%com os sabores%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
+      IF SQLERRM NOT LIKE '%obrigatória%' THEN RAISE EXCEPTION 'mensagem: %', SQLERRM; END IF;
     END;
     passou := passou + 1;
     resultados := resultados || jsonb_build_object('caso', 'C26 combo da campanha sem tabela recusa', 'ok', true);

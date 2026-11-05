@@ -18,7 +18,16 @@ import { WizardProgress } from '../components/features/vendas/NovaVenda/WizardPr
 import { NovaVendaPOS } from '../components/features/vendas/NovaVenda/pos/NovaVendaPOS'
 import { SeletorTabelaPreco } from '../components/features/vendas/NovaVenda/SeletorTabelaPreco'
 import { MontarComboDialog } from '../components/features/vendas/NovaVenda/MontarComboDialog'
-import { precoNaTabela, produtosAVenda, resumoEscolhas, type EscolhaCombo, type TabelaPreco } from '../utils/tabelaPreco'
+import {
+    faixaComboNormal,
+    notaPrecoCombo,
+    precoComboNormal,
+    precoNaTabela,
+    produtosAVenda,
+    resumoEscolhas,
+    type EscolhaCombo,
+    type TabelaPreco,
+} from '../utils/tabelaPreco'
 import { agoraSimulado } from '../lib/agoraSimulado'
 import { contarItens } from '../utils/listaNovaVenda'
 import type { PagamentoImediato, OpcoesEntrega } from '../components/features/vendas/NovaVenda/pos/FinalizarVendaDrawer'
@@ -55,6 +64,15 @@ export function NovaVenda() {
     const produtosPorId = useMemo(() => new Map(todosProdutos.map((p) => [p.id, p])), [todosProdutos])
     const nomes = useMemo(() => new Map(todosProdutos.map((p) => [p.id, p.nome])), [todosProdutos])
     const montagemPorCombo = useMemo(() => new Map(combos.map((c) => [c.comboId, c])), [combos])
+    // Preço normal (do cadastro) de um item: o que o combo soma no fiado e na venda sem forma.
+    const normalDe = useCallback(
+        (produtoId: string) => precos.get(produtoId)?.normal ?? Number(produtosPorId.get(produtoId)?.preco ?? 0),
+        [precos, produtosPorId]
+    )
+    const pixDe = useCallback(
+        (p: DomainProduto) => precoNaTabela(precos, p.id, Number(p.preco), 'pix'),
+        [precos]
+    )
     const { getVendaById, createVenda } = useVendas()
     const { getContatoById } = useContatos()
 
@@ -82,13 +100,43 @@ export function NovaVenda() {
         (p: DomainProduto) => precoNaTabela(precos, p.id, Number(p.preco), tabelaAtiva),
         [precos, tabelaAtiva]
     )
+    // Combo no preço normal = soma dos itens (fixos + sabores) no cadastro, igual ao servidor.
+    // Na vitrine, antes dos sabores, vale o menor possível ("a partir de" quando há diferença).
+    const precoComboNaAtiva = useCallback(
+        (p: DomainProduto, escolhas?: EscolhaCombo[]): number => {
+            const montagem = montagemPorCombo.get(p.id)
+            if (!p.ehCombo || tabelaAtiva !== 'normal' || !montagem) return precoNaAtiva(p)
+            return escolhas ? precoComboNormal(montagem, escolhas, normalDe) : faixaComboNormal(montagem, normalDe).min
+        },
+        [montagemPorCombo, tabelaAtiva, precoNaAtiva, normalDe]
+    )
+    /** "Fiado: R$ 345,00 · no Pix: R$ 199,00" no combo, quando a tabela ativa é a normal. */
+    const notaCombo = useCallback(
+        (p: DomainProduto, escolhas?: EscolhaCombo[]): string | null => {
+            const montagem = montagemPorCombo.get(p.id)
+            if (!p.ehCombo || tabelaAtiva !== 'normal' || !montagem) return null
+            const faixa = faixaComboNormal(montagem, normalDe)
+            const aPartirDe = !escolhas && faixa.min !== faixa.max
+            return notaPrecoCombo(precoComboNaAtiva(p, escolhas), pixDe(p), formatCurrency, aPartirDe)
+        },
+        [montagemPorCombo, tabelaAtiva, normalDe, precoComboNaAtiva, pixDe]
+    )
     // A vitrine mostra o preço da tabela ativa (as listas exibem `produto.preco`) e só o que
     // está à venda agora: combo da campanha some com a campanha pausada ou encerrada.
     const produtos = useMemo(
-        () => produtosAVenda(todosProdutos, foraDeVenda).map((p) => ({ ...p, preco: precoNaAtiva(p) })),
-        [todosProdutos, foraDeVenda, precoNaAtiva]
+        () => produtosAVenda(todosProdutos, foraDeVenda).map((p) => ({ ...p, preco: precoComboNaAtiva(p) })),
+        [todosProdutos, foraDeVenda, precoComboNaAtiva]
     )
-    const carrinho = useMemo(() => precificar(cart, precoNaAtiva), [cart, precoNaAtiva])
+    const produtoDoCadastro = useCallback((p: DomainProduto) => produtosPorId.get(p.id) ?? p, [produtosPorId])
+    const notaVitrine = useCallback((p: DomainProduto) => notaCombo(produtoDoCadastro(p)), [notaCombo, produtoDoCadastro])
+    const carrinho = useMemo(
+        () => precificar(cart, (item) => precoComboNaAtiva(item.produto, item.produto.ehCombo ? item.escolhas ?? [] : undefined)),
+        [cart, precoComboNaAtiva]
+    )
+    const notaLinha = useCallback(
+        (item: CartItem) => notaCombo(item.produto, item.produto.ehCombo ? item.escolhas ?? [] : undefined),
+        [notaCombo]
+    )
     const itensCheckout = useMemo(() => carrinho.map((item) => ({
         produto_id: item.produto_id,
         quantidade: item.quantidade,
@@ -275,7 +323,10 @@ export function NovaVenda() {
             data: data.data,
             // Com data prevista, o formulário exige como o cliente paga na entrega; essa é a
             // forma real da venda (a intenção 'venda' sozinha não diz ao entregador o que cobrar).
-            formaPagamento: data.pagamento_na_entrega ?? data.forma_pagamento,
+            // Pago na hora (Pix, dinheiro, cartão): essa também é a forma da venda — é ela que dá
+            // a tabela (o servidor não aceita a Black em venda sem forma de pagamento).
+            formaPagamento: data.pagamento_na_entrega
+                ?? (data.forma_pagamento === 'venda' && pagamento ? pagamento.metodo : data.forma_pagamento),
             taxaEntrega: data.taxa_entrega,
             // Do carrinho, não do formulário: o combo vai com os sabores e o servidor rateia.
             itens: carrinho.map(it => it.produto.ehCombo
@@ -405,6 +456,7 @@ export function NovaVenda() {
                                         onAdd={(p) => handleAddToCart(p, { avisar: false })}
                                         onUpdateQuantity={(chave, delta) => handleUpdateQuantity(chave, delta, { avisar: false })}
                                         acaoCombo={acaoCombo}
+                                        notaPreco={notaVitrine}
                                     />
                                 </div>
                             </div>
@@ -425,7 +477,6 @@ export function NovaVenda() {
                                             total={cartTotal}
                                             contatoId={selectedContato?.id || ''}
                                             contatoNome={selectedContato?.nome || ''}
-                                            tabelaEscolhida={tabela}
                                             campanha={campanha}
                                             onTabelaEscolhida={setTabela}
                                             onTabelaEfetiva={setTabelaCheckout}
@@ -499,12 +550,13 @@ export function NovaVenda() {
                 isEditing={isEditing}
                 avisoTopo={avisoSimulado || null}
                 seletorTabela={<SeletorTabelaPreco tabela={tabela} onChange={setTabela} campanha={campanha} />}
-                tabelaEscolhida={tabela}
                 campanha={campanha}
                 onTabelaEscolhida={setTabela}
                 onTabelaEfetiva={setTabelaCheckout}
                 acaoCombo={acaoCombo}
                 resumoCombo={resumoCombo}
+                notaPreco={notaVitrine}
+                notaLinha={notaLinha}
                 onEditarCombo={(chave) => {
                     const item = cart.find((i) => i.chave === chave)
                     if (item) setMontando({ comboId: item.produto_id, chave })
@@ -524,7 +576,8 @@ export function NovaVenda() {
                         combo={combo}
                         montagem={montagem}
                         produtosPorId={produtosPorId}
-                        preco={precoNaAtiva(combo)}
+                        precoDe={(escolhas) => precoComboNaAtiva(combo, escolhas)}
+                        notaDe={(escolhas) => notaCombo(combo, escolhas)}
                         escolhasIniciais={escolhasIniciais}
                         onConfirmar={confirmarMontagem}
                     />

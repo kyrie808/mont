@@ -17,8 +17,10 @@ interface MontarComboDialogProps {
     montagem: ComboMontagem
     /** Produtos ativos por id: nomes e fotos dos fixos e dos sabores. */
     produtosPorId: Map<string, DomainProduto>
-    /** Preço do combo na tabela que está valendo. */
-    preco: number
+    /** Preço do combo na tabela que está valendo, com os sabores escolhidos (no normal, a soma dos itens). */
+    precoDe: (escolhas: EscolhaCombo[]) => number
+    /** "Fiado: R$ 345,00 · no Pix: R$ 199,00" quando a tabela é a normal (null = sem nota). */
+    notaDe?: (escolhas: EscolhaCombo[]) => string | null
     /** Ao trocar sabores de um combo que já está no carrinho. */
     escolhasIniciais?: EscolhaCombo[]
     onConfirmar: (escolhas: EscolhaCombo[]) => void
@@ -36,7 +38,8 @@ export function MontarComboDialog({
     combo,
     montagem,
     produtosPorId,
-    preco,
+    precoDe,
+    notaDe,
     escolhasIniciais,
     onConfirmar,
 }: MontarComboDialogProps) {
@@ -57,6 +60,8 @@ export function MontarComboDialog({
         })
     }
 
+    const preco = precoDe(escolhas)
+    const nota = completo ? notaDe?.(escolhas) ?? null : null
     const primeiroIncompleto = montagem.grupos.find((g) => faltamNoGrupo(g, escolhas) > 0)
     const textoBotao = sabores === 'pendentes'
         ? 'Sabores em definição'
@@ -168,6 +173,7 @@ export function MontarComboDialog({
                 >
                     {textoBotao}
                 </button>
+                {nota && <p className="-mt-2 text-center text-xs text-muted-foreground">{nota}</p>}
             </div>
         </Modal>
     )

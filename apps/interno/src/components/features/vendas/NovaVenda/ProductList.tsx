@@ -16,6 +16,8 @@ interface ProductListProps {
     onUpdateQuantity: (produtoId: string, delta: number) => void
     /** Combo com escolha de sabor: 'montar' abre o seletor; 'pendente' = sabores em definição. */
     acaoCombo?: (produto: DomainProduto) => 'montar' | 'pendente' | null
+    /** Combo no preço normal: "Fiado: R$ 345,00 · no Pix: R$ 199,00" (null = sem nota). */
+    notaPreco?: (produto: DomainProduto) => string | null
 }
 
 const foco = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
@@ -30,7 +32,7 @@ const semMovimento = () => typeof window !== 'undefined' && window.matchMedia?.(
  * O AppLayout tem `overflow-x-hidden`, que anula `sticky`: a barra vira `fixed` quando a
  * sentinela sai da tela, e um espaço da mesma altura segura o lugar dela no fluxo.
  */
-export function ProductList({ produtos, loading, secoes, maisVendidos, getQuantity, onAdd, onUpdateQuantity, acaoCombo }: ProductListProps) {
+export function ProductList({ produtos, loading, secoes, maisVendidos, getQuantity, onAdd, onUpdateQuantity, acaoCombo, notaPreco }: ProductListProps) {
     const [busca, setBusca] = useState('')
     const buscando = busca.trim().length > 0
 
@@ -128,6 +130,7 @@ export function ProductList({ produtos, loading, secoes, maisVendidos, getQuanti
             produto={produto}
             quantidade={getQuantity(produto.id)}
             combo={acaoCombo?.(produto) ?? null}
+            nota={notaPreco?.(produto) ?? null}
             onAdd={onAdd}
             onUpdateQuantity={onUpdateQuantity}
         />
@@ -231,18 +234,21 @@ interface LinhaProdutoProps {
     produto: DomainProduto
     quantidade: number
     combo: 'montar' | 'pendente' | null
+    nota: string | null
     onAdd: (produto: DomainProduto) => void
     onUpdateQuantity: (produtoId: string, delta: number) => void
 }
 
-function LinhaProduto({ produto, quantidade, combo, onAdd, onUpdateQuantity }: LinhaProdutoProps) {
+function LinhaProduto({ produto, quantidade, combo, nota, onAdd, onUpdateQuantity }: LinhaProdutoProps) {
     return (
         <li className="flex min-h-16 items-center gap-3 py-2">
             <div className="min-w-0 flex-1">
                 <p className={cn('line-clamp-2 text-[15px] leading-snug text-foreground', quantidade > 0 ? 'font-semibold' : 'font-medium')}>
                     {produto.nome}
                 </p>
-                <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">{formatCurrency(Number(produto.preco))}</p>
+                <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">
+                    {nota ?? formatCurrency(Number(produto.preco))}
+                </p>
             </div>
 
             {combo === 'pendente' ? (

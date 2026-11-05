@@ -52,9 +52,9 @@ function subtotal(quantidade: number, precoUnitario: number): number {
  * checkout, a que a forma de pagamento impõe). Não grava nada: o store guarda só a escolha,
  * e voltar de "Fiado" para "Balcão" devolve o carrinho ao preço escolhido.
  */
-export function precificar(items: CartItem[], precoDe: (produto: DomainProduto) => number): CartItem[] {
+export function precificar(items: CartItem[], precoDe: (item: CartItem) => number): CartItem[] {
     return items.map((i) => {
-        const preco = precoDe(i.produto)
+        const preco = precoDe(i)
         return { ...i, preco_unitario: preco, subtotal: subtotal(i.quantidade, preco) }
     })
 }
@@ -64,7 +64,8 @@ export const useCartStore = create<CartState>()(
         (set, get) => ({
             items: [],
             cliente: null,
-            tabela: 'pix',
+            // Sem forma de pagamento a venda é no preço normal (regra do Gilmar, 04/11/2026).
+            tabela: 'normal',
             idempotencyKey: null,
             addItem: (item) =>
                 set((state) => {
@@ -112,14 +113,15 @@ export const useCartStore = create<CartState>()(
         {
             name: 'massas-cart-storage',
             // v1 (30/10/2026): linhas ganharam `chave` (combos montados) e o carrinho, a tabela
-            // de preço. Carrinho salvo na v0 vira v1 sem perder item.
-            version: 1,
+            // de preço. v2 (04/11/2026): o carrinho começa no preço normal (antes começava no Pix).
+            // Carrinho salvo nas versões antigas vira v2 sem perder item.
+            version: 2,
             migrate: (salvo, versao) => {
                 const estado = (salvo ?? {}) as Partial<CartState> & { items?: Partial<CartItem>[] }
-                if (versao < 1) {
+                if (versao < 2) {
                     return {
                         ...estado,
-                        tabela: 'pix',
+                        tabela: 'normal',
                         items: (estado.items ?? []).map((i) => ({ ...i, chave: i.chave ?? i.produto_id })),
                     } as CartState
                 }

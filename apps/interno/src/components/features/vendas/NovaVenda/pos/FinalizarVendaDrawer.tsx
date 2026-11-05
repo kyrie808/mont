@@ -13,7 +13,7 @@ import { useContas } from '../../../../../hooks/useContas'
 import type { CartItem } from '../../../../../stores/useCartStore'
 import { Button } from '../../../../ui/Button'
 import { SeletorTabelaPreco } from '../SeletorTabelaPreco'
-import { ROTULO_TABELA, tabelaDaVenda, type TabelaPreco } from '../../../../../utils/tabelaPreco'
+import { motivoDaTabela, tabelaDaVenda, type TabelaPreco } from '../../../../../utils/tabelaPreco'
 
 // Pagamento imediato (quita na hora). Ausente = venda em aberto (quita depois no perfil).
 export interface PagamentoImediato {
@@ -30,8 +30,8 @@ export interface PagamentoImediato {
 export interface OpcoesEntrega {
     entregaImediata: boolean
     /**
-     * Tabela de preço que vale na venda (Black): a forma de pagamento escolhida manda; fiado e
-     * brinde ficam no normal; sem forma, vale a escolhida no carrinho. Vai para a `criar_venda`.
+     * Tabela de preço que vale na venda (Black): a forma de pagamento escolhida manda; fiado,
+     * brinde e venda sem forma ficam no normal (regra do Gilmar, 04/11/2026). Vai para a `criar_venda`.
      */
     tabela: TabelaPreco
 }
@@ -45,8 +45,7 @@ interface FinalizarVendaDrawerProps {
     contatoId: string
     contatoNome: string
     contatoTelefone?: string | null
-    /** Tabela escolhida no carrinho e a campanha valendo (null = fora de campanha). */
-    tabelaEscolhida: TabelaPreco
+    /** Campanha valendo (null = fora de campanha). A tabela sai da forma de pagamento. */
     campanha: { nome: string; fim: string } | null
     onTabelaEscolhida: (tabela: TabelaPreco) => void
     /** Avisa a tabela que vale agora (null ao fechar), para o carrinho mostrar o preço certo. */
@@ -91,7 +90,6 @@ export function FinalizarVendaDrawer({
     contatoId,
     contatoNome,
     contatoTelefone,
-    tabelaEscolhida,
     campanha,
     onTabelaEscolhida,
     onTabelaEfetiva,
@@ -163,12 +161,8 @@ export function FinalizarVendaDrawer({
     const metodoDefinido: PagamentoNaEntrega | null = recebimento !== 'depois' && isPayNow
         ? recebimento
         : exigePagamentoNaEntrega ? pagamentoNaEntrega : null
-    const tabelaEfetiva = tabelaDaVenda(formaPagamento, metodoDefinido, tabelaEscolhida)
-    const tabelaTravadaPor = formaPagamento === 'fiado' || formaPagamento === 'brinde'
-        ? 'Fiado e brinde usam o preço normal.'
-        : metodoDefinido
-            ? `Recebendo em ${metodoDefinido === 'cartao' ? 'cartão' : metodoDefinido === 'pix' ? 'PIX' : 'dinheiro'}: vale a tabela ${ROTULO_TABELA[tabelaEfetiva]}.`
-            : null
+    const tabelaEfetiva = tabelaDaVenda(formaPagamento, metodoDefinido)
+    const tabelaTravadaPor = motivoDaTabela(formaPagamento, metodoDefinido)
 
     useEffect(() => {
         onTabelaEfetiva(isOpen ? tabelaEfetiva : null)

@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
     precoNaTabela,
     tabelaDaVenda,
+    motivoDaTabela,
+    precoComboNormal,
+    faixaComboNormal,
+    notaPrecoCombo,
     totalNaTabela,
     escolhasCompletas,
     faltamNoGrupo,
@@ -37,21 +41,54 @@ describe('precoNaTabela', () => {
     })
 })
 
-describe('tabelaDaVenda', () => {
-    it('fiado e brinde sempre no preço normal, mesmo com Pix escolhido', () => {
-        expect(tabelaDaVenda('fiado', null, 'pix')).toBe('normal')
-        expect(tabelaDaVenda('brinde', 'pix', 'cartao')).toBe('normal')
+describe('tabelaDaVenda (regra do Gilmar, 04/11/2026)', () => {
+    it('fiado e brinde sempre no preço normal, mesmo com forma escolhida', () => {
+        expect(tabelaDaVenda('fiado', null)).toBe('normal')
+        expect(tabelaDaVenda('fiado', 'pix')).toBe('normal')
+        expect(tabelaDaVenda('brinde', 'cartao')).toBe('normal')
     })
 
-    it('a forma de pagamento já escolhida manda na tabela', () => {
-        expect(tabelaDaVenda('venda', 'pix', 'cartao')).toBe('pix')
-        expect(tabelaDaVenda('venda', 'dinheiro', 'cartao')).toBe('pix')
-        expect(tabelaDaVenda('venda', 'cartao', 'pix')).toBe('cartao')
+    it('a Black só com a forma definida: Pix e dinheiro → Pix, cartão → cartão', () => {
+        expect(tabelaDaVenda('venda', 'pix')).toBe('pix')
+        expect(tabelaDaVenda('venda', 'dinheiro')).toBe('pix')
+        expect(tabelaDaVenda('venda', 'cartao')).toBe('cartao')
     })
 
-    it('sem forma definida ("receber depois"), vale a tabela escolhida no carrinho', () => {
-        expect(tabelaDaVenda('venda', null, 'cartao')).toBe('cartao')
-        expect(tabelaDaVenda('venda', null, 'pix')).toBe('pix')
+    it('sem forma definida ("receber depois") é preço normal', () => {
+        expect(tabelaDaVenda('venda', null)).toBe('normal')
+        expect(motivoDaTabela('venda', null)).toMatch(/escolha Pix, dinheiro ou cartão/)
+        expect(motivoDaTabela('fiado', 'pix')).toBe('Fiado e brinde usam o preço normal.')
+    })
+})
+
+describe('combo no preço normal = soma dos itens no cadastro', () => {
+    // Mesa Cheia (Black): Balde 4 kg 75 + 2× Baldinho 1 kg 30 (os fixos somam 135, com o brinde)
+    // + 6 doces de 680 g a 35 = 345; no Pix, 199.
+    const NORMAL: Record<string, number> = { balde: 75, baldinho: 30, dl: 35, coco: 35, nozes: 40 }
+    const normalDe = (id: string) => NORMAL[id] ?? 0
+    const mesa = {
+        fixos: [{ produtoId: 'balde', quantidade: 1 }, { produtoId: 'baldinho', quantidade: 2 }],
+        grupos: [{ quantidade: 6, opcoes: ['dl', 'coco', 'nozes'] }],
+    }
+
+    it('fixos (com o brinde) + sabores escolhidos', () => {
+        const escolhas = [
+            { grupoId: 'g', produtoId: 'dl', quantidade: 4 },
+            { grupoId: 'g', produtoId: 'coco', quantidade: 2 },
+        ]
+        expect(precoComboNormal(mesa, escolhas, normalDe)).toBe(345)
+        expect(precoComboNormal(mesa, [{ grupoId: 'g', produtoId: 'nozes', quantidade: 6 }], normalDe)).toBe(375)
+    })
+
+    it('antes dos sabores: faixa do mais barato ao mais caro', () => {
+        expect(faixaComboNormal(mesa, normalDe)).toEqual({ min: 345, max: 375 })
+    })
+
+    it('nota "Fiado: … · no Pix: …" só quando os preços diferem', () => {
+        const brl = (v: number) => `R$ ${v}`
+        expect(notaPrecoCombo(345, 199, brl)).toBe('Fiado: R$ 345 · no Pix: R$ 199')
+        expect(notaPrecoCombo(345, 199, brl, true)).toBe('Fiado: a partir de R$ 345 · no Pix: R$ 199')
+        expect(notaPrecoCombo(75, 75, brl)).toBeNull()
     })
 })
 

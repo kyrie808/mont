@@ -47,12 +47,14 @@ interface NovaVendaPOSProps {
     /** Faixa no topo (ex.: "Data simulada", fora de produção). */
     avisoTopo?: ReactNode
     seletorTabela: ReactNode
-    tabelaEscolhida: TabelaPreco
     campanha: { nome: string; fim: string } | null
     onTabelaEscolhida: (tabela: TabelaPreco) => void
     onTabelaEfetiva: (tabela: TabelaPreco | null) => void
     acaoCombo: (produto: DomainProduto) => 'montar' | 'pendente' | null
     resumoCombo: (item: CartItem) => string | null
+    /** Combo no preço normal: "Fiado: R$ 345,00 · no Pix: R$ 199,00" (vitrine e carrinho). */
+    notaPreco: (produto: DomainProduto) => string | null
+    notaLinha: (item: CartItem) => string | null
     onEditarCombo: (chave: string) => void
 }
 
@@ -60,7 +62,7 @@ interface NovaVendaPOSProps {
 // da SidebarNav (w-64) → a página NÃO rola (sai do fluxo de scroll-de-documento do AppLayout).
 export function NovaVendaPOS(props: NovaVendaPOSProps) {
     const { produtos, loading, cart, cartTotal, selectedContato, onSelectContato, getQuantity, onAdd, onUpdateQuantity, onClear, onConfirm, isEditing } = props
-    const { avisoTopo, seletorTabela, tabelaEscolhida, campanha, onTabelaEscolhida, onTabelaEfetiva, acaoCombo, resumoCombo, onEditarCombo } = props
+    const { avisoTopo, seletorTabela, campanha, onTabelaEscolhida, onTabelaEfetiva, acaoCombo, resumoCombo, notaPreco, notaLinha, onEditarCombo } = props
     const navigate = useNavigate()
     const [search, setSearch] = useState('')
     const [categoria, setCategoria] = useState('todos')
@@ -137,7 +139,7 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                     {loading ? (
                         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Carregando produtos…</div>
                     ) : (
-                        <PosProductGrid produtos={filtrados} getQuantity={getQuantity} onAdd={onAdd} onUpdateQuantity={onUpdateQuantity} acaoCombo={acaoCombo} />
+                        <PosProductGrid produtos={filtrados} getQuantity={getQuantity} onAdd={onAdd} onUpdateQuantity={onUpdateQuantity} acaoCombo={acaoCombo} notaPreco={notaPreco} />
                     )}
                 </div>
 
@@ -152,6 +154,7 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                     onCheckout={() => setPagamentoOpen(true)}
                     seletorTabela={seletorTabela}
                     resumoCombo={resumoCombo}
+                    notaLinha={notaLinha}
                     onEditarCombo={onEditarCombo}
                 />
             </div>
@@ -166,7 +169,6 @@ export function NovaVendaPOS(props: NovaVendaPOSProps) {
                 contatoId={selectedContato?.id || ''}
                 contatoNome={selectedContato?.nome || ''}
                 contatoTelefone={selectedContato?.telefone}
-                tabelaEscolhida={tabelaEscolhida}
                 campanha={campanha}
                 onTabelaEscolhida={onTabelaEscolhida}
                 onTabelaEfetiva={onTabelaEfetiva}
