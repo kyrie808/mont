@@ -11,6 +11,7 @@ import {
     faltamNoGrupo,
     resumoEscolhas,
     avisoTabelaNoPagamento,
+    cartaoDiferenteNaVenda,
     produtosAVenda,
     type MapaPrecos,
 } from './tabelaPreco'
@@ -131,21 +132,44 @@ describe('escolhas de combo', () => {
 })
 
 describe('avisoTabelaNoPagamento', () => {
-    it('lançada no Pix e paga no cartão: avisa que o valor não muda sozinho', () => {
-        expect(avisoTabelaNoPagamento('pix', 'cartao')).toMatch(/Pix/)
+    it('lançada no Pix e paga no cartão, com o cartão em outro preço: avisa que o valor não muda sozinho', () => {
+        expect(avisoTabelaNoPagamento('pix', 'cartao', true)).toMatch(/Pix/)
     })
 
-    it('lançada no cartão e paga no Pix ou dinheiro: avisa', () => {
-        expect(avisoTabelaNoPagamento('cartao', 'pix')).toMatch(/cartão/)
-        expect(avisoTabelaNoPagamento('cartao', 'dinheiro')).toMatch(/cartão/)
+    it('lançada no cartão e paga no Pix ou dinheiro, com o cartão em outro preço: avisa', () => {
+        expect(avisoTabelaNoPagamento('cartao', 'pix', true)).toMatch(/cartão/)
+        expect(avisoTabelaNoPagamento('cartao', 'dinheiro', true)).toMatch(/cartão/)
+    })
+
+    it('cartão no mesmo preço do Pix (05/11/2026): sem aviso, em qualquer direção', () => {
+        expect(avisoTabelaNoPagamento('pix', 'cartao', false)).toBeNull()
+        expect(avisoTabelaNoPagamento('cartao', 'pix', false)).toBeNull()
     })
 
     it('sem conflito, ou venda antiga sem tabela, não avisa', () => {
-        expect(avisoTabelaNoPagamento('pix', 'pix')).toBeNull()
-        expect(avisoTabelaNoPagamento('pix', 'dinheiro')).toBeNull()
-        expect(avisoTabelaNoPagamento('cartao', 'cartao')).toBeNull()
-        expect(avisoTabelaNoPagamento('normal', 'cartao')).toBeNull()
-        expect(avisoTabelaNoPagamento(null, 'cartao')).toBeNull()
+        expect(avisoTabelaNoPagamento('pix', 'pix', true)).toBeNull()
+        expect(avisoTabelaNoPagamento(null, 'cartao', true)).toBeNull()
+        expect(avisoTabelaNoPagamento('normal', 'cartao', true)).toBeNull()
+    })
+})
+
+describe('cartaoDiferenteNaVenda', () => {
+    const precos: MapaPrecos = new Map([
+        ['balde', { normal: 75, pix: 65, cartao: 65 }],
+        ['mesa', { normal: 345, pix: 199, cartao: 199 }],
+        ['palito', { normal: 40, pix: 36, cartao: 38 }],
+    ])
+
+    it('cartão igual ao Pix em todos os itens: false (combo conta pelo combo)', () => {
+        expect(cartaoDiferenteNaVenda([
+            { produtoId: 'balde', comboId: null },
+            { produtoId: 'doce', comboId: 'mesa' },
+        ], precos)).toBe(false)
+    })
+
+    it('algum item com o cartão em outro preço: true; item sem preço vigente não conta', () => {
+        expect(cartaoDiferenteNaVenda([{ produtoId: 'balde', comboId: null }, { produtoId: 'palito', comboId: null }], precos)).toBe(true)
+        expect(cartaoDiferenteNaVenda([{ produtoId: 'sumiu', comboId: null }], precos)).toBe(false)
     })
 })
 

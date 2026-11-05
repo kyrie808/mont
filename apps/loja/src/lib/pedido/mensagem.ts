@@ -1,6 +1,7 @@
 import { reais } from '@/lib/formato'
 import { catalogoDa, descreverCombo, resumirSacola } from '@/lib/sacola/calculo'
 import type { ItemSacola } from '@/lib/sacola/esquema'
+import { sacolaTemCartaoDiferente } from '@/lib/vitrine/cartao'
 import type { Vitrine } from '@/lib/vitrine/tipos'
 import type { FormaEntrega, FormaPagamento } from './esquema'
 
@@ -58,9 +59,11 @@ export function mensagemDoPedido(d: DadosMensagem): string {
         '',
         blocos.join('\n\n'),
         '',
-        d.pagamento === 'cartao'
-            ? `*Total dos produtos no Pix: ${reais(d.total)}* (no cartão vale o preço do cartão)`
-            : `*Total dos produtos (Pix ou dinheiro): ${reais(d.total)}*`,
+        !sacolaTemCartaoDiferente(linhas)
+            ? `*Total dos produtos (Pix, dinheiro ou cartão): ${reais(d.total)}*`
+            : d.pagamento === 'cartao'
+              ? `*Total dos produtos no Pix: ${reais(d.total)}* (no cartão vale o preço do cartão)`
+              : `*Total dos produtos (Pix ou dinheiro): ${reais(d.total)}*`,
         ...(retirada
             ? ['Dia e horário da retirada a gente combina por aqui.']
             : d.freteEstimado !== null

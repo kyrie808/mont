@@ -176,7 +176,25 @@ export function resumoEscolhas(escolhas: EscolhaCombo[], nomes: Map<string, stri
 }
 
 /**
- * Aviso no Quitar quando a forma de pagamento não bate com a tabela de lançamento.
+ * O cartão tem outro preço que o Pix em algum item da venda (preços vigentes). Linha de combo
+ * conta pelo combo, não pelo item rateado. Decisão de 05/11/2026: na Black o cartão é igual ao
+ * Pix, então hoje isto dá false; se voltar a haver diferença, o aviso do Quitar volta sozinho.
+ */
+export function cartaoDiferenteNaVenda(
+    itens: { produtoId: string; comboId: string | null }[],
+    precos: MapaPrecos,
+): boolean {
+    const ids = new Set(itens.map((i) => i.comboId ?? i.produtoId))
+    for (const id of ids) {
+        const p = precos.get(id)
+        if (p && Math.round(p.pix * 100) !== Math.round(p.cartao * 100)) return true
+    }
+    return false
+}
+
+/**
+ * Aviso no Quitar quando a forma de pagamento não bate com a tabela de lançamento — só se o
+ * cartão tiver outro preço nos itens da venda (com os preços iguais, não há diferença a cobrar).
  *
  * O valor da venda NÃO muda sozinho: ele foi fechado com o cliente e pode já estar no aviso
  * do entregador. Cobrar a diferença (ou não) é decisão de quem vende. Venda antiga, sem
@@ -185,7 +203,9 @@ export function resumoEscolhas(escolhas: EscolhaCombo[], nomes: Map<string, stri
 export function avisoTabelaNoPagamento(
     tabela: TabelaPreco | null,
     metodo: string,
+    cartaoDiferente: boolean,
 ): string | null {
+    if (!cartaoDiferente) return null
     if (tabela === 'pix' && metodo === 'cartao') {
         return 'Esta venda foi lançada com o preço do Pix. O valor não muda sozinho ao receber no cartão; se for cobrar a diferença, ajuste com o cliente.'
     }

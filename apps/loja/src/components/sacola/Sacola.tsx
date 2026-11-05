@@ -13,6 +13,7 @@ import { catalogoDa, descreverCombo, resumirSacola } from '@/lib/sacola/calculo'
 import { escolherLevaJunto, idsDaSacola } from '@/lib/sacola/levaJunto'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
+import { sacolaTemCartaoDiferente } from '@/lib/vitrine/cartao'
 import type { ProdutoLoja, Vitrine } from '@/lib/vitrine/tipos'
 
 interface SacolaProps {
@@ -194,7 +195,8 @@ export function Sacola({ vitrine }: SacolaProps) {
 
                     <div className="flex flex-col gap-1.5 border-t border-linha pt-3 text-sm">
                         <div className="flex justify-between text-[17px] font-bold">
-                            <span>Total no Pix</span>
+                            {/* Cartão no mesmo preço do Pix (05/11/2026): "Total"; com outro preço, "Total no Pix". */}
+                            <span>{sacolaTemCartaoDiferente(resumo.linhas) ? 'Total no Pix' : 'Total'}</span>
                             <span>{reais(resumo.totalPix)}</span>
                         </div>
                         <span className="text-xs text-texto-suave">Frete e dia de entrega: combinamos no WhatsApp.</span>

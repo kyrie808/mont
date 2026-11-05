@@ -17,6 +17,7 @@ import { TEXTO_OFERTAS, type FormaEntrega, type FormaPagamento } from '@/lib/ped
 import { catalogoDa, resumirSacola } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
+import { MESMO_PRECO, sacolaTemCartaoDiferente } from '@/lib/vitrine/cartao'
 import type { Vitrine } from '@/lib/vitrine/tipos'
 
 interface DadosProps {
@@ -271,7 +272,8 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                         <details className="rounded-[14px] border border-linha bg-white px-3.5 py-3 text-sm">
                             <summary className="cursor-pointer font-bold">
                                 Seu pedido: {resumo.quantidadeItens} {resumo.quantidadeItens === 1 ? 'item' : 'itens'} ·{' '}
-                                {reais(resumo.totalPix)} no Pix
+                                {reais(resumo.totalPix)}
+                                {sacolaTemCartaoDiferente(resumo.linhas) && ' no Pix'}
                             </summary>
                             <ul className="mt-2 flex list-none flex-col gap-1 p-0 text-[13px] text-marrom-medio">
                                 {resumo.linhas.map((l) => (
@@ -481,7 +483,9 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                     <Escolha rotulo="Como prefere pagar?" opcoes={PAGAMENTOS} valor={pagamento} onChange={setPagamento} />
                     {pagamento === 'cartao' && (
                         <p className="-mt-1 text-xs text-texto-suave">
-                            No cartão vale o preço do cartão. A Mont confirma o valor no WhatsApp.
+                            {sacolaTemCartaoDiferente(resumo.linhas)
+                                ? 'No cartão vale o preço do cartão. A Mont confirma o valor no WhatsApp.'
+                                : MESMO_PRECO}
                         </p>
                     )}
 

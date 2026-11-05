@@ -14,6 +14,7 @@ import { medirAdicao } from '@/lib/medicao/dataLayer'
 import { catalogoDa, resumirSacola, totalDeItens } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
+import { cartaoTemOutroPreco, MESMO_PRECO } from '@/lib/vitrine/cartao'
 import { ehCombo, type ComboLoja, type ProdutoLoja, type SecaoLoja, type Vitrine } from '@/lib/vitrine/tipos'
 import { PainelProduto } from './PainelProduto'
 
@@ -362,7 +363,9 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                         <span className="font-titulo text-[40px] leading-[0.95] uppercase">Despensa cheia</span>
                         <span className="font-apoio text-[22px] leading-[1.1] italic">{fraseHero}</span>
                         <PrecoCombo combo={hero} variante="banner" />
-                        <span className="text-xs text-linha">Preço no Pix. Cartão com a taxa da maquininha.</span>
+                        <span className="text-xs text-linha">
+                            {cartaoTemOutroPreco(hero) ? 'Preço no Pix. Cartão com a taxa da maquininha.' : MESMO_PRECO}
+                        </span>
                     </div>
                     <Foto
                         url={hero.imagemUrl}
