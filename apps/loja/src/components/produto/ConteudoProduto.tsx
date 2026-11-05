@@ -1,4 +1,5 @@
 import { reais } from '@/lib/formato'
+import { cartaoTemOutroPreco } from '@/lib/vitrine/cartao'
 import type { ProdutoLoja } from '@/lib/vitrine/tipos'
 import { GaleriaFotos } from './GaleriaFotos'
 
@@ -12,6 +13,9 @@ interface ConteudoProdutoProps {
 
 /** Miolo do produto, igual no painel da home e na página /produto/[slug]: fotos, nome, preço e textos do cadastro. */
 export function ConteudoProduto({ produto, classeFoto, larguraFoto }: ConteudoProdutoProps) {
+    // Na campanha: com o cartão no mesmo preço do Pix, um selo só; com preço diferente, "no Pix" + a linha do cartão.
+    const naCampanha = produto.precoCredito !== null
+    const cartaoDiferente = cartaoTemOutroPreco(produto)
     const linhasDescricao = (produto.descricao ?? '')
         .split('\n')
         .map((l) => l.trim())
@@ -35,9 +39,11 @@ export function ConteudoProduto({ produto, classeFoto, larguraFoto }: ConteudoPr
                     <span className="text-sm text-texto-suave line-through">{reais(produto.precoDe)}</span>
                 )}
                 <span className="font-titulo text-[34px] leading-none">{reais(produto.preco)}</span>
-                {produto.precoCredito !== null && <span className="text-[13px] font-bold text-verde">no Pix</span>}
+                {naCampanha && (
+                    <span className="text-[13px] font-bold text-verde">{cartaoDiferente ? 'no Pix' : 'Pix, dinheiro ou cartão'}</span>
+                )}
             </div>
-            {produto.precoCredito !== null && (
+            {cartaoDiferente && produto.precoCredito !== null && (
                 <span className="text-[13px] text-texto-suave">Cartão de crédito: {reais(produto.precoCredito)}</span>
             )}
 

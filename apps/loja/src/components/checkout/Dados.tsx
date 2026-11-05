@@ -17,6 +17,7 @@ import { TEXTO_OFERTAS, type FormaEntrega, type FormaPagamento } from '@/lib/ped
 import { catalogoDa, resumirSacola } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
+import { MESMO_PRECO, sacolaTemCartaoDiferente } from '@/lib/vitrine/cartao'
 import type { Vitrine } from '@/lib/vitrine/tipos'
 
 interface DadosProps {
@@ -481,7 +482,9 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                     <Escolha rotulo="Como prefere pagar?" opcoes={PAGAMENTOS} valor={pagamento} onChange={setPagamento} />
                     {pagamento === 'cartao' && (
                         <p className="-mt-1 text-xs text-texto-suave">
-                            No cartão vale o preço do cartão. A Mont confirma o valor no WhatsApp.
+                            {sacolaTemCartaoDiferente(resumo.linhas)
+                                ? 'No cartão vale o preço do cartão. A Mont confirma o valor no WhatsApp.'
+                                : MESMO_PRECO}
                         </p>
                     )}
 
