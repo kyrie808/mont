@@ -272,7 +272,8 @@ export function Dados({ vitrine, whatsapp }: DadosProps) {
                         <details className="rounded-[14px] border border-linha bg-white px-3.5 py-3 text-sm">
                             <summary className="cursor-pointer font-bold">
                                 Seu pedido: {resumo.quantidadeItens} {resumo.quantidadeItens === 1 ? 'item' : 'itens'} ·{' '}
-                                {reais(resumo.totalPix)} no Pix
+                                {reais(resumo.totalPix)}
+                                {sacolaTemCartaoDiferente(resumo.linhas) && ' no Pix'}
                             </summary>
                             <ul className="mt-2 flex list-none flex-col gap-1 p-0 text-[13px] text-marrom-medio">
                                 {resumo.linhas.map((l) => (

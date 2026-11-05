@@ -23,6 +23,8 @@ interface PaymentSidebarProps {
     historico: DomainPagamento[]
     /** Tabela de preço do lançamento (Black). Forma diferente no Quitar → aviso; o valor não muda. */
     tabelaPreco?: TabelaPreco | null
+    /** O cartão tem outro preço que o Pix nos itens da venda. Sem diferença, o aviso não aparece. */
+    cartaoDiferente?: boolean
 }
 
 const PAYMENT_METHODS = [
@@ -40,6 +42,7 @@ export function PaymentSidebar({
     valorPago,
     historico,
     tabelaPreco = null,
+    cartaoDiferente = false,
 }: PaymentSidebarProps) {
     const restante = Math.max(0, total - valorPago)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -205,9 +208,9 @@ export function PaymentSidebar({
                         )
                     })}
                 </div>
-                {avisoTabelaNoPagamento(tabelaPreco, currentMethod) && (
+                {avisoTabelaNoPagamento(tabelaPreco, currentMethod, cartaoDiferente) && (
                     <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-strong">
-                        {avisoTabelaNoPagamento(tabelaPreco, currentMethod)}
+                        {avisoTabelaNoPagamento(tabelaPreco, currentMethod, cartaoDiferente)}
                     </p>
                 )}
             </div>

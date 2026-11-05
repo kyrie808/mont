@@ -4,6 +4,8 @@ import { Header } from '@/components/layout/Header'
 import { formatCurrency } from '@mont/shared'
 import { LoadingScreen, Button, Drawer } from '../components/ui'
 import { useVenda, useVendas } from '../hooks/useVendas'
+import { usePrecosVigentes } from '../hooks/useProdutos'
+import { cartaoDiferenteNaVenda } from '../utils/tabelaPreco'
 import type { PagamentoFormData } from '../schemas/venda'
 import { useToast } from '../components/ui/Toast'
 import { PaymentSidebar } from '../components/features/vendas/PaymentSidebar'
@@ -24,6 +26,8 @@ export function VendaDetalhe() {
     // Veio de /vendas/:id/editar, que está desligado (criava outra venda em vez de alterar).
     const edicaoDesligada = (useLocation().state as { edicaoDesligada?: boolean } | null)?.edicaoDesligada === true
     const { venda, loading, error, refetch } = useVenda(id)
+    // Aviso do Quitar (Pix × cartão) só quando o cartão tem outro preço nos itens da venda.
+    const { precos } = usePrecosVigentes()
     const { deleteVenda, cancelVenda, addPagamento, updateVendaStatus, deleteUltimoPagamento, updateVenda } = useVendas()
 
     const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -238,6 +242,7 @@ export function VendaDetalhe() {
                         valorPago={venda.valorPago || 0}
                         historico={venda.pagamentos}
                         tabelaPreco={venda.tabelaPreco ?? null}
+                        cartaoDiferente={cartaoDiferenteNaVenda(venda.itens, precos)}
                     />
                 )}
             </Drawer>
