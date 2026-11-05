@@ -1,6 +1,6 @@
 -- Fiado = preço normal, sem exceção (decisão do Gilmar, 04/11/2026). Black só em Pix, dinheiro e cartão.
 -- Backup antes: supabase/backups/dumps/dump-*-20261104-234048.sql
--- Rollback: supabase/rollbacks/fiado_preco_normal.rollback.sql (versão no nome ao aplicar)
+-- Rollback: supabase/rollbacks/20261105045346_fiado_preco_normal.rollback.sql
 --
 -- 1. combo_itens: com a tabela 'normal', o combo custa a SOMA dos itens no produtos.preco de cada um
 --    (fixos + sabores + o que seria brinde). Antes valia produtos.preco do combo, que nos combos da

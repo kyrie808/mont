@@ -1,6 +1,6 @@
 -- Rollback de fix/fiado-preco-normal (04/11/2026): volta combo_itens e criar_venda_em ao que estava
 -- antes (extraído do dump-schema-20261104-234048.sql; md5 do corpo conferido com o banco) e tira o
--- trigger de fiado. Renomear com a versão da migração quando ela for aplicada.
+-- trigger de fiado. Desfaz a migração 20261105045346_fiado_preco_normal.
 
 DROP TRIGGER IF EXISTS trg_vendas_fiado_preco_normal ON public.vendas;
 DROP FUNCTION IF EXISTS public.fn_vendas_fiado_preco_normal();
