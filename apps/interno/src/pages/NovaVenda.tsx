@@ -446,7 +446,7 @@ export function NovaVenda() {
                                         <SeletorTabelaPreco tabela={tabela} onChange={setTabela} campanha={campanha} />
                                     </div>
                                 )}
-                                <div className="flex-1 overflow-y-auto px-4 pb-28 md:pb-4">
+                                <div className="flex-1 overflow-y-auto px-4 pb-28 lg:pb-4">
                                     <ProductList
                                         produtos={produtos}
                                         loading={loadingProdutos}
@@ -487,10 +487,11 @@ export function NovaVenda() {
                             </div>
                         )}
 
-                        {/* Barra fixa do passo Produtos (mobile) — itens + total + Próximo, acima da BottomNav.
-                            `fixed` (não sticky) por causa do overflow-x-hidden do AppLayout. */}
+                        {/* Barra fixa do passo Produtos (celular e tablet) — itens + total + Próximo, acima da BottomNav.
+                            `fixed` (não sticky) por causa do overflow-x-hidden do AppLayout. Some só em lg, junto com o
+                            passo a passo: o PDV do desktop aparece em lg (entre 768 e 1023 px não havia como avançar). */}
                         {currentStep === 1 && (
-                            <div className="fixed inset-x-0 bottom-20 z-30 border-t border-border bg-card/80 backdrop-blur-md px-4 py-2 md:hidden">
+                            <div className="fixed inset-x-0 bottom-20 z-30 border-t border-border bg-card/80 backdrop-blur-md px-4 py-2 lg:hidden">
                                 <div className="flex items-center gap-3 max-w-sm mx-auto">
                                     <Button
                                         variant="outline"

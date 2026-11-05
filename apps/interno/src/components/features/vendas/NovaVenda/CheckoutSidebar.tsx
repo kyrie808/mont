@@ -506,7 +506,7 @@ export function CheckoutSidebar({
             </form>
 
             {/* Summary & Action (Fixed at bottom) */}
-            <div className="p-4 border-t border-border bg-card space-y-4 pb-10 md:pb-6">
+            <div className="p-4 border-t border-border bg-card space-y-4 pb-10 lg:pb-6">
                 <div className="flex items-center justify-between">
                     <span className="text-muted-foreground font-medium">Total a Pagar</span>
                     <span className="text-2xl font-black text-foreground tabular-nums">
