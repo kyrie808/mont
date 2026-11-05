@@ -25,6 +25,7 @@ const base = {
     formaPagamento: 'venda' as const,
     taxaEntrega: 0,
     itens: [{ produtoId: 'p-1', quantidade: 1, precoUnitario: 10, subtotal: 10 }],
+    tabela: 'normal' as const,
 }
 
 function statusEnviado(): unknown {

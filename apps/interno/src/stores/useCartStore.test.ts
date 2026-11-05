@@ -67,7 +67,7 @@ describe('precificar', () => {
         const { addItem } = useCartStore.getState()
         addItem(linha('balde', BALDE, 2, 65))
         addItem(linha('c1', FAMILIA, 1, 199))
-        const noCartao = precificar(useCartStore.getState().items, (p) => PRECOS[p.id].cartao)
+        const noCartao = precificar(useCartStore.getState().items, (i) => PRECOS[i.produto_id].cartao)
         expect(noCartao.map((i) => i.subtotal)).toEqual([136, 206])
         // O carrinho continua com o que tinha: a escolha é do vendedor.
         expect(useCartStore.getState().items.map((i) => i.subtotal)).toEqual([130, 199])
@@ -84,15 +84,27 @@ describe('precificar', () => {
     })
 })
 
-describe('carrinho salvo antes de 30/10 (v0)', () => {
-    it('ganha chave = produto_id e tabela pix, sem perder item', () => {
+describe('carrinho salvo em versão antiga', () => {
+    it('v0 (antes de 30/10) ganha chave = produto_id e começa no preço normal, sem perder item', () => {
         const migrate = useCartStore.persist.getOptions().migrate
         expect(migrate).toBeDefined()
         const antigo = { items: [{ produto_id: 'balde', quantidade: 2, preco_unitario: 75, subtotal: 150, produto: BALDE }], cliente: null, idempotencyKey: 'k' }
         const novo = migrate!(antigo, 0) as { items: CartItem[]; tabela: string; idempotencyKey: string }
         expect(novo.items[0].chave).toBe('balde')
         expect(novo.items[0].quantidade).toBe(2)
-        expect(novo.tabela).toBe('pix')
+        expect(novo.tabela).toBe('normal')
         expect(novo.idempotencyKey).toBe('k')
+    })
+
+    it('v1 (carrinho em Pix) volta ao preço normal: sem forma de pagamento não há Black (04/11/2026)', () => {
+        const migrate = useCartStore.persist.getOptions().migrate!
+        const v1 = { items: [{ chave: 'balde', produto_id: 'balde', quantidade: 1, preco_unitario: 65, subtotal: 65, produto: BALDE }], cliente: null, tabela: 'pix', idempotencyKey: null }
+        const novo = migrate(v1, 1) as { items: CartItem[]; tabela: string }
+        expect(novo.tabela).toBe('normal')
+        expect(novo.items).toHaveLength(1)
+    })
+
+    it('carrinho novo começa no preço normal', () => {
+        expect(useCartStore.getInitialState().tabela).toBe('normal')
     })
 })

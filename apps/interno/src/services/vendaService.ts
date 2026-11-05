@@ -131,7 +131,7 @@ export const vendaService = {
             p_forma_pagamento: data.formaPagamento,
             p_taxa_entrega: data.taxaEntrega ?? 0,
             // Combo vai com os sabores (o servidor rateia o preço e abre em itens); avulso vai
-            // com preço de referência — com `p_tabela`, quem decide o preço é o servidor.
+            // com preço de referência — quem decide o preço é o servidor, pela `p_tabela`.
             p_itens: data.itens.map(it => 'comboId' in it
                 ? {
                     combo_id: it.comboId,
@@ -165,7 +165,6 @@ export const vendaService = {
         const vUpdate: VendaUpdate = {}
         if (data.contatoId) vUpdate.contato_id = data.contatoId
         if (data.data) vUpdate.data = data.data
-        if (data.formaPagamento) vUpdate.forma_pagamento = data.formaPagamento
         if (data.taxaEntrega !== undefined) vUpdate.taxa_entrega = data.taxaEntrega
         if (data.status) vUpdate.status = data.status
         if (data.pago !== undefined) vUpdate.pago = data.pago

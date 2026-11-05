@@ -16,7 +16,6 @@ const defaultProps = {
     contatoId: '0223a3d9-e59c-4498-a47f-fded3f3fb700',
     contatoNome: 'Vilma Margarete',
     // Black (30/10/2026): tabela de preço. Fora de campanha o seletor não aparece.
-    tabelaEscolhida: 'pix' as const,
     campanha: null,
     onTabelaEscolhida: vi.fn(),
     onTabelaEfetiva: vi.fn(),
@@ -57,7 +56,7 @@ describe('CheckoutSidebar — tipo de entrega define o status inicial', () => {
         const onConfirm = vi.fn().mockResolvedValue(undefined)
         render(<CheckoutSidebar {...defaultProps} onConfirm={onConfirm} />)
 
-        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: true, tabela: 'pix' })
+        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: true, tabela: 'normal' })
     })
 
     it('REGRESSÃO: "Entrego depois" nasce PENDENTE — produto ainda está no carro', async () => {
@@ -66,7 +65,7 @@ describe('CheckoutSidebar — tipo de entrega define o status inicial', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /entrego depois/i }))
 
-        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false, tabela: 'pix' })
+        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false, tabela: 'normal' })
     })
 
     it('"Entrego depois" não abre frete nem entregador — é ele mesmo quem leva', () => {
@@ -84,7 +83,7 @@ describe('CheckoutSidebar — tipo de entrega define o status inicial', () => {
         fireEvent.click(screen.getByRole('button', { name: /^entrega$/i }))
         expect(screen.getByText(/frete/i)).toBeInTheDocument()
 
-        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false, tabela: 'pix' })
+        expect(await confirmarEPegarOpcoes(onConfirm)).toEqual({ entregaImediata: false, tabela: 'normal' })
     })
 })
 
@@ -186,10 +185,29 @@ describe('CheckoutSidebar — tabela de preço da venda', () => {
         expect((await confirmarEPegarOpcoes(onConfirm)).tabela).toBe('cartao')
     })
 
-    it('sem forma definida, vale a tabela escolhida no carrinho', async () => {
+    it('sem forma definida, preço normal (a Black exige Pix, dinheiro ou cartão)', async () => {
         const onConfirm = vi.fn().mockResolvedValue(undefined)
-        render(<CheckoutSidebar {...defaultProps} tabelaEscolhida="cartao" onConfirm={onConfirm} />)
-        expect((await confirmarEPegarOpcoes(onConfirm)).tabela).toBe('cartao')
+        render(<CheckoutSidebar {...defaultProps} onConfirm={onConfirm} />)
+        expect((await confirmarEPegarOpcoes(onConfirm)).tabela).toBe('normal')
+    })
+
+    it('retirada com Pix escolhido: tabela Pix e a forma vai junto; tocar de novo volta ao normal', async () => {
+        const onConfirm = vi.fn().mockResolvedValue(undefined)
+        const onTabelaEfetiva = vi.fn()
+        render(<CheckoutSidebar {...defaultProps} onConfirm={onConfirm} onTabelaEfetiva={onTabelaEfetiva} />)
+        const pix = screen.getByRole('button', { name: /^pix$/i })
+        fireEvent.click(pix)
+        await waitFor(() => expect(onTabelaEfetiva).toHaveBeenLastCalledWith('pix'))
+        fireEvent.click(pix)
+        await waitFor(() => expect(onTabelaEfetiva).toHaveBeenLastCalledWith('normal'))
+        fireEvent.click(pix)
+        fireEvent.click(screen.getByRole("button", { name: /confirmar venda/i }))
+        await waitFor(() => expect(onConfirm).toHaveBeenCalled())
+        const [dados, pagamento, opcoes] = onConfirm.mock.calls[0]
+        expect(opcoes.tabela).toBe('pix')
+        expect(dados.pagamento_na_entrega).toBe('pix')
+        expect(dados.dinheiro_na_entrega).toBe(false)
+        expect(pagamento).toBeUndefined()
     })
 
     it('avisa a NovaVenda a tabela que vale agora (para o total mostrar o preço certo)', async () => {

@@ -80,6 +80,7 @@ describe('useVendas — invalidação do resumo que alimenta o segmento', () => 
                     formaPagamento: 'venda',
                     taxaEntrega: 0,
                     itens: [],
+                    tabela: 'normal',
                 },
                 'idem-1',
             )

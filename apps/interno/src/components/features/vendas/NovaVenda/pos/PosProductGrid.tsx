@@ -10,6 +10,8 @@ interface PosProductGridProps {
     onUpdateQuantity: (produtoId: string, delta: number) => void
     /** Combo com escolha de sabor: 'montar' abre o seletor; 'pendente' = sabores em definição. */
     acaoCombo?: (produto: DomainProduto) => 'montar' | 'pendente' | null
+    /** Combo no preço normal: "Fiado: R$ 345,00 · no Pix: R$ 199,00" (null = sem nota). */
+    notaPreco?: (produto: DomainProduto) => string | null
 }
 
 // Badge de estoque — INFORMATIVO (o estoque do Mont ainda não foi contado); NUNCA bloqueia
@@ -24,7 +26,7 @@ function estoqueBadge(p: DomainProduto): { label: string; cls: string } {
     return { label: `${atual} un`, cls }
 }
 
-export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity, acaoCombo }: PosProductGridProps) {
+export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity, acaoCombo, notaPreco }: PosProductGridProps) {
     if (produtos.length === 0) {
         return (
             <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
@@ -61,6 +63,9 @@ export function PosProductGrid({ produtos, getQuantity, onAdd, onUpdateQuantity,
 
                         <p className="mb-1 line-clamp-2 min-h-[2.5rem] text-sm font-medium text-foreground">{produto.nome}</p>
                         <p className="mb-2 text-base font-bold tabular-nums text-primary">{formatCurrency(Number(produto.preco))}</p>
+                        {notaPreco?.(produto) && (
+                            <p className="-mt-1.5 mb-2 text-xs leading-snug text-muted-foreground">{notaPreco(produto)}</p>
+                        )}
 
                         <div className="mt-auto">
                             {combo === 'pendente' ? (
