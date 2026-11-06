@@ -1,32 +1,26 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import type { PaginationState, SortingState, Updater } from '@tanstack/react-table'
 import { Plus, Search, Diamond, Flame, History, Users, X, UserCheck, Sparkles } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { useNavigationStore } from '@/stores/useNavigationStore'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { EmptyState, PageSkeleton, Pagination, paginateArray } from '../components/ui'
+import { EmptyState, PageSkeleton, Pagination } from '../components/ui'
 import { Badge } from '@/components/ui/Badge'
 import { isBuscaExata } from '../utils/telefone'
 import { ContatoCard, ContatoFormModal, ContactStoryFilter, ContatosFilterTabs, ContatosDataGrid } from '../components/contatos'
-import { useContatos } from '../hooks/useContatos'
-import { useContatosResumo } from '../hooks/useContatosResumo'
-import { useContatosRitmo } from '../hooks/useContatosRitmo'
 import { useDebounce } from '../hooks/useDebounce'
-import { classificarContato, type SegmentoCliente } from '../utils/segmentoCliente'
-import { precisaRevisao } from '../utils/filaRevisao'
+import { useIsDesktop } from '../hooks/useIsDesktop'
+import { useContagemContatos, useListaContatos } from '../hooks/useContatosSegmento'
+import { ordemDaGrade, ORDEM_PADRAO_CONTATOS, type FiltroContatos } from '../services/contatosSegmentoService'
 
 // Filtros = segmentos do funil, derivados do comportamento de compra (não do campo `status`).
 // A exceção é `novos-ia`, que não é segmento nenhum: é a fila de cadastros que a
 // secretária de WhatsApp criou e ninguém conferiu ainda (ver utils/filaRevisao).
-type FilterStoryId = 'all' | 'clientes' | 'leads' | 'vips' | 'inativos' | 'novos-ia'
-
-const STORY_TO_SEGMENTO: Record<Exclude<FilterStoryId, 'all' | 'novos-ia'>, SegmentoCliente> = {
-    clientes: 'cliente',
-    leads: 'lead',
-    vips: 'vip',
-    inativos: 'inativo',
-}
+// Segmento, contadores, filtro, ordenação e paginação são feitos no banco
+// (view_contatos_segmento) — a tabela passou de 1000 linhas, o limite por requisição.
+type FilterStoryId = FiltroContatos
 
 export function Contatos() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -36,6 +30,10 @@ export function Contatos() {
     const { openDrawer } = useNavigationStore()
     const [currentPage, setCurrentPage] = useState(1)
     const PAGE_SIZE = 30
+    const isDesktop = useIsDesktop()
+    // Desktop: a grade ordena e pagina no servidor; o estado mora aqui para virar consulta.
+    const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
+    const [paginacao, setPaginacao] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 })
 
     // Advanced Search Logic (Server-side)
     const debouncedSearchTerm = useDebounce(searchTerm, 500)
@@ -47,33 +45,30 @@ export function Contatos() {
         if (showSearch) requestAnimationFrame(() => searchInputRef.current?.focus())
     }, [showSearch])
 
-    const resumo = useContatosResumo()
-    const ritmo = useContatosRitmo()
+    // Contadores contados no banco, com a mesma busca da lista (reagem à busca, como sempre).
+    const stats = useContagemContatos(debouncedSearchTerm)
 
-    // Carrega todos (a busca segue server-side); o filtro de segmento é client-side.
-    const { contatos, loading, error, refetch } = useContatos({
-        filtros: { busca: debouncedSearchTerm, status: 'todos', tipo: 'todos', origem: 'todos' }
-    })
-
-    // Segmento derivado por contato — uma única data de referência por render.
-    const hoje = useMemo(() => new Date(), [])
-    const segmentoDe = useMemo(
-        () => new Map(contatos.map(c => [c.id, classificarContato(c, resumo.get(c.id), hoje)])),
-        [contatos, resumo, hoje],
+    // Só a página visível. Celular: páginas de 30, mais novos primeiro. Desktop: a grade.
+    const lista = useListaContatos(
+        isDesktop
+            ? { busca: debouncedSearchTerm, filtro: activeStory, ordem: ordemDaGrade(sorting), pagina: paginacao.pageIndex, tamanho: paginacao.pageSize }
+            : { busca: debouncedSearchTerm, filtro: activeStory, ordem: ORDEM_PADRAO_CONTATOS, pagina: currentPage - 1, tamanho: PAGE_SIZE },
     )
+    const contatos = lista.data?.linhas ?? []
+    const total = lista.data?.total ?? 0
+    const loading = lista.isLoading
+    const error = lista.error ? lista.error.message : null
+    const refetch = lista.refetch
 
-    // Counts por segmento
-    const stats = useMemo(() => {
-        const s = { all: contatos.length, clientes: 0, leads: 0, vips: 0, inativos: 0, novosIa: 0 }
-        for (const seg of segmentoDe.values()) {
-            if (seg === 'cliente') s.clientes++
-            else if (seg === 'lead') s.leads++
-            else if (seg === 'vip') s.vips++
-            else if (seg === 'inativo') s.inativos++
-        }
-        for (const c of contatos) if (precisaRevisao(c)) s.novosIa++
-        return s
-    }, [contatos, segmentoDe])
+    // Busca, filtro ou ordenação novos voltam para a 1ª página (nos dois layouts).
+    const voltarParaPrimeiraPagina = () => {
+        setCurrentPage(1)
+        setPaginacao((p) => ({ ...p, pageIndex: 0 }))
+    }
+    const onSortingChange = (updater: Updater<SortingState>) => {
+        setSorting(updater)
+        setPaginacao((p) => ({ ...p, pageIndex: 0 }))
+    }
 
     const storyItems = [
         { id: 'all', label: 'Todos', icon: Users, count: stats.all, color: 'primary' as const },
@@ -87,23 +82,6 @@ export function Contatos() {
             : []),
     ]
 
-    // Filtro por segmento (client-side; a busca já veio do servidor)
-    const filteredContatos = useMemo(() => {
-        if (activeStory === 'all') return contatos
-        if (activeStory === 'novos-ia') return contatos.filter(precisaRevisao)
-        const alvo = STORY_TO_SEGMENTO[activeStory]
-        return contatos.filter(c => segmentoDe.get(c.id) === alvo)
-    }, [contatos, activeStory, segmentoDe])
-
-    // Reset page when filters/search change
-    // Reset page when filters change - removed to avoid set-state-in-effect
-    // Logic will be handled in the setters
-    // useEffect(() => {
-    //     setCurrentPage(1)
-    // }, [activeStory, debouncedSearchTerm])
-
-    // Client-side pagination (temporary — server-side in UX-S005-v2)
-    const paginatedContatos = paginateArray(filteredContatos, currentPage, PAGE_SIZE)
 
     return (
         <>
@@ -164,7 +142,7 @@ export function Contatos() {
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value)
-                                    setCurrentPage(1)
+                                    voltarParaPrimeiraPagina()
                                 }}
                             />
                             {/* Espaço no fim = palavra exata. Sem o chip o resultado encolhe sem explicação. */}
@@ -189,7 +167,7 @@ export function Contatos() {
                             activeId={activeStory}
                             onSelect={(id) => {
                                 setActiveStory(id as FilterStoryId)
-                                setCurrentPage(1)
+                                voltarParaPrimeiraPagina()
                             }}
                         />
                     </section>
@@ -201,7 +179,7 @@ export function Contatos() {
                             activeId={activeStory}
                             onSelect={(id) => {
                                 setActiveStory(id as FilterStoryId)
-                                setCurrentPage(1)
+                                voltarParaPrimeiraPagina()
                             }}
                         />
                     </div>
@@ -243,30 +221,37 @@ export function Contatos() {
 
                     {/* Contact List */}
                     {!loading && !error && (
-                        filteredContatos.length > 0 ? (
+                        total > 0 ? (
                             <>
                                 {/* MOBILE (<lg): grade de cards + paginação — intocada (mobile sagrado) */}
                                 <div className="space-y-4 lg:hidden">
-                                    {paginatedContatos.map((contato) => (
+                                    {contatos.map((contato) => (
                                         <ContatoCard
                                             key={contato.id}
                                             contato={contato}
                                             nomeIndicador={contato.indicador?.nome}
-                                            segmento={segmentoDe.get(contato.id)}
-                                            ritmo={ritmo.get(contato.id)}
+                                            segmento={contato.segmento}
+                                            ritmo={contato.ritmo}
                                         />
                                     ))}
                                     <Pagination
                                         currentPage={currentPage}
-                                        totalItems={filteredContatos.length}
+                                        totalItems={total}
                                         pageSize={PAGE_SIZE}
                                         onPageChange={setCurrentPage}
                                     />
                                 </div>
 
-                                {/* DESKTOP (≥lg): data grid denso — sort + paginação próprios sobre o conjunto filtrado inteiro */}
+                                {/* DESKTOP (≥lg): data grid denso — ordenação e paginação no servidor */}
                                 <div className="hidden lg:block">
-                                    <ContatosDataGrid contatos={filteredContatos} resumo={resumo} ritmo={ritmo} />
+                                    <ContatosDataGrid
+                                        contatos={contatos}
+                                        total={total}
+                                        sorting={sorting}
+                                        onSortingChange={onSortingChange}
+                                        pagination={paginacao}
+                                        onPaginationChange={setPaginacao}
+                                    />
                                 </div>
                             </>
                         ) : (

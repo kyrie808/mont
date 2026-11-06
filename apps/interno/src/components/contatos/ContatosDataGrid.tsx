@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     useReactTable,
     getCoreRowModel,
-    getSortedRowModel,
-    getPaginationRowModel,
     type ColumnDef,
+    type OnChangeFn,
+    type PaginationState,
     type SortingState,
 } from '@tanstack/react-table'
 import { MessageCircle, Store, User } from 'lucide-react'
@@ -17,8 +17,8 @@ import { badgeBase } from '@/components/reui/data-grid/badge-base'
 import { Button } from '@/components/ui'
 import { formatCurrency, formatDate, formatPhone, cn } from '@mont/shared'
 import type { DomainContato } from '@/types/domain'
-import type { ContatoResumo } from '@/hooks/useContatosResumo'
-import { classificarContato, SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
+import type { ContatoListado } from '@/services/contatosSegmentoService'
+import { SEGMENTO_BADGE, type SegmentoCliente } from '@/utils/segmentoCliente'
 import { origemBadge } from '@/utils/origemContato'
 import { temperaturaCliente, TEMPERATURA_BADGE, TEMPERATURA_ORDEM, type RitmoCliente } from '@/utils/temperaturaCliente'
 import { useColumnSizing } from '@/hooks/useColumnSizing'
@@ -54,18 +54,25 @@ function abrirWhatsapp(telefone: string) {
     window.open(`https://wa.me/55${phone}`, '_blank')
 }
 
+/**
+ * Grade desktop de Clientes. Ordena e pagina NO SERVIDOR (view_contatos_segmento): recebe só a
+ * página atual + o total; ordenação e paginação são estado da página (Contatos.tsx), que refaz a
+ * consulta. Antes recebia a lista inteira — cortada em 1000 pelo PostgREST.
+ */
 interface ContatosDataGridProps {
-    contatos: DomainContato[]
-    resumo: ReadonlyMap<string, ContatoResumo>
-    ritmo: ReadonlyMap<string, RitmoCliente>
+    contatos: ContatoListado[]
+    total: number
+    sorting: SortingState
+    onSortingChange: OnChangeFn<SortingState>
+    pagination: PaginationState
+    onPaginationChange: OnChangeFn<PaginationState>
 }
 
-export function ContatosDataGrid({ contatos, resumo, ritmo }: ContatosDataGridProps) {
+export function ContatosDataGrid({ contatos, total, sorting, onSortingChange, pagination, onPaginationChange }: ContatosDataGridProps) {
     const navigate = useNavigate()
-    const [sorting, setSorting] = useState<SortingState>([{ id: 'nome', desc: false }])
     const [colSizing, setColSizing] = useColumnSizing('grid-contatos')
 
-    const columns = useMemo<ColumnDef<DomainContato>[]>(() => [
+    const columns = useMemo<ColumnDef<ContatoListado>[]>(() => [
         {
             accessorKey: 'nome',
             size: 240,
@@ -99,41 +106,41 @@ export function ContatosDataGrid({ contatos, resumo, ritmo }: ContatosDataGridPr
         },
         {
             id: 'segmento',
-            accessorFn: (c) => SEGMENTO_BADGE[classificarContato(c, resumo.get(c.id))].label,
+            accessorFn: (c) => SEGMENTO_BADGE[c.segmento].label,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Segmento" />,
-            cell: ({ row }) => <SegmentoBadge segmento={classificarContato(row.original, resumo.get(row.original.id))} />,
+            cell: ({ row }) => <SegmentoBadge segmento={row.original.segmento} />,
         },
         {
             id: 'temperatura',
             // ordena frio→morno→quente→novo (mais acionável primeiro)
-            accessorFn: (c) => TEMPERATURA_ORDEM[temperaturaCliente(ritmo.get(c.id)).estado],
+            accessorFn: (c) => TEMPERATURA_ORDEM[temperaturaCliente(c.ritmo).estado],
             header: ({ column }) => <DataGridColumnHeader column={column} title="Temperatura" />,
-            cell: ({ row }) => <TemperaturaBadge ritmo={ritmo.get(row.original.id)} />,
+            cell: ({ row }) => <TemperaturaBadge ritmo={row.original.ritmo} />,
         },
         {
             id: 'compras',
-            accessorFn: (c) => resumo.get(c.id)?.totalCompras ?? 0,
+            accessorFn: (c) => c.resumo.totalCompras,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Compras" />,
             cell: ({ row }) => {
-                const n = resumo.get(row.original.id)?.totalCompras ?? 0
+                const n = row.original.resumo.totalCompras
                 return <span className={cn('tabular-nums whitespace-nowrap', n === 0 && 'text-muted-foreground')}>{n || '—'}</span>
             },
         },
         {
             id: 'totalGasto',
-            accessorFn: (c) => resumo.get(c.id)?.totalGasto ?? 0,
+            accessorFn: (c) => c.resumo.totalGasto,
             header: ({ column }) => <DataGridColumnHeader column={column} title="Total gasto" />,
             cell: ({ row }) => {
-                const v = resumo.get(row.original.id)?.totalGasto ?? 0
+                const v = row.original.resumo.totalGasto
                 return <span className={cn('tabular-nums whitespace-nowrap font-medium', v === 0 ? 'text-muted-foreground' : 'text-foreground')}>{v > 0 ? formatCurrency(v) : '—'}</span>
             },
         },
         {
             id: 'ultimaCompra',
-            accessorFn: (c) => resumo.get(c.id)?.ultimaCompra ?? '',
+            accessorFn: (c) => c.resumo.ultimaCompra ?? '',
             header: ({ column }) => <DataGridColumnHeader column={column} title="Última compra" />,
             cell: ({ row }) => {
-                const d = resumo.get(row.original.id)?.ultimaCompra
+                const d = row.original.resumo.ultimaCompra
                 return <span className="text-muted-foreground whitespace-nowrap">{d ? formatDate(d) : '—'}</span>
             },
         },
@@ -172,26 +179,27 @@ export function ContatosDataGrid({ contatos, resumo, ritmo }: ContatosDataGridPr
             ),
             meta: { headerClassName: 'w-12', cellClassName: 'w-12' },
         },
-    ], [resumo, ritmo])
+    ], [])
 
     const table = useReactTable({
         data: contatos,
         columns,
-        state: { sorting, columnSizing: colSizing },
-        onSortingChange: setSorting,
+        state: { sorting, pagination, columnSizing: colSizing },
+        onSortingChange,
+        onPaginationChange,
         onColumnSizingChange: setColSizing,
         defaultColumn: { minSize: 80 },
         getRowId: (c) => c.id,
         getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: { pagination: { pageSize: 25 } },
+        manualSorting: true,
+        manualPagination: true,
+        rowCount: total,
     })
 
     return (
         <DataGrid
             table={table}
-            recordCount={contatos.length}
+            recordCount={total}
             onRowClick={(c) => navigate(`/contatos/${c.id}`)}
             tableLayout={{ rowBorder: true, headerBorder: true, headerBackground: true, headerSticky: false, columnsResizable: true }}
             tableClassNames={{ bodyRow: 'cursor-pointer' }}

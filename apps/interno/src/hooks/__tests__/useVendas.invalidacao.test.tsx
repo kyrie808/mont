@@ -5,8 +5,8 @@ import type { ReactNode } from 'react'
 import { useVendas } from '../useVendas'
 
 /**
- * Regressão: o selo Lead/Cliente/VIP vem da view `contato_compras_resumo`
- * (hook `useContatosResumo`, chave `contatos-resumo`), que conta vendas
+ * Regressão: o selo Lead/Cliente/VIP vem da `view_contatos_segmento`
+ * (chave `contatos-segmento`; antes `contato_compras_resumo` + chave `contatos-resumo`), que conta vendas
  * ENTREGUES. Toda mutação que mexe em venda muda esse resumo — mas a chave
  * não era invalidada por NINGUÉM. Com `staleTime` de 15min e
  * `refetchOnWindowFocus: false`, o selo só corrigia com F5.
@@ -59,17 +59,17 @@ describe('useVendas — invalidação do resumo que alimenta o segmento', () => 
         return hook
     }
 
-    it('marcar a venda como entregue invalida `contatos-resumo`', async () => {
+    it('marcar a venda como entregue invalida `contatos-segmento`', async () => {
         const { result } = await montar()
 
         await act(async () => {
             await result.current.updateVendaStatus('venda-1', 'entregue')
         })
 
-        expect(chavesInvalidadas()).toContain('contatos-resumo')
+        expect(chavesInvalidadas()).toContain('contatos-segmento')
     })
 
-    it('criar venda invalida `contatos-resumo`', async () => {
+    it('criar venda invalida `contatos-segmento`', async () => {
         const { result } = await montar()
 
         await act(async () => {
@@ -86,40 +86,40 @@ describe('useVendas — invalidação do resumo que alimenta o segmento', () => 
             )
         })
 
-        expect(chavesInvalidadas()).toContain('contatos-resumo')
+        expect(chavesInvalidadas()).toContain('contatos-segmento')
     })
 
-    it('editar a venda invalida `contatos-resumo`', async () => {
+    it('editar a venda invalida `contatos-segmento`', async () => {
         const { result } = await montar()
 
         await act(async () => {
             await result.current.updateVenda('venda-1', { status: 'entregue' })
         })
 
-        expect(chavesInvalidadas()).toContain('contatos-resumo')
+        expect(chavesInvalidadas()).toContain('contatos-segmento')
     })
 
-    it('excluir a venda invalida `contatos-resumo`', async () => {
+    it('excluir a venda invalida `contatos-segmento`', async () => {
         const { result } = await montar()
 
         await act(async () => {
             await result.current.deleteVenda('venda-1')
         })
 
-        expect(chavesInvalidadas()).toContain('contatos-resumo')
+        expect(chavesInvalidadas()).toContain('contatos-segmento')
     })
 
-    it('cancelar a venda invalida `contatos-resumo` (sai da contagem de compras)', async () => {
+    it('cancelar a venda invalida `contatos-segmento` (sai da contagem de compras)', async () => {
         const { result } = await montar()
 
         await act(async () => {
             await result.current.cancelVenda('venda-1')
         })
 
-        expect(chavesInvalidadas()).toContain('contatos-resumo')
+        expect(chavesInvalidadas()).toContain('contatos-segmento')
     })
 
-    it('registrar pagamento NÃO invalida `contatos-resumo` (o resumo ignora `pago`)', async () => {
+    it('registrar pagamento NÃO invalida `contatos-segmento` (o resumo ignora `pago`)', async () => {
         const { result } = await montar()
 
         await act(async () => {
@@ -131,6 +131,6 @@ describe('useVendas — invalidação do resumo que alimenta o segmento', () => 
             })
         })
 
-        expect(chavesInvalidadas()).not.toContain('contatos-resumo')
+        expect(chavesInvalidadas()).not.toContain('contatos-segmento')
     })
 })

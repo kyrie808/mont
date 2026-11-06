@@ -3,6 +3,8 @@ import type { DomainContato } from '../types/domain'
 /** O mínimo que a fila precisa saber de um contato. */
 type Revisavel = Pick<DomainContato, 'origemCadastro' | 'revisadoEm'>
 
+// ESPELHADO NO BANCO: fn_contatos_segmento (migração 20261106215818) aplica esta mesma regra para
+// Gestão de Clientes. Mudou aqui, muda lá, e roda supabase/tests/contatos_segmento_paridade.mjs.
 /**
  * `true` quando a secretária de WhatsApp criou o contato e nenhum humano conferiu ainda.
  *

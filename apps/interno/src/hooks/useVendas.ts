@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { vendaService } from '../services/vendaService'
+import { CHAVE_CONTATOS_SEGMENTO } from './useContatosSegmento'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
 
 interface UseVendasOptions {
@@ -43,13 +44,13 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
         queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] })
     }
 
-    // O selo Lead/Cliente/VIP sai da view `contato_compras_resumo` (vendas
-    // ENTREGUES não-brinde). Criar, editar, entregar, cancelar ou excluir venda
-    // muda esse resumo — sem invalidar, o selo só corrigia com F5 (staleTime de
-    // 15min + refetchOnWindowFocus desligado). Pagamento NÃO entra: o resumo
-    // ignora `pago` de propósito (fiado entregue já é cliente).
+    // O selo Lead/Cliente/VIP, o termômetro e os contadores de Clientes saem da
+    // `view_contatos_segmento` (vendas ENTREGUES não-brinde). Criar, editar, entregar,
+    // cancelar ou excluir venda muda isso — sem invalidar, o selo só corrigia com F5
+    // (staleTime de 15min + refetchOnWindowFocus desligado). Pagamento NÃO entra: a
+    // regra ignora `pago` de propósito (fiado entregue já é cliente).
     const invalidarSegmento = () => {
-        queryClient.invalidateQueries({ queryKey: ['contatos-resumo'] })
+        queryClient.invalidateQueries({ queryKey: [CHAVE_CONTATOS_SEGMENTO] })
     }
 
     const { data, isLoading, error, refetch } = useQuery({

@@ -4106,6 +4106,33 @@ export type Database = {
         }
         Relationships: []
       }
+      view_contatos_segmento: {
+        Row: {
+          apelido_norm: string | null
+          arquivado_em: string | null
+          atraso: number | null
+          contato_id: string | null
+          criado_em: string | null
+          dias_sem_compra: number | null
+          indicado_por_id: string | null
+          intervalo_medio: number | null
+          nome: string | null
+          nome_norm: string | null
+          origem_rotulo: string | null
+          precisa_revisao: boolean | null
+          segmento: string | null
+          sumido: boolean | null
+          telefone_norm: string | null
+          temperatura: string | null
+          temperatura_ordem: number | null
+          tipo: string | null
+          total_compras: number | null
+          total_gasto: number | null
+          total_pedidos: number | null
+          ultima_compra: string | null
+        }
+        Relationships: []
+      }
       view_extrato_mensal: {
         Row: {
           categoria_nome: string | null
@@ -4602,6 +4629,33 @@ export type Database = {
         Returns: undefined
       }
       fn_capitalize_name: { Args: { nome: string }; Returns: string }
+      fn_contatos_segmento: {
+        Args: { p_hoje: string }
+        Returns: {
+          apelido_norm: string
+          arquivado_em: string
+          atraso: number
+          contato_id: string
+          criado_em: string
+          dias_sem_compra: number
+          indicado_por_id: string
+          intervalo_medio: number
+          nome: string
+          nome_norm: string
+          origem_rotulo: string
+          precisa_revisao: boolean
+          segmento: string
+          sumido: boolean
+          telefone_norm: string
+          temperatura: string
+          temperatura_ordem: number
+          tipo: string
+          total_compras: number
+          total_gasto: number
+          total_pedidos: number
+          ultima_compra: string
+        }[]
+      }
       fn_count_words: { Args: { texto: string }; Returns: number }
       fn_estoque_aplica_venda: {
         Args: { p_sinal: number; p_venda_id: string }

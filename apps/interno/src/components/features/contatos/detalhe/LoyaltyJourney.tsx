@@ -1,7 +1,7 @@
 import { TrendingUp, Crown, Target, Building2 } from 'lucide-react'
 import { cn } from '@mont/shared'
 import { useVendas } from '../../../../hooks/useVendas'
-import { useIndicacoes } from '../../../../hooks/useIndicacoes'
+import { useConversoesIndicador } from '../../../../hooks/useContatosSegmento'
 import { calcularNivelCliente } from '../../../../utils/calculations'
 
 function GamificationBadge({ icon: Icon, label, colorClass }: { icon: React.ComponentType<{ className?: string }>, label: string, colorClass: string }) {
@@ -18,11 +18,9 @@ function GamificationBadge({ icon: Icon, label, colorClass }: { icon: React.Comp
 
 export function LoyaltyJourney({ contatoId, isB2B }: { contatoId: string, isB2B: boolean }) {
     const { vendas: contatoVendas } = useVendas({ excludeCatalogo: true, contatoId })
-    const { getIndicadorById } = useIndicacoes()
+    const indicacoesConvertidas = useConversoesIndicador(contatoId)
 
     const vendasValidas = contatoVendas.filter(v => v.status !== 'cancelada')
-    const indicadorInfo = getIndicadorById(contatoId)
-    const indicacoesConvertidas = indicadorInfo?.indicacoesConvertidas || 0
     const nivelCliente = calcularNivelCliente(vendasValidas.length, indicacoesConvertidas)
 
     const isGold = nivelCliente.nivel === 'ouro'

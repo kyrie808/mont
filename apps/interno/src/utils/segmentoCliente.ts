@@ -1,13 +1,29 @@
 import type { DomainContato } from '../types/domain'
-import type { ContatoResumo } from '../hooks/useContatosResumo'
 
 /**
  * Segmento de ciclo de vida do contato — baldes EXCLUSIVOS (cada contato cai em
  * exatamente um). Derivado das compras ENTREGUES (view `contato_compras_resumo`, inclui
  * fiado — "comprou" = recebeu), não do campo `contatos.status` (que virou ruído).
  * Ver plano/decisão 15/07/2026; fonte corrigida p/ entregas 26/07/2026 (fiado ≠ lead).
+ *
+ * ESPELHADO NO BANCO (06/11/2026): `fn_contatos_segmento` / `view_contatos_segmento` aplicam
+ * esta mesma cascata e estes limites. Mudou aqui, muda lá (nova migração), e roda a suíte
+ * `supabase/tests/contatos_segmento_paridade.mjs` (diferença zero).
  */
 export type SegmentoCliente = 'lead' | 'cliente' | 'vip' | 'inativo' | 'fornecedor'
+
+const SEGMENTOS: readonly SegmentoCliente[] = ['lead', 'cliente', 'vip', 'inativo', 'fornecedor']
+
+export function isSegmentoCliente(valor: unknown): valor is SegmentoCliente {
+    return typeof valor === 'string' && (SEGMENTOS as readonly string[]).includes(valor)
+}
+
+/** Compras de um contato: vendas ENTREGUES não-brinde, pagas ou não (fiado entregue já é compra). */
+export interface ContatoResumo {
+    totalGasto: number      // SUM(produto sem frete)
+    totalCompras: number    // COUNT das vendas
+    ultimaCompra: string | null
+}
 
 export const SEGMENTO_CONFIG = {
     /** Dias sem comprar para virar Inativo. */

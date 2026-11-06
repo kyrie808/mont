@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { contatoService } from '../services/contatoService'
+import { CHAVE_CONTATOS_SEGMENTO } from './useContatosSegmento'
 import { useToast } from '../components/ui/Toast'
 import type { CreateContato, UpdateContato } from '../types/domain'
 import type { ContatoFiltros } from '../schemas/contato'
@@ -44,6 +45,7 @@ export function useContatos(options: UseContatosOptions = {}) {
         mutationFn: (data: CreateContato) => contatoService.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contatos'] })
+            queryClient.invalidateQueries({ queryKey: [CHAVE_CONTATOS_SEGMENTO] })
         }
     })
 
@@ -52,6 +54,7 @@ export function useContatos(options: UseContatosOptions = {}) {
             contatoService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contatos'] })
+            queryClient.invalidateQueries({ queryKey: [CHAVE_CONTATOS_SEGMENTO] })
             queryClient.invalidateQueries({ queryKey: ['venda'] })
         }
     })
@@ -60,6 +63,7 @@ export function useContatos(options: UseContatosOptions = {}) {
         mutationFn: (id: string) => contatoService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contatos'] })
+            queryClient.invalidateQueries({ queryKey: [CHAVE_CONTATOS_SEGMENTO] })
         }
     })
 

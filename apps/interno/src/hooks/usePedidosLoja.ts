@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CHAVE_CONTATOS_SEGMENTO } from './useContatosSegmento'
 import { pedidosLojaService, type ConfirmarPedidoLoja } from '../services/pedidosLojaService'
 
 const CHAVE = ['pedidos-loja'] as const
@@ -33,6 +34,7 @@ export function useConfirmarPedidoLoja() {
             queryClient.invalidateQueries({ queryKey: CHAVE })
             queryClient.invalidateQueries({ queryKey: ['vendas'] })
             queryClient.invalidateQueries({ queryKey: ['contatos'] })
+            queryClient.invalidateQueries({ queryKey: [CHAVE_CONTATOS_SEGMENTO] })
         },
     })
 }

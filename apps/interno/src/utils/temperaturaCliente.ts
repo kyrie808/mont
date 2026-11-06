@@ -21,6 +21,8 @@ export interface TemperaturaResult {
     motivo: string
 }
 
+// ESPELHADO NO BANCO: fn_contatos_segmento (migração 20261106215818) aplica esta mesma regra para
+// Gestão de Clientes. Mudou aqui, muda lá, e roda supabase/tests/contatos_segmento_paridade.mjs.
 /**
  * Classifica a temperatura a partir do ritmo (a kanban row). `null`/sem ritmo/<2 compras = 'novo'.
  * - quente: `atraso < 0` (ainda dentro do ciclo — comprou no ritmo dele)
