@@ -239,6 +239,22 @@ export function useVendas({ startDate, endDate, includePending = false, search, 
     }
 }
 
+/**
+ * Só as ações de venda (criar, editar, status, pagar, cancelar, excluir, buscar por id), SEM
+ * baixar a lista. Antes a Nova Venda e o detalhe chamavam useVendas() sem filtro e baixavam
+ * todas as vendas com itens e pagamentos (cortadas em 1000) só para usar as funções.
+ */
+export function useVendaAcoes() {
+    const {
+        createVenda, updateVendaStatus, updateVendaPago, deleteVenda, cancelVenda,
+        updateVenda, getVendaById, addPagamento, deleteUltimoPagamento,
+    } = useVendas({ enabled: false })
+    return {
+        createVenda, updateVendaStatus, updateVendaPago, deleteVenda, cancelVenda,
+        updateVenda, getVendaById, addPagamento, deleteUltimoPagamento,
+    }
+}
+
 export function useVenda(id: string | undefined) {
     const { data: venda, isLoading: loading, error, refetch } = useQuery({
         queryKey: ['venda', id],

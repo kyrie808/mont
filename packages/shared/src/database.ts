@@ -4708,6 +4708,7 @@ export type Database = {
           vencidos: number
         }[]
       }
+      hoje_sp: { Args: { p_agora?: string }; Returns: string }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_entregador: { Args: { check_user_id?: string }; Returns: boolean }
       loja_confirmar_pedido: {
@@ -4896,6 +4897,14 @@ export type Database = {
           ultima_compra: string
         }[]
       }
+      rpc_ranking_compras_resumo: {
+        Args: { p_ano?: number; p_mes?: number }
+        Returns: {
+          soma_pontos: number
+          total_clientes: number
+          total_compras: number
+        }[]
+      }
       rpc_registrar_interacao_ia: {
         Args: { p_contato_id: string; p_message_ids: string[]; p_payload: Json }
         Returns: Json
@@ -4958,6 +4967,36 @@ export type Database = {
           tipo: string
           total_pedidos: number
           ultima_compra: string
+        }[]
+      }
+      rpt_ltv_por_origem_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          clientes: number
+          ltv_total: number
+          origem: string
+          recompraram: number
+        }[]
+      }
+      rpt_ltv_resumo_periodo: {
+        Args: { p_ate?: string; p_desde?: string }
+        Returns: {
+          adormecidos: number
+          adormecidos_ltv: number
+          ativos: number
+          ativos_ltv: number
+          compras_1: number
+          compras_2: number
+          compras_3a5: number
+          compras_6mais: number
+          recompraram: number
+          risco: number
+          risco_ltv: number
+          soma_ticket_medio: number
+          top20_clientes: number
+          top20_ltv: number
+          total_clientes: number
+          total_ltv: number
         }[]
       }
       rpt_margem_por_sku_periodo: {

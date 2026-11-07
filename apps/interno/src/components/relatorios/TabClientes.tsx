@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronDown } from 'lucide-react'
-import { useRptLtvPorCliente } from '../../hooks/useRelatorios'
+import { useRptLtvFiltrado, useRptLtvResumo, useRptLtvTop } from '../../hooks/useRelatorios'
 import {
     HBars,
     C_FG, C_MUTED_FG, C_MUTED, C_MONO, COL_PRIMARY, COL_WARNING,
@@ -20,37 +20,41 @@ function diasSemComprar(ultimaCompra: string | null): number {
 
 // Aba Clientes = cockpit de relacionamento VITALÍCIO (LTV/churn/risco não cabem num mês).
 // Sempre geral, independente do período da página.
+// Totais e Pareto saem do banco (rpt_ltv_resumo_periodo); só vêm linha a linha os 8 do topo e
+// os "em risco" (todos, em lotes) — antes a aba somava a lista inteira, cortada em 1000.
+const GERAL = { tipo: 'geral' } as const
+const RISCO = { status: 'risco' } as const
+
 export function TabClientes({ animKey }: Props) {
     const navigate = useNavigate()
     const [verTodosRisco, setVerTodosRisco] = useState(false)
-    const { data: clientes = [], isLoading, isError } = useRptLtvPorCliente({ tipo: 'geral' })
+    const { data: resumo, isLoading: l1, isError: e1 } = useRptLtvResumo(GERAL)
+    const { data: top = [], isLoading: l2, isError: e2 } = useRptLtvTop(GERAL, 8)
+    const { data: risco = [], isLoading: l3, isError: e3 } = useRptLtvFiltrado(GERAL, RISCO)
+    const isLoading = l1 || l2 || l3
+    const isError = e1 || e2 || e3
 
     const derived = useMemo(() => {
-        if (!clientes.length) return null
-        const sum = (rows: typeof clientes) => rows.reduce((s, c) => s + (c.ltv_total ?? 0), 0)
+        if (!resumo || resumo.total_clientes === 0) return null
 
-        const total = clientes.length
-        const ativos      = clientes.filter(c => c.status_atividade === 'ativo')
-        const risco       = clientes.filter(c => c.status_atividade === 'risco')
-        const adormecidos = clientes.filter(c => c.status_atividade === 'adormecido')
-
-        const totalLtv = sum(clientes)
+        const total = resumo.total_clientes
+        const totalLtv = resumo.total_ltv
         const ltvMedio = total ? totalLtv / total : 0
-        const ticketMedio = total ? clientes.reduce((s, c) => s + (c.ticket_medio ?? 0), 0) / total : 0
+        const ticketMedio = total ? resumo.soma_ticket_medio / total : 0
 
         const funil = [
-            { id: 'ativo',      label: 'Ativos',      qtd: ativos.length,      valor: sum(ativos),      color: COL_PRIMARY },
-            { id: 'risco',      label: 'Em risco',    qtd: risco.length,       valor: sum(risco),       color: COL_WARNING },
-            { id: 'adormecido', label: 'Adormecidos', qtd: adormecidos.length, valor: sum(adormecidos), color: C_MUTED_FG },
+            { id: 'ativo',      label: 'Ativos',      qtd: resumo.ativos,      valor: resumo.ativos_ltv,      color: COL_PRIMARY },
+            { id: 'risco',      label: 'Em risco',    qtd: resumo.risco,       valor: resumo.risco_ltv,       color: COL_WARNING },
+            { id: 'adormecido', label: 'Adormecidos', qtd: resumo.adormecidos, valor: resumo.adormecidos_ltv, color: C_MUTED_FG },
         ]
-        const adormPct = total ? Math.round(adormecidos.length / total * 100) : 0
+        const adormPct = total ? Math.round(resumo.adormecidos / total * 100) : 0
 
-        // Concentração (Pareto) — a view já vem ordenada por ltv desc
-        const top20Count = Math.ceil(total * 0.2)
-        const top20Ltv   = clientes.slice(0, top20Count).reduce((s, c) => s + (c.ltv_total ?? 0), 0)
+        // Concentração (Pareto): os primeiros ceil(20%) por LTV, contados no banco
+        const top20Count = resumo.top20_clientes
+        const top20Ltv   = resumo.top20_ltv
         const paretoTopPct = totalLtv > 0 ? Math.round(top20Ltv / totalLtv * 100) : 0
 
-        const topByLtv = clientes.slice(0, 8).map(c => ({
+        const topByLtv = top.map(c => ({
             id: c.contato_id, label: c.nome, value: c.ltv_total ?? 0, color: '#7c3aed', // roxo = categoria VIP (design system)
         }))
 
@@ -58,10 +62,10 @@ export function TabClientes({ animKey }: Props) {
         const recuperar = risco
             .map(c => ({ contatoId: c.contato_id, nome: c.nome ?? '—', dias: diasSemComprar(c.ultima_compra), ltv: c.ltv_total ?? 0 }))
             .sort((a, b) => b.ltv - a.ltv)
-        const recuperarValor = risco.reduce((s, c) => s + (c.ltv_total ?? 0), 0)
+        const recuperarValor = resumo.risco_ltv
 
-        return { total, funil, adormPct, ltvMedio, ticketMedio, totalLtv, top20Count, top20Ltv, paretoTopPct, topByLtv, recuperar, recuperarValor, adormCount: adormecidos.length }
-    }, [clientes])
+        return { total, funil, adormPct, ltvMedio, ticketMedio, totalLtv, top20Count, top20Ltv, paretoTopPct, topByLtv, recuperar, recuperarValor, adormCount: resumo.adormecidos }
+    }, [resumo, top, risco])
 
     if (isLoading) return <EmptyState msg="Carregando dados de clientes…" />
     if (isError)   return <EmptyState msg="Falha ao carregar dados de clientes." />

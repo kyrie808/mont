@@ -23,10 +23,12 @@ function mensagemDeErro(e: unknown, fallback: string): string {
 
 interface UseContatosOptions {
     filtros?: ContatoFiltros
+    /** false = não busca a lista (só as ações). Ver useContatoAcoes. */
+    enabled?: boolean
 }
 
 export function useContatos(options: UseContatosOptions = {}) {
-    const { filtros } = options
+    const { filtros, enabled = true } = options
     const queryClient = useQueryClient()
     const toast = useToast()
     const queryKey = ['contatos', filtros]
@@ -39,6 +41,7 @@ export function useContatos(options: UseContatosOptions = {}) {
             filtros?.status
         ),
         staleTime: 1000 * 60 * 15,
+        enabled,
     })
 
     const createMutation = useMutation({
@@ -119,6 +122,16 @@ export function useContatos(options: UseContatosOptions = {}) {
         searchContatos,
         getContatoById
     }
+}
+
+/**
+ * Só as ações de contato (criar, editar, excluir, buscar, buscar por id), SEM baixar a lista.
+ * Para telas que não mostram a lista: antes elas chamavam useContatos() e baixavam todos os
+ * contatos (cortados em 1000 pelo PostgREST) só para usar as funções.
+ */
+export function useContatoAcoes() {
+    const { createContato, updateContato, deleteContato, searchContatos, getContatoById } = useContatos({ enabled: false })
+    return { createContato, updateContato, deleteContato, searchContatos, getContatoById }
 }
 
 export function useContato(id: string | undefined) {

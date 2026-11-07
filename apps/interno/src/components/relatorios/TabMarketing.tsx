@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronDown, Users, Clock, Megaphone, Gift, Tag, PhoneOff } from 'lucide-react'
 import {
-    useRptLtvPorCliente, useRptAquisicaoMensal, useRptRankingIndicacoes,
+    useRptLtvResumo, useRptLtvPorOrigem, useRptLtvFiltrado, useRptAquisicaoMensal, useRptRankingIndicacoes,
     useRptCampanhas, useRptCampanhasPromocao, useRptAquisicaoFonte, useRptPromocoes,
     useRptRelacionamentoEsforco, useRptRelacionamentoFunil,
 } from '../../hooks/useRelatorios'
@@ -39,6 +39,9 @@ const metaDe = (o: string) => ORIGEM_META[o] ?? { label: o, color: C_MUTED_FG }
 // Cabeçalho de coluna de tabela — na escala do sistema (não px minúsculo).
 const colHead = 'text-[11px] font-semibold uppercase tracking-wide text-muted-foreground'
 
+const GERAL = { tipo: 'geral' } as const
+const UMA_COMPRA = { totalPedidos: 1 } as const
+
 function diasSemComprar(ultima: string | null): number {
     if (!ultima) return 9999
     return Math.floor((Date.now() - new Date(ultima).getTime()) / 86400000)
@@ -49,7 +52,10 @@ export function TabMarketing({ animKey, periodo }: Props) {
     const [verTodosOneTimer, setVerTodosOneTimer] = useState(false)
     const [expandEmbaixador, setExpandEmbaixador] = useState<string | null>(null)
 
-    const { data: clientes = [], isLoading: l1, isError: e1 } = useRptLtvPorCliente({ tipo: 'geral' })
+    // Totais vitalícios do banco; linha a linha só quem comprou 1 vez (lista nominal, em lotes).
+    const { data: ltvResumo, isLoading: l1, isError: e1 } = useRptLtvResumo(GERAL)
+    const { data: porOrigem = [], isLoading: l3, isError: e3 } = useRptLtvPorOrigem(GERAL)
+    const { data: umaCompra = [], isLoading: l4, isError: e4 } = useRptLtvFiltrado(GERAL, UMA_COMPRA)
     const { data: aquisicao = [], isLoading: l2, isError: e2 } = useRptAquisicaoMensal()
     const { data: indicadores = [] } = useRptRankingIndicacoes()
     const { data: campanhas = [] } = useRptCampanhas()
@@ -62,8 +68,8 @@ export function TabMarketing({ animKey, periodo }: Props) {
     const { data: funilRows = [] } = useRptRelacionamentoFunil()
     const relFunil = funilRows[0]
 
-    const isLoading = l1 || l2
-    const isError = e1 || e2
+    const isLoading = l1 || l2 || l3 || l4
+    const isError = e1 || e2 || e3 || e4
 
     const topEmbaixadores = useMemo(
         () => indicadores.filter(i => (i.total_indicados ?? 0) > 0).slice(0, 6),
@@ -71,7 +77,8 @@ export function TabMarketing({ animKey, periodo }: Props) {
     )
 
     const derived = useMemo(() => {
-        if (!clientes.length && !aquisicao.length) return null
+        const compraram = ltvResumo?.total_clientes ?? 0
+        if (!compraram && !aquisicao.length) return null
 
         // ── AQUISIÇÃO no período (fluxo) ──────────────────────────────────────
         const inScope = (r: typeof aquisicao[number]) =>
@@ -109,30 +116,20 @@ export function TabMarketing({ animKey, periodo }: Props) {
             ? serie.findIndex(s => s.ano === periodo.ano && s.mes === periodo.mes)
             : undefined
 
-        // ── QUALIDADE por origem (vitalício, compradores) ────────────────────
-        const qMap = new Map<string, { n: number; ltv: number; recompra: number }>()
-        for (const c of clientes) {
-            const o = c.origem ?? 'direto'
-            const acc = qMap.get(o) ?? { n: 0, ltv: 0, recompra: 0 }
-            acc.n += 1
-            acc.ltv += c.ltv_total ?? 0
-            if ((c.total_pedidos ?? 0) >= 2) acc.recompra += 1
-            qMap.set(o, acc)
-        }
-        const qualidade = [...qMap.entries()]
-            .map(([origem, v]) => ({
-                origem, ...metaDe(origem),
-                n: v.n,
-                ltvMedio: v.n > 0 ? v.ltv / v.n : 0,
-                voltaramPct: v.n > 0 ? Math.round(v.recompra / v.n * 100) : 0,
+        // ── QUALIDADE por origem (vitalício, compradores) — agrupado no banco ──
+        const qualidade = porOrigem
+            .map((v) => ({
+                origem: v.origem, ...metaDe(v.origem),
+                n: v.clientes,
+                ltvMedio: v.clientes > 0 ? v.ltv_total / v.clientes : 0,
+                voltaramPct: v.clientes > 0 ? Math.round(v.recompraram / v.clientes * 100) : 0,
             }))
             .sort((a, b) => b.n - a.n)
 
         // ── JORNADA (vitalício) ──────────────────────────────────────────────
         const totalLeads   = aquisicao.reduce((s, r) => s + (r.novos_leads ?? 0), 0)
-        const compraram    = clientes.length
-        const recompraram  = clientes.filter(c => (c.total_pedidos ?? 0) >= 2).length
-        const fieis        = clientes.filter(c => (c.total_pedidos ?? 0) >= 6).length
+        const recompraram  = ltvResumo?.recompraram ?? 0
+        const fieis        = ltvResumo?.compras_6mais ?? 0
         // Funil ANINHADO (cada etapa ⊂ anterior): contatos → compraram → de novo → fiéis.
         const funil = [
             { id: 'leads',   label: 'Contatos',          n: totalLeads,  color: '#64748b' },
@@ -146,10 +143,10 @@ export function TabMarketing({ animKey, periodo }: Props) {
         const advocacyPct = compraram > 0 ? Math.round(embaixadores / compraram * 100) : 0
 
         // ── FREQUÊNCIA de compra (vitalício) ─────────────────────────────────
-        const um        = clientes.filter(c => (c.total_pedidos ?? 0) === 1).length
-        const dois       = clientes.filter(c => (c.total_pedidos ?? 0) === 2).length
-        const tresCinco = clientes.filter(c => { const n = c.total_pedidos ?? 0; return n >= 3 && n <= 5 }).length
-        const seisMais  = clientes.filter(c => (c.total_pedidos ?? 0) >= 6).length
+        const um        = ltvResumo?.compras_1 ?? 0
+        const dois      = ltvResumo?.compras_2 ?? 0
+        const tresCinco = ltvResumo?.compras_3a5 ?? 0
+        const seisMais  = ltvResumo?.compras_6mais ?? 0
         const retencao = [
             { id: '1',   label: '1 compra',   n: um,        color: COL_WARNING },
             { id: '2',   label: '2 compras',  n: dois,      color: '#3b82f6' },
@@ -159,8 +156,7 @@ export function TabMarketing({ animKey, periodo }: Props) {
         const umPct = compraram > 0 ? Math.round(um / compraram * 100) : 0
 
         // clientes de 1 compra por tempo sem voltar (candidatos a chamar de volta)
-        const oneTimers = clientes
-            .filter(c => (c.total_pedidos ?? 0) === 1)
+        const oneTimers = umaCompra
             .map(c => ({ contatoId: c.contato_id, nome: c.nome ?? '—', dias: diasSemComprar(c.ultima_compra), ltv: c.ltv_total ?? 0 }))
         const fresh  = oneTimers.filter(o => o.dias <= 30).length
         const golden = oneTimers.filter(o => o.dias > 30 && o.dias <= 90)
@@ -176,7 +172,7 @@ export function TabMarketing({ animKey, periodo }: Props) {
             embaixadores, embaixadoresReceita, advocacyPct,
             retencao, umPct, fresh, coldCount: cold, recuperaveis, recuperavelValor,
         }
-    }, [clientes, aquisicao, indicadores, periodo])
+    }, [ltvResumo, porOrigem, umaCompra, aquisicao, indicadores, periodo])
 
     if (isLoading) return <EmptyState msg="Carregando dados de marketing…" />
     if (isError)   return <EmptyState msg="Falha ao carregar dados de marketing." />

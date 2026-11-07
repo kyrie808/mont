@@ -22,22 +22,33 @@ import {
 } from '../components/ui'
 import { useCatalogoPendentes } from '../hooks/useCatalogoPendentes'
 import { useContatos } from '../hooks/useContatos'
+import { useListaContatos } from '../hooks/useContatosSegmento'
+import { useDebounce } from '../hooks/useDebounce'
+import { ORDEM_PADRAO_CONTATOS } from '../services/contatosSegmentoService'
 import type { CatalogoPendente } from '../hooks/useCatalogoPendentes'
 
 export function CatalogoPendentes() {
   const toast = useToast()
   const navigate = useNavigate()
   const { data: pendentes = [], isLoading: loading, error, vincularManualmente } = useCatalogoPendentes()
-  const { contatos, loading: loadingContatos } = useContatos()
-
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPedido, setSelectedPedido] = useState<CatalogoPendente | null>(null)
   const [isLinking, setIsLinking] = useState(false)
 
-  const filteredContatos = contatos?.filter(c =>
-    c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.telefone.includes(searchTerm)
+  // Busca no servidor (a mesma de Clientes: nome, apelido, telefone, sem acento). Antes filtrava no
+  // navegador uma lista cortada em 1000, e os contatos mais antigos não apareciam para vincular.
+  // Busca vazia: os 30 contatos mais recentes (decisão de 07/11/2026).
+  const termo = useDebounce(searchTerm, 300).trim()
+  const recentes = useListaContatos(
+    { busca: '', filtro: 'all', ordem: ORDEM_PADRAO_CONTATOS, pagina: 0, tamanho: 30 },
+    { enabled: !termo },
   )
+  const encontrados = useContatos({
+    filtros: { busca: termo, tipo: 'todos', status: 'todos', origem: 'todos' },
+    enabled: Boolean(termo),
+  })
+  const filteredContatos = termo ? encontrados.contatos : (recentes.data?.linhas ?? [])
+  const loadingContatos = termo ? encontrados.loading : recentes.isLoading
 
   const handleLink = async (contatoId: string) => {
     if (!selectedPedido) return
