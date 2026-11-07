@@ -9,9 +9,8 @@ import { IndicadosDetalhe } from '../components/dashboard/IndicadosDetalhe'
 import { useContato, useContatos } from '../hooks/useContatos'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
-import { useIndicacoes } from '../hooks/useIndicacoes'
 import { useIndicadosDoIndicador } from '../hooks/useIndicadosDoIndicador'
-import { useContatosResumo } from '../hooks/useContatosResumo'
+import { useConversoesIndicador, useSegmentoContato } from '../hooks/useContatosSegmento'
 import { calcularNivelCliente } from '../utils/calculations'
 import { classificarContato } from '../utils/segmentoCliente'
 
@@ -37,10 +36,11 @@ export function ContatoDetalhe() {
     const { contato, loading, error, refetch } = useContato(id)
     const { deleteContato } = useContatos()
     const { vendas: vendasRaw } = useVendas({ excludeCatalogo: true, contatoId: id })
-    const { getIndicadorById } = useIndicacoes()
+    // Indicações convertidas deste contato (contadas no banco; antes vinham de listas cortadas em 1000).
+    const indicacoesConvertidas = useConversoesIndicador(id)
     // Quem esta pessoa trouxe (drill-down por compra real; só renderiza se houver).
     const { indicados: indicadosDoContato } = useIndicadosDoIndicador(id ?? null)
-    const resumoMap = useContatosResumo()
+    const segmentoBanco = useSegmentoContato(id)
     const { data: kanbanRow } = useKanbanRowContato(id ?? null)
     const statusRel: RelacionamentoStatus = (kanbanRow?.status_relacionamento as RelacionamentoStatus) ?? 'a_contatar'
 
@@ -55,10 +55,10 @@ export function ContatoDetalhe() {
 
     // Cálculo de nível para passar pro Hero
     const vendasValidas = vendasRaw.filter(v => v.status !== 'cancelada')
-    const indicadorInfo = getIndicadorById(id || '')
-    const indicacoesConvertidas = indicadorInfo?.indicacoesConvertidas || 0
     const nivelCliente = calcularNivelCliente(vendasValidas.length, indicacoesConvertidas)
-    const segmento = classificarContato(contato, resumoMap.get(contato.id))
+    // Segmento da view_contatos_segmento. Enquanto carrega, a mesma classificação "sem compras"
+    // que o perfil sempre mostrou antes do resumo chegar.
+    const segmento = segmentoBanco ?? classificarContato(contato, undefined)
 
     const handleDelete = async () => {
         setIsDeleting(true)

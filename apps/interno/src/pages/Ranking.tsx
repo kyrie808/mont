@@ -12,7 +12,7 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { KpiCard } from '../components/dashboard/KpiCard'
 import { MonthPicker } from '../components/dashboard/MonthPicker'
 import { useMonthPickerBinding } from '../hooks/useMonthPickerBinding'
-import { useIndicacoes } from '../hooks/useIndicacoes'
+import { useTotalConversoes } from '../hooks/useContatosSegmento'
 import { useRankingCompras } from '../hooks/useRankingCompras'
 import { useTopIndicadores } from '../hooks/useTopIndicadores'
 import { TopIndicadoresWidget } from '../components/dashboard/TopIndicadoresWidget'
@@ -27,7 +27,8 @@ const TOP_N = 10
 const nfPontos = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 })
 
 export function Ranking() {
-    const { totalConversoes } = useIndicacoes()
+    // Indicações convertidas, contadas no banco (antes: contatos e vendas cortados em 1000).
+    const totalConversoes = useTotalConversoes()
     const { topIndicadores } = useTopIndicadores()
     const [activeTab, setActiveTab] = useState<TabType>('compras')
     const [escopo, setEscopo] = useState<EscopoType>('geral')

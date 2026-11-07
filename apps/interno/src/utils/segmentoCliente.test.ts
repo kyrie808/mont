@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { classificarContato, SEGMENTO_CONFIG } from './segmentoCliente'
-import type { ContatoResumo } from '../hooks/useContatosResumo'
+import type { ContatoResumo } from './segmentoCliente'
 
 const hoje = new Date('2026-07-15T12:00:00')
 

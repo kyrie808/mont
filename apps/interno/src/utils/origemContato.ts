@@ -13,6 +13,8 @@ const FONTE_LABEL: Record<string, string> = {
 const NEUTRO = 'bg-muted text-muted-foreground border-border'
 const DESTAQUE = 'bg-primary/5 text-primary border-primary/30'
 
+// ESPELHADO NO BANCO: fn_contatos_segmento (migração 20261106215818) aplica esta mesma regra para
+// Gestão de Clientes. Mudou aqui, muda lá, e roda supabase/tests/contatos_segmento_paridade.mjs.
 export function origemBadge(
     origem: string | null | undefined,
     fonte?: string | null,
