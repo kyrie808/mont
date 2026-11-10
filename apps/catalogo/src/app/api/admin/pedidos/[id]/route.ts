@@ -173,7 +173,8 @@ export async function PATCH(
                 taxa_entrega: data.frete,
                 observacoes: data.observacoes || null,
                 cat_pedido_id: id,
-                data: new Date().toISOString().split('T')[0],
+                // Dia de São Paulo: o servidor roda em UTC e, depois das 21h, toISOString já dá amanhã.
+                data: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()),
                 contato_id: contatoId,
             })
         if (vendaError) console.error('VENDA_ERROR:', vendaError)
