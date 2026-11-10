@@ -102,7 +102,7 @@ async function buildUserData(ev: EventoRow): Promise<UserDataBase> {
   ud.ln = await hashField(ln)
   ud.ct = await hashField(normalizeCity(c.cidade))
   ud.st = await hashField(normalizeState(c.uf))
-  ud.zip = await hashField(normalizeZip(c.cep))
+  ud.zp = await hashField(normalizeZip(c.cep))
   ud.external_id = await hashField(c.id)
 
   return ud

@@ -125,7 +125,7 @@ export async function enviarPedido(entrada: unknown): Promise<ResultadoEnvio> {
         evento: 'Lead',
         eventId: idLead(d.chave),
         atribuicao,
-        pessoa: { telefone: d.telefone, nome: d.nome },
+        pessoa: { telefone: d.telefone, nome: d.nome, cep: d.entrega === 'entrega' ? d.cep : null },
         dados: data ? { currency: 'BRL', value: Number(data.total) } : {},
     }
     after(() => enviarEventoSite(lead))

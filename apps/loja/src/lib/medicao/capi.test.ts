@@ -11,7 +11,7 @@ const BASE: EnvioSite = {
     atribuicao: { fbp: 'fb.1.1762169000000.123', fbc: 'fb.1.1762169000000.IwAR2', utm_source: 'facebook' },
     ip: '200.1.2.3',
     userAgent: 'Mozilla/5.0',
-    pessoa: { telefone: '11987654321', nome: 'Maria da Silva' },
+    pessoa: { telefone: '11987654321', nome: 'Maria da Silva', cep: '09750-000' },
     dados: { value: 65, currency: 'BRL' },
     instante: 1_762_170_000,
 }
@@ -36,8 +36,17 @@ describe('montarEventoSite', () => {
             ph: [sha('5511987654321')],
             fn: [sha('maria')],
             ln: [sha('da silva')],
+            // CEP com os 8 dígitos, sem traço.
+            zp: [sha('09750000')],
         })
-        expect(JSON.stringify(e)).not.toMatch(/Maria|98765|utm_source/)
+        expect(JSON.stringify(e)).not.toMatch(/Maria|98765|09750|utm_source/)
+    })
+
+    it('CEP ausente ou inválido não vai', async () => {
+        for (const cep of [null, undefined, '', '0975-00']) {
+            const e = await montarEventoSite({ ...BASE, pessoa: { telefone: '11987654321', nome: 'Maria', cep } })
+            expect(e.user_data).not.toHaveProperty('zp')
+        }
     })
 
     it('InitiateCheckout sem pessoa nem cookies leva só o navegador', async () => {
