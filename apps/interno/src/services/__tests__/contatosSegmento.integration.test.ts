@@ -12,8 +12,8 @@ import type { Database } from '@mont/shared'
  *  - "Todos" = total real de `contatos`; contadores = classificação do app sobre todos;
  *  - paginação cobre todos os contatos sem repetir, nos filtros e nas ordenações;
  *  - cada coluna ordenável sai ordenada; temperatura na ordem frio → morno → quente → novo;
- *  - busca por nome, apelido, telefone e palavra exata devolve o MESMO conjunto da busca antiga
- *    (`contatoService.func`), e os contadores reagem à busca;
+ *  - busca por nome, apelido, telefone e palavra exata devolve o MESMO conjunto que o banco (mesmo
+ *    filtro direto na tabela, sem corte) e que a busca antiga quando ela cabe em 1000; contadores reagem;
  *  - conversões de indicação = a conta do antigo useIndicacoes sem o corte de 1000.
  *
  * Nada é gravado. Janela: manual (ver skill tdd-mont-pragmatico).
@@ -33,6 +33,7 @@ import { contatoService } from '../contatoService'
 import { classificarContato, type ContatoResumo, type SegmentoCliente } from '../../utils/segmentoCliente'
 import { precisaRevisao } from '../../utils/filaRevisao'
 import { stripAccents } from '@mont/shared'
+import { filtroBuscaContato } from '../../utils/telefone'
 import { temperaturaCliente } from '../../utils/temperaturaCliente'
 import { origemBadge } from '../../utils/origemContato'
 import { toDomainContato } from '../mappers'
@@ -188,17 +189,35 @@ describe('Gestão de Clientes pela view_contatos_segmento (integração, só lei
             'a',
         ]
         for (const termo of termos) {
-            const antiga = await contatoService.func(termo)
-            expect(antiga.length, `"${termo}" (a busca antiga tem de caber em 1000 para servir de gabarito)`).toBeLessThan(1000)
+            // Gabarito = o banco, sem o corte de 1000: o MESMO filtro da busca (filtroBuscaContato) direto
+            // na tabela contatos, lido inteiro em lotes, e a contagem exata. (Até 10/11/2026 o gabarito
+            // era a busca antiga, contatoService.func, que corta em 1000 — com 1104 contatos, "a" já casa
+            // com 1030 e ela deixou de servir.)
+            const filtro = filtroBuscaContato(termo)
+            const gabarito = await tudo((de, ate) => {
+                let q = supabase.from('contatos').select('id')
+                if (filtro) q = q.or(filtro)
+                return q.order('id').range(de, ate)
+            })
+            let qContagem = supabase.from('contatos').select('id', { count: 'exact', head: true })
+            if (filtro) qContagem = qContagem.or(filtro)
+            const { count: contagemBanco, error: erroContagem } = await qContagem
+            expect(erroContagem, `"${termo}"`).toBeNull()
+            expect(gabarito.length, `"${termo}" (gabarito lido inteiro)`).toBe(contagemBanco)
+
             const { linhas, total } = await listarTudo(termo, 'all')
             const contagem = await contatosSegmentoService.contar(termo)
-            expect(new Set(linhas.map((l) => l.id)), `"${termo}"`).toEqual(new Set(antiga.map((c) => c.id)))
-            expect(total, `"${termo}"`).toBe(antiga.length)
-            expect(contagem.all, `"${termo}"`).toBe(antiga.length)
+            expect(new Set(linhas.map((l) => l.id)), `"${termo}"`).toEqual(new Set(gabarito.map((c) => c.id)))
+            expect(total, `"${termo}"`).toBe(contagemBanco)
+            expect(contagem.all, `"${termo}"`).toBe(contagemBanco)
             expect(contagem.clientes + contagem.leads + contagem.vips + contagem.inativos, `"${termo}"`)
                 .toBe(linhas.filter((l) => l.segmento !== 'fornecedor').length)
+
+            // Checagem a mais: quando a busca antiga cabe em 1000, ela dá o mesmo conjunto.
+            const antiga = await contatoService.func(termo)
+            if (antiga.length < 1000) expect(new Set(antiga.map((c) => c.id)), `"${termo}" (busca antiga)`).toEqual(new Set(gabarito.map((c) => c.id)))
         }
-    }, 120_000)
+    }, 180_000)
 
     it('conversões de indicação = a conta do antigo useIndicacoes sem o corte de 1000', async () => {
         const contatos = await tudo((de, ate) => supabase.from('contatos').select('id, indicado_por_id').order('id').range(de, ate))
