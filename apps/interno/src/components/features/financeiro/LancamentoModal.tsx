@@ -10,7 +10,7 @@ import { useLancamentos } from '../../../hooks/useLancamentos'
 import { useEntregadores } from '../../../hooks/useEntregadores'
 import { comprovanteService } from '../../../services/comprovanteService'
 import { useToast } from '../../ui/Toast'
-import { cn } from '@mont/shared'
+import { cn, hojeBrasilia } from '@mont/shared'
 import { formatCurrency } from '@mont/shared'
 
 const lancamentoSchema = z.object({
@@ -55,7 +55,7 @@ export function LancamentoModal({ type, isOpen, onClose, onSuccess }: Lancamento
         resolver: zodResolver(lancamentoSchema),
         defaultValues: {
             valor: 0,
-            data: new Date().toISOString().split('T')[0],
+            data: hojeBrasilia(),
             conta_id: '',
             plano_conta_id: '',
             descricao: '',

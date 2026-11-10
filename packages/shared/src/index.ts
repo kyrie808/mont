@@ -11,6 +11,8 @@ export {
     formatDateTime,
     formatRelativeDate,
     hojeBrasilia,
+    agoraBrasiliaInput,
+    diaBrasilia,
     getWhatsAppLink,
     formatWeight,
     pluralize,

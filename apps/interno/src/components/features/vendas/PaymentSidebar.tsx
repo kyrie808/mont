@@ -8,7 +8,7 @@ import { pagamentoSchema, type PagamentoFormData } from '../../../schemas/venda'
 import type { DomainPagamento } from '../../../types/domain'
 import { Button } from '../../ui/Button'
 import { Select } from '../../ui/Select'
-import { cn } from '@mont/shared'
+import { cn, agoraBrasiliaInput } from '@mont/shared'
 import { avisoTabelaNoPagamento, type TabelaPreco } from '../../../utils/tabelaPreco'
 import { cashFlowService } from '../../../services/cashFlowService'
 import { formatCurrency } from '@mont/shared'
@@ -73,7 +73,7 @@ export function PaymentSidebar({
         defaultValues: {
             venda_id: vendaId,
             valor: restante,
-            data: new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T').slice(0, 16),
+            data: agoraBrasiliaInput(),
             metodo: 'pix' as const,
             conta_id: '',
             observacao: ''
@@ -249,7 +249,7 @@ export function PaymentSidebar({
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Data</label>
                     <input
                         type="datetime-local"
-                        value={formatDateTimeLocal(currentData || new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T'))}
+                        value={formatDateTimeLocal(currentData || agoraBrasiliaInput())}
                         onChange={(e) => setValue('data', e.target.value)}
                         className={cn(
                             "w-full px-3 py-2 bg-muted border rounded-lg text-sm outline-hidden transition-all",

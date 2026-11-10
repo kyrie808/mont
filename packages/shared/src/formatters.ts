@@ -85,7 +85,24 @@ const fmtDiaBrasilia = new Intl.DateTimeFormat('en-CA', {
  * servidor. Depois das 21h o UTC já virou o dia; aqui não. `now` injetável pra teste.
  */
 export function hojeBrasilia(now: Date = new Date()): string {
-    return fmtDiaBrasilia.format(now)
+    return diaBrasilia(now)
+}
+
+/** O dia de Brasília de um instante qualquer, 'AAAA-MM-DD' (ex.: limites de um filtro de mês). */
+export function diaBrasilia(d: Date): string {
+    return fmtDiaBrasilia.format(d)
+}
+
+const fmtHoraBrasilia = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+})
+
+/**
+ * Data e hora de Brasília como 'AAAA-MM-DDTHH:mm' — o valor de um `<input type="datetime-local">`.
+ * Sem argumento = agora. Mesmo princípio do hojeBrasilia: nunca `toISOString()` (é UTC).
+ */
+export function agoraBrasiliaInput(now: Date = new Date()): string {
+    return `${fmtDiaBrasilia.format(now)}T${fmtHoraBrasilia.format(now)}`
 }
 
 /**
