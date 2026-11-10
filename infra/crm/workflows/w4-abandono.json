@@ -20,7 +20,7 @@
           ]
         }
       },
-      "notes": "So varredura. A janela de abandono (30 min) e decidida pela Edge Function via `minutos` no corpo, nao aqui."
+      "notes": "So varredura. A janela de abandono (30 min) e decidida pela Edge Function via `minutos` no corpo, nao aqui. A mesma janela vale para as duas etapas: 30 min de silencio e a Marcia puxa, +30 min depois da retomada e a equipe sabe."
     },
     {
       "id": "buscar-abandonados",
@@ -50,21 +50,95 @@
           "name": "Ingestor Mont (x-ingestor-secret)"
         }
       },
-      "notes": "Acao GLOBAL: varre todos os contatos, nao recebe jid nem telefone_wa. Ja marca os rascunhos como 'abandonado' e ja tem guarda de humano atendendo dentro da Edge Function — nao reimplementar nada disso aqui."
+      "notes": "Acao GLOBAL: varre todos os contatos, nao recebe jid nem telefone_wa. Devolve DUAS listas, `retomar` (Etapa 1) e `avisar` (Etapa 2), num unico item.\n\nTodas as decisoes moram la dentro e NAO se reimplementam aqui: a guarda de humano atendendo, o UPDATE para status 'abandonado', o carimbo de `retomado_em` e — critico — a GAIOLA de allowlist. O que chega em `retomar` ja passou por `estaLiberado`; re-filtrar no n8n seria a terceira copia de uma regra, que e exatamente como este projeto perdeu um cliente."
     },
     {
-      "id": "um-por-vez",
-      "name": "Um por vez",
+      "id": "retomar-um-por-vez",
+      "name": "Retomar, um por vez",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         440,
-        0
+        -140
       ],
       "parameters": {
-        "jsCode": "return $json.abandonados.map(a => ({ json: a }));"
+        "jsCode": "// Etapa 1: a Marcia puxa o cliente. A Edge Function ja aplicou a gaiola e ja marcou\n// `retomado_em` — aqui so sai o envio.\nreturn ($json.retomar ?? []).map(r => ({ json: r }));"
       },
-      "notes": "Um item por rascunho abandonado. Cada item ja traz telefone_wa, contato, pedido e total (numero, sem formatacao)."
+      "notes": "`?? []` e nao acesso cru: lista vazia e o caso NORMAL (a maioria das varreduras nao acha nada), e foi `$json.abandonados.map` sem guarda que derrubou a execucao das 07:21 de 04/10 quando a Edge Function trocou o formato da resposta. Zero itens aqui apenas desliga o ramo.\n\nCada item traz telefone_wa, contato e texto (a retomada ja redigida pela Edge Function)."
+    },
+    {
+      "id": "enviar-retomada",
+      "name": "Enviar retomada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        660,
+        -140
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution:8080/message/sendText/mont",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.telefone_wa, text: $json.texto, delay: 4000, linkPreview: false }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GAzXyugDzud6i2fY",
+          "name": "Evolution API (apikey)"
+        }
+      },
+      "notes": "`number: telefone_wa` — este envio vai para o CLIENTE, nao para o grupo interno. E o primeiro caminho fora do W3 em que a agente fala com cliente; a gaiola que autoriza isso foi aplicada a montante, na Edge Function.\n\n`delay: 4000` e nao 0: o `delay` da Evolution simula presenca de digitacao, e mensagem que chega instantanea denuncia robo — mesmo motivo do piso de 4 s em `calcularTempoDigitacaoMs`. O aviso interno pode ir com 0 porque ninguem no grupo acha que e humano digitando.\n\nSem onError, de proposito: `retomado_em` foi carimbado ANTES deste envio, entao falha aqui significa cliente nao puxado. Vermelho e o unico sinal."
+    },
+    {
+      "id": "registrar-retomada",
+      "name": "Registrar retomada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        -140
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://herlvujykltxnwqmwmyx.supabase.co/functions/v1/whatsapp-secretaria",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ acao: 'registrar_envio', telefone_wa: $('Retomar, um por vez').item.json.telefone_wa, message_id: $json.key?.id ?? '', texto: $('Retomar, um por vez').item.json.texto }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "M5zuDDF22eH3VJHu",
+          "name": "Ingestor Mont (x-ingestor-secret)"
+        }
+      },
+      "notes": "PASSO LOAD-BEARING, nao telemetria. `registrar_envio` grava o message_id em `wa_envios`, e e SO isso que distingue a voz da Marcia da dos quatro humanos que dividem a conta.\n\nSem ele: `humanoAssumiu` le a propria retomada como 'o Gilmar assumiu', a Marcia se cala naquela conversa — e, pior, a Etapa 2 nunca avisa a equipe, porque o guard de humano manda marcar `abandonado` em silencio. Ele tambem grava a fala dela em `mensagens_whatsapp`: o que sai pela API da Evolution NAO volta pelo webhook, entao sem isto ela fica amnesica da propria retomada.\n\n`$json.key?.id ?? ''` com encadeamento opcional, igual ao no `Registrar envio` do W3: a resposta da Evolution nao sempre traz `key` e o acesso cru lanca. A Edge Function rejeita message_id vazio com 400 — falha visivel, que e o que se quer.\n\nSem onError: diferente do W3 (onde engolir o erro e necessario pra 'Liberar presenca' rodar e a conta nao travar), aqui nao ha no depois deste. Vermelho nao custa nada e e o unico aviso."
+    },
+    {
+      "id": "avisar-um-por-vez",
+      "name": "Avisar, um por vez",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        140
+      ],
+      "parameters": {
+        "jsCode": "// Etapa 2: ela ja puxou e o cliente seguiu calado. O rascunho ja esta `abandonado`.\nreturn ($json.avisar ?? []).map(a => ({ json: a }));"
+      },
+      "notes": "Lista vazia e o caso normal — so cai aqui quem ja tem `retomado_em` e seguiu calado por mais 30 min. Cada item traz telefone_wa, contato, pedido e total (numero, sem formatacao)."
     },
     {
       "id": "destino-do-aviso",
@@ -73,7 +147,7 @@
       "typeVersion": 4.4,
       "position": [
         660,
-        0
+        140
       ],
       "parameters": {
         "method": "POST",
@@ -94,7 +168,7 @@
           "name": "Ingestor Mont (x-ingestor-secret)"
         }
       },
-      "notes": "O id do grupo e constante VALIDADA na Edge Function, nunca campo livre aqui. O item de 'rascunhos_abandonados' ja traz telefone_wa (nao jid) — mandamos direto, sem reconstruir jid a mao num Code (essa conversao mora so em packages/shared)."
+      "notes": "O id do grupo e constante VALIDADA na Edge Function, nunca campo livre aqui. O item de `avisar` ja traz telefone_wa (nao jid) — mandamos direto, sem reconstruir jid a mao num Code (essa conversao mora so em packages/shared)."
     },
     {
       "id": "avisar-abandono",
@@ -103,7 +177,7 @@
       "typeVersion": 4.4,
       "position": [
         880,
-        0
+        140
       ],
       "parameters": {
         "method": "POST",
@@ -113,7 +187,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $json.jid.split('@')[0], text: `⏳ NAO CONFIRMADO — ${$('Um por vez').item.json.contato} (${$('Um por vez').item.json.telefone_wa})\\nMontou isto e parou de responder ha 30 min:\\n${$('Um por vez').item.json.pedido}\\nProdutos: R$ ${$('Um por vez').item.json.total.toFixed(2).replace('.', ',')}\\nNinguem confirmou. Vale um empurrao?`, delay: 0, linkPreview: false }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: $json.jid.split('@')[0], text: `⏳ NAO CONFIRMADO — ${$('Avisar, um por vez').item.json.contato} (${$('Avisar, um por vez').item.json.telefone_wa})\\nMontou isto, a Marcia puxou e ele nao respondeu:\\n${$('Avisar, um por vez').item.json.pedido}\\nProdutos: R$ ${$('Avisar, um por vez').item.json.total.toFixed(2).replace('.', ',')}\\nVale uma ligacao?`, delay: 0, linkPreview: false }) }}",
         "options": {
           "timeout": 20000
         }
@@ -124,7 +198,7 @@
           "name": "Evolution API (apikey)"
         }
       },
-      "notes": "Formata R$ na mao (toFixed+replace virgula), igual formatarReais em catalogo.ts: 'rascunhos_abandonados' devolve 'total' numerico, nao 'total_texto'. Intl.NumberFormat produz espaco nao-separavel (U+00A0), ruim em texto de WhatsApp — por isso nao usamos formatCurrency aqui.\n\nSem onError, de proposito — ao contrario do que os outros onError deste repo poderiam sugerir por padronizacao. O no 2 (Buscar abandonados) ja marcou este pedido como 'abandonado' no banco ANTES deste envio rodar. Se a Evolution estiver fora do ar aqui, o pedido ja saiu de 'rascunho' e a proxima varredura nunca mais o encontra. 'continueRegularOutput' deixaria essa falha em execucao VERDE: lead perdido pra sempre, sem aviso e sem nem um vermelho no historico pra alguem notar — exatamente o modo de falha que este workflow existe para eliminar. Diferente do W3, onde engolir erro no envio e necessario pra 'Liberar presenca' rodar depois (senao a conta trava): aqui nao ha nenhum no depois deste, entao nao ha custo nenhum em deixar vermelho. Vermelho aqui e o que avisa a equipe — nao tirar."
+      "notes": "`$json.jid` aqui e o GRUPO INTERNO devolvido por `destino_aviso` — nao o cliente. Trocar por telefone_wa mandaria o relatorio interno (nome e valor do pedido) para o proprio cliente.\n\nO texto diz que a Marcia JA tentou: quando este aviso sai, a Etapa 1 rodou ha 30 min e o cliente ignorou a retomada. 'Vale uma ligacao?' e nao 'Vale um empurrao?' porque o empurrao por mensagem ja foi dado.\n\nFormata R$ na mao (toFixed+replace virgula), igual formatarReais em catalogo.ts: `avisar` devolve `total` numerico, nao `total_texto`. Intl.NumberFormat produz espaco nao-separavel (U+00A0), ruim em texto de WhatsApp — por isso nao usamos formatCurrency aqui.\n\nSem onError, de proposito — ao contrario do que os outros onError deste repo poderiam sugerir por padronizacao. O no `Buscar abandonados` ja marcou este pedido como 'abandonado' no banco ANTES deste envio rodar. Se a Evolution estiver fora do ar aqui, o pedido ja saiu de 'rascunho' e a proxima varredura nunca mais o encontra. 'continueRegularOutput' deixaria essa falha em execucao VERDE: lead perdido pra sempre, sem aviso e sem nem um vermelho no historico pra alguem notar — exatamente o modo de falha que este workflow existe para eliminar. Isto nao e hipotese: em 30/09 um onError neste mesmo no transformou falha de envio em execucao verde com o pedido ja marcado 'abandonado', e ninguem soube. Vermelho aqui e o que avisa a equipe — nao tirar."
     }
   ],
   "connections": {
@@ -143,14 +217,41 @@
       "main": [
         [
           {
-            "node": "Um por vez",
+            "node": "Retomar, um por vez",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Avisar, um por vez",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Um por vez": {
+    "Retomar, um por vez": {
+      "main": [
+        [
+          {
+            "node": "Enviar retomada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar retomada": {
+      "main": [
+        [
+          {
+            "node": "Registrar retomada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar, um por vez": {
       "main": [
         [
           {
