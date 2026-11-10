@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Check, X, Plus } from 'lucide-react'
-import { cn } from '@mont/shared'
+import { cn, agoraBrasiliaInput } from '@mont/shared'
 import {
     useRegistrarPontoContato,
     useAtualizarPontoContato,
@@ -35,10 +35,10 @@ const RESULTADO_PONTO_OPTIONS: Array<{ value: ResultadoPontoContato; label: stri
 
 // datetime-local (yyyy-MM-ddTHH:mm) no horário local de São Paulo.
 const nowLocalDateTime = () =>
-    new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T').slice(0, 16)
+    agoraBrasiliaInput()
 
 const isoToLocalDateTime = (iso: string) =>
-    new Date(iso).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T').slice(0, 16)
+    agoraBrasiliaInput(new Date(iso))
 
 interface RegistrarContatoFormProps {
     contatoId: string

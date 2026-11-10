@@ -8,7 +8,7 @@ import { useProdutos } from '../../../hooks/useProdutos'
 import { useContatos } from '../../../hooks/useContatos'
 import { useToast } from '../../ui/Toast'
 import type { CreatePurchaseOrder, UpdatePurchaseOrder, CreatePurchaseOrderItem, DomainPurchaseOrderWithItems } from '../../../types/domain'
-import { formatCurrency } from '@mont/shared'
+import { formatCurrency, hojeBrasilia } from '@mont/shared'
 
 interface PurchaseOrderFormProps {
     isOpen: boolean
@@ -24,7 +24,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
     const [loading, setLoading] = useState(false)
 
     // Header State
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const [date, setDate] = useState(hojeBrasilia())
     const [notes, setNotes] = useState('')
     const [fornecedorId, setFornecedorId] = useState('')
     const [amountPaid, setAmountPaid] = useState<number>(0)
@@ -53,7 +53,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSave, initialData }: Purc
                 })))
             } else {
                 // Reset for new order
-                setDate(new Date().toISOString().split('T')[0])
+                setDate(hojeBrasilia())
                 setNotes('')
                 setFornecedorId('')
                 setAmountPaid(0)

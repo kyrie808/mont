@@ -4,7 +4,7 @@ import { X, DollarSign } from 'lucide-react'
 import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { formatCurrency } from '@mont/shared'
+import { formatCurrency, hojeBrasilia } from '@mont/shared'
 import type { DomainPurchaseOrderWithItems } from '../../../types/domain'
 import { cashFlowService } from '../../../services/cashFlowService'
 import type { Conta } from '@mont/shared'
@@ -50,7 +50,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
         resolver: zodResolver(paymentSchema),
         defaultValues: {
             amount: 0,
-            payment_date: new Date().toISOString().split('T')[0],
+            payment_date: hojeBrasilia(),
             payment_method: 'pix',
             conta_id: '',
             notes: ''
@@ -80,7 +80,7 @@ export function PurchaseOrderPaymentModal({ isOpen, onClose, onConfirm, order }:
         if (isOpen && order) {
             reset({
                 amount: remainingAmount > 0 ? remainingAmount : 0,
-                payment_date: new Date().toISOString().split('T')[0],
+                payment_date: hojeBrasilia(),
                 payment_method: 'pix',
                 conta_id: contas.length > 0 ? contas[0].id : '',
                 notes: ''

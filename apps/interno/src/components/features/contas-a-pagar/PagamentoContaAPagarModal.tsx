@@ -7,7 +7,7 @@ import { Modal, ModalActions, Button, Input, Select } from '../../ui'
 import { useToast } from '../../ui/Toast'
 import { useContas } from '../../../hooks/useContas'
 import { contasAPagarService } from '../../../services/contasAPagarService'
-import { formatCurrency, formatDate } from '@mont/shared'
+import { formatCurrency, formatDate, hojeBrasilia } from '@mont/shared'
 import { cn } from '@mont/shared'
 import type { ContaAPagarWithCategoria } from '../../../services/contasAPagarService'
 import type { Database } from '@mont/shared'
@@ -68,7 +68,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
         resolver: zodResolver(schema),
         defaultValues: {
             valor: 0,
-            data_pagamento: new Date().toISOString().split('T')[0],
+            data_pagamento: hojeBrasilia(),
             conta_id: '',
             metodo_pagamento: 'pix',
             observacao: '',
@@ -93,7 +93,7 @@ export function PagamentoContaAPagarModal({ isOpen, onClose, conta, onConfirm }:
         if (isOpen) {
             reset({
                 valor: saldoDevedor > 0 ? saldoDevedor : 0,
-                data_pagamento: new Date().toISOString().split('T')[0],
+                data_pagamento: hojeBrasilia(),
                 conta_id: contasAtivas.length > 0 ? contasAtivas[0].id : '',
                 metodo_pagamento: 'pix',
                 observacao: '',

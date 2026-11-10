@@ -7,7 +7,7 @@ import { Modal, ModalActions, Button } from '../../ui'
 import { useContas } from '../../../hooks/useContas'
 import { useLancamentos } from '../../../hooks/useLancamentos'
 import { useToast } from '../../ui/Toast'
-import { cn } from '@mont/shared'
+import { cn, hojeBrasilia } from '@mont/shared'
 import { formatCurrency } from '@mont/shared'
 
 const transferenciaSchema = z.object({
@@ -46,7 +46,7 @@ export function TransferenciaModal({ isOpen, onClose, onSuccess }: Transferencia
         resolver: zodResolver(transferenciaSchema),
         defaultValues: {
             valor: 0,
-            data: new Date().toISOString().split('T')[0],
+            data: hojeBrasilia(),
             conta_id: '',
             conta_destino_id: '',
             descricao: 'Transferência interna',

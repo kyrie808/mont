@@ -1,3 +1,4 @@
+import { diaBrasilia, hojeBrasilia } from '@mont/shared'
 import { supabase } from '../lib/supabase'
 import type { VendaUpdate } from '@mont/shared'
 import type { DomainVenda, CreateVenda, UpdateVenda, VendasMetrics } from '../types/domain'
@@ -84,16 +85,17 @@ export const vendaService = {
         if (includePending && (startDate || endDate)) {
             const conditions: string[] = []
             if (startDate && endDate) {
-                const startStr = startDate.toISOString().split('T')[0]
-                const endStr = endDate.toISOString().split('T')[0]
+                // Dia de Brasília dos limites: endOfMonth (23:59 local) em UTC já é dia 1º do mês seguinte.
+                const startStr = diaBrasilia(startDate)
+                const endStr = diaBrasilia(endDate)
                 conditions.push(`and(data.gte.${startStr},data.lte.${endStr})`)
             }
             conditions.push(`status.eq.pendente`)
             conditions.push(`pago.eq.false`)
             query = query.or(conditions.join(','))
         } else {
-            if (startDate) query = query.gte('data', startDate.toISOString().split('T')[0])
-            if (endDate) query = query.lte('data', endDate.toISOString().split('T')[0])
+            if (startDate) query = query.gte('data', diaBrasilia(startDate))
+            if (endDate) query = query.lte('data', diaBrasilia(endDate))
         }
 
         const { data, error } = await query
@@ -382,7 +384,7 @@ export const vendaService = {
         if (saldo <= 0) return venda
 
         // Registra pagamento do saldo restante — o trigger cuida de marcar pago=true
-        const dataPagamento = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).split(' ')[0]
+        const dataPagamento = hojeBrasilia()
         await this.addPagamento(id, saldo, metodo, dataPagamento, contaId, observacao)
 
         return this.getVendaById(id)

@@ -1,3 +1,4 @@
+import { hojeBrasilia } from '@mont/shared'
 import { z } from 'zod'
 
 // Item de venda
@@ -63,7 +64,7 @@ export const pagamentoSchema = z.object({
     valor: z.number().min(0.01, 'Valor deve ser maior que zero'),
     data: z.string().refine((val) => {
         const date = new Date(val);
-        const todayStr = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).split(' ')[0];
+        const todayStr = hojeBrasilia();
         const endOfToday = new Date(`${todayStr}T23:59:59`);
         return date <= endOfToday;
     }, 'A data de pagamento não pode ser futura'),
