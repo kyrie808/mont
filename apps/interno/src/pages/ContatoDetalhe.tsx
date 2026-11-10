@@ -6,7 +6,7 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { Button, PageSkeleton } from '../components/ui'
 import { ContatoFormModal } from '../components/contatos'
 import { IndicadosDetalhe } from '../components/dashboard/IndicadosDetalhe'
-import { useContato, useContatos } from '../hooks/useContatos'
+import { useContato, useContatoAcoes } from '../hooks/useContatos'
 import { useToast } from '../components/ui/Toast'
 import { useVendas } from '../hooks/useVendas'
 import { useIndicadosDoIndicador } from '../hooks/useIndicadosDoIndicador'
@@ -34,7 +34,7 @@ export function ContatoDetalhe() {
     const navigate = useNavigate()
     const toast = useToast()
     const { contato, loading, error, refetch } = useContato(id)
-    const { deleteContato } = useContatos()
+    const { deleteContato } = useContatoAcoes()
     const { vendas: vendasRaw } = useVendas({ excludeCatalogo: true, contatoId: id })
     // Indicações convertidas deste contato (contadas no banco; antes vinham de listas cortadas em 1000).
     const indicacoesConvertidas = useConversoesIndicador(id)

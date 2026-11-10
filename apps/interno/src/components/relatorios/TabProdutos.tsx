@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Award, AlertTriangle } from 'lucide-react'
-import { useRptMargemPorSku, useRptGiroEstoque, useRptLtvPorCliente } from '../../hooks/useRelatorios'
+import { useRptMargemPorSku, useRptGiroEstoque, useRptLtvResumo } from '../../hooks/useRelatorios'
 import type { PeriodoRel } from '../../services/relatorioService'
 import {
     C_FG, C_MUTED_FG, C_MUTED, C_MONO, COL_PRIMARY, COL_WARNING,
@@ -26,7 +26,7 @@ const stockColor = (s: string): string => STOCK_META[s as StatusEstoque]?.color 
 export function TabProdutos({ animKey, periodo }: Props) {
     const { data: margens = [], isLoading: l1, isError: e1 } = useRptMargemPorSku(periodo)
     const { data: giros = [],   isLoading: l2, isError: e2 } = useRptGiroEstoque(periodo)
-    const { data: ltvRows = [] }                              = useRptLtvPorCliente(periodo)
+    const { data: ltvResumo }                                 = useRptLtvResumo(periodo)
 
     const isLoading = l1 || l2
     const isError   = e1 || e2
@@ -95,7 +95,7 @@ export function TabProdutos({ animKey, periodo }: Props) {
         const topProduct = margens[0]
 
         // outros = receita de vendas sem itens (LTV-produto − receita itemizada). Ambos produto.
-        const totalLtv      = ltvRows.reduce((s, c) => s + (c.ltv_total ?? 0), 0)
+        const totalLtv      = ltvResumo?.total_ltv ?? 0 // somado no banco (antes: lista cortada em 1000)
         const outrosReceita = Math.round(totalLtv) - Math.round(totalReceita)
 
         return {
@@ -103,7 +103,7 @@ export function TabProdutos({ animKey, periodo }: Props) {
             abc, abcResumo,
             statusCount, precisamAtencao, totalProdutos: giros.length, topProduct, outrosReceita,
         }
-    }, [produtos, giros, margens, ltvRows])
+    }, [produtos, giros, margens, ltvResumo])
 
     if (isLoading) return <EmptyState msg="Carregando dados de produtos…" />
     if (isError)   return <EmptyState msg="Falha ao carregar dados de produtos." />

@@ -1,7 +1,7 @@
 import { Search, User, Plus, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Button, Modal, Input, ModalActions } from '../../../ui'
-import { useContatos } from '../../../../hooks/useContatos'
+import { useContatoAcoes } from '../../../../hooks/useContatos'
 import { useClientesSugeridos } from '../../../../hooks/useClientesSugeridos'
 import { useToast } from '../../../../components/ui/Toast'
 import { formatPhone } from '@mont/shared'
@@ -20,7 +20,7 @@ export function ClientSelector({ selectedContato, onSelect }: ClientSelectorProp
     const [search, setSearch] = useState('')
     const [results, setResults] = useState<DomainContato[]>([])
     const [selecting, setSelecting] = useState(false)
-    const { searchContatos, createContato, getContatoById } = useContatos()
+    const { searchContatos, createContato, getContatoById } = useContatoAcoes()
     const { data: sugeridos = [] } = useClientesSugeridos(20)
     const toast = useToast()
 

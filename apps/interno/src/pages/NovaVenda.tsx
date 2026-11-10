@@ -5,8 +5,8 @@ import { useCombosMontagem, useMaisVendidos, usePrecosVigentes, useProdutos } fr
 import { useSecoes } from '../hooks/useSecoes'
 import { useCartStore, precificar, type CartItem } from '../stores/useCartStore'
 import { useToast } from '../components/ui/Toast'
-import { useVendas } from '../hooks/useVendas'
-import { useContatos } from '../hooks/useContatos'
+import { useVendaAcoes } from '../hooks/useVendas'
+import { useContatoAcoes } from '../hooks/useContatos'
 import type { DomainProduto, CreateVenda } from '../types/domain'
 import { formatCurrency } from '@mont/shared'
 
@@ -73,8 +73,8 @@ export function NovaVenda() {
         (p: DomainProduto) => precoNaTabela(precos, p.id, Number(p.preco), 'pix'),
         [precos]
     )
-    const { getVendaById, createVenda } = useVendas()
-    const { getContatoById } = useContatos()
+    const { getVendaById, createVenda } = useVendaAcoes()
+    const { getContatoById } = useContatoAcoes()
 
     // Store
     const {

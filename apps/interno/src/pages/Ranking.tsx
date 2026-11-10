@@ -39,16 +39,12 @@ export function Ranking() {
     const periodo = escopo === 'mes'
         ? { ano: year, mes: month }
         : { ano: null, mes: null }
-    const { rankingCompras, loading } = useRankingCompras(periodo)
-
-    // Top-N para o pódio/lista; os KPIs usam o conjunto INTEIRO (números honestos).
-    const topRanking = rankingCompras.slice(0, TOP_N)
+    // Top-N para o pódio/lista; os KPIs vêm do banco sobre o conjunto INTEIRO (números honestos).
+    const { rankingCompras: topRanking, resumo, loading } = useRankingCompras(periodo, TOP_N)
 
     const metrics = useMemo(() => {
         if (activeTab === 'compras') {
-            const totalClientes = rankingCompras.length
-            const somaPontos = rankingCompras.reduce((acc, curr) => acc + curr.totalPontos, 0)
-            const totalCompras = rankingCompras.reduce((acc, curr) => acc + curr.totalCompras, 0)
+            const { totalClientes, somaPontos, totalCompras } = resumo
             const mediaPorCompra = totalCompras > 0 ? somaPontos / totalCompras : 0
 
             return [
@@ -108,9 +104,9 @@ export function Ranking() {
                 }
             ]
         }
-    }, [activeTab, escopo, rankingCompras, topIndicadores, totalConversoes])
+    }, [activeTab, escopo, resumo, topIndicadores, totalConversoes])
 
-    if (loading && rankingCompras.length === 0) return <PageSkeleton rows={8} showHeader />
+    if (loading && topRanking.length === 0) return <PageSkeleton rows={8} showHeader />
 
     return (
         <>

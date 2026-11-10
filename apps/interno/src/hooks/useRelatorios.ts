@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { relatorioService, rangeDoPeriodo, type PeriodoRel } from '../services/relatorioService'
+import { relatorioService, rangeDoPeriodo, type FiltroLtv, type PeriodoRel } from '../services/relatorioService'
 
 const STALE_TIME = 1000 * 60 * 5
 
@@ -10,10 +10,38 @@ function periodoKey(p: PeriodoRel): string {
 
 // ── Clientes ──────────────────────────────────────────────────────────────────
 
-export function useRptLtvPorCliente(periodo: PeriodoRel) {
+/** Totais do LTV no período (contagens e somas feitas no banco). */
+export function useRptLtvResumo(periodo: PeriodoRel) {
     return useQuery({
-        queryKey: ['relatorio', 'ltv_por_cliente', periodoKey(periodo)],
-        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getLtvPorCliente(desde, ate) },
+        queryKey: ['relatorio', 'ltv_resumo', periodoKey(periodo)],
+        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getLtvResumo(desde, ate) },
+        staleTime: STALE_TIME,
+    })
+}
+
+/** LTV por origem de aquisição (uma linha por origem). */
+export function useRptLtvPorOrigem(periodo: PeriodoRel) {
+    return useQuery({
+        queryKey: ['relatorio', 'ltv_por_origem', periodoKey(periodo)],
+        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getLtvPorOrigem(desde, ate) },
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Os N clientes de maior LTV. */
+export function useRptLtvTop(periodo: PeriodoRel, limite: number) {
+    return useQuery({
+        queryKey: ['relatorio', 'ltv_top', periodoKey(periodo), limite],
+        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getLtvTop(desde, ate, limite) },
+        staleTime: STALE_TIME,
+    })
+}
+
+/** Todos os clientes de um filtro (em risco / compraram 1 vez), sem o corte de 1000. */
+export function useRptLtvFiltrado(periodo: PeriodoRel, filtro: FiltroLtv) {
+    return useQuery({
+        queryKey: ['relatorio', 'ltv_filtrado', periodoKey(periodo), filtro],
+        queryFn: () => { const { desde, ate } = rangeDoPeriodo(periodo); return relatorioService.getLtvFiltrado(desde, ate, filtro) },
         staleTime: STALE_TIME,
     })
 }

@@ -18,12 +18,13 @@ const QUINZE_MIN = 1000 * 60 * 15
 const CONTAGEM_VAZIA: ContagemContatos = { all: 0, clientes: 0, leads: 0, vips: 0, inativos: 0, novosIa: 0 }
 
 /** Uma página da Gestão de Clientes. Mantém a página anterior na tela enquanto a próxima chega. */
-export function useListaContatos(parametros: ParametrosListaContatos) {
+export function useListaContatos(parametros: ParametrosListaContatos, opcoes: { enabled?: boolean } = {}) {
     return useQuery({
         queryKey: [CHAVE_CONTATOS_SEGMENTO, 'lista', parametros],
         queryFn: () => contatosSegmentoService.listar(parametros),
         placeholderData: keepPreviousData,
         staleTime: QUINZE_MIN,
+        enabled: opcoes.enabled ?? true,
     })
 }
 

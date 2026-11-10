@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { formatPhone } from '@mont/shared'
 import { Modal, ModalActions, Button } from '../ui'
 import { contatoSchema, type ContatoFormData } from '../../schemas/contato'
-import { useContatos } from '../../hooks/useContatos'
+import { useContatoAcoes } from '../../hooks/useContatos'
 import { useToast } from '../ui/Toast'
 import { useCep } from '../../hooks/useCep'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
@@ -37,7 +37,7 @@ export function ContatoFormModal({
     const isEditing = !!contato
     const isDesktop = useIsDesktop()
     const toast = useToast()
-    const { createContato, updateContato, searchContatos } = useContatos()
+    const { createContato, updateContato, searchContatos } = useContatoAcoes()
     const { fetchCep, loading: loadingCep } = useCep()
 
     const [indicadorSearch, setIndicadorSearch] = useState('')

@@ -15,13 +15,58 @@ export function rangeDoPeriodo(p: PeriodoRel): { desde: string | null; ate: stri
     return { desde: format(first, 'yyyy-MM-dd'), ate: format(last, 'yyyy-MM-dd') }
 }
 
+export type LtvCliente = Fn<'rpt_ltv_por_cliente_periodo'>[number]
+export type LtvResumo = Fn<'rpt_ltv_resumo_periodo'>[number]
+export type LtvPorOrigem = Fn<'rpt_ltv_por_origem_periodo'>[number]
+
+/** Filtro de linhas do LTV que a tela mostra por nome (lista "em risco", "compraram 1 vez"). */
+export type FiltroLtv = { status: 'risco' } | { totalPedidos: 1 }
+
+/** O PostgREST devolve no máximo 1000 linhas por requisição (max_rows): lê em lotes até o fim. */
+const LOTE = 1000
+
 export const relatorioService = {
     // ── Clientes ──────────────────────────────────────────────────────────────
+    // Os totais saem do banco (rpt_ltv_resumo_periodo / rpt_ltv_por_origem_periodo, migração
+    // 20261107202501). Antes as abas somavam no navegador a lista inteira, que o PostgREST corta
+    // em 1000 linhas. Só vêm linha a linha os clientes que a tela mostra pelo nome.
 
-    async getLtvPorCliente(pDesde: string | null, pAte: string | null): Promise<Fn<'rpt_ltv_por_cliente_periodo'>> {
-        const { data, error } = await supabase.rpc('rpt_ltv_por_cliente_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
+    async getLtvResumo(pDesde: string | null, pAte: string | null): Promise<LtvResumo | null> {
+        const { data, error } = await supabase.rpc('rpt_ltv_resumo_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
+        if (error) throw error
+        return data?.[0] ?? null
+    },
+
+    async getLtvPorOrigem(pDesde: string | null, pAte: string | null): Promise<LtvPorOrigem[]> {
+        const { data, error } = await supabase.rpc('rpt_ltv_por_origem_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
         if (error) throw error
         return data ?? []
+    },
+
+    /** Os N clientes de maior LTV no período. */
+    async getLtvTop(pDesde: string | null, pAte: string | null, limite: number): Promise<LtvCliente[]> {
+        const { data, error } = await supabase
+            .rpc('rpt_ltv_por_cliente_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
+            .order('ltv_total', { ascending: false })
+            .limit(limite)
+        if (error) throw error
+        return data ?? []
+    },
+
+    /** TODOS os clientes do filtro (maior LTV primeiro), lidos em lotes de 1000 — sem corte. */
+    async getLtvFiltrado(pDesde: string | null, pAte: string | null, filtro: FiltroLtv): Promise<LtvCliente[]> {
+        const linhas: LtvCliente[] = []
+        for (let de = 0; ; de += LOTE) {
+            let q = supabase.rpc('rpt_ltv_por_cliente_periodo', { p_desde: pDesde ?? undefined, p_ate: pAte ?? undefined })
+            q = 'status' in filtro ? q.eq('status_atividade', filtro.status) : q.eq('total_pedidos', filtro.totalPedidos)
+            const { data, error } = await q
+                .order('ltv_total', { ascending: false })
+                .order('contato_id', { ascending: true })
+                .range(de, de + LOTE - 1)
+            if (error) throw error
+            linhas.push(...(data ?? []))
+            if (!data || data.length < LOTE) return linhas
+        }
     },
 
     // ── Produtos ──────────────────────────────────────────────────────────────

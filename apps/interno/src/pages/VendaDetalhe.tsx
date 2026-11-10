@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { formatCurrency } from '@mont/shared'
 import { LoadingScreen, Button, Drawer } from '../components/ui'
-import { useVenda, useVendas } from '../hooks/useVendas'
+import { useVenda, useVendaAcoes } from '../hooks/useVendas'
 import { usePrecosVigentes } from '../hooks/useProdutos'
 import { cartaoDiferenteNaVenda } from '../utils/tabelaPreco'
 import type { PagamentoFormData } from '../schemas/venda'
@@ -28,7 +28,7 @@ export function VendaDetalhe() {
     const { venda, loading, error, refetch } = useVenda(id)
     // Aviso do Quitar (Pix × cartão) só quando o cartão tem outro preço nos itens da venda.
     const { precos } = usePrecosVigentes()
-    const { deleteVenda, cancelVenda, addPagamento, updateVendaStatus, deleteUltimoPagamento, updateVenda } = useVendas()
+    const { deleteVenda, cancelVenda, addPagamento, updateVendaStatus, deleteUltimoPagamento, updateVenda } = useVendaAcoes()
 
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showCancelModal, setShowCancelModal] = useState(false)
