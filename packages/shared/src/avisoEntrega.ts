@@ -31,6 +31,8 @@ export interface VendaAviso {
     valorPago: number
     taxaEntrega: number | null
     observacaoEntregador: string | null
+    /** Nome do entregador da venda (vendas.entregador_id → entregadores.nome); null = sem entregador. */
+    entregador: string | null
     cliente: ClienteAviso
     itens: Array<{ quantidade: number; nome: string }>
 }
@@ -127,6 +129,7 @@ export function montarAvisoEntrega(v: VendaAviso): string {
         `*🚗Entrega ${v.dataEntregaPrevista ? diaMes(v.dataEntregaPrevista) : '??/??'}🚗*`,
         '🧀 *Novo Pedido — Mont Distribuidora*',
         '',
+        `*Entregador:* ${vazio(v.entregador) ? '—' : v.entregador!.trim()}`,
         `*Cliente:* ${v.cliente.nome.trim()}`,
         `*Telefone:* ${telefoneBr(v.cliente.telefone)}`,
         '',

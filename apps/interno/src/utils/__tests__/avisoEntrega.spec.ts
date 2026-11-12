@@ -15,6 +15,7 @@ const valeria: VendaAviso = {
     valorPago: 0,
     taxaEntrega: 5,
     observacaoEntregador: 'RECEBER ANTES DAS 11H ⚠️ - Levar maquininha',
+    entregador: 'Maurício',
     cliente: {
         nome: 'Valéria',
         telefone: '11995890951',
@@ -39,6 +40,7 @@ describe('montarAvisoEntrega — o formato do grupo #ENTREGAS', () => {
             '*🚗Entrega 16/10🚗*',
             '🧀 *Novo Pedido — Mont Distribuidora*',
             '',
+            '*Entregador:* Maurício',
             '*Cliente:* Valéria',
             '*Telefone:* (11) 99589-0951',
             '',
@@ -109,6 +111,12 @@ describe('montarAvisoEntrega — o formato do grupo #ENTREGAS', () => {
         })
         expect(texto).toContain('*Endereço:* UPA Demarchi, falar com a Andréa')
         expect(texto).toContain('*Observação:* —')
+    })
+
+    it('entregador: o nome logo antes do cliente; sem entregador na venda, "—"', () => {
+        expect(montarAvisoEntrega({ ...valeria, entregador: 'Gilmar' })).toContain('*Entregador:* Gilmar\n*Cliente:* Valéria')
+        expect(montarAvisoEntrega({ ...valeria, entregador: null })).toContain('*Entregador:* —\n*Cliente:* Valéria')
+        expect(montarAvisoEntrega({ ...valeria, entregador: '  ' })).toContain('*Entregador:* —')
     })
 
     it('quantidade fracionada sai com vírgula', () => {
