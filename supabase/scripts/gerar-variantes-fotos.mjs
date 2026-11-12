@@ -19,7 +19,9 @@ const PASTA_VARIANTES = 'variantes'
 const base = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!base || !chave) {
-    console.error('Faltam SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) e SUPABASE_SERVICE_ROLE_KEY no ambiente.')
+    // Só os nomes do que falta (nunca valores).
+    const faltam = [!base && 'SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL)', !chave && 'SUPABASE_SERVICE_ROLE_KEY'].filter(Boolean)
+    console.error(`Falta no ambiente: ${faltam.join(' e ')}.`)
     process.exit(1)
 }
 const aplicar = process.argv.includes('--aplicar')
