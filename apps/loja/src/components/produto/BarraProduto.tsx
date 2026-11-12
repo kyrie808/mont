@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { BotaoAvisa } from '@/components/Esgotado'
 import { Seletor } from '@/components/Seletor'
 import { reais } from '@/lib/formato'
 import type { ProdutoLoja } from '@/lib/vitrine/tipos'
@@ -9,12 +10,14 @@ interface BarraProdutoProps {
     produto: ProdutoLoja
     /** Quantas unidades já estão na sacola (0 = nenhuma). */
     naSacola: number
+    /** WhatsApp da Mont: o esgotado troca o "Adicionar" pelo "Me avisa quando chegar". */
+    whatsapp: string
     /** Quantidade final na sacola (não soma: a barra mostra e ajusta o que já está lá). */
     onConfirmar: (quantidade: number) => void
 }
 
 /** Ação do produto (quantidade + adicionar à sacola), igual no painel e na página do produto. */
-export function BarraProduto({ produto, naSacola, onConfirmar }: BarraProdutoProps) {
+export function BarraProduto({ produto, naSacola, whatsapp, onConfirmar }: BarraProdutoProps) {
     const [quantidade, setQuantidade] = useState(naSacola > 0 ? naSacola : 1)
     const jaNaSacola = naSacola > 0
     const rotuloBotao =
@@ -43,13 +46,7 @@ export function BarraProduto({ produto, naSacola, onConfirmar }: BarraProdutoPro
                     </button>
                 </>
             ) : (
-                <button
-                    type="button"
-                    disabled
-                    className="h-[52px] flex-1 rounded-[26px] bg-linha text-base font-bold text-texto-suave"
-                >
-                    Esgotado
-                </button>
+                <BotaoAvisa produto={produto} whatsapp={whatsapp} variante="barra" />
             )}
         </div>
     )

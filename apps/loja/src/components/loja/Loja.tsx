@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@mont/shared'
 import { PrecoCombo } from '@/components/combo/PrecoCombo'
+import { BotaoAvisa, FaixaEsgotado, fotoEsgotada } from '@/components/Esgotado'
 import { Foto } from '@/components/Foto'
 import { IconeSacola } from '@/components/IconeSacola'
 import { Seletor } from '@/components/Seletor'
@@ -15,6 +16,7 @@ import { catalogoDa, resumirSacola, totalDeItens } from '@/lib/sacola/calculo'
 import { useSacola } from '@/lib/sacola/store'
 import { useSacolaPronta } from '@/lib/sacola/useSacolaPronta'
 import { cartaoTemOutroPreco, MESMO_PRECO } from '@/lib/vitrine/cartao'
+import { separarEsgotados } from '@/lib/vitrine/esgotado'
 import { ehCombo, type ComboLoja, type ProdutoLoja, type SecaoLoja, type Vitrine } from '@/lib/vitrine/tipos'
 import { PainelProduto } from './PainelProduto'
 
@@ -212,6 +214,27 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         </article>
     )
 
+    // Esgotado na lista: miniatura cinza com a faixa, "Volta em breve" no lugar do preço e o "Me avisa".
+    const linhaEsgotada = (p: ProdutoLoja) => (
+        <article key={p.id} className="flex items-center gap-3 border-b border-linha py-2.5">
+            <button
+                type="button"
+                onClick={(e) => abrir(p, e)}
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl text-left"
+            >
+                <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+                    <Foto url={p.imagemUrl} alt="" largura={56} className={cn('h-14 w-14', fotoEsgotada)} />
+                    <FaixaEsgotado tamanho="linha" />
+                </span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-sm leading-tight font-bold text-texto-suave">{p.nome}</span>
+                    <span className="text-xs text-texto-suave">Volta em breve</span>
+                </span>
+            </button>
+            <BotaoAvisa produto={p} whatsapp={whatsapp} variante="linha" />
+        </article>
+    )
+
     // Seção com poucos produtos: cartões com foto grande, preço e botão alinhados no pé.
     const cartaoProduto = (p: ProdutoLoja, prioridade: boolean) => (
         <article key={p.id} className="flex flex-col gap-1.5 rounded-2xl border border-linha bg-white p-2.5">
@@ -246,9 +269,40 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         </article>
     )
 
+    // Esgotado em grade: fundo mais apagado, foto cinza com a faixa, "Volta em breve" e o "Me avisa quando chegar".
+    const cartaoEsgotado = (p: ProdutoLoja) => (
+        <article key={p.id} className="flex flex-col gap-1.5 rounded-2xl border border-linha bg-esgotado p-2.5">
+            <button
+                type="button"
+                onClick={(e) => abrir(p, e)}
+                className="flex cursor-pointer flex-col gap-1.5 rounded-xl text-left"
+            >
+                <span className="relative h-[120px] w-full overflow-hidden rounded-xl">
+                    <Foto url={p.imagemUrl} alt="" largura={170} className={cn('h-[120px] w-full', fotoEsgotada)} />
+                    <FaixaEsgotado tamanho="cartao" />
+                </span>
+                <span className="text-sm leading-tight font-bold text-texto-suave">{p.nome}</span>
+                {p.subtitulo && <span className="text-xs leading-snug text-texto-suave">{p.subtitulo}</span>}
+            </button>
+            <div className="mt-auto flex flex-col gap-1.5">
+                <span className="text-xs text-texto-suave">Volta em breve</span>
+                <BotaoAvisa produto={p} whatsapp={whatsapp} variante="cartao" />
+            </div>
+        </article>
+    )
+
+    // Divisor antes dos esgotados de uma seção em lista (só aparece se a seção tiver algum). Na grade, não há divisor.
+    const divisorEsgotados = (
+        <div className="mt-[18px] mb-0.5 flex items-center gap-2">
+            <span className="text-xs font-bold tracking-[1.5px] text-texto-suave uppercase">Esgotados no momento</span>
+            <span aria-hidden="true" className="h-px flex-1 bg-linha" />
+        </div>
+    )
+
     const secaoDaLoja = (s: SecaoLoja, primeira: boolean) => {
         const combosDaSecao = s.itens.filter(ehCombo)
-        const avulsos = s.itens.filter((p) => !ehCombo(p))
+        // Esgotados no fim da seção: na grade, como últimos cards; na lista, depois do divisor.
+        const { aVenda, esgotados } = separarEsgotados(s.itens.filter((p) => !ehCombo(p)))
         return (
             <section
                 key={s.id}
@@ -265,10 +319,19 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 {s.formato === 'cartoes' ? (
                     <div className="grid grid-cols-2 gap-3">
                         {/* Sem combos da campanha no topo, as 2 primeiras fotos da 1ª seção são o maior conteúdo da tela. */}
-                        {avulsos.map((p, i) => cartaoProduto(p, primeira && i < 2))}
+                        {aVenda.map((p, i) => cartaoProduto(p, primeira && i < 2))}
+                        {esgotados.map(cartaoEsgotado)}
                     </div>
                 ) : (
-                    avulsos.map(linhaProduto)
+                    <>
+                        {aVenda.map(linhaProduto)}
+                        {esgotados.length > 0 && (
+                            <>
+                                {divisorEsgotados}
+                                {esgotados.map(linhaEsgotada)}
+                            </>
+                        )}
+                    </>
                 )}
             </section>
         )
@@ -439,6 +502,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 <PainelProduto
                     key={produtoAberto.id}
                     produto={produtoAberto}
+                    whatsapp={whatsapp}
                     naSacola={quantidadeDe(produtoAberto.id)}
                     focarFechar={abertoPorTeclado}
                     onFechar={fechar}

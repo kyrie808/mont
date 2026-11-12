@@ -11,6 +11,11 @@
     --color-tracejado: #C9B9A6;      /* borda tracejada, desabilitado */
     --color-laranja: #E8923A;        /* CTA (texto marrom sobre ele) */
     --color-verde: #2E7D32;          /* confirmação */
+    /* Produto esgotado (wireframe Esgotado). */
+    --color-faixa: #C62828;          /* faixa e etiqueta "ESGOTADO" (texto branco) */
+    --color-esgotado: #F4F1EC;       /* fundo do card/opção esgotada */
+    --color-verde-claro: #E8F2E9;    /* fundo do selo "Vamos te avisar" */
+    --color-verde-escuro: #1B5E20;   /* texto do selo "Vamos te avisar" */
 }
 
 /*

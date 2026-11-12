@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { EtiquetaEsgotado, fotoEsgotada } from '@/components/Esgotado'
 import { Foto } from '@/components/Foto'
 import { PrecoCombo } from './PrecoCombo'
 import { Seletor } from '@/components/Seletor'
@@ -140,12 +141,19 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                                                 aria-checked={marcado}
                                                 disabled={!o.disponivel}
                                                 onClick={() => setQ((atual) => ({ ...atual, [g.id]: { [o.produtoId]: 1 } }))}
-                                                className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-[14px] border-[1.5px] bg-white px-3 py-2 text-left transition-colors duration-150 disabled:cursor-default disabled:opacity-60 ${marcado ? 'border-marrom' : 'border-linha'}`}
+                                                className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-[14px] border-[1.5px] bg-white px-3 py-2 text-left transition-colors duration-150 disabled:cursor-default disabled:bg-esgotado ${marcado ? 'border-marrom' : 'border-linha'}`}
                                             >
-                                                <Foto url={o.imagemUrl} alt="" largura={44} className="h-11 w-11 rounded-[10px]" />
-                                                <span className="flex-1 text-[15px] font-medium">{o.nome}</span>
+                                                <Foto
+                                                    url={o.imagemUrl}
+                                                    alt=""
+                                                    largura={44}
+                                                    className={`h-11 w-11 rounded-[10px] ${o.disponivel ? '' : fotoEsgotada}`}
+                                                />
+                                                <span className={`flex-1 text-[15px] font-medium ${o.disponivel ? '' : 'text-texto-suave'}`}>
+                                                    {o.nome}
+                                                </span>
                                                 {!o.disponivel ? (
-                                                    <span className="pr-1 text-xs font-bold text-texto-suave">Esgotado</span>
+                                                    <EtiquetaEsgotado className="mr-1" />
                                                 ) : (
                                                     <span
                                                         aria-hidden="true"
@@ -204,7 +212,12 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                                     const limiteSabor = !g.permiteRepetir && qtd >= 1
                                     return (
                                         <div key={o.produtoId} className="flex items-center gap-3 border-b border-linha py-2">
-                                            <Foto url={o.imagemUrl} alt={o.nome} largura={44} className="h-11 w-11 rounded-[10px]" />
+                                            <Foto
+                                                url={o.imagemUrl}
+                                                alt={o.nome}
+                                                largura={44}
+                                                className={`h-11 w-11 rounded-[10px] ${o.disponivel ? '' : fotoEsgotada}`}
+                                            />
                                             <span
                                                 className={`flex-1 text-[15px] font-medium ${o.disponivel ? 'text-marrom' : 'text-texto-suave'}`}
                                             >
@@ -223,7 +236,7 @@ function Editor({ combo, chaveEdicao }: { combo: ComboLoja; chaveEdicao: string 
                                                     maisDesabilitado={cheio || limiteSabor}
                                                 />
                                             ) : (
-                                                <span className="pr-2 text-xs font-bold text-texto-suave">Esgotado</span>
+                                                <EtiquetaEsgotado className="mr-2" />
                                             )}
                                         </div>
                                     )

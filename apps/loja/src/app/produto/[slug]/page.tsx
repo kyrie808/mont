@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { PaginaProduto } from '@/components/produto/PaginaProduto'
+import { ambiente } from '@/lib/ambiente'
 import { catalogoDa } from '@/lib/sacola/calculo'
 import { metadadosDoProduto } from '@/lib/seo'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
@@ -47,7 +48,7 @@ export default async function PaginaDoProduto({ params }: Parametros) {
     const juntos = compradosJuntos(produto, await coCompra(produto.id), [...catalogo.produtos.values()])
     return (
         <Suspense>
-            <PaginaProduto produto={produto} vitrine={vitrine} juntos={juntos} />
+            <PaginaProduto produto={produto} vitrine={vitrine} juntos={juntos} whatsapp={ambiente().NEXT_PUBLIC_WHATSAPP_NUMBER} />
         </Suspense>
     )
 }

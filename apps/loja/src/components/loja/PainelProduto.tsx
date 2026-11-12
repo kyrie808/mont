@@ -10,6 +10,8 @@ interface PainelProdutoProps {
     produto: ProdutoLoja
     /** Quantas unidades já estão na sacola (0 = nenhuma). */
     naSacola: number
+    /** WhatsApp da Mont (o "Me avisa quando chegar" do esgotado). */
+    whatsapp: string
     /** Aberto pelo teclado: o foco vai para o "×" (com contorno). Pelo toque: para o painel. */
     focarFechar: boolean
     onFechar: () => void
@@ -20,7 +22,7 @@ interface PainelProdutoProps {
 const FOCAVEIS = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /** Tela 02: o produto abre como painel por cima da loja (não troca de página). */
-export function PainelProduto({ produto, naSacola, focarFechar, onFechar, onConfirmar }: PainelProdutoProps) {
+export function PainelProduto({ produto, naSacola, whatsapp, focarFechar, onFechar, onConfirmar }: PainelProdutoProps) {
     const painel = useRef<HTMLElement>(null)
     const fechar = useRef<HTMLButtonElement>(null)
 
@@ -96,7 +98,7 @@ export function PainelProduto({ produto, naSacola, focarFechar, onFechar, onConf
                 </div>
 
                 {/* Ação sempre à vista, no alcance do polegar, por mais longa que seja a descrição. */}
-                <BarraProduto produto={produto} naSacola={naSacola} onConfirmar={onConfirmar} />
+                <BarraProduto produto={produto} naSacola={naSacola} whatsapp={whatsapp} onConfirmar={onConfirmar} />
             </section>
         </div>
     )

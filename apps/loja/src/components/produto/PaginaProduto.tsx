@@ -19,10 +19,12 @@ interface PaginaProdutoProps {
     vitrine: Vitrine
     /** "Leve junto": comprados junto com este, completados pela categoria (lib/vitrine/compradosJuntos). */
     juntos: ProdutoLoja[]
+    /** WhatsApp da Mont (o "Me avisa quando chegar" do esgotado). */
+    whatsapp: string
 }
 
 /** Página do produto (/produto/[slug]): o link compartilhado e o Google abrem aqui; na home, o produto abre no painel. */
-export function PaginaProduto({ produto, vitrine, juntos }: PaginaProdutoProps) {
+export function PaginaProduto({ produto, vitrine, juntos, whatsapp }: PaginaProdutoProps) {
     const pronta = useSacolaPronta()
     const itens = useSacola((s) => s.itens)
     const definirQuantidade = useSacola((s) => s.definirQuantidade)
@@ -98,6 +100,7 @@ export function PaginaProduto({ produto, vitrine, juntos }: PaginaProdutoProps) 
                     key={`${pronta}-${naSacola}`}
                     produto={produto}
                     naSacola={naSacola}
+                    whatsapp={whatsapp}
                     onConfirmar={(q) => {
                         medirAdicao(produto, q - naSacola)
                         definirQuantidade(produto.id, q)
