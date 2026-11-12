@@ -38,6 +38,7 @@ const json = (body: unknown, status: number) =>
 const SELECT_VENDA = `
   id, data_entrega_prevista, criado_em, aviso_grupo_enviado_em, status, forma_pagamento, pago,
   total, valor_pago, taxa_entrega, observacao_entregador,
+  entregador:entregadores!vendas_entregador_id_fkey(nome),
   contato:contatos!inner(nome, telefone, cep, logradouro, numero, complemento, bairro, cidade, endereco),
   itens:itens_venda(quantidade, produto:produtos(nome))`
 
@@ -53,6 +54,7 @@ interface LinhaVenda {
   valor_pago: number | string | null
   taxa_entrega: number | string | null
   observacao_entregador: string | null
+  entregador: { nome: string } | null
   contato: {
     nome: string; telefone: string | null; cep: string | null; logradouro: string | null; numero: string | null
     complemento: string | null; bairro: string | null; cidade: string | null; endereco: string | null
@@ -73,6 +75,7 @@ function paraAviso(l: LinhaVenda): VendaAviso {
     valorPago: Number(l.valor_pago ?? 0),
     taxaEntrega: l.taxa_entrega === null ? null : Number(l.taxa_entrega),
     observacaoEntregador: l.observacao_entregador,
+    entregador: l.entregador?.nome ?? null,
     cliente: { ...l.contato },
     itens: (l.itens ?? []).map((i) => ({ quantidade: Number(i.quantidade), nome: i.produto?.nome ?? '(produto removido)' })),
   }
