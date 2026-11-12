@@ -199,13 +199,14 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl text-left"
             >
                 <Foto url={p.imagemUrl} alt="" largura={56} className="h-14 w-14 shrink-0 rounded-xl" />
-                <span className="flex min-w-0 flex-col gap-1">
-                    <span className="text-sm leading-tight font-bold">{p.nome}</span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="line-clamp-2 text-sm leading-tight font-bold">{p.nome}</span>
+                    {/* Preço atual primeiro: nem todo produto tem o riscado, e assim a coluna do preço fica alinhada. */}
                     <span className="flex items-baseline gap-1.5">
+                        <span className="text-base font-bold">{reais(p.preco)}</span>
                         {p.precoDe !== null && (
-                            <span className="text-xs text-texto-suave line-through">{reais(p.precoDe)}</span>
+                            <span className="text-[11px] text-texto-suave line-through">{reais(p.precoDe)}</span>
                         )}
-                        <span className="font-titulo text-xl leading-none">{reais(p.preco)}</span>
                         {p.selo && <span className={cn(seloClasse, 'self-center')}>{p.selo}</span>}
                     </span>
                 </span>
@@ -227,7 +228,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                     <FaixaEsgotado tamanho="linha" />
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm leading-tight font-bold text-texto-suave">{p.nome}</span>
+                    <span className="line-clamp-2 text-sm leading-tight font-bold text-texto-suave">{p.nome}</span>
                     <span className="text-xs text-texto-suave">Volta em breve</span>
                 </span>
             </button>
@@ -370,7 +371,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
             <header className="flex h-16 items-center justify-between border-b border-linha bg-creme px-4">
                 <div className="flex items-center gap-2.5">
                     <div className="relative h-10 w-10 overflow-hidden rounded-full bg-areia">
-                        <Image src="/logo-mont.png" alt="Mont" fill sizes="40px" className="object-contain" />
+                        <Image src="/logo-mont-120.webp" alt="Mont" fill sizes="40px" className="object-contain" />
                     </div>
                     <div className="flex flex-col">
                         <span className="font-titulo text-xl leading-none tracking-[0.5px]">MONT</span>
