@@ -291,7 +291,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
         </article>
     )
 
-    // Divisor antes dos esgotados da seção (só aparece se a seção tiver algum).
+    // Divisor antes dos esgotados de uma seção em lista (só aparece se a seção tiver algum). Na grade, não há divisor.
     const divisorEsgotados = (
         <div className="mt-[18px] mb-0.5 flex items-center gap-2">
             <span className="text-xs font-bold tracking-[1.5px] text-texto-suave uppercase">Esgotados no momento</span>
@@ -301,7 +301,7 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
 
     const secaoDaLoja = (s: SecaoLoja, primeira: boolean) => {
         const combosDaSecao = s.itens.filter(ehCombo)
-        // Esgotados no fim da seção, depois do divisor.
+        // Esgotados no fim da seção: na grade, como últimos cards; na lista, depois do divisor.
         const { aVenda, esgotados } = separarEsgotados(s.itens.filter((p) => !ehCombo(p)))
         return (
             <section
@@ -317,20 +317,11 @@ export function Loja({ vitrine, whatsapp }: LojaProps) {
                 )}
                 {combosDaSecao.length > 0 && <div className="flex flex-col gap-3">{combosDaSecao.map(cardCombo)}</div>}
                 {s.formato === 'cartoes' ? (
-                    <>
-                        {aVenda.length > 0 && (
-                            <div className="grid grid-cols-2 gap-3">
-                                {/* Sem combos da campanha no topo, as 2 primeiras fotos da 1ª seção são o maior conteúdo da tela. */}
-                                {aVenda.map((p, i) => cartaoProduto(p, primeira && i < 2))}
-                            </div>
-                        )}
-                        {esgotados.length > 0 && (
-                            <>
-                                {divisorEsgotados}
-                                <div className="grid grid-cols-2 gap-3">{esgotados.map(cartaoEsgotado)}</div>
-                            </>
-                        )}
-                    </>
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Sem combos da campanha no topo, as 2 primeiras fotos da 1ª seção são o maior conteúdo da tela. */}
+                        {aVenda.map((p, i) => cartaoProduto(p, primeira && i < 2))}
+                        {esgotados.map(cartaoEsgotado)}
+                    </div>
                 ) : (
                     <>
                         {aVenda.map(linhaProduto)}

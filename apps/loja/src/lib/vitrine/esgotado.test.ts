@@ -3,7 +3,7 @@ import { interpretarAvisos, mensagemAviso, separarEsgotados } from './esgotado'
 
 const item = (id: string, disponivel: boolean) => ({ id, disponivel })
 
-describe('esgotados no fim da seção', () => {
+describe('esgotados no fim da seção (grade: últimos cards; lista: depois do divisor)', () => {
     it('à venda primeiro, esgotados depois, cada grupo na ordem da seção', () => {
         const { aVenda, esgotados } = separarEsgotados([
             item('a', true),
@@ -16,7 +16,7 @@ describe('esgotados no fim da seção', () => {
         expect(esgotados.map((p) => p.id)).toEqual(['x', 'y'])
     })
 
-    it('seção sem esgotado: nada no grupo de esgotados (o divisor não aparece)', () => {
+    it('seção sem esgotado: nada no grupo de esgotados (na lista, o divisor não aparece)', () => {
         expect(separarEsgotados([item('a', true), item('b', true)]).esgotados).toEqual([])
     })
 })

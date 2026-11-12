@@ -106,14 +106,15 @@ function useAvisado(produtoId: string): boolean {
 type VarianteAviso = 'cartao' | 'linha' | 'barra'
 
 const textos: Record<VarianteAviso, { botao: string; selo: string }> = {
-    cartao: { botao: 'Me avisa quando chegar', selo: 'Vamos te avisar' },
+    // No card de ~151 px, "Me avisa quando chegar" quebraria em 2 linhas: fica o curto, como na lista.
+    cartao: { botao: 'Me avisa', selo: 'Vamos te avisar' },
     linha: { botao: 'Me avisa', selo: 'Avisaremos' },
     barra: { botao: 'Me avisa quando chegar', selo: 'Vamos te avisar' },
 }
 
 const tamanhos: Record<VarianteAviso, string> = {
-    // Card em grade: largura do card; o texto quebra em 2 linhas se não couber.
-    cartao: 'min-h-11 w-full rounded-[22px] px-3 py-1 text-[13px] leading-tight',
+    // Card em grade: largura do card.
+    cartao: 'h-11 w-full rounded-[22px] px-3 text-[13px]',
     linha: 'h-11 shrink-0 rounded-[22px] px-3.5 text-[13px]',
     // Barra do painel/página do produto, no lugar do "Adicionar".
     barra: 'h-[52px] flex-1 rounded-[26px] px-4 text-base',
