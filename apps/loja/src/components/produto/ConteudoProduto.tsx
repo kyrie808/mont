@@ -23,7 +23,14 @@ export function ConteudoProduto({ produto, classeFoto, larguraFoto }: ConteudoPr
 
     return (
         <>
-            <GaleriaFotos fotos={produto.fotos} alt={produto.nome} largura={larguraFoto} prioridade className={classeFoto} />
+            <GaleriaFotos
+                fotos={produto.fotos}
+                alt={produto.nome}
+                largura={larguraFoto}
+                prioridade
+                esgotado={!produto.disponivel}
+                className={classeFoto}
+            />
 
             <div className="mt-1 flex flex-col items-start gap-1.5">
                 {produto.selo && (
