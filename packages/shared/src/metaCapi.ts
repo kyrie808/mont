@@ -26,7 +26,8 @@ export interface UserDataBase {
     ln?: string[]
     ct?: string[]
     st?: string[]
-    zip?: string[]
+    /** CEP. A chave da Meta é `zp`; `zip` era ignorado. */
+    zp?: string[]
     external_id?: string[]
 }
 

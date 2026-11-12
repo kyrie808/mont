@@ -45,11 +45,11 @@ export function normalizeState(raw: string | null | undefined): string | null {
     return clean ? clean.slice(0, 2) : null
 }
 
-/** cep → só dígitos. */
+/** CEP → os 8 dígitos (`zp` da Meta). Fora disso não é CEP: null, e o campo não vai. */
 export function normalizeZip(raw: string | null | undefined): string | null {
     if (!raw) return null
     const digits = raw.replace(/\D/g, '')
-    return digits || null
+    return /^\d{8}$/.test(digits) ? digits : null
 }
 
 /** SHA-256 hex minúsculo de uma string. */

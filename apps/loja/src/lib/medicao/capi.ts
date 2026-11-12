@@ -1,4 +1,4 @@
-import { hashField, normalizePhone, splitName } from '@mont/shared'
+import { hashField, normalizePhone, normalizeZip, splitName } from '@mont/shared'
 import { z } from 'zod'
 import type { Atribuicao } from './origem'
 
@@ -6,7 +6,7 @@ import type { Atribuicao } from './origem'
  * API de Conversões da Meta, pelo servidor da loja (InitiateCheckout e Lead).
  *
  * Mesma normalização do `meta-capi-worker` e do catálogo antigo (`@mont/shared`): telefone na
- * forma do WhatsApp, nome sem acento partido em fn/ln, tudo com SHA-256. `fbp`/`fbc` vão crus.
+ * forma do WhatsApp, nome sem acento partido em fn/ln, CEP com os 8 dígitos (`zp`), tudo com SHA-256. `fbp`/`fbc` vão crus.
  * O `event_id` é o mesmo do evento do navegador (GTM), e a Meta deduplica os dois.
  *
  * `META_TEST_EVENT_CODE` (opcional, só fora de produção): manda para "Testar eventos". ⚠️ Se o
@@ -26,7 +26,8 @@ export interface EnvioSite {
     atribuicao: Atribuicao
     ip: string | null
     userAgent: string
-    pessoa?: { telefone: string; nome: string }
+    /** `cep` só quando o cliente informou (entrega). */
+    pessoa?: { telefone: string; nome: string; cep?: string | null }
     dados: Record<string, unknown>
     /** Segundos desde 1970. */
     instante: number
@@ -45,6 +46,8 @@ export async function montarEventoSite(e: EnvioSite) {
     if (fnHash) user_data.fn = fnHash
     const lnHash = await hashField(ln)
     if (lnHash) user_data.ln = lnHash
+    const zp = await hashField(normalizeZip(e.pessoa?.cep))
+    if (zp) user_data.zp = zp
 
     return {
         event_name: e.evento,

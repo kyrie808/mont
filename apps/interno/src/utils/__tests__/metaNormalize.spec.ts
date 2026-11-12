@@ -94,8 +94,14 @@ describe('normalizeCity / normalizeState / normalizeZip', () => {
         expect(normalizeState('SP')).toBe('sp')
         expect(normalizeState('sp')).toBe('sp')
     })
-    it('cep só dígitos', () => {
+    it('cep só os 8 dígitos', () => {
         expect(normalizeZip('01310-100')).toBe('01310100')
+        expect(normalizeZip(' 09750 000 ')).toBe('09750000')
+    })
+    it('cep que não tem 8 dígitos → null', () => {
+        expect(normalizeZip('0975-000')).toBeNull()
+        expect(normalizeZip('097500001')).toBeNull()
+        expect(normalizeZip('sem cep')).toBeNull()
     })
     it('vazios → null', () => {
         expect(normalizeCity(null)).toBeNull()
