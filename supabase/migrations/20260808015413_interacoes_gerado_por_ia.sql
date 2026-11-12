@@ -11,7 +11,7 @@ ALTER TABLE public.interacoes
   ADD COLUMN IF NOT EXISTS gerado_por_ia boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN public.interacoes.gerado_por_ia IS
-  'true = escrito pelo analista de conversa (W2). A UI mostra selo de origem automática.';
+  'true = escrito pelo analista de conversa (W2). A UI mostra selo de origem automatica.';
 
 CREATE INDEX IF NOT EXISTS idx_interacoes_gerado_por_ia
   ON public.interacoes (contato_id) WHERE gerado_por_ia;

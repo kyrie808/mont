@@ -10,23 +10,20 @@
 -- `/ads` também) e consultada pelo ingestor no momento em que o lead chega.
 
 CREATE TABLE IF NOT EXISTS public.meta_anuncios (
-  ad_id       text PRIMARY KEY,          -- = `source_id` do referral
+  ad_id       text PRIMARY KEY,
   adset_id    text,
-  campaign_id text NOT NULL,             -- casa com campanhas.meta_campaign_id
+  campaign_id text NOT NULL,
   nome        text,
   status      text,
   sync_em     timestamptz NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.meta_anuncios IS
-  'Dicionário ad_id → campaign_id, populado pelo meta-ads-sync. Traduz o `source_id` do referral CTWA em campanha do Mont.';
+  'Dicionario ad_id -> campaign_id, populado pelo meta-ads-sync. Traduz o source_id do referral CTWA em campanha do Mont.';
 
 CREATE INDEX IF NOT EXISTS idx_meta_anuncios_campaign_id
   ON public.meta_anuncios (campaign_id);
 
--- ── RLS ───────────────────────────────────────────────────────────────────────
--- Escrita: só service_role (o sync), que bypassa RLS — nenhuma policy de escrita.
--- Leitura: admins, para observabilidade. Mesmo padrão de meta_eventos.
 ALTER TABLE public.meta_anuncios ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins podem ler meta_anuncios"

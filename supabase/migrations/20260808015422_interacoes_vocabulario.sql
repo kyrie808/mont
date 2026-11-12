@@ -40,6 +40,6 @@ ALTER TABLE public.interacoes
   );
 
 COMMENT ON CONSTRAINT interacoes_vocabulario_check ON public.interacoes IS
-  'Vocabulário fechado da timeline. `resultado` é validado conforme o `tipo` — os conjuntos não se misturam.';
+  'Vocabulario fechado da timeline. resultado e validado conforme o tipo - os conjuntos nao se misturam.';
 
 NOTIFY pgrst, 'reload schema';

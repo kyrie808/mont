@@ -18,7 +18,8 @@
 --   não vê `itens_venda` de forma confiável (inseridos depois) — um trigger aqui silenciaria (loop
 --   vazio). Se um dia existir esse caminho, ele deve debitar após inserir os itens, não no INSERT da venda.
 
--- 1) Helper único: aplica o sinal (+1 credita / -1 debita) sobre todos os itens da venda.
+-- Estoque: movimentação simétrica (entrega ⇔ estoque). Invariante: estoque debitado ⟺ status='entregue'.
+
 CREATE OR REPLACE FUNCTION public.fn_estoque_aplica_venda(p_venda_id uuid, p_sinal integer)
 RETURNS void
 LANGUAGE plpgsql
@@ -38,8 +39,6 @@ BEGIN
 END;
 $function$;
 
--- 2) Reescrita do trigger de status: impõe a invariante em QUALQUER transição de/para 'entregue'.
---    Mantém o lançamento de brinde amarrado ao mesmo par (cria ao virar entregue, apaga ao sair).
 CREATE OR REPLACE FUNCTION public.handle_stock_on_status_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -53,7 +52,6 @@ DECLARE
     v_plano_conta_id uuid;
     v_contato_nome   text;
 BEGIN
-    -- Passou a ser 'entregue' (pendente→entregue, cancelada→entregue): DEBITA.
     IF v_new_entregue AND NOT v_old_entregue THEN
         PERFORM public.fn_estoque_aplica_venda(NEW.id, -1);
 
@@ -71,7 +69,6 @@ BEGIN
             );
         END IF;
 
-    -- Deixou de ser 'entregue' (entregue→pendente, entregue→cancelada): CREDITA (restaura).
     ELSIF v_old_entregue AND NOT v_new_entregue THEN
         PERFORM public.fn_estoque_aplica_venda(NEW.id, 1);
 
@@ -85,9 +82,6 @@ BEGIN
 END;
 $function$;
 
--- 3) Novo: DELETE de venda entregue restaura o estoque (o par que faltava do débito da entrega).
---    BEFORE DELETE: os itens_venda ainda existem aqui (o CASCADE roda depois). O lançamento de
---    brinde some por FK/limpeza da app — este trigger só devolve o físico.
 CREATE OR REPLACE FUNCTION public.fn_estoque_on_venda_delete()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -107,8 +101,3 @@ CREATE TRIGGER trigger_stock_on_venda_delete
     BEFORE DELETE ON public.vendas
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_estoque_on_venda_delete();
-
--- Fecha a exposição via PostgREST: SECURITY DEFINER não deve ser chamável por anon/authenticated
--- (os triggers rodam no contexto do dono, independente destes grants).
-REVOKE EXECUTE ON FUNCTION public.fn_estoque_aplica_venda(uuid, integer) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.fn_estoque_on_venda_delete()          FROM PUBLIC, anon, authenticated;

@@ -15,6 +15,10 @@
 -- escrita em vendas (updateVenda, cancelVenda, RPC criar_pedido, triggers de sync
 -- cat_pedido↔venda). Só no banco capturamos todos.
 
+-- Meta CAPI — enfileiramento de Purchase na outbox meta_eventos (§3.3 / §9.1)
+-- Enfileira quando status='entregue' AND forma_pagamento<>'brinde'; fiado incluído,
+-- brinde e origem='catalogo' excluídos. event_id='venda_<id>' + UNIQUE = idempotência.
+
 CREATE OR REPLACE FUNCTION public.fn_enfileirar_purchase_meta()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -29,7 +33,6 @@ BEGIN
      AND NEW.forma_pagamento <> 'brinde'
      AND coalesce(NEW.origem, '') <> 'catalogo'
   THEN
-    -- Snapshot do ctwa_clid do contato (v1: quase sempre NULL — sem gateway ainda).
     SELECT c.ctwa_clid INTO v_ctwa_clid
     FROM public.contatos c
     WHERE c.id = NEW.contato_id;
@@ -48,7 +51,6 @@ BEGIN
       'venda_' || NEW.id,
       NEW.contato_id,
       NEW.id,
-      -- Momento da conversão: preferir data_entrega; senão data da venda; senão criação.
       coalesce(NEW.data_entrega::timestamptz, NEW.data::timestamptz, NEW.criado_em, now()),
       NEW.total,
       'BRL',
@@ -56,25 +58,17 @@ BEGIN
       v_action_source,
       'pendente'
     )
-    ON CONFLICT (event_id) DO NOTHING;  -- idempotência
+    ON CONFLICT (event_id) DO NOTHING;
   END IF;
 
   RETURN NEW;
 END;
 $$;
 
--- AFTER INSERT (imports que já entram 'entregue') OR UPDATE OF status/forma_pagamento
--- (o flip para entregue). Restringir as colunas evita disparo a cada update de `pago`.
 DROP TRIGGER IF EXISTS trg_enfileirar_purchase_meta ON public.vendas;
 CREATE TRIGGER trg_enfileirar_purchase_meta
   AFTER INSERT OR UPDATE OF status, forma_pagamento ON public.vendas
   FOR EACH ROW
   EXECUTE FUNCTION public.fn_enfileirar_purchase_meta();
-
--- Trigger-only: não deve ser chamável via API REST. O trigger dispara independente de
--- grant; revogar EXECUTE fecha os lints 0028/0029 sem afetar o enfileiramento.
-REVOKE EXECUTE ON FUNCTION public.fn_enfileirar_purchase_meta() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.fn_enfileirar_purchase_meta() FROM anon;
-REVOKE EXECUTE ON FUNCTION public.fn_enfileirar_purchase_meta() FROM authenticated;
 
 NOTIFY pgrst, 'reload schema';

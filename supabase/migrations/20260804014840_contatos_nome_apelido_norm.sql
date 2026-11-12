@@ -37,14 +37,10 @@ ALTER TABLE public.contatos
     ) STORED;
 
 COMMENT ON COLUMN public.contatos.nome_norm IS
-    'Nome sem acento, gerado de `nome`. Alvo da busca — espelha stripAccents() do app. Nao escrever: e GENERATED ALWAYS.';
+    'Nome sem acento, gerado de nome. Alvo da busca - espelha stripAccents() do app. Nao escrever: e GENERATED ALWAYS.';
 COMMENT ON COLUMN public.contatos.apelido_norm IS
-    'Apelido sem acento, gerado de `apelido`. Alvo da busca — espelha stripAccents() do app. Nao escrever: e GENERATED ALWAYS.';
+    'Apelido sem acento, gerado de apelido. Alvo da busca - espelha stripAccents() do app. Nao escrever: e GENERATED ALWAYS.';
 
--- ----------------------------------------------------------------------------
--- Guarda de sanidade: aborta se qualquer acento sobreviveu à normalização.
--- Protege contra o escape Unicode do literal não ter sido interpretado.
--- ----------------------------------------------------------------------------
 DO $$
 DECLARE
     restantes int;
@@ -57,8 +53,5 @@ BEGIN
         RAISE EXCEPTION 'Normalizacao de acento falhou em % contatos', restantes;
     END IF;
 END $$;
-
--- Sem índice: 807 linhas e o filtro é `ilike '%…%'` / regex, que btree não serve.
--- Se a base crescer, o caminho é pg_trgm (já disponível, não instalado).
 
 NOTIFY pgrst, 'reload schema';

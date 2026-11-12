@@ -26,9 +26,6 @@ AS $$
   WITH d AS (
     SELECT regexp_replace(coalesce(p_telefone, ''), '\D', '', 'g') AS dig
   ), n AS (
-    -- Tira o código do país só quando o resto sobra com tamanho nacional plausível.
-    -- Nunca mexe num número de 10/11 dígitos que POR ACASO comece com 55: o DDD 55
-    -- (Rio Grande do Sul) é legítimo e seria mutilado.
     SELECT CASE
              WHEN length(dig) IN (12, 13) AND left(dig, 2) = '55' THEN substr(dig, 3)
              ELSE dig
@@ -36,39 +33,29 @@ AS $$
     FROM d
   )
   SELECT CASE
-    -- 11 dígitos = DDD + celular de 9. Celular brasileiro sempre começa com 9;
-    -- se não começa, o dado está corrompido e não vira chave.
     WHEN length(nac) = 11
      AND left(nac, 2) ~ '^(1[1-9]|[2-9][0-9])$'
      AND substr(nac, 3, 1) = '9'
       THEN '55' || nac
-
-    -- 10 dígitos = DDD + 8. Assinante começando em 6-9 é celular antigo, cadastrado
-    -- antes do 9º dígito → recompõe. Começando em 2-5 é telefone FIXO, que não tem
-    -- WhatsApp → não canoniza (NULL).
     WHEN length(nac) = 10
      AND left(nac, 2) ~ '^(1[1-9]|[2-9][0-9])$'
      AND substr(nac, 3, 1) IN ('6', '7', '8', '9')
       THEN '55' || left(nac, 2) || '9' || substr(nac, 3)
-
     ELSE NULL
   END
   FROM n;
 $$;
 
 COMMENT ON FUNCTION public.fn_telefone_wa(text) IS
-  'Telefone BR → forma canônica de WhatsApp (55 + DDD + 9 dígitos), ou NULL se não for celular válido. Usada na coluna gerada contatos.telefone_wa.';
+  'Telefone BR -> forma canonica de WhatsApp (55 + DDD + 9 digitos), ou NULL se nao for celular valido. Usada na coluna gerada contatos.telefone_wa.';
 
 ALTER TABLE public.contatos
   ADD COLUMN IF NOT EXISTS telefone_wa text
   GENERATED ALWAYS AS (public.fn_telefone_wa(telefone)) STORED;
 
 COMMENT ON COLUMN public.contatos.telefone_wa IS
-  'Chave de casamento com o WhatsApp (JID sem @s.whatsapp.net). Derivada de `telefone` — nunca escrever direto.';
+  'Chave de casamento com o WhatsApp (JID sem @s.whatsapp.net). Derivada de telefone - nunca escrever direto.';
 
--- Único: dois contatos não podem disputar o mesmo WhatsApp. Pega inclusive o caso que
--- `telefone_norm` deixa passar — `1148041265` e `11948041265` são textos diferentes,
--- mas o mesmo aparelho. Parcial porque NULL (fixo/placeholder) pode repetir à vontade.
 CREATE UNIQUE INDEX IF NOT EXISTS contatos_telefone_wa_key
   ON public.contatos (telefone_wa) WHERE telefone_wa IS NOT NULL;
 

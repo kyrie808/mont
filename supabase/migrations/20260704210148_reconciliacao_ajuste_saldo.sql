@@ -4,19 +4,14 @@
 --
 -- Aditiva/reversível. Backup: dump-*-20260704-175624.
 
--- 1) origem 'ajuste' passa a ser válida em lancamentos.
 ALTER TABLE public.lancamentos DROP CONSTRAINT IF EXISTS chk_lancamentos_origem;
 ALTER TABLE public.lancamentos ADD CONSTRAINT chk_lancamentos_origem
     CHECK (origem = ANY (ARRAY['manual','venda','brinde','migracao_historica','transferencia','contas_a_pagar','ajuste']));
 
--- 2) Categoria reservada do ajuste. automatica=true → NÃO aparece nos seletores de categoria
---    (getPlanoDeContas filtra automatica=false) nem aceita lançamento manual; usada só pela RPC.
 INSERT INTO public.plano_de_contas (nome, tipo, categoria, ativo, automatica, codigo)
 SELECT 'Ajuste de Saldo', 'despesa', 'variavel', true, true, 'AJUSTE_SALDO'
 WHERE NOT EXISTS (SELECT 1 FROM public.plano_de_contas WHERE codigo = 'AJUSTE_SALDO');
 
--- 3) RPC: reconcilia uma conta ao saldo real. Calcula a diferença e insere UM lançamento
---    origem='ajuste' (entrada se falta, saída se sobra). Guard de admin igual às RPCs manuais.
 CREATE OR REPLACE FUNCTION public.registrar_ajuste_saldo(p_conta_id uuid, p_saldo_real numeric)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -49,7 +44,7 @@ BEGIN
 
   v_diff := round(p_saldo_real - v_conta.saldo_atual, 2);
   IF v_diff = 0 THEN
-    RETURN NULL;  -- nada a ajustar
+    RETURN NULL;
   END IF;
 
   SELECT id INTO v_cat_id FROM plano_de_contas WHERE codigo = 'AJUSTE_SALDO' LIMIT 1;
@@ -73,15 +68,7 @@ BEGIN
 END;
 $function$;
 
--- Só authenticated (admin no runtime via is_admin) chama; revoga o grant default a PUBLIC/anon
--- para casar com os RPCs financeiros irmãos (registrar_despesa_manual/entrada_manual) e não
--- reintroduzir o lint 0028 (anon pode executar SECURITY DEFINER).
-REVOKE EXECUTE ON FUNCTION public.registrar_ajuste_saldo(uuid, numeric) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.registrar_ajuste_saldo(uuid, numeric) TO authenticated;
-
--- 4) Relatórios: ajustes NÃO são despesa operacional nem entrada/saída de operação.
---    Excluídos do lucro líquido e dos KPIs de caixa; permanecem visíveis no extrato bruto.
---    ⚠️ security_invoker=on precisa ser re-setado (CREATE OR REPLACE reseta reloptions).
 
 CREATE OR REPLACE VIEW public.view_lucro_liquido_mensal
 WITH (security_invoker = on) AS

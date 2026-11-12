@@ -52,3 +52,5 @@ CREATE OR REPLACE VIEW public.view_extrato_mensal WITH (security_invoker = on) A
              LEFT JOIN contatos c ON c.id = po.fornecedor_id
              LEFT JOIN plano_de_contas pcf ON pcf.codigo = 'COMPRA_FABRICA'::text) combined
      LEFT JOIN plano_de_contas pc ON pc.id = combined.plano_conta_id;
+
+NOTIFY pgrst, 'reload schema';

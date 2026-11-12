@@ -19,10 +19,8 @@ ALTER TABLE public.contatos
     GENERATED ALWAYS AS (regexp_replace(coalesce(telefone, ''), '\D', '', 'g')) STORED;
 
 COMMENT ON COLUMN public.contatos.telefone_norm IS
-    'Telefone só com dígitos, gerado a partir de `telefone`. Chave de identidade '
-    'do contato e alvo da busca. Não escrever direto — é GENERATED ALWAYS.';
+    'Telefone so com digitos, gerado a partir de telefone. Chave de identidade do contato e alvo da busca. Nao escrever direto - e GENERATED ALWAYS.';
 
--- Parcial: contato sem telefone (string vazia) não deve colidir com outro sem telefone.
 CREATE UNIQUE INDEX IF NOT EXISTS contatos_telefone_norm_key
     ON public.contatos (telefone_norm)
     WHERE telefone_norm <> '';
