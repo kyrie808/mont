@@ -7,10 +7,22 @@
 //
 // Quem reduz é o Image Transformation do Supabase (lado maior até 800/200 px, sem ampliar, webp q80).
 //
-// Uso (a chave service_role é lida do .env.local da loja e nunca é impressa):
-//   node --env-file=apps/loja/.env.local supabase/scripts/gerar-variantes-fotos.mjs            # só lista
-//   node --env-file=apps/loja/.env.local supabase/scripts/gerar-variantes-fotos.mjs --aplicar  # gera o que falta
+// Uso (a chave service_role vem do ambiente ou do .env.local da loja, lido como o Next lê; nunca é impressa):
+//   node supabase/scripts/gerar-variantes-fotos.mjs            # só lista
+//   node supabase/scripts/gerar-variantes-fotos.mjs --aplicar  # gera o que falta
 //   ... --aplicar --refazer   # gera de novo mesmo as que já existem
+
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
+
+// Sem as variáveis no ambiente: lê os .env da loja do mesmo jeito que o Next lê (@next/env), sem imprimir nada.
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const pastaLoja = fileURLToPath(new URL('../../apps/loja/', import.meta.url))
+    // No pnpm o @next/env é dependência do next (não da loja): resolve a partir dele.
+    const doNext = createRequire(createRequire(`${pastaLoja}package.json`).resolve('next/package.json'))
+    const { loadEnvConfig } = doNext('@next/env')
+    loadEnvConfig(pastaLoja, false, { info: () => {}, error: console.error })
+}
 
 const BUCKET = 'products'
 const LARGURAS = [200, 800]
